@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import re
 import uuid
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import AppRole, UserStatus
 from app.core.config import settings
+from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError, ValidationError
 from app.models.users import UserORM
 from app.models.workspace_memberships import WorkspaceMembershipORM
 from app.models.workspaces import WorkspaceORM
@@ -82,5 +84,35 @@ async def maybe_auto_provision_user(
         return user
 
     name = (display_name or user.full_name or user.email).strip()
+    await activate_user_with_workspace(session, user, name=name)
+    return user
+
+
+async def complete_user_profile(
+    session: AsyncSession,
+    user_id: UUID,
+    *,
+    full_name: str,
+) -> UserORM:
+    """POST /users/complete-profile — Mode A activates; Mode B → pending_approval."""
+    user = await session.get(UserORM, user_id)
+    if user is None:
+        raise NotFoundError("User not found")
+
+    name = full_name.strip()
+    if not name:
+        raise ValidationError("Display name is required", field="full_name")
+
+    if user.status == UserStatus.active:
+        raise ConflictError("Profile already completed")
+    if user.status != UserStatus.pending_profile:
+        raise ForbiddenError(message="Profile completion not allowed in current status")
+
+    user.full_name = name
+    if settings.registration_require_admin_approval:
+        user.status = UserStatus.pending_approval
+        await session.flush()
+        return user
+
     await activate_user_with_workspace(session, user, name=name)
     return user

@@ -58,7 +58,16 @@
   },
   "admin": {
     "users": {
-      "placeholder": "Darba vietas dalībnieku administrēšana — implementējiet features/admin."
+      "title": "Reģistrāciju apstiprinājumi",
+      "description": "Lietotāji, kas gaida platformas piekļuvi (B režīms). A režīmā tukšs.",
+      "empty": "Nav lietotāju, kas gaida apstiprinājumu.",
+      "approve": "Apstiprināt",
+      "reject": "Noraidīt",
+      "columns": {
+        "email": "E-pasts",
+        "name": "Vārds",
+        "actions": "Darbības"
+      }
     }
   },
   "panels": {
@@ -116,6 +125,11 @@
     },
     "actions": {
       "signOut": "Iziet"
+    },
+    "completeProfile": {
+      "nameLabel": "Attēlojamais vārds",
+      "nameRequired": "Vārds ir obligāts",
+      "submit": "Turpināt"
     }
   },
   "errors": {

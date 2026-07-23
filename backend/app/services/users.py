@@ -9,13 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import AppRole, PlatformRole, UserStatus
 from app.core.config import settings
-from app.core.exceptions import ForbiddenError, NotFoundError
+from app.core.exceptions import ForbiddenError, NotFoundError, ValidationError
 from app.core.logging import get_logger
 from app.models.users import UserORM
 from app.models.workspace_memberships import WorkspaceMembershipORM
 from app.models.workspaces import WorkspaceORM
 from app.schemas.me import MeMembership, MeResponse
-from app.services.onboarding import resolve_initial_user_status
+from app.services.onboarding import activate_user_with_workspace, resolve_initial_user_status
 
 logger = get_logger(__name__)
 
@@ -157,3 +157,41 @@ async def set_active_workspace(
             "role": membership.role,
         }
     )
+
+
+async def list_pending_users(session: AsyncSession) -> list[UserORM]:
+    return list(
+        await session.scalars(
+            select(UserORM)
+            .where(UserORM.status == UserStatus.pending_approval)
+            .order_by(UserORM.created_at.asc())
+        )
+    )
+
+
+async def approve_pending_user(session: AsyncSession, user_id: UUID) -> UserORM:
+    user = await session.scalar(
+        select(UserORM).where(UserORM.id == user_id).with_for_update()
+    )
+    if user is None:
+        raise NotFoundError("User not found")
+    if user.status != UserStatus.pending_approval:
+        raise ValidationError("User is not pending approval")
+
+    display_name = (user.full_name or user.email).strip()
+    await activate_user_with_workspace(session, user, name=display_name)
+    return user
+
+
+async def reject_pending_user(session: AsyncSession, user_id: UUID) -> UserORM:
+    user = await session.scalar(
+        select(UserORM).where(UserORM.id == user_id).with_for_update()
+    )
+    if user is None:
+        raise NotFoundError("User not found")
+    if user.status != UserStatus.pending_approval:
+        raise ValidationError("User is not pending approval")
+
+    user.status = UserStatus.rejected
+    await session.flush()
+    return user

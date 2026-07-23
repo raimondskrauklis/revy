@@ -58,7 +58,16 @@
   },
   "admin": {
     "users": {
-      "placeholder": "Workspace member administration — implement in features/admin."
+      "title": "Signup approvals",
+      "description": "Review users waiting for platform access (Mode B). Empty in Mode A.",
+      "empty": "No users awaiting approval.",
+      "approve": "Approve",
+      "reject": "Reject",
+      "columns": {
+        "email": "Email",
+        "name": "Name",
+        "actions": "Actions"
+      }
     }
   },
   "panels": {
@@ -116,6 +125,11 @@
     },
     "actions": {
       "signOut": "Sign out"
+    },
+    "completeProfile": {
+      "nameLabel": "Display name",
+      "nameRequired": "Display name is required",
+      "submit": "Continue"
     }
   },
   "errors": {
