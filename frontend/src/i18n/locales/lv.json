@@ -1,0 +1,133 @@
+{
+  "common": {
+    "save": "Saglabāt",
+    "cancel": "Atcelt",
+    "loading": "Ielādē…",
+    "retry": "Mēģināt vēlreiz",
+    "loadFailed": "Neizdevās ielādēt datus",
+    "search": "Meklēt",
+    "select": "Izvēlēties",
+    "selectDate": "Izvēlēties datumu",
+    "clear": "Notīrīt",
+    "today": "Šodien",
+    "remove": "Noņemt",
+    "appName": "Lietotne"
+  },
+  "nav": {
+    "home": "Sākums",
+    "dashboard": "Panelis",
+    "settings": "Iestatījumi"
+  },
+  "theme": {
+    "light": "Gaišs",
+    "dark": "Tumšs",
+    "system": "Sistēma"
+  },
+  "dashboard": {
+    "welcome": "Pierakstījies kā {{email}}"
+  },
+  "settings": {
+    "title": "Iestatījumi",
+    "quietDemo": {
+      "title": "Formas elementi",
+      "description": "Quiet* komponentes — izmantojiet tās, nevis HTML ievades.",
+      "nameLabel": "Attēlojamais vārds",
+      "notesLabel": "Piezīmes",
+      "roleLabel": "Loma",
+      "dueDateLabel": "Termiņš",
+      "chipsLabel": "Statusa žetoni",
+      "roles": {
+        "admin": "Administrators",
+        "member": "Dalībnieks",
+        "viewer": "Skatītājs"
+      },
+      "status": {
+        "draft": "Melnraksts",
+        "active": "Aktīvs",
+        "pending": "Gaida",
+        "failed": "Neizdevās",
+        "label": "Etiķete",
+        "tag": "Noņemams tags",
+        "filter": "Pārslēgt filtru"
+      },
+      "table": {
+        "rowA": "Piemēra rinda (virsma)",
+        "rowB": "Piemēra rinda (svītra)"
+      }
+    }
+  },
+  "admin": {
+    "users": {
+      "placeholder": "Darba vietas dalībnieku administrēšana — implementējiet features/admin."
+    }
+  },
+  "panels": {
+    "close": "Aizvērt paneli",
+    "closeTop": "Aizvērt augšējo paneli",
+    "focusPanel": "Rādīt paneli: {{title}}",
+    "quickViewHint": "Īskats — pilnai informācijai atveriet pilnu lapu.",
+    "unknownType": "Nezināms paneļa tips."
+  },
+  "sidebar": {
+    "mainNav": "Galvenā navigācija",
+    "collapseHint": "Sakļaut sānjoslu",
+    "expandHint": "Izvērst sānjoslu",
+    "close": "Aizvērt izvēlni"
+  },
+  "auth": {
+    "loading": "Ielādē…",
+    "login": {
+      "title": "Pierakstīties",
+      "body": "Lai turpinātu, izmantojiet savu organizācijas kontu.",
+      "action": "Turpināt ar SSO"
+    },
+    "sessionExpired": {
+      "title": "Sesija beigusies",
+      "body": "Lūdzu, pierakstieties vēlreiz."
+    },
+    "status": {
+      "verifyEmail": {
+        "title": "Apstipriniet e-pastu",
+        "body": "Pārbaudiet iesūtni un noklikšķiniet uz apstiprinājuma saites, pēc tam atsvaidziniet lapu."
+      },
+      "completeProfile": {
+        "title": "Pabeidziet profilu",
+        "body": "Pievienojiet savus datus pirms lietotnes izmantošanas."
+      },
+      "pendingApproval": {
+        "title": "Gaida apstiprinājumu",
+        "body": "Administrators drīzumā pārskatīs jūsu kontu."
+      },
+      "rejected": {
+        "title": "Konts nav apstiprināts",
+        "body": "Jūsu reģistrācija netika apstiprināta. Sazinieties ar atbalstu, ja uzskatāt, ka tā ir kļūda."
+      },
+      "suspended": {
+        "title": "Konts apturēts",
+        "body": "Jūsu konts ir apturēts. Sazinieties ar atbalstu."
+      }
+    },
+    "unauthorized": {
+      "title": "Piekļuve liegta",
+      "body": "Jums nav tiesību skatīt šo lapu.",
+      "goBack": "Atpakaļ",
+      "goHome": "Uz sākumu",
+      "signedInAs": "Pierakstījies kā {{email}}"
+    },
+    "actions": {
+      "signOut": "Iziet"
+    }
+  },
+  "errors": {
+    "not_found": "Resurss nav atrasts",
+    "validation_error": "Pārbaudiet ievadītos datus",
+    "forbidden": "Jums nav tiesību",
+    "unauthorized": "Lūdzu, pierakstieties",
+    "network_error": "Neizdevās sasniegt serveri",
+    "unknown_error": "Kaut kas nogāja greizi",
+    "not_found_page": {
+      "title": "Lapa nav atrasta",
+      "body": "Pieprasītā lapa neeksistē."
+    }
+  }
+}

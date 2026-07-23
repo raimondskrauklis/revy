@@ -1,0 +1,28 @@
+# backend/Pipfile
+# Dev entry point only — real dependencies are in requirements/.
+#
+#   pipenv run install    # once (or after requirements change)
+#   pipenv shell          # daily — activates .venv in this folder
+#   pipenv run test
+#   pipenv run lint
+
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+
+[dev-packages]
+
+[requires]
+python_version = "3.12"
+
+[scripts]
+install = "pip install -r requirements/dev.txt"
+install-prod = "pip install -r requirements/prod.txt"
+test = "pytest tests/unit/"
+lint = "ruff check ."
+dev = "uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
+migrate = "alembic upgrade head"
+migrate-test = "alembic -x test=true upgrade head"

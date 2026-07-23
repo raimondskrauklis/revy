@@ -1,0 +1,30 @@
+# backend/alembic/README
+Hand-written Alembic revisions only — no --autogenerate.
+
+## Filename pattern (KP)
+
+```text
+YYYY_MM_DD_HHMM_NNNN_slug.py
+```
+
+Example:
+
+```text
+2025_11_17_1522_0001_uuid_v7_base_setup.py
+ └─date──┘└time┘└seq┘ └─ from: alembic revision -m "uuid_v7_base_setup" ─┘
+```
+
+`revision` in the file equals the filename stem. Sequence (`0001`, `0002`, …) is the
+**fourth** numeric segment — not the `HHMM` time block.
+
+Built by `build_migration_revision_id()` in `env.py` (`alembic.ini`: `file_template = %%(rev)s`).
+
+## Commands
+
+From `backend/`:
+
+```bash
+alembic revision -m "uuid_v7_base_setup"   # edit upgrade()/downgrade() by hand
+alembic upgrade head
+alembic -x test=true upgrade head           # uses TEST_DATABASE_URL
+```

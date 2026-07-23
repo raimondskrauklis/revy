@@ -1,0 +1,10 @@
+/* frontend/src/index.css */
+@import 'tailwindcss';
+@import './styles/tokens.css';
+@import './styles/tokens.revy.css';
+@import './styles/motion.css';
+
+.app-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-ring-strong) transparent;
+}

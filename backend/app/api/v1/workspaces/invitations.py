@@ -1,0 +1,59 @@
+# backend/app/api/v1/workspaces/invitations.py
+"""Workspace invitations — INVITATIONS.md (persist when P1 migration lands)."""
+from typing import Annotated
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.auth import CurrentUser, get_current_user
+from app.core.database import get_db
+from app.core.exceptions import ForbiddenError, NotFoundError
+from app.core.permissions import Permission, require_permission
+from app.core.tenancy import require_same_workspace
+from app.models.users import UserORM
+from app.models.workspaces import WorkspaceORM
+from app.schemas.common import SuccessResponse
+from app.schemas.invitations import InvitationCreate, InvitationResponse
+from app.services.email_dispatch import enqueue_workspace_invitation_email
+from app.services.invitations import create_invitation
+
+router = APIRouter(prefix="/{workspace_id}/invitations", tags=["invitations"])
+
+
+@router.post("", response_model=SuccessResponse[InvitationResponse], status_code=status.HTTP_201_CREATED)
+async def post_workspace_invitation(
+    workspace_id: UUID,
+    body: InvitationCreate,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> SuccessResponse[InvitationResponse]:
+    require_permission(current_user, Permission.admin_users)
+    require_same_workspace(current_user, workspace_id)
+    if current_user.user_id is None:
+        raise ForbiddenError(message="User not provisioned")
+
+    workspace = await session.get(WorkspaceORM, workspace_id)
+    if workspace is None:
+        raise NotFoundError("Workspace not found")
+
+    inviter = await session.get(UserORM, current_user.user_id)
+    inviter_name = (inviter.full_name if inviter and inviter.full_name else None) or (
+        inviter.email if inviter else current_user.email or "A teammate"
+    )
+
+    payload = await create_invitation(
+        session,
+        workspace_id=workspace_id,
+        email=body.email,
+        role=body.role,
+        invited_by_user_id=current_user.user_id,
+    )
+    # P1: persist workspace_invitations row in same transaction before commit
+    enqueue_workspace_invitation_email(
+        to_email=payload["email"],
+        inviter_name=inviter_name,
+        workspace_name=workspace.name,
+        accept_token=payload["token"],
+    )
+    return SuccessResponse(data=InvitationResponse.model_validate(payload))

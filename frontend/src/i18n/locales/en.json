@@ -1,0 +1,133 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "loading": "Loading…",
+    "retry": "Retry",
+    "loadFailed": "Failed to load data",
+    "search": "Search",
+    "select": "Select",
+    "selectDate": "Select date",
+    "clear": "Clear",
+    "today": "Today",
+    "remove": "Remove",
+    "appName": "App"
+  },
+  "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "settings": "Settings"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "dashboard": {
+    "welcome": "Signed in as {{email}}"
+  },
+  "settings": {
+    "title": "Settings",
+    "quietDemo": {
+      "title": "Form controls",
+      "description": "Quiet* components — use these instead of raw HTML inputs.",
+      "nameLabel": "Display name",
+      "notesLabel": "Notes",
+      "roleLabel": "Role",
+      "dueDateLabel": "Due date",
+      "chipsLabel": "Status chips",
+      "roles": {
+        "admin": "Admin",
+        "member": "Member",
+        "viewer": "Viewer"
+      },
+      "status": {
+        "draft": "Draft",
+        "active": "Active",
+        "pending": "Pending",
+        "failed": "Failed",
+        "label": "Label",
+        "tag": "Removable tag",
+        "filter": "Toggle filter"
+      },
+      "table": {
+        "rowA": "Example row (surface)",
+        "rowB": "Example row (alt stripe)"
+      }
+    }
+  },
+  "admin": {
+    "users": {
+      "placeholder": "Workspace member administration — implement in features/admin."
+    }
+  },
+  "panels": {
+    "close": "Close panel",
+    "closeTop": "Close top panel",
+    "focusPanel": "Show panel: {{title}}",
+    "quickViewHint": "Quick view — open the full page for complete details.",
+    "unknownType": "Unknown panel type."
+  },
+  "sidebar": {
+    "mainNav": "Main navigation",
+    "collapseHint": "Collapse sidebar",
+    "expandHint": "Expand sidebar",
+    "close": "Close menu"
+  },
+  "auth": {
+    "loading": "Loading…",
+    "login": {
+      "title": "Sign in",
+      "body": "Use your organization account to continue.",
+      "action": "Continue with SSO"
+    },
+    "sessionExpired": {
+      "title": "Session expired",
+      "body": "Please sign in again."
+    },
+    "status": {
+      "verifyEmail": {
+        "title": "Verify your email",
+        "body": "Check your inbox for the verification link, then refresh this page."
+      },
+      "completeProfile": {
+        "title": "Complete your profile",
+        "body": "Add your details before accessing the app."
+      },
+      "pendingApproval": {
+        "title": "Pending approval",
+        "body": "An administrator will review your account soon."
+      },
+      "rejected": {
+        "title": "Account not approved",
+        "body": "Your registration was not approved. Contact support if you believe this is an error."
+      },
+      "suspended": {
+        "title": "Account suspended",
+        "body": "Your account has been suspended. Contact support for help."
+      }
+    },
+    "unauthorized": {
+      "title": "Access denied",
+      "body": "You do not have permission to view this page.",
+      "goBack": "Go back",
+      "goHome": "Go home",
+      "signedInAs": "Signed in as {{email}}"
+    },
+    "actions": {
+      "signOut": "Sign out"
+    }
+  },
+  "errors": {
+    "not_found": "Resource not found",
+    "validation_error": "Please check your input",
+    "forbidden": "You do not have permission",
+    "unauthorized": "Please sign in",
+    "network_error": "Unable to reach the server",
+    "unknown_error": "Something went wrong",
+    "not_found_page": {
+      "title": "Page not found",
+      "body": "The page you requested does not exist."
+    }
+  }
+}

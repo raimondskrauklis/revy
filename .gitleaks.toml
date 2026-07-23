@@ -1,0 +1,14 @@
+# .gitleaks.toml
+# Revy — extends gitleaks defaults. Manual: gitleaks detect --source . --config .gitleaks.toml
+
+title = "revy"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Frontend build artefacts"
+paths = [
+  '''(?i)frontend/dist/''',
+  '''(?i)frontend/node_modules/''',
+]

@@ -1,0 +1,105 @@
+/* frontend/src/styles/tokens.css */
+/* Semantic design tokens — --app-* light (:root) + dark (html.dark) */
+
+:root {
+  /* Surfaces */
+  --app-canvas: #F8FAFC;
+  --app-surface: #FFFFFF;
+  --app-ring: #E2E8F0;
+  --app-ring-strong: #CBD5E1;
+  --app-input-border: #94A3B8;
+
+  /* Text */
+  --app-text-strong: #0F172A;
+  --app-text: #334155;
+  --app-text-muted: #64748B;
+  --app-text-subtle: #94A3B8;
+
+  /* Chips */
+  --app-chip: #F1F5F9;
+  --app-chip-active: #E2E8F0;
+  --app-chip-hover: color-mix(in oklab, var(--app-chip) 88%, var(--app-text) 7%);
+
+  /* Tables */
+  --app-table-row: var(--app-surface);
+  --app-table-row-alt: var(--app-chip);
+
+  /* CTA */
+  --app-cta-bg: #0F172A;
+  --app-cta-fg: #FFFFFF;
+
+  /* Semantic */
+  --app-primary: #4F46E5;
+  --app-primary-foreground: #FFFFFF;
+  --app-link: var(--app-primary);
+  --app-success: #0D9488;
+  --app-warning: #D97706;
+  --app-info: #4F46E5;
+  --app-danger: #E11D48;
+  --app-on-accent: var(--app-primary-foreground);
+
+  --app-success-subtle: color-mix(in oklab, var(--app-success) 10%, var(--app-surface));
+  --app-warning-subtle: color-mix(in oklab, var(--app-warning) 10%, var(--app-surface));
+  --app-danger-subtle: color-mix(in oklab, var(--app-danger) 10%, var(--app-surface));
+  --app-info-subtle: color-mix(in oklab, var(--app-info) 10%, var(--app-surface));
+  --app-accent-subtle: color-mix(in oklab, var(--app-primary) 8%, var(--app-chip));
+
+  /* Elevation */
+  --elev-shadow-1: 0 1px 2px rgb(15 23 42 / 0.06);
+  --elev-shadow-2: 0 4px 12px rgb(15 23 42 / 0.08);
+  --elev-shadow-3: 0 12px 32px rgb(15 23 42 / 0.12);
+
+  /* Z-index scale — docs/frontend/foundations/Z_INDEX.md */
+  --z-base: 0;
+  --z-elevated: 10;
+  --z-sticky: 20;
+  --z-dropdown: 30;
+  --z-sidebar: 40;
+  --z-overlay: 50;
+  --z-panel: 60;
+  --z-modal: 70;
+  --z-toast: 80;
+  --z-tooltip: 90;
+}
+
+html.dark {
+  --app-canvas: #020617;
+  --app-surface: #0F172A;
+  --app-ring: #1E293B;
+  --app-ring-strong: #334155;
+  --app-input-border: #64748B;
+
+  --app-text-strong: #F8FAFC;
+  --app-text: #CBD5E1;
+  --app-text-muted: #94A3B8;
+  --app-text-subtle: #64748B;
+
+  --app-chip: #1E293B;
+  --app-chip-active: #334155;
+  --app-chip-hover: color-mix(in oklab, var(--app-chip) 85%, var(--app-text) 10%);
+
+  --app-table-row: var(--app-surface);
+  --app-table-row-alt: var(--app-chip);
+
+  --app-cta-bg: #F8FAFC;
+  --app-cta-fg: #020617;
+
+  --app-primary: #818CF8;
+  --app-primary-foreground: #FFFFFF;
+  --app-link: var(--app-primary);
+  --app-success: #2DD4BF;
+  --app-warning: #FBBF24;
+  --app-info: #818CF8;
+  --app-danger: #FB7185;
+  --app-on-accent: var(--app-primary-foreground);
+
+  --app-success-subtle: color-mix(in oklab, var(--app-success) 15%, var(--app-surface));
+  --app-warning-subtle: color-mix(in oklab, var(--app-warning) 15%, var(--app-surface));
+  --app-danger-subtle: color-mix(in oklab, var(--app-danger) 15%, var(--app-surface));
+  --app-info-subtle: color-mix(in oklab, var(--app-info) 15%, var(--app-surface));
+  --app-accent-subtle: color-mix(in oklab, var(--app-primary) 12%, var(--app-chip));
+
+  --elev-shadow-1: 0 0 0 1px var(--app-ring);
+  --elev-shadow-2: 0 0 0 1px var(--app-ring);
+  --elev-shadow-3: 0 0 0 1px var(--app-ring);
+}

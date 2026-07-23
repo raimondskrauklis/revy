@@ -1,0 +1,23 @@
+# backend/pyproject.toml
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "DTZ", "BLE", "G", "LOG"]
+ignore = [
+    "B008",
+    "E501",
+    "UP042",
+    "UP046",
+    "UP047",
+    "SIM108",
+    "RUF002",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"app/api/v1/health.py" = ["BLE001"]
+"app/core/exception_handlers.py" = ["G101", "LOG014"]
+"app/core/sentry.py" = ["SIM103"]
+"app/workers/celery_app.py" = ["E402"]
+"tests/**" = ["SIM117"]

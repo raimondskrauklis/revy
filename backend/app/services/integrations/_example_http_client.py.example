@@ -1,0 +1,32 @@
+# templates/backend/app/services/integrations/_example_http_client.py.example
+"""Example outbound HTTP wrapper — copy to integrations/<vendor>.py.
+
+See docs/backend/OUTBOUND_HTTP.md
+"""
+from __future__ import annotations
+
+import httpx
+
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+DEFAULT_TIMEOUT = httpx.Timeout(10.0, connect=5.0)
+
+
+class ExampleVendorClient:
+    def __init__(self, base_url: str, api_key: str) -> None:
+        self._client = httpx.AsyncClient(
+            base_url=base_url.rstrip("/"),
+            headers={"Authorization": f"Bearer {api_key}"},
+            timeout=DEFAULT_TIMEOUT,
+        )
+
+    async def close(self) -> None:
+        await self._client.aclose()
+
+    async def get_status(self) -> dict:
+        response = await self._client.get("/status")
+        response.raise_for_status()
+        logger.info("vendor_status_ok", extra={"operation": "get_status"})
+        return response.json()

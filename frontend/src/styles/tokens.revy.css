@@ -1,0 +1,22 @@
+/* product/revy/frontend/tokens.revy.css */
+/* Revy brand overrides — import after styles/tokens.css in index.css */
+
+:root {
+  --rv-primary: #6366f1;
+  --rv-primary-dark: #818cf8;
+
+  /* Map product tokens to app semantic tokens */
+  --app-primary: var(--rv-primary);
+  --app-link: var(--rv-primary);
+  --app-info: var(--rv-primary);
+  --app-cta-bg: var(--rv-primary);
+  --app-cta-fg: #ffffff;
+}
+
+html.dark {
+  --app-primary: var(--rv-primary-dark);
+  --app-link: var(--rv-primary-dark);
+  --app-info: var(--rv-primary-dark);
+  --app-cta-bg: var(--rv-primary-dark);
+  --app-cta-fg: #ffffff;
+}

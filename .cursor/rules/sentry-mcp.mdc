@@ -1,0 +1,14 @@
+---
+description: Sentry MCP — manual debugging only; never poll or fix unprompted
+alwaysApply: true
+---
+
+# Sentry MCP (manual only)
+
+Sentry MCP is in `.cursor/mcp.json`. **Do not call Sentry MCP tools** in general chat or on your own initiative.
+
+Use Sentry MCP only when the user:
+- invokes `@sentry-fix-issues`, or
+- explicitly asks to fix/investigate a **specific** issue (URL, short ID, or pasted trace they attached in that message).
+
+Never unprompted: `search_issues`, `list_issues`, backlog triage, or starting a fix from ambient context.

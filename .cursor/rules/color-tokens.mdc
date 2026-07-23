@@ -1,0 +1,16 @@
+---
+description: Frontend colors and `--tp-*` tokens — use when styling React UI or `index.css`
+globs: frontend/**/*.{tsx,ts,css}
+alwaysApply: false
+---
+
+# Color tokens (short)
+
+1. **Source of truth**: `docs/frontend_improvements/COLOR_TOKEN_UI_GUIDE.md` — open it for names and “when to use what”.
+2. **Only** `var(--tp-*)` in app UI (e.g. `bg-[color:var(--tp-surface)]`). No raw Tailwind colors (`bg-blue-500`, `text-amber-*`) in features.
+3. **Warning** is always `--tp-warning` (never `--tp-warn`). **Links**: `--tp-link`. **Text on solid fills** (accent/success/danger): `text-[color:var(--tp-on-accent)]`.
+4. **Borders**: hairlines `--tp-ring`; **focus** `--tp-ring-strong`; **input/checkbox idle** `--tp-input-border` (not `--tp-ring` for those).
+5. **Do not invent** `--tp-border`, `--tp-surface-muted`, `--tp-surface-elevated`, `*-muted` tints — use `--tp-ring` / `--tp-chip` / `*-subtle` per the guide.
+6. **Quiet chips** (`@/components/ui/quiet-chip`): zebra **data** rows → **`placement="dataRow"`** on neutral pills (`QuietChipStatus` `default`+`quiet`, **`QuietChipLabel`**, **`QuietChipTag`**). Shared IP signal tiers → **`ipSignalStrengthToStatusIntent`**. Plan: `docs/frontend_improvements/QUIET_CHIP_TABLE_BADGE_UX_PLAN.md`.
+
+Root `.cursorrules` §3 STYLING + INPUTS repeat essentials; this rule scopes them to `frontend/`.

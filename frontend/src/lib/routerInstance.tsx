@@ -1,0 +1,94 @@
+// frontend/src/lib/routerInstance.tsx
+import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { RequirePermission } from '@/components/auth/RequirePermission';
+import { AppShellLayout } from '@/components/layout/AppShellLayout';
+import { NotFoundPage } from '@/components/errors/NotFoundPage';
+import { LoginPage } from '@/features/auth/pages/LoginPage';
+import { AuthCallbackPage } from '@/features/auth/pages/AuthCallbackPage';
+import { UnauthorizedPage } from '@/features/auth/pages/UnauthorizedPage';
+import { StatusGatePage } from '@/features/auth/pages/StatusGatePage';
+import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
+import { AdminUsersPage } from '@/features/admin/pages/AdminUsersPage';
+import { SettingsPage } from '@/features/settings/pages/SettingsPage';
+
+export const appRouter = createBrowserRouter([
+  { path: '/', element: <Navigate to="/dashboard" replace /> },
+  { path: '/login', element: <LoginPage /> },
+  { path: '/auth/callback', element: <AuthCallbackPage /> },
+  {
+    path: '/auth/verify-email',
+    element: (
+      <StatusGatePage
+        titleKey="auth.status.verifyEmail.title"
+        bodyKey="auth.status.verifyEmail.body"
+      />
+    ),
+  },
+  {
+    path: '/complete-profile',
+    element: (
+      <StatusGatePage
+        titleKey="auth.status.completeProfile.title"
+        bodyKey="auth.status.completeProfile.body"
+      />
+    ),
+  },
+  {
+    path: '/pending-approval',
+    element: (
+      <StatusGatePage
+        titleKey="auth.status.pendingApproval.title"
+        bodyKey="auth.status.pendingApproval.body"
+      />
+    ),
+  },
+  {
+    path: '/account-rejected',
+    element: (
+      <StatusGatePage
+        titleKey="auth.status.rejected.title"
+        bodyKey="auth.status.rejected.body"
+      />
+    ),
+  },
+  {
+    path: '/account-suspended',
+    element: (
+      <StatusGatePage
+        titleKey="auth.status.suspended.title"
+        bodyKey="auth.status.suspended.body"
+      />
+    ),
+  },
+  {
+    path: '/unauthorized',
+    element: <UnauthorizedPage />,
+  },
+  {
+    element: <ProtectedRoute />,
+    children: [
+      {
+        path: '/dashboard',
+        element: <AppShellLayout />,
+        children: [{ index: true, element: <DashboardPage /> }],
+      },
+      {
+        path: '/settings',
+        element: <AppShellLayout />,
+        children: [{ index: true, element: <SettingsPage /> }],
+      },
+      {
+        element: <RequirePermission permission="admin:users" />,
+        children: [
+          {
+            path: '/admin/users',
+            element: <AppShellLayout />,
+            children: [{ index: true, element: <AdminUsersPage /> }],
+          },
+        ],
+      },
+    ],
+  },
+  { path: '*', element: <NotFoundPage /> },
+]);

@@ -1,0 +1,5 @@
+# templates/backend/app/models/_example_product_item.py.example
+"""Deprecated — use app/models/items.py as the live reference implementation.
+
+Copy patterns from items + services/items.py + api/v1/items.py + schemas/items.py.
+"""
