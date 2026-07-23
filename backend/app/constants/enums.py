@@ -43,7 +43,7 @@ class ItemStatus(str, Enum):
 
 
 class InvitationStatus(str, Enum):
-    """workspace_invitations.status — INVITATIONS.md (P1 migration)."""
+    """workspace_invitations.status — INVITATIONS.md."""
 
     pending = "pending"
     accepted = "accepted"

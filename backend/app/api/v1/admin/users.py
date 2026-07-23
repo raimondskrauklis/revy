@@ -5,9 +5,11 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.responses import JSONResponse
 
 from app.core.auth import CurrentUser, require_super_admin
 from app.core.database import get_db
+from app.core.idempotency import idempotency_guard
 from app.schemas.common import SuccessResponse
 from app.schemas.me import MeResponse
 from app.schemas.users import PendingUserResponse
@@ -37,7 +39,10 @@ async def post_approve_user(
     user_id: UUID,
     _admin: Annotated[CurrentUser, Depends(require_super_admin())],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> SuccessResponse[MeResponse]:
+    idempotent: Annotated[JSONResponse | None, Depends(idempotency_guard)] = None,
+) -> SuccessResponse[MeResponse] | JSONResponse:
+    if idempotent is not None:
+        return idempotent
     user = await approve_pending_user(session, user_id)
     await session.commit()
     me = await build_me_response(session, user.id)
@@ -49,7 +54,10 @@ async def post_reject_user(
     user_id: UUID,
     _admin: Annotated[CurrentUser, Depends(require_super_admin())],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> SuccessResponse[PendingUserResponse]:
+    idempotent: Annotated[JSONResponse | None, Depends(idempotency_guard)] = None,
+) -> SuccessResponse[PendingUserResponse] | JSONResponse:
+    if idempotent is not None:
+        return idempotent
     user = await reject_pending_user(session, user_id)
     await session.commit()
     return SuccessResponse(data=PendingUserResponse.model_validate(user))

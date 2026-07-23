@@ -13,6 +13,7 @@ from app.api.v1.health import router as health_router
 from app.core.config import settings
 from app.core.database import close_db, init_db
 from app.core.exception_handlers import register_exception_handlers
+from app.core.idempotency import IdempotencyStoreMiddleware
 from app.core.jwks import jwks_client
 from app.core.logging import RequestIdMiddleware, configure_logging, get_logger
 from app.core.rate_limit import close_redis
@@ -47,6 +48,7 @@ def create_app() -> FastAPI:
     register_exception_handlers(app)
 
     app.add_middleware(RequestIdMiddleware)
+    app.add_middleware(IdempotencyStoreMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

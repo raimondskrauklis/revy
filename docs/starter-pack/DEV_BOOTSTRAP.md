@@ -40,6 +40,25 @@ Operator runbook: DigitalOcean managed PostgreSQL 17, Keycloak, local Redis, API
 
 5. Copy frontend env: `cp frontend/.env.example frontend/.env.local` and align `VITE_KEYCLOAK_*` with backend.
 
+### Env pruning (P3 — strict Settings)
+
+`Settings` rejects unknown keys. Before running the API or tests after P3, ensure `backend/.env` contains **only** variables defined in `backend/.env.example` / `app.core.config.Settings`.
+
+Remove legacy carryover keys, for example:
+
+- `FRONTEND_BASE_URL` → use `APP_PUBLIC_URL`
+- `STORAGE_*`, `RAW_FILES_BUCKET`, `DO_KP_*`
+- `PROD_DATABASE_URL`, `ENABLE_REQUEST_LOGGING`
+- Any `KP_*` prefix from the KP platform fork
+
+Verify:
+
+```bash
+cd backend && pipenv run python -c "from app.core.config import settings; print(settings.environment)"
+```
+
+For CI and local unit tests, set `ENVIRONMENT=test` when using a dedicated test database (see `TEST_DATABASE_URL` in `.env.example`).
+
 ---
 
 ## 2. PostgreSQL extensions (doadmin)

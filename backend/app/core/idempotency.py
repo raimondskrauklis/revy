@@ -8,8 +8,10 @@ from typing import Annotated, Any
 
 from fastapi import Depends, Request
 from redis.asyncio import Redis
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse, Response
 
+from app.core.auth import CurrentUser, get_current_user
 from app.core.rate_limit import get_redis
 from app.core.security import app_secret_fingerprint
 
@@ -87,3 +89,28 @@ async def store_idempotent_response(
         "body": body,
     }
     await redis.set(redis_key, json.dumps(payload), ex=IDEMPOTENCY_TTL_SECONDS)
+
+
+async def idempotency_guard(
+    request: Request,
+    redis: Annotated[Redis, Depends(get_redis)],
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> JSONResponse | None:
+    """Return cached POST response when Idempotency-Key matches, else prime request.state."""
+    request.state.idempotency_user_sub = current_user.sub
+    return await load_idempotent_response(request, redis, user_sub=current_user.sub)
+
+
+class IdempotencyStoreMiddleware(BaseHTTPMiddleware):
+    """Persist successful POST responses keyed by Idempotency-Key + user sub."""
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        response = await call_next(request)
+        if getattr(request.state, "idempotency_redis_key", None) is None:
+            return response
+        user_sub = getattr(request.state, "idempotency_user_sub", None)
+        if user_sub is None:
+            return response
+        redis = await get_redis()
+        await store_idempotent_response(request, response, redis, user_sub=user_sub)
+        return response
