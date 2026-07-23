@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import GitHubInstallationStatus
@@ -18,7 +19,29 @@ from app.core.pagination import (
     encode_cursor,
 )
 from app.models.github_installation import GitHubInstallationORM
+from app.models.workspaces import WorkspaceORM
 from app.schemas.github_installation import GitHubInstallationCreate, GitHubInstallationResponse
+
+
+def _installation_conflict(
+    existing: GitHubInstallationORM,
+    *,
+    workspace_id: UUID,
+) -> ConflictError:
+    if existing.workspace_id == workspace_id:
+        return ConflictError(message="GitHub installation already registered for this workspace")
+    return ConflictError(message="GitHub installation is linked to another workspace")
+
+
+async def _find_installation_by_github_id(
+    session: AsyncSession,
+    github_installation_id: int,
+) -> GitHubInstallationORM | None:
+    return await session.scalar(
+        select(GitHubInstallationORM).where(
+            GitHubInstallationORM.github_installation_id == github_installation_id,
+        )
+    )
 
 
 async def list_github_installations(
@@ -66,15 +89,15 @@ async def create_github_installation(
     workspace_id: UUID,
     payload: GitHubInstallationCreate,
 ) -> GitHubInstallationORM:
-    existing = await session.scalar(
-        select(GitHubInstallationORM).where(
-            GitHubInstallationORM.github_installation_id == payload.github_installation_id,
-        )
+    workspace = await session.scalar(
+        select(WorkspaceORM).where(WorkspaceORM.id == workspace_id).with_for_update()
     )
+    if workspace is None:
+        raise NotFoundError("Workspace not found")
+
+    existing = await _find_installation_by_github_id(session, payload.github_installation_id)
     if existing is not None:
-        if existing.workspace_id == workspace_id:
-            raise ConflictError(message="GitHub installation already registered for this workspace")
-        raise ConflictError(message="GitHub installation is linked to another workspace")
+        raise _installation_conflict(existing, workspace_id=workspace_id)
 
     installation = GitHubInstallationORM(
         workspace_id=workspace_id,
@@ -86,7 +109,14 @@ async def create_github_installation(
         permissions_snapshot=payload.permissions_snapshot,
     )
     session.add(installation)
-    await session.flush()
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        await session.rollback()
+        raced = await _find_installation_by_github_id(session, payload.github_installation_id)
+        if raced is not None:
+            raise _installation_conflict(raced, workspace_id=workspace_id) from exc
+        raise ConflictError(message="GitHub installation already registered") from exc
     return installation
 
 

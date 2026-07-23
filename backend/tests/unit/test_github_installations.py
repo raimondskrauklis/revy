@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from app.constants.enums import GitHubAccountType, GitHubInstallationStatus
 from app.core.exceptions import ConflictError
@@ -18,7 +19,7 @@ from app.services.github_installations import create_github_installation, list_g
 async def test_create_github_installation_persists_row():
     workspace_id = uuid.uuid4()
     session = AsyncMock()
-    session.scalar = AsyncMock(return_value=None)
+    session.scalar = AsyncMock(side_effect=[MagicMock(), None])
     session.add = MagicMock()
     session.flush = AsyncMock()
 
@@ -52,7 +53,7 @@ async def test_create_github_installation_rejects_duplicate():
     )
 
     session = AsyncMock()
-    session.scalar = AsyncMock(return_value=existing)
+    session.scalar = AsyncMock(side_effect=[MagicMock(), existing])
 
     payload = GitHubInstallationCreate(
         github_installation_id=12345,
@@ -63,6 +64,38 @@ async def test_create_github_installation_rejects_duplicate():
 
     with pytest.raises(ConflictError):
         await create_github_installation(session, workspace_id=workspace_id, payload=payload)
+
+
+@pytest.mark.asyncio
+async def test_create_github_installation_maps_integrity_error_to_conflict():
+    workspace_id = uuid.uuid4()
+    other_workspace_id = uuid.uuid4()
+    raced = GitHubInstallationORM(
+        workspace_id=other_workspace_id,
+        github_installation_id=12345,
+        account_login="acme-corp",
+        account_type=GitHubAccountType.organization,
+        account_id=99,
+        status=GitHubInstallationStatus.active,
+    )
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[MagicMock(), None, raced])
+    session.add = MagicMock()
+    session.rollback = AsyncMock()
+    session.flush = AsyncMock(side_effect=IntegrityError("insert", {}, Exception("unique")))
+
+    payload = GitHubInstallationCreate(
+        github_installation_id=12345,
+        account_login="acme-corp",
+        account_type=GitHubAccountType.organization,
+        account_id=99,
+    )
+
+    with pytest.raises(ConflictError, match="linked to another workspace"):
+        await create_github_installation(session, workspace_id=workspace_id, payload=payload)
+
+    session.rollback.assert_awaited_once()
 
 
 @pytest.mark.asyncio
