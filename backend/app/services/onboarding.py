@@ -6,6 +6,7 @@ import re
 import uuid
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import AppRole, UserStatus
@@ -95,7 +96,9 @@ async def complete_user_profile(
     full_name: str,
 ) -> UserORM:
     """POST /users/complete-profile — Mode A activates; Mode B → pending_approval."""
-    user = await session.get(UserORM, user_id)
+    user = await session.scalar(
+        select(UserORM).where(UserORM.id == user_id).with_for_update()
+    )
     if user is None:
         raise NotFoundError("User not found")
 

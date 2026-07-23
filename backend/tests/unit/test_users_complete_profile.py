@@ -22,7 +22,7 @@ async def test_complete_profile_mode_a_activates_user():
     user.id = user_id
 
     session = AsyncMock()
-    session.get = AsyncMock(return_value=user)
+    session.scalar = AsyncMock(return_value=user)
     session.flush = AsyncMock()
     session.add = MagicMock()
 
@@ -51,7 +51,7 @@ async def test_complete_profile_mode_b_pending_approval():
     user.id = user_id
 
     session = AsyncMock()
-    session.get = AsyncMock(return_value=user)
+    session.scalar = AsyncMock(return_value=user)
     session.flush = AsyncMock()
 
     with patch("app.services.onboarding.settings.registration_require_admin_approval", True):
@@ -72,7 +72,7 @@ async def test_complete_profile_rejects_active_user():
     user.id = user_id
 
     session = AsyncMock()
-    session.get = AsyncMock(return_value=user)
+    session.scalar = AsyncMock(return_value=user)
 
     with pytest.raises(ConflictError):
         await complete_user_profile(session, user_id, full_name="Name")
@@ -89,7 +89,7 @@ async def test_complete_profile_rejects_wrong_status():
     user.id = user_id
 
     session = AsyncMock()
-    session.get = AsyncMock(return_value=user)
+    session.scalar = AsyncMock(return_value=user)
 
     with pytest.raises(ForbiddenError):
         await complete_user_profile(session, user_id, full_name="Name")
