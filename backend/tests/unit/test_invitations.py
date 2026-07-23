@@ -19,7 +19,7 @@ async def test_create_invitation_persists_row():
     workspace_id = uuid.uuid4()
     inviter_id = uuid.uuid4()
     session = AsyncMock()
-    session.scalar = AsyncMock(side_effect=[None, None])
+    session.scalar = AsyncMock(side_effect=[None, MagicMock(), None])
     session.add = MagicMock()
     session.flush = AsyncMock()
 
@@ -95,7 +95,7 @@ async def test_create_invitation_rejects_duplicate_pending():
     )
 
     session = AsyncMock()
-    session.scalar = AsyncMock(side_effect=[None, pending])
+    session.scalar = AsyncMock(side_effect=[None, MagicMock(), pending])
 
     with pytest.raises(ConflictError, match="pending invitation"):
         await create_invitation(
@@ -140,6 +140,60 @@ async def test_accept_invitation_creates_membership():
     assert invitation.status == InvitationStatus.accepted
     assert invitation.accepted_at is not None
     assert user.status == UserStatus.active
+
+
+@pytest.mark.asyncio
+async def test_accept_invitation_leaves_active_user_unchanged():
+    workspace_id = uuid.uuid4()
+    user = UserORM(
+        keycloak_user_id="kc-active",
+        email="active@example.com",
+        status=UserStatus.active,
+    )
+    user.id = uuid.uuid4()
+
+    invitation = WorkspaceInvitationORM(
+        workspace_id=workspace_id,
+        email="active@example.com",
+        role=AppRole.viewer,
+        token="active-token",
+        invited_by_user_id=uuid.uuid4(),
+        status=InvitationStatus.pending,
+        expires_at=datetime.now(UTC) + timedelta(days=1),
+    )
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[invitation, None])
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    await accept_invitation(session, token="active-token", user=user)
+
+    assert user.status == UserStatus.active
+
+
+@pytest.mark.asyncio
+async def test_accept_invitation_rejects_pending_approval():
+    user = UserORM(
+        keycloak_user_id="kc-wait",
+        email="wait@example.com",
+        status=UserStatus.pending_approval,
+    )
+    invitation = WorkspaceInvitationORM(
+        workspace_id=uuid.uuid4(),
+        email="wait@example.com",
+        role=AppRole.viewer,
+        token="token",
+        invited_by_user_id=uuid.uuid4(),
+        status=InvitationStatus.pending,
+        expires_at=datetime.now(UTC) + timedelta(days=1),
+    )
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(return_value=invitation)
+
+    with pytest.raises(ForbiddenError, match="cannot accept invitations"):
+        await accept_invitation(session, token="token", user=user)
 
 
 @pytest.mark.asyncio
