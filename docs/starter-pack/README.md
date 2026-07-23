@@ -16,7 +16,7 @@ Execution plans peer-reviewed (final pass 2026-07-24) — see findings § Peer r
 | Phase | File | Status |
 |-------|------|--------|
 | P0 — Scaffold baseline | [SCAFFOLD_P0_EXECUTION.md](./SCAFFOLD_P0_EXECUTION.md) | Done (2026-07-23) |
-| P1 — Runnable dev platform | [SCAFFOLD_P1_EXECUTION.md](./SCAFFOLD_P1_EXECUTION.md) | pending |
+| P1 — Runnable dev platform | [SCAFFOLD_P1_EXECUTION.md](./SCAFFOLD_P1_EXECUTION.md) | Done (2026-07-24) — human Keycloak smoke pending |
 | P2 — Registration & platform flows | [SCAFFOLD_P2_EXECUTION.md](./SCAFFOLD_P2_EXECUTION.md) | pending |
 | P3 — Shared platform hardening | [SCAFFOLD_P3_EXECUTION.md](./SCAFFOLD_P3_EXECUTION.md) | pending |
 | P4 — Revy product foundation | [SCAFFOLD_P4_EXECUTION.md](./SCAFFOLD_P4_EXECUTION.md) | pending |
@@ -26,4 +26,4 @@ Execution plans peer-reviewed (final pass 2026-07-24) — see findings § Peer r
 
 **Locked exclusions (Phases 1–4):** `.cursorrules`, deploy workflow, root `AGENTS.md`/`README` — see [findings § Locked exclusions](./SCAFFOLD_FINDINGS.md#locked-exclusions).
 
-**Next:** `phase-execution` → [SCAFFOLD_P1_EXECUTION.md](./SCAFFOLD_P1_EXECUTION.md)
+**Next:** `phase-execution` → [SCAFFOLD_P2_EXECUTION.md](./SCAFFOLD_P2_EXECUTION.md)
