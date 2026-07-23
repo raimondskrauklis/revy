@@ -92,6 +92,8 @@ Test DB (optional local check):
 pipenv run alembic -x test=true upgrade head
 ```
 
+Optional: register a test GitHub installation via **Installations** in the dashboard (dev manual register form).
+
 ---
 
 ## 4. Local Redis

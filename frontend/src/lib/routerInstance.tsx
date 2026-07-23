@@ -12,6 +12,7 @@ import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
 import { AdminUsersPage } from '@/features/admin/pages/AdminUsersPage';
 import { RequirePlatformAdmin } from '@/components/auth/RequirePlatformAdmin';
 import { SettingsPage } from '@/features/settings/pages/SettingsPage';
+import { InstallationsPage } from '@/features/installations/pages/InstallationsPage';
 
 export const appRouter = createBrowserRouter([
   { path: '/', element: <Navigate to="/dashboard" replace /> },
@@ -68,6 +69,11 @@ export const appRouter = createBrowserRouter([
         path: '/dashboard',
         element: <AppShellLayout />,
         children: [{ index: true, element: <DashboardPage /> }],
+      },
+      {
+        path: '/installations',
+        element: <AppShellLayout />,
+        children: [{ index: true, element: <InstallationsPage /> }],
       },
       {
         path: '/settings',

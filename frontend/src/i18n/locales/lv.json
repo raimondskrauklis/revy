@@ -16,6 +16,7 @@
   "nav": {
     "home": "Sākums",
     "dashboard": "Panelis",
+    "installations": "Instalācijas",
     "settings": "Iestatījumi"
   },
   "theme": {
@@ -130,6 +131,37 @@
       "nameLabel": "Attēlojamais vārds",
       "nameRequired": "Vārds ir obligāts",
       "submit": "Turpināt"
+    }
+  },
+  "installations": {
+    "title": "GitHub instalācijas",
+    "subtitle": "Piesaistiet GitHub App instalācijas šai darbvietai.",
+    "empty": "Vēl nav GitHub instalāciju.",
+    "noWorkspace": "Izvēlieties darbvietu, lai skatītu instalācijas.",
+    "table": {
+      "account": "Konts",
+      "type": "Tips",
+      "installationId": "Instalācijas ID",
+      "status": "Statuss",
+      "created": "Izveidots"
+    },
+    "accountType": {
+      "organization": "Organizācija",
+      "user": "Lietotājs"
+    },
+    "status": {
+      "active": "Aktīvs",
+      "suspended": "Apturēts",
+      "removed": "Noņemts"
+    },
+    "register": {
+      "title": "Reģistrēt instalāciju",
+      "description": "Tikai izstrādei — manuāla reģistrācija līdz webhook fāzei.",
+      "installationId": "GitHub instalācijas ID",
+      "accountLogin": "Konta login",
+      "accountId": "GitHub konta ID",
+      "accountType": "Konta tips",
+      "submit": "Reģistrēt instalāciju"
     }
   },
   "errors": {

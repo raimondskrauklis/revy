@@ -12,12 +12,12 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.core.config import settings
 from app.core.database import get_db
-from app.main import app
 
 
 def _test_database_url() -> str | None:
+    from app.core.config import settings
+
     return os.environ.get("TEST_DATABASE_URL") or settings.test_database_url
 
 
@@ -36,6 +36,8 @@ async def db_session() -> AsyncSession:
 
 @pytest.fixture
 async def async_client(db_session: AsyncSession):
+    from app.main import app
+
     async def _override_get_db():
         yield db_session
 

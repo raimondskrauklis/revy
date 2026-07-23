@@ -49,3 +49,18 @@ class InvitationStatus(str, Enum):
     accepted = "accepted"
     revoked = "revoked"
     expired = "expired"
+
+
+class GitHubAccountType(str, Enum):
+    """github_installations.account_type — REVY_PRODUCT_SLICE.md."""
+
+    organization = "organization"
+    user = "user"
+
+
+class GitHubInstallationStatus(str, Enum):
+    """github_installations.status — REVY_PRODUCT_SLICE.md."""
+
+    active = "active"
+    suspended = "suspended"
+    removed = "removed"

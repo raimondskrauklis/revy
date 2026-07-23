@@ -16,6 +16,7 @@
   "nav": {
     "home": "Home",
     "dashboard": "Dashboard",
+    "installations": "Installations",
     "settings": "Settings"
   },
   "theme": {
@@ -130,6 +131,37 @@
       "nameLabel": "Display name",
       "nameRequired": "Display name is required",
       "submit": "Continue"
+    }
+  },
+  "installations": {
+    "title": "GitHub installations",
+    "subtitle": "Connect GitHub App installations to this workspace.",
+    "empty": "No GitHub installations yet.",
+    "noWorkspace": "Select a workspace to view installations.",
+    "table": {
+      "account": "Account",
+      "type": "Type",
+      "installationId": "Installation ID",
+      "status": "Status",
+      "created": "Created"
+    },
+    "accountType": {
+      "organization": "Organization",
+      "user": "User"
+    },
+    "status": {
+      "active": "Active",
+      "suspended": "Suspended",
+      "removed": "Removed"
+    },
+    "register": {
+      "title": "Register installation",
+      "description": "Dev-only manual registration until the webhook phase ships.",
+      "installationId": "GitHub installation ID",
+      "accountLogin": "Account login",
+      "accountId": "GitHub account ID",
+      "accountType": "Account type",
+      "submit": "Register installation"
     }
   },
   "errors": {
