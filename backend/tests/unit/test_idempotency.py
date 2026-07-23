@@ -10,6 +10,7 @@ from app.core.idempotency import (
     IDEMPOTENCY_REDIS_PREFIX,
     _request_fingerprint,
     load_idempotent_response,
+    release_idempotency_reservation,
     store_idempotent_response,
 )
 
@@ -46,12 +47,14 @@ async def test_load_idempotent_response_miss_primes_state():
     request = _make_request()
     redis = AsyncMock()
     redis.get = AsyncMock(return_value=None)
+    redis.set = AsyncMock(return_value=True)
 
     result = await load_idempotent_response(request, redis, user_sub="user-sub")
 
     assert result is None
     assert request.state.idempotency_redis_key == f"{IDEMPOTENCY_REDIS_PREFIX}:user-sub:key-1"
     assert request.state.idempotency_fingerprint == _request_fingerprint(request, b'{"name":"Example"}')
+    redis.set.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -101,6 +104,30 @@ async def test_load_idempotent_response_skips_without_header():
 
 
 @pytest.mark.asyncio
+async def test_store_idempotent_response_skips_empty_success_body():
+    request = _make_request()
+    fingerprint = _request_fingerprint(request, b'{"name":"Example"}')
+    request.state.idempotency_redis_key = f"{IDEMPOTENCY_REDIS_PREFIX}:user-sub:key-1"
+    request.state.idempotency_fingerprint = fingerprint
+
+    response = MagicMock()
+    response.status_code = 201
+    response.body = b""
+
+    redis = AsyncMock()
+    redis.get = AsyncMock(
+        return_value=json.dumps({"status": "in_flight", "fingerprint": fingerprint})
+    )
+    redis.delete = AsyncMock()
+    redis.set = AsyncMock()
+
+    await store_idempotent_response(request, response, redis, user_sub="user-sub", body_bytes=b"")
+
+    redis.set.assert_not_called()
+    redis.delete.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_store_idempotent_response_persists_success():
     request = _make_request()
     request.state.idempotency_redis_key = f"{IDEMPOTENCY_REDIS_PREFIX}:user-sub:key-1"
@@ -134,6 +161,40 @@ async def test_store_idempotent_response_skips_non_success():
     response.body = b""
 
     redis = AsyncMock()
+    redis.get = AsyncMock(return_value='{"status":"in_flight","fingerprint":"fp"}')
+    redis.delete = AsyncMock()
     await store_idempotent_response(request, response, redis, user_sub="user-sub")
 
     redis.set.assert_not_called()
+    redis.delete.assert_awaited_once_with("key")
+
+
+@pytest.mark.asyncio
+async def test_release_idempotency_reservation_clears_in_flight():
+    request = _make_request()
+    request.state.idempotency_redis_key = "key"
+    request.state.idempotency_fingerprint = "fp"
+
+    redis = AsyncMock()
+    redis.get = AsyncMock(return_value='{"status":"in_flight","fingerprint":"fp"}')
+    redis.delete = AsyncMock()
+
+    await release_idempotency_reservation(request, redis)
+
+    redis.delete.assert_awaited_once_with("key")
+
+
+@pytest.mark.asyncio
+async def test_load_idempotent_response_in_flight_returns_conflict():
+    request = _make_request()
+    redis = AsyncMock()
+    redis.get = AsyncMock(
+        return_value='{"status":"in_flight","fingerprint":"'
+        + _request_fingerprint(request, b'{"name":"Example"}')
+        + '"}'
+    )
+
+    result = await load_idempotent_response(request, redis, user_sub="user-sub")
+
+    assert result is not None
+    assert result.status_code == 409

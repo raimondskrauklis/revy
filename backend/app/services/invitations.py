@@ -14,8 +14,19 @@ from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError, Va
 from app.models.invitations import WorkspaceInvitationORM
 from app.models.users import UserORM
 from app.models.workspace_memberships import WorkspaceMembershipORM
+from app.models.workspaces import WorkspaceORM
 
 INVITATION_TTL_DAYS = 7
+
+_INVITATION_ACCEPT_BLOCKED_STATUSES = frozenset(
+    {
+        UserStatus.pending_activation,
+        UserStatus.pending_email_verification,
+        UserStatus.pending_approval,
+        UserStatus.rejected,
+        UserStatus.suspended,
+    }
+)
 
 
 def _generate_token() -> str:
@@ -58,14 +69,22 @@ async def create_invitation(
         if membership is not None:
             raise ConflictError(message="User is already a workspace member")
 
+    workspace = await session.scalar(
+        select(WorkspaceORM).where(WorkspaceORM.id == workspace_id).with_for_update()
+    )
+    if workspace is None:
+        raise NotFoundError("Workspace not found")
+
     now = datetime.now(UTC)
     pending_invite = await session.scalar(
-        select(WorkspaceInvitationORM).where(
+        select(WorkspaceInvitationORM)
+        .where(
             WorkspaceInvitationORM.workspace_id == workspace_id,
             func.lower(WorkspaceInvitationORM.email) == normalized,
             WorkspaceInvitationORM.status == InvitationStatus.pending,
             WorkspaceInvitationORM.expires_at > now,
         )
+        .with_for_update()
     )
     if pending_invite is not None:
         raise ConflictError(message="A pending invitation already exists for this email")
@@ -116,6 +135,9 @@ async def accept_invitation(
     if user.email.strip().lower() != invitation.email:
         raise ForbiddenError(message="Invitation email does not match your account")
 
+    if user.status in _INVITATION_ACCEPT_BLOCKED_STATUSES:
+        raise ForbiddenError(message="Account cannot accept invitations in current status")
+
     existing_membership = await session.scalar(
         select(WorkspaceMembershipORM).where(
             WorkspaceMembershipORM.user_id == user.id,
@@ -135,7 +157,7 @@ async def accept_invitation(
     invitation.status = InvitationStatus.accepted
     invitation.accepted_at = now
 
-    if user.status != UserStatus.active:
+    if user.status == UserStatus.pending_profile:
         user.status = UserStatus.active
 
     await session.flush()
