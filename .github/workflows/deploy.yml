@@ -344,6 +344,11 @@ jobs:
             set -e
             echo "🔄 Running database migrations..."
 
+            DOCKER_CONFIG="$(mktemp -d)"
+            export DOCKER_CONFIG
+            printf '{}\n' > "${DOCKER_CONFIG}/config.json"
+            trap 'rm -rf "${DOCKER_CONFIG}"' EXIT
+
             echo "${{ secrets.DOCR_TOKEN }}" | docker login ${{ env.REGISTRY }} -u doctoken --password-stdin
 
             docker pull ${{ env.REGISTRY }}/${{ env.REGISTRY_NAME }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
@@ -367,6 +372,11 @@ jobs:
           script: |
             set -e
             echo "🚀 Deploying backend..."
+
+            DOCKER_CONFIG="$(mktemp -d)"
+            export DOCKER_CONFIG
+            printf '{}\n' > "${DOCKER_CONFIG}/config.json"
+            trap 'rm -rf "${DOCKER_CONFIG}"' EXIT
 
             echo "${{ secrets.DOCR_TOKEN }}" | docker login ${{ env.REGISTRY }} -u doctoken --password-stdin
 
@@ -399,6 +409,11 @@ jobs:
             set -e
             echo "🚀 Deploying frontend..."
 
+            DOCKER_CONFIG="$(mktemp -d)"
+            export DOCKER_CONFIG
+            printf '{}\n' > "${DOCKER_CONFIG}/config.json"
+            trap 'rm -rf "${DOCKER_CONFIG}"' EXIT
+
             echo "${{ secrets.DOCR_TOKEN }}" | docker login ${{ env.REGISTRY }} -u doctoken --password-stdin
 
             docker pull ${{ env.REGISTRY }}/${{ env.REGISTRY_NAME }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
@@ -429,6 +444,11 @@ jobs:
           script: |
             set -e
             echo "🚀 Deploying Celery workers..."
+
+            DOCKER_CONFIG="$(mktemp -d)"
+            export DOCKER_CONFIG
+            printf '{}\n' > "${DOCKER_CONFIG}/config.json"
+            trap 'rm -rf "${DOCKER_CONFIG}"' EXIT
 
             echo "${{ secrets.DOCR_TOKEN }}" | docker login ${{ env.REGISTRY }} -u doctoken --password-stdin
             docker pull ${{ env.REGISTRY }}/${{ env.REGISTRY_NAME }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
