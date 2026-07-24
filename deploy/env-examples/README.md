@@ -8,10 +8,13 @@ Canonical env examples for local development and production. Copy from here — 
 |-------|-----------|-------------------|----------------|
 | Backend | `backend/.env` | `/mnt/revy/backend/.env` | `CI_*` test secrets |
 | Frontend `VITE_*` | `frontend/.env.local` | Baked at CI build — **not** on droplet | Repository secrets |
-| Keycloak JDBC | `deploy/keycloak/.env` | Shared backend `.env` | — |
+| Keycloak | — | `/mnt/revy_volume/keycloak/config/` | `deploy/keycloak/config/` |
 | Deploy | — | — | `DOCR_TOKEN`, `DROPLET_IP`, `SSH_PRIVATE_KEY` |
+| Nginx vhosts | — | `/etc/nginx/sites-available/` | `deploy/nginx/*.conf` |
 
 Production frontend is static `serve -s dist` — changing `VITE_*` requires **rebuild + redeploy** of `revy-web`.
+
+**Production URLs (`createit.digital`):** SPA/API `https://revy.createit.digital`, Keycloak `https://auth.revy.createit.digital` (not `/auth` on the app host).
 
 ## Files
 

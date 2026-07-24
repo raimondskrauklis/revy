@@ -1,0 +1,25 @@
+# deploy/keycloak/config/docker-compose.simple.yml
+# Fallback only — slower cold start, no image build. Same .env as production.
+#   docker compose -f docker-compose.simple.yml up -d
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: revy-kc
+    restart: unless-stopped
+    command: start
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:9000:9000"
+    mem_limit: 1g
+    networks:
+      revy-net:
+        aliases:
+          - keycloak
+
+networks:
+  revy-net:
+    external: true
+    name: revy-net

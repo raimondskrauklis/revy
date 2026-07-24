@@ -6,12 +6,11 @@ from datetime import UTC, datetime
 from logging.config import fileConfig
 from pathlib import Path
 
-from sqlalchemy import pool, text
+from sqlalchemy import inspect, pool, text
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
-from sqlalchemy import inspect
 
-import app.core.alembic_postgresql  # noqa: F401 — register RevyPostgresqlImpl (long version_num)
+import app.core.alembic_postgresql
 import app.models  # noqa: F401 — register ORM tables on Base.metadata
 from alembic import context
 from app.core.alembic_postgresql import ALEMBIC_VERSION_NUM_LENGTH

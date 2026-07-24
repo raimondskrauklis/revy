@@ -108,7 +108,8 @@ Revy changes flowed back to `internal-docs/starter-pack/templates/backend/` for:
 | Idempotency | `IDEMPOTENCY.md` | **Module only** — not wired to routers |
 | Email | `EMAIL.md` | **Verified** — console + Mailgun providers |
 | Cursor lists / items | `AGENT_PATTERNS.md` | **Verified** — items slice |
-| Celery | generic queues | **Skeleton** — not Revy queue map (`implementation.revy.md`) |
+| Celery | generic queues | **Revy queue map** — `github_events` routes wired (P4); task modules stub |
+| `github_installation` | TENANCY.md | **Verified** — migration, API, dashboard UI (P4) |
 | Frontend status gates | `ProtectedRoute.tsx` | **Verified** — `VITE_REGISTRATION_*`; routes render informational `StatusGatePage`, not forms/admin queue |
 | Migrations applied | — | **Assumption** — files exist; DO apply not verified in CI |
 

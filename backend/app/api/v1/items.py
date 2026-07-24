@@ -5,10 +5,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.responses import JSONResponse
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.database import get_db
 from app.core.exceptions import ForbiddenError
+from app.core.idempotency import idempotency_guard
 from app.core.pagination import CursorParams, CursorResponse, get_cursor_params
 from app.core.permissions import Permission, require_permission
 from app.core.tenancy import require_workspace, workspace_id_for_create
@@ -42,7 +44,10 @@ async def post_item(
     body: ItemCreate,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> SuccessResponse[ItemResponse]:
+    idempotent: Annotated[JSONResponse | None, Depends(idempotency_guard)] = None,
+) -> SuccessResponse[ItemResponse] | JSONResponse:
+    if idempotent is not None:
+        return idempotent
     require_permission(current_user, Permission.items_manage)
     if current_user.user_id is None:
         raise ForbiddenError(message="User not provisioned")

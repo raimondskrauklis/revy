@@ -10,3 +10,14 @@ export enum AppRole {
 export enum PlatformRole {
   super_admin = 'super_admin',
 }
+
+export enum GitHubAccountType {
+  organization = 'organization',
+  user = 'user',
+}
+
+export enum GitHubInstallationStatus {
+  active = 'active',
+  suspended = 'suspended',
+  removed = 'removed',
+}

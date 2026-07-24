@@ -1,0 +1,33 @@
+# deploy/keycloak/config/docker-compose.yml
+# Production (KC 26 optimized). Run from THIS directory:
+#   cp .env.example .env && $EDITOR .env
+#   docker compose build
+#   docker compose up -d
+#   curl -sf http://127.0.0.1:9000/health/ready
+#
+# Droplet path: /mnt/revy_volume/keycloak/config/
+
+services:
+  keycloak:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: revy-keycloak:26.0
+    container_name: revy-kc
+    restart: unless-stopped
+    command: start --optimized
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:9000:9000"
+    mem_limit: 1g
+    networks:
+      revy-net:
+        aliases:
+          - keycloak
+
+networks:
+  revy-net:
+    external: true
+    name: revy-net

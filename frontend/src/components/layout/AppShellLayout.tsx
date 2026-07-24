@@ -6,7 +6,7 @@
  */
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LayoutDashboard, Settings } from 'lucide-react';
+import { LayoutDashboard, Plug, Settings } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { StackShell } from '@/components/layout/StackShell';
 
@@ -18,6 +18,7 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'nav.dashboard', icon: LayoutDashboard },
+  { href: '/installations', label: 'nav.installations', icon: Plug },
   { href: '/settings', label: 'nav.settings', icon: Settings },
 ];
 

@@ -1,4 +1,4 @@
-name: CI/CD - kp-platform
+name: CI/CD - Revy
 
 on:
   pull_request:
@@ -10,67 +10,43 @@ on:
 
 # Avoid overlapping runs on the same ref
 concurrency:
-  group: kp-platform-${{ github.ref }}
+  group: revy-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   REGISTRY: registry.digitalocean.com
-  REGISTRY_NAME: kp-project           # change if your DO registry name differs
-  BACKEND_IMAGE: kp-platform-backend      # registry.digitalocean.com/<REGISTRY_NAME>/<BACKEND_IMAGE>
-  FRONTEND_IMAGE: kp-platform-frontend
-  BACKEND_CONTAINER_NAME: kp-platform-backend
-  FRONTEND_CONTAINER_NAME: kp-platform-frontend
-  DOCKER_NETWORK: kp-platform-net       # either create this network or change to your actual one
-  ENV_FILE_PATH: /mnt/volume_kp/backend/.env
-  # Toggle Celery worker + beat recycle (general queue `celery`). "false" = leave long-running jobs running.
-  # See: docs/system/celery_workers.md, docs/file_processing/WORKER_QUEUE_SPLIT.md
+  # DO control panel → Container Registry name (full image: REGISTRY/REGISTRY_NAME/IMAGE:tag)
+  REGISTRY_NAME: revy-container-registry
+  BACKEND_IMAGE: revy-api
+  FRONTEND_IMAGE: revy-web
+  BACKEND_CONTAINER_NAME: revy-api
+  FRONTEND_CONTAINER_NAME: revy-web
+  DOCKER_NETWORK: revy-net
+  ENV_FILE_PATH: /mnt/revy/backend/.env
   RESTART_WORKERS: "true"
-  # Dedicated document-analysis worker only (`kp-platform-celery-worker-documents`, queue `documents`).
-  # Independent of RESTART_WORKERS — ship doc pipeline image without restarting general worker.
-  RESTART_DOCUMENT_WORKER: "true"
-  # Dedicated indicator-monitoring worker (`kp-platform-celery-worker-monitoring`, queue `monitoring`).
-  RESTART_MONITORING_WORKER: "true"
-  # Dedicated market-scan worker (`kp-platform-celery-worker-market`, queue `market`).
-  # A restart kills an in-flight full market scan (~hours; the run guard reclaims it as failed) —
-  # set "false" while a scan is running. Never add `market` to another worker's -Q list.
-  # See: docs/risk_profiles/CELERY_WORKERS.md, docs/investigation/market_indicators/P2_*.md (P2.1 ops).
-  RESTART_MARKET_WORKER: "true"
-  # Dedicated graph community worker (`kp-platform-celery-worker-graph`, queue `graph`).
-  # P9.1: enabled after market → community chain ships (rollback to "false" if worker issues).
-  RESTART_GRAPH_WORKER: "true"
-  # "true" skips frontend + backend tests and test-DB migrate/seed in CI. Set "false" to restore full validate.
+  # "true" skips frontend + backend tests and test-DB migrate in CI. Set "false" once Actions secrets exist.
   SKIP_CI_TESTS: "true"
-  # After backend deploy: index GenAI corpus from image + pgvector health gate (when GENAI_ENABLED on volume .env).
-  GENAI_INDEX_CORPUS_ON_DEPLOY: "true"
-  GENAI_HF_CACHE_PATH: /mnt/volume_kp/genai-hf-cache
 
 jobs:
   # ========================================================================
   # PHASE 1: VALIDATION (PR + main)
+  # Secrets: deploy/env-examples/github-actions.secrets.example
   # ========================================================================
   validate:
     name: Lint, Type Check, Build, Test
     runs-on: ubuntu-latest
     env:
-      # Vite + large dependency graph (e.g. Plotly) can exceed Node's default ~2 GiB heap during chunk rendering.
       NODE_OPTIONS: "--max-old-space-size=6144"
       VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
       VITE_KEYCLOAK_URL: ${{ secrets.VITE_KEYCLOAK_URL }}
       VITE_KEYCLOAK_REALM: ${{ secrets.VITE_KEYCLOAK_REALM }}
       VITE_KEYCLOAK_CLIENT_ID: ${{ secrets.VITE_KEYCLOAK_CLIENT_ID }}
-      VITE_REALTIME_ENABLED: ${{ secrets.VITE_REALTIME_ENABLED }}
-      # P1 supplier profile Geography tab — must be the literal string `true` when enabled (see frontend/.env.example).
-      VITE_SUPPLIER_GEOGRAPHY_TAB: ${{ secrets.VITE_SUPPLIER_GEOGRAPHY_TAB }}
-      # GP0 GenAI assistant UI on market workspace — literal `true` when enabled (see frontend/.env.example).
-      VITE_GENAI_UI_ENABLED: ${{ secrets.VITE_GENAI_UI_ENABLED }}
+      VITE_REGISTRATION_REQUIRE_ADMIN_APPROVAL: ${{ secrets.VITE_REGISTRATION_REQUIRE_ADMIN_APPROVAL }}
+      VITE_REGISTRATION_REQUIRE_PROFILE_FORM: ${{ secrets.VITE_REGISTRATION_REQUIRE_PROFILE_FORM }}
       DO_DB_ID: ${{ secrets.DO_DB_ID }}
       DIGITALOCEAN_ACCESS_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-      # Observability (optional): set Actions secret SENTRY_DSN if you want CI test errors in Sentry
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
       SENTRY_ENABLE_IN_TEST: "true"
-      # Backend Settings — GitHub Actions secrets only (never committed .env).
-      # Required for any step that imports app.core.config (run_eval, alembic, pytest, …).
-      # See docs/ci/cd/01_GITHUB_SETUP.md
       ENVIRONMENT: test
       DATABASE_URL: ${{ secrets.CI_TEST_DATABASE_URL }}
       TEST_DATABASE_URL: ${{ secrets.CI_TEST_DATABASE_URL }}
@@ -80,7 +56,6 @@ jobs:
       KEYCLOAK_CLIENT_SECRET: ${{ secrets.CI_KEYCLOAK_CLIENT_SECRET }}
       REDIS_URL: ${{ secrets.CI_REDIS_URL }}
       SECRET_KEY: ${{ secrets.CI_SECRET_KEY }}
-      DO_KP_FILES_BUCKET: ci-test-kp-files
       BOOTSTRAP_SUPER_ADMIN_EMAIL: ci@test.local
       ALLOWED_ORIGINS: http://localhost:5173
 
@@ -92,7 +67,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
           cache-dependency-path: "frontend/package-lock.json"
 
@@ -117,27 +92,14 @@ jobs:
           cd frontend
           npm test
 
-      - name: Indicator monitoring i18n key coverage
-        if: ${{ env.SKIP_CI_TESTS != 'true' }}
-        run: |
-          cd frontend
-          npm run check:i18n:indicator-monitoring
-
       - name: Build frontend (Vite)
         env:
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
           VITE_KEYCLOAK_URL: ${{ secrets.VITE_KEYCLOAK_URL }}
           VITE_KEYCLOAK_REALM: ${{ secrets.VITE_KEYCLOAK_REALM }}
           VITE_KEYCLOAK_CLIENT_ID: ${{ secrets.VITE_KEYCLOAK_CLIENT_ID }}
-          VITE_REALTIME_ENABLED: ${{ secrets.VITE_REALTIME_ENABLED }}
-          VITE_SUPPLIER_GEOGRAPHY_TAB: ${{ secrets.VITE_SUPPLIER_GEOGRAPHY_TAB }}
-          VITE_GENAI_UI_ENABLED: ${{ secrets.VITE_GENAI_UI_ENABLED }}
-          # System maintenance banner
-          VITE_BANNER_ENABLED: ${{ secrets.VITE_BANNER_ENABLED }}
-          VITE_BANNER_TITLE: ${{ secrets.VITE_BANNER_TITLE }}
-          VITE_BANNER_MESSAGE: ${{ secrets.VITE_BANNER_MESSAGE }}
-          VITE_BANNER_COMPLETION: ${{ secrets.VITE_BANNER_COMPLETION }}
-          VITE_BANNER_DISMISSIBLE: ${{ secrets.VITE_BANNER_DISMISSIBLE }}
+          VITE_REGISTRATION_REQUIRE_ADMIN_APPROVAL: ${{ secrets.VITE_REGISTRATION_REQUIRE_ADMIN_APPROVAL }}
+          VITE_REGISTRATION_REQUIRE_PROFILE_FORM: ${{ secrets.VITE_REGISTRATION_REQUIRE_PROFILE_FORM }}
         run: |
           cd frontend
           npm run build
@@ -155,20 +117,10 @@ jobs:
           cd backend
           pip install -r requirements/dev.txt
 
-      - name: Graph community lib import smoke
-        run: |
-          cd backend
-          python -c "import networkx, igraph, leidenalg; import networkx.algorithms.community as c; assert hasattr(c, 'louvain_communities')"
-
       - name: Python linting (ruff)
         run: |
           cd backend
           ruff check .
-
-      - name: GenAI eval gate
-        run: |
-          cd backend
-          python scripts/genai/run_eval.py
 
       - name: Install doctl (DigitalOcean CLI)
         if: ${{ env.SKIP_CI_TESTS != 'true' && env.DIGITALOCEAN_ACCESS_TOKEN != '' && env.DO_DB_ID != '' }}
@@ -198,18 +150,6 @@ jobs:
           doctl databases firewalls append "$DO_DB_ID" --rule "ip_addr:$IP"
           echo "runner_ip=$IP" >> "$GITHUB_OUTPUT"
 
-      - name: Install WeasyPrint system dependencies
-        if: ${{ env.SKIP_CI_TESTS != 'true' }}
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libpango-1.0-0 \
-            libpangocairo-1.0-0 \
-            libcairo2 \
-            libgdk-pixbuf-2.0-0 \
-            libffi-dev \
-            libglib2.0-0
-
       - name: Run migrations on test database
         if: ${{ env.SKIP_CI_TESTS != 'true' }}
         run: |
@@ -217,18 +157,11 @@ jobs:
           alembic -x test=true upgrade head
           echo "✅ Test database migrations complete"
 
-      - name: Seed test data
-        if: ${{ env.SKIP_CI_TESTS != 'true' }}
-        run: |
-          cd backend
-          python -m scripts.seed_test_data
-          echo "✅ Test data seeded"
-
       - name: Backend tests (all)
         if: ${{ env.SKIP_CI_TESTS != 'true' }}
         run: |
           cd backend
-          pytest -v --tb=short
+          pytest tests/unit/ -v --tb=short
           echo "✅ All backend tests passed"
 
       - name: Remove GitHub Runner IP from DO Managed Database firewall
@@ -253,6 +186,11 @@ jobs:
 
   # ========================================================================
   # PHASE 2: BUILD & DEPLOY (ONLY when main gets a push = PR merged)
+  # Migrations run on droplet from deployed image SHA (not GHA runner).
+  #
+  # Required GitHub Actions secrets (deploy): DOCR_TOKEN, DROPLET_IP, SSH_PRIVATE_KEY, VITE_*
+  # Registry login: username `doctoken` + DOCR_TOKEN
+  # DIGITALOCEAN_ACCESS_TOKEN + DO_DB_ID — CI validate only (SKIP_CI_TESTS=false).
   # ========================================================================
   deploy-production:
     name: Build, Push, and Deploy to Droplet
@@ -265,10 +203,8 @@ jobs:
       VITE_KEYCLOAK_URL: ${{ secrets.VITE_KEYCLOAK_URL }}
       VITE_KEYCLOAK_REALM: ${{ secrets.VITE_KEYCLOAK_REALM }}
       VITE_KEYCLOAK_CLIENT_ID: ${{ secrets.VITE_KEYCLOAK_CLIENT_ID }}
-      VITE_REALTIME_ENABLED: ${{ secrets.VITE_REALTIME_ENABLED }}
-      VITE_SUPPLIER_GEOGRAPHY_TAB: ${{ secrets.VITE_SUPPLIER_GEOGRAPHY_TAB }}
-      VITE_GENAI_UI_ENABLED: ${{ secrets.VITE_GENAI_UI_ENABLED }}
-      # Frontend Sentry (production)
+      VITE_REGISTRATION_REQUIRE_ADMIN_APPROVAL: ${{ secrets.VITE_REGISTRATION_REQUIRE_ADMIN_APPROVAL }}
+      VITE_REGISTRATION_REQUIRE_PROFILE_FORM: ${{ secrets.VITE_REGISTRATION_REQUIRE_PROFILE_FORM }}
       VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
       VITE_SENTRY_SEND_DEFAULT_PII: ${{ secrets.VITE_SENTRY_SEND_DEFAULT_PII }}
       VITE_SENTRY_ENABLE_SCREENSHOT: ${{ secrets.VITE_SENTRY_ENABLE_SCREENSHOT }}
@@ -290,21 +226,6 @@ jobs:
           password: ${{ secrets.DOCR_TOKEN }}
 
       # ----------------- BACKEND IMAGE -----------------
-      - name: Stage corpus into backend image context
-        run: cp -r corpus backend/corpus
-
-      - name: Stage genai tier mapping into backend resources
-        run: mkdir -p backend/app/resources/genai && cp docs/GenAI/tier_mapping.yaml backend/app/resources/genai/tier_mapping.yaml
-
-      - name: Stage genai three-graph rules into backend resources
-        run: cp docs/GenAI/three_graph_qa_rules.yaml backend/app/resources/genai/three_graph_qa_rules.yaml
-
-      - name: Stage genai data catalogue into backend resources
-        run: |
-          mkdir -p backend/app/resources/genai
-          cp docs/GenAI/data_catalogue.generated.yaml backend/app/resources/genai/data_catalogue.generated.yaml
-          cp docs/GenAI/data_catalogue.annotations.yaml backend/app/resources/genai/data_catalogue.annotations.yaml
-
       - name: Build backend Docker image
         run: |
           cd backend
@@ -325,9 +246,8 @@ jobs:
           VITE_KEYCLOAK_URL: ${{ secrets.VITE_KEYCLOAK_URL }}
           VITE_KEYCLOAK_REALM: ${{ secrets.VITE_KEYCLOAK_REALM }}
           VITE_KEYCLOAK_CLIENT_ID: ${{ secrets.VITE_KEYCLOAK_CLIENT_ID }}
-          VITE_REALTIME_ENABLED: ${{ secrets.VITE_REALTIME_ENABLED }}
-          VITE_SUPPLIER_GEOGRAPHY_TAB: ${{ secrets.VITE_SUPPLIER_GEOGRAPHY_TAB }}
-          VITE_GENAI_UI_ENABLED: ${{ secrets.VITE_GENAI_UI_ENABLED }}
+          VITE_REGISTRATION_REQUIRE_ADMIN_APPROVAL: ${{ secrets.VITE_REGISTRATION_REQUIRE_ADMIN_APPROVAL }}
+          VITE_REGISTRATION_REQUIRE_PROFILE_FORM: ${{ secrets.VITE_REGISTRATION_REQUIRE_PROFILE_FORM }}
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
           VITE_SENTRY_SEND_DEFAULT_PII: ${{ secrets.VITE_SENTRY_SEND_DEFAULT_PII }}
           VITE_SENTRY_ENABLE_SCREENSHOT: ${{ secrets.VITE_SENTRY_ENABLE_SCREENSHOT }}
@@ -335,12 +255,6 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-          # System maintenance banner
-          VITE_BANNER_ENABLED: ${{ secrets.VITE_BANNER_ENABLED }}
-          VITE_BANNER_TITLE: ${{ secrets.VITE_BANNER_TITLE }}
-          VITE_BANNER_MESSAGE: ${{ secrets.VITE_BANNER_MESSAGE }}
-          VITE_BANNER_COMPLETION: ${{ secrets.VITE_BANNER_COMPLETION }}
-          VITE_BANNER_DISMISSIBLE: ${{ secrets.VITE_BANNER_DISMISSIBLE }}
         run: |
           cd frontend
           npm ci --no-audit --no-fund
@@ -370,36 +284,31 @@ jobs:
             set -e
             echo "🔄 Ensuring Redis is running..."
 
-            # Ensure network exists
-            docker network inspect kp-platform-net >/dev/null 2>&1 || docker network create kp-platform-net
+            docker network inspect ${{ env.DOCKER_NETWORK }} >/dev/null 2>&1 || docker network create ${{ env.DOCKER_NETWORK }}
 
-            # Ensure Redis data dir exists with proper permissions
-            mkdir -p /mnt/volume_kp/redis-data
-            chown -R 999:999 /mnt/volume_kp/redis-data
-            chmod -R 750 /mnt/volume_kp/redis-data
+            mkdir -p /mnt/revy/redis-data
+            chown -R 999:999 /mnt/revy/redis-data
+            chmod -R 750 /mnt/revy/redis-data
 
-            # Check if container exists
             if ! docker ps -a --filter name=^redis$ --format '{{.Names}}' | grep -q '^redis$'; then
               echo "🟡 Redis container not found. Starting new one..."
               docker run -d \
                 --name redis \
-                --network kp-platform-net \
+                --network ${{ env.DOCKER_NETWORK }} \
                 --restart unless-stopped \
-                -v /mnt/volume_kp/redis-data:/data \
+                -v /mnt/revy/redis-data:/data \
                 -p 127.0.0.1:6379:6379 \
                 redis:7-alpine
             else
-              # If exists but stopped, start it
               if ! docker ps --filter name=^redis$ --filter status=running --format '{{.Names}}' | grep -q '^redis$'; then
                 echo "🟡 Redis exists but stopped. Starting..."
                 docker start redis
               fi
             fi
 
-            # Health check loop: Wait until Redis responds to ping (up to 30s)
             echo "🩺 Waiting for Redis health..."
             for i in {1..6}; do
-              if docker run --rm --network kp-platform-net redis redis-cli -h redis ping | grep -q 'PONG'; then
+              if docker run --rm --network ${{ env.DOCKER_NETWORK }} redis redis-cli -h redis ping | grep -q 'PONG'; then
                 echo "✅ Redis is healthy"
                 break
               fi
@@ -407,8 +316,7 @@ jobs:
               sleep 5
             done
 
-            # Fail if still not healthy
-            if ! docker run --rm --network kp-platform-net redis redis-cli -h redis ping | grep -q 'PONG'; then
+            if ! docker run --rm --network ${{ env.DOCKER_NETWORK }} redis redis-cli -h redis ping | grep -q 'PONG'; then
               echo "❌ Redis health check failed" >&2
               exit 1
             fi
@@ -459,21 +367,12 @@ jobs:
 
             sleep 2
 
-            GENAI_EXTRA_ARGS=""
-            if grep -Eq '^GENAI_ENABLED=(true|1|yes|True|TRUE)$' ${{ env.ENV_FILE_PATH }}; then
-              HF_CACHE="${{ env.GENAI_HF_CACHE_PATH }}"
-              mkdir -p "$HF_CACHE"
-              GENAI_EXTRA_ARGS="-e HF_HOME=/cache/huggingface -v ${HF_CACHE}:/cache/huggingface"
-              echo "GenAI enabled — mounting HF cache at ${HF_CACHE}"
-            fi
-
             docker run -d \
               --restart unless-stopped \
               --network ${{ env.DOCKER_NETWORK }} \
               -p 127.0.0.1:8000:8000 \
               --env-file ${{ env.ENV_FILE_PATH }} \
               -e SENTRY_RELEASE=${{ github.sha }} \
-              ${GENAI_EXTRA_ARGS} \
               --name ${{ env.BACKEND_CONTAINER_NAME }} \
               ${{ env.REGISTRY }}/${{ env.REGISTRY_NAME }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
 
@@ -508,16 +407,8 @@ jobs:
             echo "✅ Frontend deployed"
 
       # ----------------- WORKERS -----------------
-      # Single SSH session for all Celery workers (avoids sshd MaxStartups timeouts under scanner load).
-      # Per-worker gates: RESTART_WORKERS, RESTART_DOCUMENT_WORKER, RESTART_MONITORING_WORKER,
-      # RESTART_MARKET_WORKER, RESTART_GRAPH_WORKER — see docs/file_processing/WORKER_QUEUE_SPLIT.md.
       - name: Deploy Celery workers
-        if: |
-          env.RESTART_WORKERS == 'true' ||
-          env.RESTART_DOCUMENT_WORKER == 'true' ||
-          env.RESTART_MONITORING_WORKER == 'true' ||
-          env.RESTART_MARKET_WORKER == 'true' ||
-          env.RESTART_GRAPH_WORKER == 'true'
+        if: env.RESTART_WORKERS == 'true'
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DROPLET_IP }}
@@ -527,150 +418,36 @@ jobs:
           command_timeout: 15m
           script: |
             set -e
-            echo "🚀 Deploying Celery workers (single SSH session)..."
+            echo "🚀 Deploying Celery workers..."
 
             echo "${{ secrets.DOCR_TOKEN }}" | docker login ${{ env.REGISTRY }} -u doctoken --password-stdin
             docker pull ${{ env.REGISTRY }}/${{ env.REGISTRY_NAME }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
 
             BACKEND_IMAGE="${{ env.REGISTRY }}/${{ env.REGISTRY_NAME }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}"
 
-            if [ "${{ env.RESTART_WORKERS }}" = "true" ]; then
-              echo "🔄 General Celery worker + beat..."
-              docker stop kp-platform-celery-worker 2>/dev/null || true
-              docker rm kp-platform-celery-worker 2>/dev/null || true
-              docker run -d \
-                --restart unless-stopped \
-                --network ${{ env.DOCKER_NETWORK }} \
-                --env-file ${{ env.ENV_FILE_PATH }} \
-                -e SENTRY_RELEASE=${{ github.sha }} \
-                --name kp-platform-celery-worker \
-                "$BACKEND_IMAGE" \
-                celery -A app.workers.celery_app worker --loglevel=info --concurrency=4 -Q celery
-
-              docker stop kp-platform-celery-beat 2>/dev/null || true
-              docker rm kp-platform-celery-beat 2>/dev/null || true
-              docker run -d \
-                --restart unless-stopped \
-                --network ${{ env.DOCKER_NETWORK }} \
-                --env-file ${{ env.ENV_FILE_PATH }} \
-                -e SENTRY_RELEASE=${{ github.sha }} \
-                --name kp-platform-celery-beat \
-                "$BACKEND_IMAGE" \
-                celery -A app.workers.celery_app beat --loglevel=info
-              echo "✅ Celery worker and beat deployed"
-            fi
-
-            if [ "${{ env.RESTART_DOCUMENT_WORKER }}" = "true" ]; then
-              echo "🔄 Document analysis worker..."
-              docker stop kp-platform-celery-worker-documents 2>/dev/null || true
-              docker rm kp-platform-celery-worker-documents 2>/dev/null || true
-              docker run -d \
-                --restart unless-stopped \
-                --network ${{ env.DOCKER_NETWORK }} \
-                --env-file ${{ env.ENV_FILE_PATH }} \
-                -e SENTRY_RELEASE=${{ github.sha }} \
-                --name kp-platform-celery-worker-documents \
-                "$BACKEND_IMAGE" \
-                celery -A app.workers.celery_app worker --loglevel=info --concurrency=2 -Q documents
-              echo "✅ Document analysis Celery worker deployed"
-            fi
-
-            if [ "${{ env.RESTART_MONITORING_WORKER }}" = "true" ]; then
-              echo "🔄 Indicator monitoring worker..."
-              docker stop kp-platform-celery-worker-monitoring 2>/dev/null || true
-              docker rm kp-platform-celery-worker-monitoring 2>/dev/null || true
-              docker run -d \
-                --restart unless-stopped \
-                --network ${{ env.DOCKER_NETWORK }} \
-                --env-file ${{ env.ENV_FILE_PATH }} \
-                -e SENTRY_RELEASE=${{ github.sha }} \
-                --name kp-platform-celery-worker-monitoring \
-                "$BACKEND_IMAGE" \
-                celery -A app.workers.celery_app worker --loglevel=info --concurrency=2 -Q monitoring
-              echo "✅ Indicator monitoring Celery worker deployed"
-            fi
-
-            if [ "${{ env.RESTART_MARKET_WORKER }}" = "true" ]; then
-              echo "🔄 Market scan worker..."
-              docker stop kp-platform-celery-worker-market 2>/dev/null || true
-              docker rm kp-platform-celery-worker-market 2>/dev/null || true
-              docker run -d \
-                --restart unless-stopped \
-                --network ${{ env.DOCKER_NETWORK }} \
-                --env-file ${{ env.ENV_FILE_PATH }} \
-                -e SENTRY_RELEASE=${{ github.sha }} \
-                --name kp-platform-celery-worker-market \
-                "$BACKEND_IMAGE" \
-                celery -A app.workers.celery_app worker --loglevel=info --concurrency=1 -Q market
-              echo "✅ Market scan Celery worker deployed"
-            fi
-
-            if [ "${{ env.RESTART_GRAPH_WORKER }}" = "true" ]; then
-              echo "🔄 Graph community worker..."
-              docker stop kp-platform-celery-worker-graph 2>/dev/null || true
-              docker rm kp-platform-celery-worker-graph 2>/dev/null || true
-              docker run -d \
-                --restart unless-stopped \
-                --network ${{ env.DOCKER_NETWORK }} \
-                --env-file ${{ env.ENV_FILE_PATH }} \
-                -e SENTRY_RELEASE=${{ github.sha }} \
-                --name kp-platform-celery-worker-graph \
-                "$BACKEND_IMAGE" \
-                celery -A app.workers.celery_app worker --loglevel=info --concurrency=1 -Q graph
-              echo "✅ Graph community Celery worker deployed"
-            fi
-
-            echo "✅ Celery worker deploy complete"
-
-      # ----------------- GENAI CORPUS INDEX -----------------
-      # One-shot container on the NEW backend image (fresh /app/corpus). See docs/GenAI/explainability/GENAI_DEPLOY_OPS.md
-      - name: GenAI corpus index and health gate
-        if: env.GENAI_INDEX_CORPUS_ON_DEPLOY == 'true'
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.DROPLET_IP }}
-          username: root
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          timeout: 60s
-          command_timeout: 45m
-          script: |
-            set -e
-            ENV_FILE="${{ env.ENV_FILE_PATH }}"
-            BACKEND_IMAGE="${{ env.REGISTRY }}/${{ env.REGISTRY_NAME }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}"
-            HF_CACHE="${{ env.GENAI_HF_CACHE_PATH }}"
-
-            if ! grep -Eq '^GENAI_ENABLED=(true|1|yes|True|TRUE)$' "$ENV_FILE"; then
-              echo "⏭ GENAI_ENABLED is not true on volume .env — skipping corpus index"
-              exit 0
-            fi
-
-            echo "${{ secrets.DOCR_TOKEN }}" | docker login ${{ env.REGISTRY }} -u doctoken --password-stdin
-            docker pull "$BACKEND_IMAGE"
-
-            mkdir -p "$HF_CACHE"
-            APP_UID=$(docker run --rm "$BACKEND_IMAGE" id -u appuser)
-            chown -R "$APP_UID:$APP_UID" "$HF_CACHE"
-
-            echo "📚 Indexing GenAI corpus + methodology retrieval eval..."
-            docker run --rm \
+            docker stop revy-worker 2>/dev/null || true
+            docker rm revy-worker 2>/dev/null || true
+            docker run -d \
+              --restart unless-stopped \
               --network ${{ env.DOCKER_NETWORK }} \
-              --env-file "$ENV_FILE" \
+              --env-file ${{ env.ENV_FILE_PATH }} \
               -e SENTRY_RELEASE=${{ github.sha }} \
-              -e HF_HOME=/cache/huggingface \
-              -v "$HF_CACHE:/cache/huggingface" \
+              --name revy-worker \
               "$BACKEND_IMAGE" \
-              sh -c "python scripts/genai/index_corpus.py && python -m scripts.seed_genai_chat_suggestions && python scripts/genai/run_retrieval_eval.py --skip-index"
+              celery -A app.workers.celery_app worker --loglevel=info --concurrency=2 -Q default,notifications,heavy
 
-            echo "🔍 GenAI health gate..."
-            HEALTH=$(docker exec ${{ env.BACKEND_CONTAINER_NAME }} python scripts/genai/health_gate.py)
-            DOC_COUNT=$(echo "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin).get('corpus_document_count',0))")
-            CHUNK_COUNT=$(echo "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin).get('corpus_chunk_count',0))")
-            echo "GenAI corpus: ${DOC_COUNT} documents, ${CHUNK_COUNT} chunks"
-            if [ "$DOC_COUNT" -lt 1 ]; then
-              echo "❌ corpus_document_count is 0 after index — deploy failed"
-              exit 1
-            fi
-            echo "✅ GenAI corpus index and health gate passed"
+            docker stop revy-beat 2>/dev/null || true
+            docker rm revy-beat 2>/dev/null || true
+            docker run -d \
+              --restart unless-stopped \
+              --network ${{ env.DOCKER_NETWORK }} \
+              --env-file ${{ env.ENV_FILE_PATH }} \
+              -e SENTRY_RELEASE=${{ github.sha }} \
+              --name revy-beat \
+              "$BACKEND_IMAGE" \
+              celery -A app.workers.celery_app beat --loglevel=info
+
+            echo "✅ Celery worker and beat deployed"
 
       # ----------------- SUMMARY -----------------
       - name: Deployment summary
@@ -682,17 +459,12 @@ jobs:
           script: |
             echo ""
             echo "╔══════════════════════════════════════════════════════╗"
-            echo "║ ✅ KP-PLATFORM DEPLOYMENT SUCCESSFUL                ║"
+            echo "║ ✅ REVY DEPLOYMENT SUCCESSFUL                         ║"
             echo "╠══════════════════════════════════════════════════════╣"
             echo "║ Backend:  $(docker ps --filter name=${{ env.BACKEND_CONTAINER_NAME }} --format '{{.Status}}' | head -1) ║"
             echo "║ Frontend: $(docker ps --filter name=${{ env.FRONTEND_CONTAINER_NAME }} --format '{{.Status}}' | head -1) ║"
             echo "║ Image SHA: ${{ github.sha }}                         ║"
             echo "║ Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')       ║"
-            if grep -Eq '^GENAI_ENABLED=(true|1|yes|True|TRUE)$' ${{ env.ENV_FILE_PATH }} 2>/dev/null; then
-              HEALTH=$(docker exec ${{ env.BACKEND_CONTAINER_NAME }} python scripts/genai/health_gate.py 2>/dev/null || echo '{}')
-              GENAI_DOCS=$(echo "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin).get('corpus_document_count','?'))" 2>/dev/null || echo "?")
-              echo "║ GenAI corpus docs: ${GENAI_DOCS}                      ║"
-            fi
             echo "╚══════════════════════════════════════════════════════╝"
             echo ""
-            docker ps --filter "name=kp-platform" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+            docker ps --filter "name=revy" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"

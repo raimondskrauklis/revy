@@ -1,14 +1,16 @@
 # backend/app/api/v1/workspaces/invitations.py
-"""Workspace invitations — INVITATIONS.md (persist when P1 migration lands)."""
+"""Workspace invitations — INVITATIONS.md."""
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.responses import JSONResponse
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.database import get_db
 from app.core.exceptions import ForbiddenError, NotFoundError
+from app.core.idempotency import idempotency_guard
 from app.core.permissions import Permission, require_permission
 from app.core.tenancy import require_same_workspace
 from app.models.users import UserORM
@@ -16,7 +18,7 @@ from app.models.workspaces import WorkspaceORM
 from app.schemas.common import SuccessResponse
 from app.schemas.invitations import InvitationCreate, InvitationResponse
 from app.services.email_dispatch import enqueue_workspace_invitation_email
-from app.services.invitations import create_invitation
+from app.services.invitations import create_invitation, invitation_to_payload
 
 router = APIRouter(prefix="/{workspace_id}/invitations", tags=["invitations"])
 
@@ -27,7 +29,10 @@ async def post_workspace_invitation(
     body: InvitationCreate,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> SuccessResponse[InvitationResponse]:
+    idempotent: Annotated[JSONResponse | None, Depends(idempotency_guard)] = None,
+) -> SuccessResponse[InvitationResponse] | JSONResponse:
+    if idempotent is not None:
+        return idempotent
     require_permission(current_user, Permission.admin_users)
     require_same_workspace(current_user, workspace_id)
     if current_user.user_id is None:
@@ -42,14 +47,15 @@ async def post_workspace_invitation(
         inviter.email if inviter else current_user.email or "A teammate"
     )
 
-    payload = await create_invitation(
+    invitation = await create_invitation(
         session,
         workspace_id=workspace_id,
         email=body.email,
         role=body.role,
         invited_by_user_id=current_user.user_id,
     )
-    # P1: persist workspace_invitations row in same transaction before commit
+    await session.commit()
+    payload = invitation_to_payload(invitation)
     enqueue_workspace_invitation_email(
         to_email=payload["email"],
         inviter_name=inviter_name,

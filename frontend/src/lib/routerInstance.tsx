@@ -1,16 +1,18 @@
 // frontend/src/lib/routerInstance.tsx
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { RequirePermission } from '@/components/auth/RequirePermission';
 import { AppShellLayout } from '@/components/layout/AppShellLayout';
 import { NotFoundPage } from '@/components/errors/NotFoundPage';
 import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { AuthCallbackPage } from '@/features/auth/pages/AuthCallbackPage';
 import { UnauthorizedPage } from '@/features/auth/pages/UnauthorizedPage';
+import { CompleteProfilePage } from '@/features/auth/pages/CompleteProfilePage';
 import { StatusGatePage } from '@/features/auth/pages/StatusGatePage';
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
 import { AdminUsersPage } from '@/features/admin/pages/AdminUsersPage';
+import { RequirePlatformAdmin } from '@/components/auth/RequirePlatformAdmin';
 import { SettingsPage } from '@/features/settings/pages/SettingsPage';
+import { InstallationsPage } from '@/features/installations/pages/InstallationsPage';
 
 export const appRouter = createBrowserRouter([
   { path: '/', element: <Navigate to="/dashboard" replace /> },
@@ -27,12 +29,7 @@ export const appRouter = createBrowserRouter([
   },
   {
     path: '/complete-profile',
-    element: (
-      <StatusGatePage
-        titleKey="auth.status.completeProfile.title"
-        bodyKey="auth.status.completeProfile.body"
-      />
-    ),
+    element: <CompleteProfilePage />,
   },
   {
     path: '/pending-approval',
@@ -74,12 +71,17 @@ export const appRouter = createBrowserRouter([
         children: [{ index: true, element: <DashboardPage /> }],
       },
       {
+        path: '/installations',
+        element: <AppShellLayout />,
+        children: [{ index: true, element: <InstallationsPage /> }],
+      },
+      {
         path: '/settings',
         element: <AppShellLayout />,
         children: [{ index: true, element: <SettingsPage /> }],
       },
       {
-        element: <RequirePermission permission="admin:users" />,
+        element: <RequirePlatformAdmin />,
         children: [
           {
             path: '/admin/users',
