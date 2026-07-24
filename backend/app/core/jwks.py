@@ -7,6 +7,9 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx
+import jwt
+from jwt import PyJWK, PyJWKSet
+from jwt.exceptions import PyJWKSetError
 
 from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError
@@ -15,6 +18,37 @@ from app.core.logging import get_logger
 logger = get_logger(__name__)
 
 _JWKS_CACHE_TTL = timedelta(hours=1)
+
+
+class JwkSigningKeyNotFoundError(Exception):
+    """No signing JWK in the set matches the token ``kid`` header."""
+
+
+def signing_keys_from_jwks(jwks: dict[str, Any]) -> list[PyJWK]:
+    """Return signing keys from a JWKS document (``use: sig`` or unset, with ``kid``)."""
+    jwk_set = PyJWKSet.from_dict(jwks)
+    signing_keys = [
+        key
+        for key in jwk_set.keys
+        if key.public_key_use in ("sig", None) and key.key_id
+    ]
+    if not signing_keys:
+        raise PyJWKSetError("The JWKS endpoint did not contain any signing keys")
+    return signing_keys
+
+
+def signing_key_from_jwt(jwks: dict[str, Any], token: str) -> PyJWK:
+    """Resolve the RS256 signing key for a JWT using ``kid`` and cached JWKS."""
+    kid = jwt.get_unverified_header(token).get("kid")
+    if not kid:
+        raise jwt.InvalidTokenError("Token header missing kid")
+
+    signing_keys = signing_keys_from_jwks(jwks)
+    for key in signing_keys:
+        if key.key_id == kid:
+            return key
+
+    raise JwkSigningKeyNotFoundError(f'No signing key matches kid: "{kid}"')
 
 
 class JwksClient:
