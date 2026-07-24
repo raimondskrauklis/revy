@@ -19,7 +19,7 @@ description: >-
 1. Re-read plan folder `*_GENERAL_PLAN.md` + `*_FINDINGS.md` vs what shipped.
 2. Grep code + plan folder — drift, skipped deliverables, corners cut.
 3. `| Gap | Action |` — fix **small in-scope** now; defer large → README note.
-4. Investigator “how/what” gaps → **`corpus-program`** + **`author-corpus`** (or **`author-market-screen-corpus`** for `IND-*-CPV`); new corpus file + manifest — not `docs/` copies.
+4. Methodology / investigator corpus gaps — **out of scope for Revy** (KP program removed). Defer or note in plan README.
 5. Continue to doc-sync (`create-execution-plan`).
 
 Skip if last phase is doc-only.

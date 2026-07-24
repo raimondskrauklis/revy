@@ -20,10 +20,8 @@ Execution plans peer-reviewed (final pass 2026-07-24) — see findings § Peer r
 | P2 — Registration & platform flows | [SCAFFOLD_P2_EXECUTION.md](./SCAFFOLD_P2_EXECUTION.md) | Done (2026-07-24) |
 | P3 — Shared platform hardening | [SCAFFOLD_P3_EXECUTION.md](./SCAFFOLD_P3_EXECUTION.md) | Done (2026-07-24) |
 | P4 — Revy product foundation | [SCAFFOLD_P4_EXECUTION.md](./SCAFFOLD_P4_EXECUTION.md) | Done (2026-07-24) |
-| P5 — Repo identity & automation | [SCAFFOLD_P5_EXECUTION.md](./SCAFFOLD_P5_EXECUTION.md) | **deferred** |
+| P5 — Agent & cursor identity | [SCAFFOLD_P5_EXECUTION.md](./SCAFFOLD_P5_EXECUTION.md) | Done (2026-07-25) |
 
-**Authority:** `internal-docs/starter-pack/` + `internal-docs/product/revy/` (gitignored). Committed runbooks: `DEV_BOOTSTRAP.md`, `REGISTRATION_FLAGS.md`, `KEYCLOAK_DEV_CHECKLIST.md` (P1); `REVY_PRODUCT_SLICE.md` (P4.1).
+**Authority:** `internal-docs/starter-pack/` + `internal-docs/product/revy/` (gitignored). Committed runbooks: `DEV_BOOTSTRAP.md`, `REGISTRATION_FLAGS.md`, `KEYCLOAK_DEV_CHECKLIST.md` (P1); `REVY_PRODUCT_SLICE.md` (P4.1). Agent entry: root [`AGENTS.md`](../../AGENTS.md).
 
-**Locked exclusions (Phases 1–4):** `.cursorrules`, deploy workflow, root `AGENTS.md`/`README` — see [findings § Locked exclusions](./SCAFFOLD_FINDINGS.md#locked-exclusions).
-
-**Next:** P5 deferred — invoke [SCAFFOLD_P5_EXECUTION.md](./SCAFFOLD_P5_EXECUTION.md) when ready.
+**Next:** Scaffold program complete (P0–P5). CI tests: set `SKIP_CI_TESTS: "false"` in deploy workflow when Actions secrets are ready.

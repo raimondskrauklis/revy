@@ -1,0 +1,45 @@
+---
+description: Frontend React/TypeScript conventions
+globs: frontend/**/*
+alwaysApply: false
+---
+
+# Frontend (React/TypeScript)
+
+## Stack
+
+React 19, TypeScript strict, Vite, Tailwind 4, TanStack Query v5, Zustand (UI only).
+
+## Structure
+
+- Features: `frontend/src/features/<name>/` — colocate `api.ts`, `hooks.ts`, `types.ts`
+- Shared UI: `components/ui/`, layout: `components/layout/`
+- ~150 lines soft limit — extract subcomponents/hooks when growing
+
+## State
+
+- Server state: TanStack Query — ❌ NO server state in Zustand
+- Lists: cursor pagination where API supports it
+
+## Inputs
+
+- `QuietInput`, `QuietSelect`, `QuietDateInput` from `@/components/ui/`
+- ❌ NO `<input type="date">`, `<select>`, raw HTML inputs
+
+## Dates & locale
+
+- `@/lib/date`, `@/lib/locale`, `@/lib/number`
+- ❌ NO `toLocaleDateString()`, bare `.toLocaleString()`, hardcoded `'en-GB'` / `'lv-LV'`
+
+## Errors & toasts
+
+- `mapApiError()` → `showDomainErrorToast()` — `@/shared/errors`
+- Form field errors: `handleFormError()` in `@/shared/errors/handlers.ts`
+- ❌ NO `window.alert()` for user-facing errors
+
+## Touch & responsive
+
+- Min **44px** touch targets; test at **375px**
+- Focus: `focus-visible:ring-2 ring-[color:var(--app-ring-strong)]` on interactive elements
+
+**Drift patterns:** `internal-docs/starter-pack/docs/frontend/patterns/AGENT_DRIFT.md`

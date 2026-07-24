@@ -1,0 +1,47 @@
+---
+description: Backend Python/FastAPI conventions
+globs: backend/**/*
+alwaysApply: false
+---
+
+# Backend (Python/FastAPI)
+
+## Stack
+
+Python 3.12+, FastAPI, SQLAlchemy 2.0 async, Pydantic v2, PostgreSQL, Celery.
+
+## Naming
+
+- Files, functions, variables: `snake_case`
+- Classes: `PascalCase`; ORM suffix `*ORM`
+- Enums in `backend/app/constants/enums.py` — `snake_case` keys **and** values
+
+## Database
+
+- SQLAlchemy 2.0 `Mapped` syntax — ❌ NO SQLModel
+- All DB I/O **async**
+- Migrations: hand-written Alembic only — ❌ **NEVER** `--autogenerate`
+- Migration module docstring: short table/change label only (no phase tags, no plan refs)
+
+## API layer
+
+- Routers in `app/api/v1/` — thin; delegate to services
+- Cursor pagination: `CursorParams`, `CursorResponse`, order `(created_at DESC, id DESC)`
+- Response numerics for frontend JSON: `float`, not `Decimal`
+
+## Errors & auth
+
+- `app.core.exceptions` (`NotFoundError`, `ValidationError`, `ForbiddenError`, `UnauthorizedError`)
+- ❌ NO bare `HTTPException`
+- JWT: `app/core/auth.py` + async JWKS (`app/core/jwks.py`) — see `internal-docs/starter-pack/docs/backend/AUTH.md`
+
+## Logging
+
+`get_logger(__name__)` with structured `extra={}`.
+
+## Tests
+
+- `tests/unit/` only — service layer, mocks
+- ❌ NO new tests under `tests/api/` or `tests/service/`
+
+**Patterns:** `internal-docs/starter-pack/docs/backend/AGENT_PATTERNS.md`

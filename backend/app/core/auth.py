@@ -9,15 +9,15 @@ from uuid import UUID
 import jwt
 from fastapi import Depends, Header
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jwt import PyJWKClient
+from jwt.exceptions import PyJWKSetError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import AppRole, PlatformRole, UserStatus
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.exceptions import ForbiddenError, UnauthorizedError
-from app.core.jwks import jwks_client
+from app.core.exceptions import ForbiddenError, ServiceUnavailableError, UnauthorizedError
+from app.core.jwks import JwkSigningKeyNotFoundError, jwks_client, signing_key_from_jwt
 from app.core.logging import get_logger
 from app.models.users import UserORM
 from app.models.workspace_memberships import WorkspaceMembershipORM
@@ -56,6 +56,20 @@ def token_client_allowlist() -> frozenset[str]:
     return frozenset(clients)
 
 
+def _decode_token_payload(token: str, jwks: dict) -> dict:
+    """Verify JWT signature, issuer, expiry; then validate audience allowlist."""
+    signing_key = signing_key_from_jwt(jwks, token)
+    payload = jwt.decode(
+        token,
+        signing_key.key,
+        algorithms=["RS256"],
+        issuer=jwks_client.issuer,
+        options={"verify_aud": False},
+    )
+    _validate_audience(payload)
+    return payload
+
+
 def _validate_audience(payload: dict) -> None:
     allowed = token_client_allowlist()
     azp = payload.get("azp")
@@ -78,35 +92,29 @@ async def decode_access_token(token: str) -> dict:
     """Validate JWT signature, issuer, expiry, and audience."""
     jwks = await jwks_client.get_jwks()
     try:
-        jwk_client = PyJWKClient.from_dict(jwks)
-        signing_key = jwk_client.get_signing_key_from_jwt(token)
-        payload = jwt.decode(
-            token,
-            signing_key.key,
-            algorithms=["RS256"],
-            issuer=jwks_client.issuer,
-            options={"verify_aud": False},
-        )
-        _validate_audience(payload)
-        return payload
+        return _decode_token_payload(token, jwks)
     except jwt.ExpiredSignatureError as exc:
         raise UnauthorizedError("Token expired") from exc
-    except jwt.InvalidTokenError:
+    except JwkSigningKeyNotFoundError:
         jwks = await jwks_client.get_jwks(force_refresh=True)
         try:
-            jwk_client = PyJWKClient.from_dict(jwks)
-            signing_key = jwk_client.get_signing_key_from_jwt(token)
-            payload = jwt.decode(
-                token,
-                signing_key.key,
-                algorithms=["RS256"],
-                issuer=jwks_client.issuer,
-                options={"verify_aud": False},
-            )
-            _validate_audience(payload)
-            return payload
-        except jwt.InvalidTokenError as retry_exc:
+            return _decode_token_payload(token, jwks)
+        except jwt.ExpiredSignatureError as exc:
+            raise UnauthorizedError("Token expired") from exc
+        except PyJWKSetError as exc:
+            raise ServiceUnavailableError(
+                message="Authentication service unavailable",
+                details={"reason": str(exc)},
+            ) from exc
+        except (JwkSigningKeyNotFoundError, jwt.InvalidTokenError) as retry_exc:
             raise UnauthorizedError("Invalid token") from retry_exc
+    except PyJWKSetError as exc:
+        raise ServiceUnavailableError(
+            message="Authentication service unavailable",
+            details={"reason": str(exc)},
+        ) from exc
+    except jwt.InvalidTokenError as exc:
+        raise UnauthorizedError("Invalid token") from exc
 
 
 async def _resolve_active_workspace(

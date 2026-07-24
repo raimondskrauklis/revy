@@ -1,166 +1,21 @@
-# KP Analytics Platform - Cursor Rules
+# Revy — Cursor rules (pointer)
 
-## 0. BEHAVIORAL RULES (STRICT)
-- **File Headers**: ALWAYS add the relative file path as the first line of every generated file.
-  - Python: `# backend/app/path/to/file.py`
-  - TS/TSX: `// frontend/src/path/to/file.tsx`
-- **Production Only**: Generate robust, production-ready code. NO workarounds, NO error silencing, NO temporary fixes.
-- **Concise Output**: Do NOT provide long summaries after tasks. Only confirm completion or ask necessary questions.
-- **Chat Output**: Minimal code in chat. Focus on writing/editing files directly.
-- **No Docs**: Do NOT create or update `.md` documentation files unless explicitly asked.
+Read **AGENTS.md** for the agent entry point, doc index, and Revy product context.
 
-## 1. PROJECT CONTEXT
-- **Domain**: Competition Analysis & Procurement Screening for Latvia (KP primary, KNAB secondary).
-- **Full Context**: Read `docs/risk_profiles/PLATFORM_CONTEXT.md` for complete platform overview.
-- **Core Entities**: `EconomicOperator`, `ContractingAuthority`, `Tender`, `TenderLot`, `Bid`, `Contract`, `Alert`, `Investigation`, `IndicatorValue`, `TypologyMatch`, `RiskScore`.
-- **Architecture**: Hybrid (FastAPI Backend + React Frontend).
+Detailed rules: **`.cursor/rules/`** (modular `.mdc` files):
 
-## 2. BACKEND (Python/FastAPI)
-- **Stack**: Python 3.12+, FastAPI, SQLAlchemy 2.0 (Async), Pydantic v2, PostgreSQL 16.
-- **Naming**: 
-  - Files, Functions, Variables: `snake_case`
-  - Classes: `PascalCase`
-  - **ENUMS**: `snake_case` for BOTH keys and values (to match PostgreSQL). 
-    - Example: `status = "in_progress"` NOT `status = "IN_PROGRESS"`.
-- **Database**:
-  - Use **SQLAlchemy 2.0** Mapped syntax.
-  - ❌ NO SQLModel.
-  - All DB I/O must be **async**.
-  - Models suffix: `ORM` (e.g., `UserORM`).
-  - Enums: Define in `backend/app/constants/enums.py`.
-  - **Migrations**: ❌ **NEVER** use Alembic `--autogenerate` (do **not** run `pipenv run alembic revision --autogenerate -m "..."`). Write migration files by hand (`pipenv run alembic revision -m "..."` without `--autogenerate`).
-  - **Migration docstrings**: Module `"""..."""` is the Alembic console label — keep it short (tables/change only, e.g. `"""github_installations table."""`). ❌ NO doc filenames, phase tags (`P0`, `P1`), `(hand-written)`, or plan references — they clutter `alembic upgrade` logs.
-- **Validation**: Pydantic v2 (`model_config = {"from_attributes": True}`).
-- **JSON numerics**: Response schemas the frontend consumes use `float`, not `Decimal` (Pydantic v2 serializes `Decimal` as JSON strings; `Number.isFinite` fails). ORM may keep `Decimal`. See `docs/backend/analytics_risks/ANALYTICS_AND_CALCULATIONS_LIVE.md` §8.4 and **D-DECIMAL-CAST** in `docs/analytics_visualizations/IMPLEMENTATION_PLAN.md`.
-- **Pagination**: Use **Cursor Pagination** for list endpoints.
-  - Schema: `CursorParams`, `CursorResponse`, `CursorMeta`.
-  - Ordering: `(created_at DESC, id DESC)`.
-  - Indexes: Ensure composite index on `(created_at DESC, id DESC)`.
-- **Errors**: Use `app.core.exceptions` hierarchy (`NotFoundError`, `ValidationError`, `ForbiddenError`).
-  - ❌ NO bare `HTTPException`. Always use domain exceptions.
-  - Responses: `{"success": false, "error": {"code": "...", "message": "..."}}`.
-- **Logging**: Structured JSON via `logging.getLogger(__name__)`.
-  - Use `extra={}` for context (`entity_id`, `operation`, `duration_ms`).
-  - ❌ NO `print()` statements.
-- **JSONB `jsonb_array_elements` (LATERAL / cross join)**:
-  - ❌ NO bare `jsonb_array_elements(col)` or `COALESCE(col, '[]'::jsonb)` when `col` may be a non-array JSONB scalar — expansion runs before `WHERE jsonb_typeof(col) = 'array'`.
-  - ✅ Use `app.core.sql_utils`: `jsonb_array_or_empty_sql("alias.col")` inside `jsonb_array_elements(...)`, or `jsonb_array_elements_safe_sql("alias.col")` for the full call (entity_metrics JSONB, `bids.subcontractors` / `consortium_partners`, etc.).
+- `00-core.mdc` — behavioral rules, file headers
+- `backend-python.mdc` — FastAPI, SQLAlchemy, migrations (`backend/**`)
+- `frontend-react.mdc` — React, state, structure (`frontend/**`)
+- `app-color-tokens.mdc` — `--app-*` tokens + `tokens.revy.css` (`frontend/**`)
+- `app-i18n.mdc` — EN + LV, `t()` everywhere (`frontend/**`)
+- `testing.mdc` — pytest + Vitest (`**/tests/**`, `**/*.test.*`)
+- `sentry-mcp.mdc` — Sentry MCP manual debugging only
 
-## 3. FRONTEND (React/TypeScript)
-- **Stack**: React 19, TypeScript 5 (Strict), Vite, Tailwind CSS 4, shadcn/ui.
-- **State**: 
-  - Server: TanStack Query v5 (❌ NO server state in Zustand).
-  - UI: Zustand.
-- **Components**: 
-  - Functional only. 
-  - Flat structure where it fits the feature; split into subfolders when a feature grows (see Structure).
-  - **~150 lines is a soft limit** — prefer extracting subcomponents or hooks when a file gets long, even if those pieces are not reused elsewhere. Readability and single responsibility matter more than the number.
-  - Colocate feature files (`api.ts`, `hooks.ts`, `types.ts` inside feature folder).
-- **Pagination**: Use `useInfiniteList` hook with cursor support.
-  - Response type: `CursorResponse<T>`.
-  - Cursor param: `cursor` (not offset).
+**Skills:** `.cursor/skills/ship-changes`, `sentry-fix-issues`, `phase-execution`, `chunk-execution` — see AGENTS.md.
 
-### STYLING (STRICT)
-- **Canonical token guide**: `docs/frontend_improvements/COLOR_TOKEN_UI_GUIDE.md` — read for `--tp-*` names, `ring` vs `--tp-input-border` vs `--tp-ring-strong`, table/lot rows, and **forbidden** spellings. Cursor also loads `.cursor/rules/color-tokens.mdc` when you work under `frontend/`.
-- **Colors / tokens**: Only `--tp-*` via `bg-[color:var(--tp-…)]` (see guide). Use **`--tp-warning`** (never `--tp-warn`). Links: **`--tp-link`**. Text on solid accent/success/danger fills: **`text-[color:var(--tp-on-accent)]`**. No raw Tailwind chroma in feature code. ❌ NO `bg-blue-500`, `text-gray-700`, `#fff`, hex codes in product UI.
-- **Borders**: Use `ring-1 ring-[color:var(--tp-ring)]` or `shadow-[inset_0_0_0_1px_var(--tp-ring)]`.
-  - ❌ NO `border`, `border-2`, `border-gray-200`.
-- **Focus**: ALL interactive elements: `focus-visible:ring-2 ring-[color:var(--tp-ring-strong)]`.
-- **Touch**: Min **44px** touch targets. Test at **375px** width.
+**Scaffold runbooks (committed):** `docs/starter-pack/` — bootstrap, Keycloak, registration flags.
 
-### INPUTS (STRICT)
-- Use: `QuietInput`, `QuietSelect`, `QuietDateInput`, `QuietChipStatus` / `QuietChipSelectable` / `QuietChipLabel` / `QuietChipTag` (see `@/components/ui/quiet-chip`) from `@/components/ui/`.
-- ❌ NO `<input type="date">`, `<select>`, raw HTML inputs.
-- **Quiet chips:** on **zebra** data rows (`--tp-table-row` / `--tp-table-row-alt`), set **`placement="dataRow"`** where neutral fill must not match the row (`QuietChipStatus` when `intent="default"` + `variant="quiet"`, plus **`QuietChipLabel`** / **`QuietChipTag`**). Shared IP signal → **`ipSignalStrengthToStatusIntent`** (`@/lib/ipSignalStrengthToStatusIntent`). `docs/frontend_improvements/QUIET_CHIP_TABLE_BADGE_UX_PLAN.md`.
+**Full template + product docs (contributors with access):** `internal-docs/starter-pack/`, `internal-docs/product/revy/`.
 
-### DATES & LOCALE (STRICT)
-- Use `@/lib/date`: `formatDate()`, `formatDateTime()`, `parseApiDate()`, `toApiDate()`.
-- Locale mapping: `@/lib/locale` → `getDateLocale()` (date-fns), `getIntlLocale()` (Intl).
-- Number/currency formatting: `@/lib/number` — functions auto-detect locale from i18n.
-- ❌ NO `new Date().toLocaleDateString()`, `toISOString()` in display code.
-- ❌ NO hardcoded locale strings (`'en-GB'`, `'lv-LV'`, `'en-US'`) — use `getIntlLocale()`.
-- ❌ NO bare `.toLocaleString()` — pass `getIntlLocale()` or use `formatNumber()`.
-
-### ERRORS & TOASTS (STRICT)
-- Errors: `mapApiError()` → `DomainError` → `showDomainErrorToast()`. See `docs/errors_logging_toasts/`.
-- Toast: **Sonner** only. `toast.success()`, `toast.error()`. Deduplication: 3s cooldown.
-  - ❌ NO `window.alert()`, `console.error()` for user-facing errors.
-  - ❌ NO promise toasts. Use inline loading states.
-- Form errors: `handleFormError()` for field-level validation (bypasses global toast).
-
-### i18n (STRICT)
-- Languages: EN (fallback) + LV. Use `useTranslation()` + `t()`.
-- ❌ NO hardcoded user-facing strings. ALL labels, tooltips, errors via `t()`.
-- **Placement is not “entities only.”** Put strings in the locale file / namespace that matches the feature (e.g. `charts_*` for diagnostic analytics, `deepInvestigation_*` for DI workflows, `entities_*` for entity UI). Follow existing neighbors in the same feature folder.
-- **Legacy**: Some areas still use root `en.json` / `lv.json`; those files remain active. Prefer **not** growing them for **new** work unless you are clearly extending an existing screen that already lives there.
-- **New features**: If no suitable namespace exists, **add a dedicated pair** (e.g. `feature_en.json` / `feature_lv.json`) and register it in i18n config — do not default to generic bundles when a scoped file is clearer.
-
-### STRUCTURE (STRICT)
-- **New folders**: Allowed when they mirror an established platform pattern (same shape as sibling features: colocated `components/`, `hooks/`, `api`, tests). Do not invent novel top-level trees without matching how similar features are organized.
-- ❌ NO creating abstraction wrappers that don't exist.
-- Read `docs/frontend_improvements/README.md` for patterns.
-- **Entity implementation**: Read `docs/risk_profiles/IMPLEMENTATION_PLAN.md` for phased plan.
-- `features/profiles/` is a quick mock — do NOT copy its data model or mock data approach.
-  Reusable patterns from it: stack panel integration, tab navigation, "Create Investigation" wiring.
-
-## 4. TESTING
-
-### Backend (Pytest)
-- **`tests/unit/` only** — all new and changed backend tests live here (pure functions, services, query/cursor/permission/validation logic, schemas). Exercise HTTP-facing behavior via service-layer tests and mocks — **no** new or extended suites under `tests/api/` or `tests/service/` (`tests/api/` and `tests/service/` are legacy-only; do not add files there).
-- **Fixtures**: `conftest.py` → `db_session`, `async_client`, `mock_user`.
-- **Test data**: Add seed functions to `scripts/seed_test_data.py`.
-- **Environment**: Set `TEST_DATABASE_URL` (seed script and tests use this, not DATABASE_URL).
-- **Run**: `pytest` (all), `pytest tests/unit/` (fast).
-
-### Frontend (Vitest + Testing Library)
-- **Colocate tests**: Place `*.test.ts(x)` next to source files.
-- **Hooks**: Use `renderHook` from `@testing-library/react`.
-- **Components**: Use `render`, `screen`, `userEvent`.
-- **API mocking**: MSW handlers in `@/test/mocks/handlers.ts`.
-- **Run**: `npm test` (all), `npm run test:watch` (dev).
-
-### CI Pipeline
-- Runs full `pytest` on every PR (tree may still contain legacy folders)
-- Test DB: `kp_platform_test` with `CI_TEST_DATABASE_URL` secret
-- Migrations + seed data run before tests
-
-### When to Write Tests
-- ✅ New API endpoints → Unit test (`tests/unit/` — service layer, filters, cursors, permission branches, validation)
-- ✅ New services/hooks → Unit test
-- ✅ Bug fixes → Regression test
-- ✅ New tables → Add seed function to `seed_test_data.py`
-- ❌ Simple styling changes → Skip
-
-## 5. CRITICAL ANTI-PATTERNS
-
-### Backend
-- ❌ `alembic revision --autogenerate` (`pipenv run alembic revision --autogenerate -m "..."`). Author revisions manually.
-- ❌ Defining Enums in models (use `backend/app/constants/enums.py`).
-- ❌ Using PascalCase for backend Enums (use `snake_case`).
-- ❌ Mixing ORM models and Pydantic schemas.
-- ❌ Using Offset Pagination for data-heavy lists.
-- ❌ New tests under `tests/api/` or `tests/service/` — **`tests/unit/` only**.
-- ❌ `jsonb_array_elements(COALESCE(...))` or bare `jsonb_array_elements(bids.subcontractors)` — use `jsonb_array_or_empty_sql` / `jsonb_array_elements_safe_sql` (see §2 JSONB LATERAL).
-
-### Frontend
-- ❌ Hardcoded colors (`bg-blue-500`, `#fff`, `bg-yellow-200`) - use `--tp-*` tokens.
-- ❌ Native inputs (`<input type="date">`) - use `Quiet*` components.
-- ❌ Raw date methods (`toLocaleDateString()`) - use `@/lib/date`.
-- ❌ Hardcoded locales (`'en-GB'`, `'en-US'`, `'lv-LV'`) - use `@/lib/locale`.
-- ❌ Bare `.toLocaleString()` without locale - use `getIntlLocale()` or `formatNumber()`.
-- ❌ Missing focus rings on buttons/inputs.
-- ❌ Touch targets < 44px.
-- ❌ Ad-hoc folder layouts that ignore how comparable features in `features/` are structured.
-- ❌ Hardcoded user-facing strings - use `t()` from i18next.
-- ❌ Copying `features/profiles/` mock data model. Reuse its panel/tab/navigation patterns.
-
-### Both
-- ❌ Creating `.md` files without explicit request.
-
-## 6. PLAN EXECUTION & CURSOR TODOS
-
-**`phase-execution`** — full LOOP; one TODO per subphase in the **current phase**; run subphases in order without “Continue?” prompts — **except migration subphase pause** (stop after migration deliverable tests; resume per skill). Then gate → **`ship-changes`** → next phase. See `.cursor/skills/phase-execution/SKILL.md`.
-
-**`chunk-execution`** — **one subphase only** when user explicitly invokes it; stop after that chunk. See `.cursor/skills/chunk-execution/SKILL.md`.
-
-Shared: concrete TODOs (files + verify command); `pipenv run …` from **`backend/`**; migrations handwritten only — ❌ **`--autogenerate`** (§2).
+Do NOT create or update `.md` docs unless the user explicitly asks.

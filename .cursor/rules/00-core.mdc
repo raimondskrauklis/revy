@@ -1,0 +1,17 @@
+---
+description: Core behavioral rules — always apply
+alwaysApply: true
+---
+
+# Core rules (Revy)
+
+1. **File headers** — line 1 is a relative path comment:
+   - Python: `# backend/app/path/to/file.py`
+   - TS/TSX: `// frontend/src/path/to/file.tsx`
+2. **Production only** — no workarounds, no error silencing, no temporary fixes.
+3. **Concise output** — minimal chat; write files directly.
+4. **No docs churn** — do NOT create or update `.md` unless the user explicitly asks.
+5. **Revy domain** — GitHub installations, workspaces, code review pipeline (see `docs/starter-pack/REVY_PRODUCT_SLICE.md` and `internal-docs/product/revy/`). Not KP Analytics / procurement.
+6. **i18n day one** — EN + LV; all user-facing strings via `t()`.
+7. **Theme** — `--app-*` tokens with light + dark; brand overrides in `tokens.revy.css` only.
+8. **Authority** — committed runbooks: `docs/starter-pack/`; full patterns: `internal-docs/starter-pack/`.

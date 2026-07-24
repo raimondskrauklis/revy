@@ -1,90 +1,64 @@
 # docs/starter-pack/SCAFFOLD_P5_EXECUTION.md
 
-# P5 — Repo identity & automation (execution)
+# P5 — Agent & cursor identity (execution)
 
-Phase **P5** of [`SCAFFOLD_GENERAL_PLAN.md`](./SCAFFOLD_GENERAL_PLAN.md). Baseline: [`SCAFFOLD_FINDINGS.md`](./SCAFFOLD_FINDINGS.md) § Locked exclusions. **P5 only.**
+Phase **P5** of [`SCAFFOLD_GENERAL_PLAN.md`](./SCAFFOLD_GENERAL_PLAN.md). Baseline: [`SCAFFOLD_FINDINGS.md`](./SCAFFOLD_FINDINGS.md) § Locked exclusions.
 
-**Status:** **Deferred** — do **not** execute until product owner explicitly invokes Phase 5.
+**Status:** **Done** (2026-07-25) — agent/cursor alignment. Deploy workflow already Revy-branded; no separate `ci.yml`.
 
-**Goal:** Agents and CI match Revy, not KP.
+**Goal:** Agents and contributor docs match **Revy**, not KP Analytics.
 
 **Authority:** `internal-docs/starter-pack/AGENTS.md`, `internal-docs/product/revy/README.md`.
 
-## Decisions locked for P5
+## Decisions (rescoped from original P5)
 
-- **New** `.github/workflows/ci.yml` — lint + test + build; do **not** enable tests in KP `deploy.yml`. `backend/scripts/seed_test_data.py` is a Revy **no-op stub** — do not grow KP seed entities; new `ci.yml` must not depend on it (unit tests use mocks).
-- Root `AGENTS.md` = starter-pack content + Revy pointer to `docs/starter-pack/` and `internal-docs/product/revy/`.
-- Slim `.cursorrules` to pointer + link modular rules; do not import KP domain entities.
-- Wire `internal-docs/` mention in agent docs (contributors with access).
-- `SKIP_CI_TESTS` in legacy `deploy.yml` stays until separate deploy program retires that workflow.
+- **Deploy / CI** — `.github/workflows/deploy.yml` is already `CI/CD - Revy`; **no** new `ci.yml`. Flip `SKIP_CI_TESTS` when secrets are ready (deploy program, not P5).
+- **Cursor** — modular `.cursor/rules/` from starter-pack (`--app-*`, not `--tp-*`); remove KP deep-investigation / corpus skills.
+- **Root entry** — `AGENTS.md` + slim `.cursorrules` pointer + minimal `README.md`.
 
-## Out of scope for P5
+## Out of scope
 
-- Full production droplet deploy / DOCR pipeline redesign
+- Full droplet / DOCR pipeline redesign
 - Keycloak realm automation
-- Revy review pipeline features
+- Enabling CI tests (separate ops when secrets exist)
 
 ---
 
-## P5.1 — Root AGENTS.md
+## P5.1 — Root AGENTS.md ✅
 
-**What:** Add `AGENTS.md` at repo root; Revy-specific section: stack, `docs/starter-pack/`, env canon, locked exclusions summary.
+**Deliverable:** [AGENTS.md](../../AGENTS.md) — Revy context, `docs/starter-pack/`, `internal-docs/` map, skills index.
 
-**Files:** `AGENTS.md`
+## P5.2 — Cursor rules & skills ✅
 
-**Deliverable:** File exists; links to `docs/starter-pack/README.md`.
+**Deliverable:**
 
-## P5.2 — Replace KP .cursorrules + audit rules
+- [`.cursorrules`](../../.cursorrules) — pointer only
+- [`.cursor/rules/`](../../.cursor/rules/) — `00-core`, `backend-python`, `frontend-react`, `app-color-tokens`, `app-i18n`, `testing`, `sentry-mcp`
+- Removed KP rules: `color-tokens` (`--tp-*`), `deep-investigation-*`, `scope-calculator-pattern`
+- Removed KP corpus skills (`author-*-corpus`, `corpus-program`)
 
-**What:** Short `.cursorrules` pointing to `AGENTS.md` and `docs/starter-pack/`. **Audit** `.cursor/rules/` — remove or replace **KP-only** rules that mislead Revy work (`deep-investigation-*`, `color-tokens.mdc` with `--tp-*`, `scope-calculator-pattern.mdc`). **Keep** `sentry-mcp.mdc` (active workspace policy). Prefer AGENTS.md over a duplicate `revy.mdc` unless a glob-scoped rule is needed (e.g. `frontend/` + `--app-*` tokens).
+## P5.3 — README ✅
 
-**Files:** `.cursorrules`, `.cursor/rules/` (delete/replace KP files as needed)
+**Deliverable:** [README.md](../../README.md) — quick start → `DEV_BOOTSTRAP.md`, link `AGENTS.md`.
 
-**Deliverable:** `.cursorrules` no longer references KP entities or `--tp-*`; `rg --tp- .cursor/rules/` — no misleading token rules (or files removed).
-
-## P5.3 — Revy CI workflow
-
-**What:** `ci.yml` on PR: backend `pipenv run lint` + `pytest tests/unit/`; frontend `npm run lint` + `npm test` + `npm run build`; uses `TEST_DATABASE_URL` secret only if integration tests added later.
-
-**Files:** `.github/workflows/ci.yml`
-
-**Deliverable:** Workflow file valid YAML; no reference to `seed_test_data.py`.
-
-## P5.4 — README contributor entry
-
-**What:** Minimal root `README.md` — what Revy is, quick start link to `DEV_BOOTSTRAP.md`, not KP platform.
-
-**Files:** `README.md`
-
-**Deliverable:** README links `docs/starter-pack/DEV_BOOTSTRAP.md`.
-
-## P5.5 — Doc sync
-
-**What:** Update findings locked exclusions; README execution table P5 Done.
+## P5.4 — Doc sync ✅
 
 | Doc | Change |
 |-----|--------|
-| `docs/starter-pack/SCAFFOLD_FINDINGS.md` | Mark exclusions resolved |
-| `docs/starter-pack/README.md` | P5 status |
-
-**Deliverable:** README P5 row Done + sha.
+| `SCAFFOLD_FINDINGS.md` | Locked exclusions updated |
+| `README.md` (this folder) | P5 Done |
+| `SCAFFOLD_GENERAL_PLAN.md` | P5 scope note |
 
 ---
 
-**Phase gate** (from `backend/`):
+**Phase gate** (sanity):
 
 ```bash
+# backend/
 pipenv run lint && pipenv run pytest tests/unit/ -q
-```
 
-**Phase gate** (from `frontend/`):
-
-```bash
+# frontend/
 npm run lint && npm test -- --run && npm run build
 ```
 
-**Human gate:** Open test PR and confirm `ci.yml` checks pass on GitHub.
-
-**Deploy:** CI only — no droplet change.
-
-**Next:** **none** (final phase).
+**Next:** none (final scaffold phase).

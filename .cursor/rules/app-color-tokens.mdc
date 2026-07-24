@@ -1,0 +1,16 @@
+---
+description: Semantic CSS tokens — --app-* light and dark
+globs: frontend/**/*.{tsx,ts,css}
+alwaysApply: false
+---
+
+# Color tokens (Revy)
+
+1. **Source of truth**: `frontend/src/styles/tokens.css` + brand overrides in `frontend/src/styles/tokens.revy.css`
+2. **Only** `var(--app-*)` in feature UI (e.g. `bg-[color:var(--app-surface)]`). ❌ NO raw Tailwind chroma (`bg-blue-500`, hex in className). ❌ NO legacy `--tp-*` (KP Analytics).
+3. **Warning**: `--app-warning`. **Links**: `--app-link`. **Text on solid fills**: `text-[color:var(--app-on-accent)]`.
+4. **Borders**: hairlines `ring-1 ring-[color:var(--app-ring)]` or `shadow-[inset_0_0_0_1px_var(--app-ring)]`; **focus** `--app-ring-strong`; **input idle** `--app-input-border`.
+5. **Tables**: zebra rows `--app-table-row` / `--app-table-row-alt`.
+6. **Product brand**: map `--rv-*` → `--app-*` in `tokens.revy.css` only — not in feature components.
+
+See also `internal-docs/starter-pack/docs/frontend/foundations/COLOR_TOKEN_UI_GUIDE.md` (token names use `--app-*` in this repo).

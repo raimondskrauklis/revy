@@ -1,0 +1,26 @@
+---
+description: Testing conventions — pytest and Vitest
+globs: "**/tests/**,**/*.test.*,**/*.spec.*"
+alwaysApply: false
+---
+
+# Testing
+
+## Backend (pytest)
+
+- Location: `backend/tests/unit/` only
+- Service-layer tests with mocks; no new `tests/api/` or `tests/service/`
+- Env: `TEST_DATABASE_URL` for integration-style fixtures
+- Run: `pipenv run pytest tests/unit/` (from `backend/`)
+
+## Frontend (Vitest + Testing Library)
+
+- Colocate: `*.test.ts(x)` next to source
+- Run: `npm test` (from `frontend/`)
+
+## When to write tests
+
+- ✅ New services/hooks, validation, bug fixes (regression)
+- ❌ Styling-only changes
+
+`backend/scripts/seed_test_data.py` is a no-op stub — unit tests use mocks, not KP seed patterns.
