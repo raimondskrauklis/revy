@@ -1,5 +1,5 @@
 # backend/alembic/versions/2026_07_23_2315_0002_p1_items.py
-"""P1 items table — starter-pack demo resource (hand-written)."""
+"""items table."""
 from __future__ import annotations
 
 import sqlalchemy as sa

@@ -1,5 +1,5 @@
 # backend/alembic/versions/2026_07_24_0200_0003_invitations.py
-"""workspace_invitations table — INVITATIONS.md (hand-written)."""
+"""workspace_invitations table."""
 from __future__ import annotations
 
 import sqlalchemy as sa

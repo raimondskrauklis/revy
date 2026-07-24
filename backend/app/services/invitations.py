@@ -129,8 +129,6 @@ async def accept_invitation(
     if invitation.status != InvitationStatus.pending:
         raise NotFoundError("Invitation not found or expired")
     if invitation.expires_at <= now:
-        invitation.status = InvitationStatus.expired
-        await session.flush()
         raise NotFoundError("Invitation not found or expired")
 
     if user.email.strip().lower() != invitation.email:

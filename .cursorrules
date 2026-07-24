@@ -29,6 +29,7 @@
   - Models suffix: `ORM` (e.g., `UserORM`).
   - Enums: Define in `backend/app/constants/enums.py`.
   - **Migrations**: ❌ **NEVER** use Alembic `--autogenerate` (do **not** run `pipenv run alembic revision --autogenerate -m "..."`). Write migration files by hand (`pipenv run alembic revision -m "..."` without `--autogenerate`).
+  - **Migration docstrings**: Module `"""..."""` is the Alembic console label — keep it short (tables/change only, e.g. `"""github_installations table."""`). ❌ NO doc filenames, phase tags (`P0`, `P1`), `(hand-written)`, or plan references — they clutter `alembic upgrade` logs.
 - **Validation**: Pydantic v2 (`model_config = {"from_attributes": True}`).
 - **JSON numerics**: Response schemas the frontend consumes use `float`, not `Decimal` (Pydantic v2 serializes `Decimal` as JSON strings; `Number.isFinite` fails). ORM may keep `Decimal`. See `docs/backend/analytics_risks/ANALYTICS_AND_CALCULATIONS_LIVE.md` §8.4 and **D-DECIMAL-CAST** in `docs/analytics_visualizations/IMPLEMENTATION_PLAN.md`.
 - **Pagination**: Use **Cursor Pagination** for list endpoints.

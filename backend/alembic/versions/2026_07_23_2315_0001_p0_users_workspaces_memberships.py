@@ -1,5 +1,5 @@
 # backend/alembic/versions/2026_07_23_2315_0001_p0_users_workspaces_memberships.py
-"""P0 users, workspaces, workspace_memberships — hand-written (MIGRATIONS.md)."""
+"""users, workspaces, workspace_memberships."""
 from __future__ import annotations
 
 import sqlalchemy as sa

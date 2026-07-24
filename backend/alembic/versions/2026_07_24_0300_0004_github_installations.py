@@ -1,5 +1,5 @@
 # backend/alembic/versions/2026_07_24_0300_0004_github_installations.py
-"""github_installations table — REVY_PRODUCT_SLICE.md (hand-written)."""
+"""github_installations table."""
 from __future__ import annotations
 
 import sqlalchemy as sa

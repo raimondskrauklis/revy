@@ -263,9 +263,9 @@ async def test_accept_invitation_rejects_expired():
 
     session = AsyncMock()
     session.scalar = AsyncMock(return_value=invitation)
-    session.flush = AsyncMock()
 
     with pytest.raises(NotFoundError):
         await accept_invitation(session, token="expired", user=user)
 
-    assert invitation.status == InvitationStatus.expired
+    assert invitation.status == InvitationStatus.pending
+    session.flush.assert_not_called()
