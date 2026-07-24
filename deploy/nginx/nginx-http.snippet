@@ -1,0 +1,5 @@
+# deploy/nginx/nginx-http.snippet
+# Add ONCE inside `http { }` in /etc/nginx/nginx.conf (not in a site file).
+# Required for rate limiting on revy.createit.digital /api/
+
+limit_req_zone $binary_remote_addr zone=api_limit:10m rate=30r/s;

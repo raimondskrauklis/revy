@@ -15,7 +15,8 @@ concurrency:
 
 env:
   REGISTRY: registry.digitalocean.com
-  REGISTRY_NAME: revy
+  # DO control panel → Container Registry name (full image: REGISTRY/REGISTRY_NAME/IMAGE:tag)
+  REGISTRY_NAME: revy-container-registry
   BACKEND_IMAGE: revy-api
   FRONTEND_IMAGE: revy-web
   BACKEND_CONTAINER_NAME: revy-api
@@ -66,7 +67,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
           cache-dependency-path: "frontend/package-lock.json"
 
@@ -186,6 +187,10 @@ jobs:
   # ========================================================================
   # PHASE 2: BUILD & DEPLOY (ONLY when main gets a push = PR merged)
   # Migrations run on droplet from deployed image SHA (not GHA runner).
+  #
+  # Required GitHub Actions secrets (deploy): DOCR_TOKEN, DROPLET_IP, SSH_PRIVATE_KEY, VITE_*
+  # Registry login: username `doctoken` + DOCR_TOKEN
+  # DIGITALOCEAN_ACCESS_TOKEN + DO_DB_ID — CI validate only (SKIP_CI_TESTS=false).
   # ========================================================================
   deploy-production:
     name: Build, Push, and Deploy to Droplet

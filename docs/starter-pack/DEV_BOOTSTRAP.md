@@ -10,7 +10,7 @@ Operator runbook: DigitalOcean managed PostgreSQL 17, Keycloak, local Redis, API
 
 - DO managed PostgreSQL cluster (dev + test DB users/databases)
 - Keycloak reachable from your machine (local `localhost:8080` or shared dev realm)
-- `pipenv`, Node 20+, Docker (Redis only)
+- `pipenv`, Node 24 LTS+, Docker (Redis only)
 
 ---
 
@@ -127,6 +127,8 @@ Register in Keycloak with the **same email** on first login.
 ## 6. Keycloak
 
 Complete [KEYCLOAK_DEV_CHECKLIST.md](./KEYCLOAK_DEV_CHECKLIST.md) before starting the API.
+
+**Production DNS (createit.digital):** app `https://revy.createit.digital`, Keycloak `https://auth.revy.createit.digital` — set matching `VITE_KEYCLOAK_*` in GitHub Actions and `ALLOWED_ORIGINS` on the droplet.
 
 ---
 
