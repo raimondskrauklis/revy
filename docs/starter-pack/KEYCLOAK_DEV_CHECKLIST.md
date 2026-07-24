@@ -17,6 +17,7 @@ Configure realm and clients so browser tokens pass `app.core.auth` validation.
 | Verify email | On (dev users: complete verification or relax required action) |
 
 Backend: `KEYCLOAK_REALM=revy`  
+Production API (docker): `KEYCLOAK_URL=http://keycloak:8080` **and** `KEYCLOAK_ISSUER=https://auth.revy.createit.digital/realms/revy` (JWT `iss` from browser login uses the public host).  
 Frontend: `VITE_KEYCLOAK_REALM=revy`
 
 ---

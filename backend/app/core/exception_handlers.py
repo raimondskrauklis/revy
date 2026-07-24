@@ -16,10 +16,13 @@ async def platform_exception_handler(
     request: Request, exc: PlatformException
 ) -> JSONResponse:
     if exc.http_status_code >= 500:
-        logger.error("platform_error", extra={"message": exc.message}, exc_info=True)
+        logger.error("platform_error", extra={"error_message": exc.message}, exc_info=True)
         capture_exception(exc)
     else:
-        logger.info("platform_error", extra={"message": exc.message, "code": exc.error_code})
+        logger.info(
+            "platform_error",
+            extra={"error_message": exc.message, "code": exc.error_code},
+        )
 
     content: dict = {
         "error": exc.error_code,
