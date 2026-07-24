@@ -113,7 +113,7 @@ async def test_accept_invitation_creates_membership():
     user = UserORM(
         keycloak_user_id="kc-invitee",
         email="invitee@example.com",
-        status=UserStatus.pending_profile,
+        status=UserStatus.active,
     )
     user.id = uuid.uuid4()
 
@@ -170,6 +170,30 @@ async def test_accept_invitation_leaves_active_user_unchanged():
     await accept_invitation(session, token="active-token", user=user)
 
     assert user.status == UserStatus.active
+
+
+@pytest.mark.asyncio
+async def test_accept_invitation_rejects_pending_profile():
+    user = UserORM(
+        keycloak_user_id="kc-profile",
+        email="profile@example.com",
+        status=UserStatus.pending_profile,
+    )
+    invitation = WorkspaceInvitationORM(
+        workspace_id=uuid.uuid4(),
+        email="profile@example.com",
+        role=AppRole.viewer,
+        token="token",
+        invited_by_user_id=uuid.uuid4(),
+        status=InvitationStatus.pending,
+        expires_at=datetime.now(UTC) + timedelta(days=1),
+    )
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(return_value=invitation)
+
+    with pytest.raises(ForbiddenError, match="cannot accept invitations"):
+        await accept_invitation(session, token="token", user=user)
 
 
 @pytest.mark.asyncio

@@ -22,6 +22,7 @@ _INVITATION_ACCEPT_BLOCKED_STATUSES = frozenset(
     {
         UserStatus.pending_activation,
         UserStatus.pending_email_verification,
+        UserStatus.pending_profile,
         UserStatus.pending_approval,
         UserStatus.rejected,
         UserStatus.suspended,
@@ -156,9 +157,6 @@ async def accept_invitation(
 
     invitation.status = InvitationStatus.accepted
     invitation.accepted_at = now
-
-    if user.status == UserStatus.pending_profile:
-        user.status = UserStatus.active
 
     await session.flush()
     return membership
