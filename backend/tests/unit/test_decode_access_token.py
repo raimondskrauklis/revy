@@ -90,6 +90,30 @@ async def test_decode_access_token_refreshes_jwks_on_key_rotation():
 
 
 @pytest.mark.asyncio
+async def test_decode_access_token_retry_path_unusable_jwks_returns_service_unavailable():
+    jwks_old, _ = _rsa_jwks(kid="old-kid")
+    _, private_pem_new = _rsa_jwks(kid="new-kid")
+    token = jwt.encode(
+        {
+            "sub": "user-1",
+            "azp": "revy-web",
+            "iss": "https://auth.example/realms/revy",
+        },
+        private_pem_new,
+        algorithm="RS256",
+        headers={"kid": "new-kid"},
+    )
+    get_jwks = AsyncMock(side_effect=[jwks_old, {"keys": []}])
+
+    with _auth_patches(jwks=jwks_old, get_jwks=get_jwks):
+        with pytest.raises(ServiceUnavailableError, match="Authentication service unavailable"):
+            await decode_access_token(token)
+
+    assert get_jwks.await_count == 2
+    get_jwks.assert_any_await(force_refresh=True)
+
+
+@pytest.mark.asyncio
 async def test_decode_access_token_rejects_invalid_signature_without_refresh():
     jwks, _ = _rsa_jwks()
     _, other_private_pem = _rsa_jwks(kid="other-kid")

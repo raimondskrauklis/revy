@@ -101,6 +101,11 @@ async def decode_access_token(token: str) -> dict:
             return _decode_token_payload(token, jwks)
         except jwt.ExpiredSignatureError as exc:
             raise UnauthorizedError("Token expired") from exc
+        except PyJWKSetError as exc:
+            raise ServiceUnavailableError(
+                message="Authentication service unavailable",
+                details={"reason": str(exc)},
+            ) from exc
         except (JwkSigningKeyNotFoundError, jwt.InvalidTokenError) as retry_exc:
             raise UnauthorizedError("Invalid token") from retry_exc
     except PyJWKSetError as exc:
