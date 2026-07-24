@@ -217,9 +217,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Verify deploy secrets
+        run: |
+          set -euo pipefail
+          missing=()
+          [ -z "${{ secrets.DOCR_TOKEN }}" ] && missing+=(DOCR_TOKEN)
+          [ -z "${{ secrets.DROPLET_IP }}" ] && missing+=(DROPLET_IP)
+          [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ] && missing+=(SSH_PRIVATE_KEY)
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing GitHub Actions secrets: ${missing[*]}. See deploy/env-examples/github-actions.secrets.example"
+            exit 1
+          fi
+
       # ----------------- DOCKER LOGIN -----------------
       - name: Login to DigitalOcean Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: doctoken
@@ -278,7 +290,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DROPLET_IP }}
-          username: root
+          username: deploy
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
@@ -287,8 +299,6 @@ jobs:
             docker network inspect ${{ env.DOCKER_NETWORK }} >/dev/null 2>&1 || docker network create ${{ env.DOCKER_NETWORK }}
 
             mkdir -p /mnt/revy/redis-data
-            chown -R 999:999 /mnt/revy/redis-data
-            chmod -R 750 /mnt/revy/redis-data
 
             if ! docker ps -a --filter name=^redis$ --format '{{.Names}}' | grep -q '^redis$'; then
               echo "🟡 Redis container not found. Starting new one..."
@@ -328,7 +338,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DROPLET_IP }}
-          username: root
+          username: deploy
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
@@ -352,7 +362,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DROPLET_IP }}
-          username: root
+          username: deploy
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
@@ -383,7 +393,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DROPLET_IP }}
-          username: root
+          username: deploy
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
@@ -412,7 +422,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DROPLET_IP }}
-          username: root
+          username: deploy
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           timeout: 60s
           command_timeout: 15m
@@ -454,7 +464,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DROPLET_IP }}
-          username: root
+          username: deploy
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             echo ""
