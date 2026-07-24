@@ -61,4 +61,4 @@ docker compose up -d --force-recreate
 |-|-|
 | Health | `curl -sf http://127.0.0.1:9000/health/ready` |
 | Nginx | `deploy/nginx/auth.revy.createit.digital.conf` |
-| API env | `KEYCLOAK_URL=http://keycloak:8080` in `/mnt/revy/backend/.env` |
+| API env | `KEYCLOAK_URL=http://keycloak:8080` and `KEYCLOAK_ISSUER=https://auth.revy.createit.digital/realms/revy` in `/mnt/revy_volume/backend/.env` |

@@ -38,15 +38,11 @@ def test_keycloak_token_issuer_uses_public_override():
     assert settings.keycloak_token_issuer == "https://auth.revy.createit.digital/realms/revy"
 
 
-def test_jwks_client_issuer_uses_keycloak_token_issuer():
+def test_jwks_client_issuer_reads_settings_token_issuer():
     from app.core.jwks import jwks_client
 
-    with (
-        patch("app.core.jwks.settings.keycloak_url", "http://keycloak:8080"),
-        patch("app.core.jwks.settings.keycloak_realm", "revy"),
-        patch(
-            "app.core.jwks.settings.keycloak_issuer",
-            "https://auth.revy.createit.digital/realms/revy",
-        ),
-    ):
+    class _SettingsStub:
+        keycloak_token_issuer = "https://auth.revy.createit.digital/realms/revy"
+
+    with patch("app.core.jwks.settings", _SettingsStub()):
         assert jwks_client.issuer == "https://auth.revy.createit.digital/realms/revy"

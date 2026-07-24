@@ -6,11 +6,11 @@ import pytest
 from starlette.requests import Request
 
 from app.core.exception_handlers import platform_exception_handler
-from app.core.exceptions import UnauthorizedError
+from app.core.exceptions import ServiceUnavailableError, UnauthorizedError
 
 
 @pytest.mark.asyncio
-async def test_platform_exception_handler_logs_without_reserved_extra_keys():
+async def test_platform_exception_handler_logs_4xx_without_reserved_extra_keys():
     request = MagicMock(spec=Request)
     exc = UnauthorizedError("Invalid token")
 
@@ -23,3 +23,22 @@ async def test_platform_exception_handler_logs_without_reserved_extra_keys():
     assert "message" not in extra
     assert extra["error_message"] == "Invalid token"
     assert extra["code"] == "unauthorized"
+
+
+@pytest.mark.asyncio
+async def test_platform_exception_handler_logs_5xx_without_reserved_extra_keys():
+    request = MagicMock(spec=Request)
+    exc = ServiceUnavailableError(message="Authentication service unavailable")
+
+    with (
+        patch("app.core.exception_handlers.logger") as mock_logger,
+        patch("app.core.exception_handlers.capture_exception") as mock_capture,
+    ):
+        response = await platform_exception_handler(request, exc)
+
+    assert response.status_code == 503
+    mock_logger.error.assert_called_once()
+    extra = mock_logger.error.call_args.kwargs["extra"]
+    assert "message" not in extra
+    assert extra["error_message"] == "Authentication service unavailable"
+    mock_capture.assert_called_once_with(exc)
