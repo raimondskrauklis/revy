@@ -22,7 +22,7 @@ env:
   BACKEND_CONTAINER_NAME: revy-api
   FRONTEND_CONTAINER_NAME: revy-web
   DOCKER_NETWORK: revy-net
-  ENV_FILE_PATH: /mnt/revy/backend/.env
+  ENV_FILE_PATH: /mnt/revy_volume/backend/.env
   RESTART_WORKERS: "true"
   # "true" skips frontend + backend tests and test-DB migrate in CI. Set "false" once Actions secrets exist.
   SKIP_CI_TESTS: "true"
@@ -344,12 +344,8 @@ jobs:
             set -e
             echo "🔄 Running database migrations..."
 
-            DOCKER_CONFIG="$(mktemp -d)"
-            export DOCKER_CONFIG
-            printf '{}\n' > "${DOCKER_CONFIG}/config.json"
-            trap 'rm -rf "${DOCKER_CONFIG}"' EXIT
-
-            echo "${{ secrets.DOCR_TOKEN }}" | docker login ${{ env.REGISTRY }} -u doctoken --password-stdin
+            DOCR_AUTH="$(printf 'doctoken:%s' '${{ secrets.DOCR_TOKEN }}' | base64 -w0)"
+            export DOCKER_AUTH_CONFIG="{\"auths\":{\"${{ env.REGISTRY }}\":{\"auth\":\"${DOCR_AUTH}\"}}}"
 
             docker pull ${{ env.REGISTRY }}/${{ env.REGISTRY_NAME }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
 
@@ -373,12 +369,8 @@ jobs:
             set -e
             echo "🚀 Deploying backend..."
 
-            DOCKER_CONFIG="$(mktemp -d)"
-            export DOCKER_CONFIG
-            printf '{}\n' > "${DOCKER_CONFIG}/config.json"
-            trap 'rm -rf "${DOCKER_CONFIG}"' EXIT
-
-            echo "${{ secrets.DOCR_TOKEN }}" | docker login ${{ env.REGISTRY }} -u doctoken --password-stdin
+            DOCR_AUTH="$(printf 'doctoken:%s' '${{ secrets.DOCR_TOKEN }}' | base64 -w0)"
+            export DOCKER_AUTH_CONFIG="{\"auths\":{\"${{ env.REGISTRY }}\":{\"auth\":\"${DOCR_AUTH}\"}}}"
 
             docker pull ${{ env.REGISTRY }}/${{ env.REGISTRY_NAME }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
 
@@ -409,12 +401,8 @@ jobs:
             set -e
             echo "🚀 Deploying frontend..."
 
-            DOCKER_CONFIG="$(mktemp -d)"
-            export DOCKER_CONFIG
-            printf '{}\n' > "${DOCKER_CONFIG}/config.json"
-            trap 'rm -rf "${DOCKER_CONFIG}"' EXIT
-
-            echo "${{ secrets.DOCR_TOKEN }}" | docker login ${{ env.REGISTRY }} -u doctoken --password-stdin
+            DOCR_AUTH="$(printf 'doctoken:%s' '${{ secrets.DOCR_TOKEN }}' | base64 -w0)"
+            export DOCKER_AUTH_CONFIG="{\"auths\":{\"${{ env.REGISTRY }}\":{\"auth\":\"${DOCR_AUTH}\"}}}"
 
             docker pull ${{ env.REGISTRY }}/${{ env.REGISTRY_NAME }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
 
@@ -445,12 +433,8 @@ jobs:
             set -e
             echo "🚀 Deploying Celery workers..."
 
-            DOCKER_CONFIG="$(mktemp -d)"
-            export DOCKER_CONFIG
-            printf '{}\n' > "${DOCKER_CONFIG}/config.json"
-            trap 'rm -rf "${DOCKER_CONFIG}"' EXIT
-
-            echo "${{ secrets.DOCR_TOKEN }}" | docker login ${{ env.REGISTRY }} -u doctoken --password-stdin
+            DOCR_AUTH="$(printf 'doctoken:%s' '${{ secrets.DOCR_TOKEN }}' | base64 -w0)"
+            export DOCKER_AUTH_CONFIG="{\"auths\":{\"${{ env.REGISTRY }}\":{\"auth\":\"${DOCR_AUTH}\"}}}"
             docker pull ${{ env.REGISTRY }}/${{ env.REGISTRY_NAME }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
 
             BACKEND_IMAGE="${{ env.REGISTRY }}/${{ env.REGISTRY_NAME }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}"
