@@ -124,13 +124,11 @@ Do NOT retry. Do NOT workaround. Tell user what to run.
 
 ---
 
-## Context: KP Platform
+## Context: Revy
 
-- **Backend:** FastAPI, SQLAlchemy async, Alembic, Pydantic
-- **Frontend:** React 19, TypeScript strict, Vite
-- **Services:** `backend/app/services/`
-- **Routes:** `backend/app/routes/`
-- **Components:** `frontend/src/components/`
+- **Backend:** FastAPI, SQLAlchemy async, Alembic, Pydantic — `backend/app/`
+- **Frontend:** React 19, TypeScript, Vite — `frontend/src/`
+- **Product slice:** `docs/starter-pack/REVY_PRODUCT_SLICE.md`
 
 Use for accurate, specific commit messages.
 

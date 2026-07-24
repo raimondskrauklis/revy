@@ -1,0 +1,16 @@
+---
+description: i18n — EN + LV from day one
+globs: frontend/**/*
+alwaysApply: false
+---
+
+# i18n
+
+1. **Languages**: EN primary + LV required — keys must match across locales.
+2. **API**: `useTranslation()` + `t()` for every user-facing string.
+3. **Namespaces**: feature-scoped locale files where appropriate; follow neighbors in the same feature folder.
+4. **Parity**: new EN keys require LV in the same change when touching i18n.
+5. **Locale helpers**: `@/lib/locale`, `@/lib/number` — not hardcoded locale strings.
+6. ❌ NO hardcoded UI strings in components.
+
+Config: `frontend/src/i18n/`. See `internal-docs/starter-pack/docs/i18n/README.md`.

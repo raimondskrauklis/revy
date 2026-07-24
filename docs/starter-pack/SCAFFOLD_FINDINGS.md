@@ -8,17 +8,17 @@ Baseline for Revy greenfield platform foundation (starter-pack → repo). **No e
 
 ## Locked exclusions
 
-**Do not change or scope into Phases 1–4** until explicitly invoked. Agents and implementers must not “fix” these opportunistically.
+**Phases 1–4:** agents must not opportunistically “fix” backend/frontend product gaps listed below.
 
-| Exclusion | What stays as-is | Rationale |
-|-----------|------------------|-----------|
-| **`.cursorrules`** | KP Analytics rules (domain, `--tp-*`, legacy test paths) | Replace in Phase 5; premature edits confuse scaffold work |
-| **Deploy workflow** | `.github/workflows/deploy.yml` (KP pipeline, `SKIP_CI_TESTS`) | Revy CI/CD is a separate program |
-| **Root `AGENTS.md` / `README`** | No in-repo agent or human entry point yet | Adopt starter-pack `AGENTS.md` + Revy pointer in Phase 5 |
-| **Backend platform completeness** | Registration admin APIs, invitations DB, idempotency on routes, conftest **fixtures** + `ENVIRONMENT=test` bootstrap, JsonFormatter `extra`, etc. | Phases 2–3 — not scaffold baseline |
-| **Frontend product completeness** | Revy review UI, MSW handlers, product routes beyond starter-pack SPA | Phase 4+ — starter-pack shell is intentional |
+| Exclusion | Status (2026-07-25) |
+|-----------|------------------------|
+| **`.cursorrules` / agent entry** | **Resolved (P5)** — `AGENTS.md`, modular `.cursor/rules/`, slim `.cursorrules` |
+| **Deploy workflow** | **Resolved early** — `.github/workflows/deploy.yml` is Revy-branded; tests gated by `SKIP_CI_TESTS` |
+| **Root `README`** | **Resolved (P5)** — minimal contributor entry |
+| **Backend platform completeness** | Phases 2–3 scope — registration, invitations, idempotency routes, etc. |
+| **Frontend product completeness** | Phase 4+ — review pipeline UI beyond starter-pack shell |
 
-**Related (deferred, not locked file-by-file):** wire `internal-docs/` into repo rules; production droplet runtime; Keycloak realm automation.
+**Related (deferred):** production droplet runtime tuning; Keycloak realm automation; flip `SKIP_CI_TESTS` when CI secrets ready.
 
 ---
 
@@ -79,8 +79,8 @@ Revy changes flowed back to `internal-docs/starter-pack/templates/backend/` for:
 
 | Trap | Detail |
 |------|--------|
-| **KP `.cursorrules`** | Still describes KP domain, `--tp-*`, KP `seed_test_data` patterns — **misleading for agents** (deferred fix in P5). |
-| **`.github/workflows/deploy.yml`** | Full KP pipeline, `SKIP_CI_TESTS: "true"` — **not Revy** (deferred). |
+| **KP `.cursorrules`** | **Resolved (P5)** — `AGENTS.md` + modular `--app-*` rules. |
+| **`.github/workflows/deploy.yml`** | **Resolved** — Revy-branded; `SKIP_CI_TESTS` until secrets ready. |
 | **`legacy backend/.env`** | KP Keycloak (`kp-platform`), `FRONTEND_BASE_URL`, storage/mailgun keys — re-baseline in **P1** before smoke; full prune in **P3.5** before dropping `extra="ignore"`. |
 | **`Settings.extra = "ignore"`** | Masks orphan keys in `backend/.env` — remove in P3.5 after env matches `Settings` / `.env.example`. |
 | **JWT audience** | Strict allowlist (`revy-api`, `revy-web`) — Keycloak mappers must match or login fails. |
@@ -197,7 +197,7 @@ Revy changes flowed back to `internal-docs/starter-pack/templates/backend/` for:
 ## Devil's advocate
 
 - **Facade platform:** FE registration/admin routes without APIs → false sense of completeness.
-- **Agent confusion:** KP `.cursorrules` + Revy code → wrong patterns (offset pagination, `--tp-*`, KP entities).
+- **Agent confusion (mitigated P5):** was KP `.cursorrules` vs Revy code — now `AGENTS.md` + `--app-*` rules.
 - **Skipped CI:** regressions until minimal workflow exists.
 - **Auth commit in dependency:** subtle bugs when routes expect rollback semantics.
 - **internal-docs gitignored:** new contributors without internal-docs see incomplete picture unless `docs/starter-pack/` is kept current.

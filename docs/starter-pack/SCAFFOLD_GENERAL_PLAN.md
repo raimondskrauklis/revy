@@ -4,15 +4,14 @@ Phased goals from [SCAFFOLD_FINDINGS.md](./SCAFFOLD_FINDINGS.md). **No file list
 
 **Cross-cutting (every phase):** unit tests for touched logic; starter-pack template sync when core patterns change; EN+LV for any new user-facing strings; no autogenerate migrations.
 
-**Locked exclusions** (from findings — do not touch in Phases 1–4):
+**Locked exclusions** (from findings):
 
-| Item | Phase |
-|------|-------|
-| `.cursorrules` | 5 |
-| `.github/workflows/deploy.yml` | 5 |
-| Root `AGENTS.md` / `README` | 5 |
-| Backend platform completeness (registration APIs, invitations, idempotency wire, …) | 2–3 |
-| Frontend product completeness (Revy UI beyond starter-pack SPA) | 4+ |
+| Item | Status |
+|------|--------|
+| `.cursorrules` / `AGENTS.md` / root `README` | Done (P5, 2026-07-25) |
+| `.github/workflows/deploy.yml` | Revy-branded; tests via `SKIP_CI_TESTS` |
+| Backend platform completeness (registration APIs, invitations, idempotency wire, …) | Phases 2–3 |
+| Frontend product completeness (Revy UI beyond starter-pack SPA) | Phase 4+ |
 
 ---
 
@@ -80,17 +79,15 @@ Phased goals from [SCAFFOLD_FINDINGS.md](./SCAFFOLD_FINDINGS.md). **No file list
 
 ---
 
-## Phase 5 — Repo identity & automation (deferred wave)
+## Phase 5 — Agent & cursor identity
 
-**Goal:** Agents and CI match Revy, not KP.
+**Goal:** Agents and contributor docs match Revy, not KP.
 
-**Scope:** In — root `AGENTS.md` (starter-pack + Revy pointer); slim `.cursorrules` or modular `.cursor/rules/`; **new** minimal `ci.yml` (lint, test, build) — do not enable tests in KP `deploy.yml` (`seed_test_data.py` is a no-op stub; do not wire CI to KP seed patterns). Out — full production deploy pipeline (separate program).
+**Scope:** In — root `AGENTS.md`, slim `.cursorrules`, modular `.cursor/rules/` (`--app-*`), remove KP corpus/deep-investigation rules & skills, minimal `README.md`. Out — new `ci.yml` (deploy workflow already Revy); full production deploy redesign.
 
-**Deliverables:** PR checks green without KP workflow; new contributor/agent entry points in repo.
+**Deliverables:** Agent entry points in repo; no misleading KP domain in Cursor context.
 
-**Depends on:** Phase 1 (minimum); ideally Phase 3.
-
-**Status:** **Deferred** by product owner — do not start until explicitly invoked.
+**Status:** **Done** (2026-07-25).
 
 ---
 
