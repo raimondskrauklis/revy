@@ -66,8 +66,7 @@ class JwksClient:
 
     @property
     def issuer(self) -> str:
-        base = settings.keycloak_url.rstrip("/")
-        return f"{base}/realms/{settings.keycloak_realm}"
+        return settings.keycloak_token_issuer
 
     async def _http_client(self) -> httpx.AsyncClient:
         if self.__class__._client is None or self.__class__._client.is_closed:

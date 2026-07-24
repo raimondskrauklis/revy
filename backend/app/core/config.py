@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     keycloak_realm: str
     keycloak_client_id: str
     keycloak_client_secret: str
+    # JWT `iss` when it differs from KEYCLOAK_URL (e.g. public auth host vs docker `keycloak:8080`)
+    keycloak_issuer: str | None = None
 
     # One-time first deploy — remove from .env after super admin first login
     bootstrap_super_admin_email: str | None = None
@@ -89,6 +91,14 @@ class Settings(BaseSettings):
     revy_revision_timeout_standard_seconds: int = 900
     revy_revision_timeout_deep_seconds: int = 1500
     revy_revision_timeout_critical_seconds: int = 1800
+
+    @property
+    def keycloak_token_issuer(self) -> str:
+        """OIDC issuer (`iss`) for JWT validation — public URL when KEYCLOAK_URL is internal."""
+        if self.keycloak_issuer:
+            return self.keycloak_issuer.rstrip("/")
+        base = self.keycloak_url.rstrip("/")
+        return f"{base}/realms/{self.keycloak_realm}"
 
     @property
     def cors_origins(self) -> list[str]:

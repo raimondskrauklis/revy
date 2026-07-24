@@ -20,10 +20,9 @@ description: >-
    - On forbidden branch → `git checkout -b feat/<short-topic>` (keep uncommitted work).
    - Else stay on current feature branch.
 2. **Checks** — run tests for touched areas; if `backend/` Python changed: `pipenv run ruff check --fix .` then `pipenv run ruff check .` (no `--unsafe-fixes`).
-3. **Bugbot** — `review-bugbot` skill, `Diff: uncommitted changes`; fix valid findings; re-run checks.
-4. **Commit** — `git add` relevant files; plain `git commit -m "…"` — **no** `--trailer`, **no** `Co-authored-by: Cursor`.
-5. **Push** — `git push -u origin HEAD` (first push) or `git push`.
-6. **PR** — `gh pr view` or `gh pr list --head <branch> --json url`; if none:
+3. **Commit** — `git add` relevant files; plain `git commit -m "…"` — **no** `--trailer`, **no** `Co-authored-by: Cursor`.
+4. **Push** — `git push -u origin HEAD` (first push) or `git push`.
+5. **PR** — `gh pr view` or `gh pr list --head <branch> --json url`; if none:
 
 ```bash
 gh pr create --title "<short title>" --body "$(cat <<'EOF'
@@ -37,6 +36,6 @@ EOF
 )"
 ```
 
-Skip step 6 if user said **no pr**.
+Skip step 5 if user said **no pr**. After PR is open, run **`babysit-pr`** if Greptile leaves review comments.
 
 **Output:** branch, commit sha, PR URL (or compare URL if `gh pr create` failed).

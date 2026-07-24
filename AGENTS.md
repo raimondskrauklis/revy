@@ -41,11 +41,11 @@ Root [`.cursorrules`](.cursorrules) is a short pointer.
 
 | Skill | When |
 |-------|------|
-| `ship-changes` | Ship: Bugbot, branch, commit, push, PR |
+| `ship-changes` | Ship: branch, commit, push, PR |
 | `sentry-fix-issues` | User points at one Sentry issue URL/ID |
 | `phase-execution` | Full scaffold execution LOOP from `docs/starter-pack/SCAFFOLD_P*_EXECUTION.md` |
 | `chunk-execution` | One scaffold subphase only |
-| `babysit-pr` | Triage/fix Bugbot on an open PR |
+| `babysit-pr` | Triage/fix Greptile review comments on an open PR |
 
 Scaffold planning skills (`create-findings`, `create-general-plan`, `create-execution-plan`, peer-review, `devils-advocate`, `post-finish-gap-pass`) apply to `docs/starter-pack/` program work only.
 
