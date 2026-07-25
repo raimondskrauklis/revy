@@ -2,6 +2,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useInfiniteList } from '@/hooks/useInfiniteList';
 import type {
+  DeleteAccountPayload,
+  DeleteWorkspacePayload,
   Invitation,
   InvitationCreatePayload,
   Member,
@@ -10,11 +12,17 @@ import type {
 } from '@/features/settings/types';
 import {
   createCheckoutSession,
+  createExportJob,
   createInvitation,
   createPortalSession,
+  deleteAccount,
+  deleteWorkspace,
+  downloadExportJob,
   fetchBillingStatus,
+  fetchExportJobStatus,
   fetchInvitations,
   fetchMembers,
+  leaveWorkspace,
   patchWorkspace,
   removeMember,
   revokeInvitation,
@@ -27,6 +35,7 @@ export const settingsQueryKeys = {
   invitations: (workspaceId: string, status = 'pending') =>
     ['settings', 'invitations', workspaceId, status] as const,
   billing: (workspaceId: string) => ['settings', 'billing', workspaceId] as const,
+  exportJob: (jobId: string) => ['settings', 'export', jobId] as const,
 };
 
 export function useMembers(workspaceId: string | null | undefined) {
@@ -153,4 +162,53 @@ export function useCreatePortalSession(workspaceId: string | null | undefined) {
       return createPortalSession(workspaceId);
     },
   });
+}
+
+export function useCreateExportJob() {
+  return useMutation({
+    mutationFn: () => createExportJob(),
+  });
+}
+
+export function useExportJobStatus(jobId: string | null) {
+  return useQuery({
+    queryKey: settingsQueryKeys.exportJob(jobId ?? ''),
+    queryFn: () => fetchExportJobStatus(jobId!),
+    enabled: Boolean(jobId),
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (status === 'pending' || status === 'processing') {
+        return 2000;
+      }
+      return false;
+    },
+  });
+}
+
+export function useLeaveWorkspace(workspaceId: string | null | undefined) {
+  return useMutation({
+    mutationFn: () => {
+      if (!workspaceId) throw new Error('workspace_required');
+      return leaveWorkspace(workspaceId);
+    },
+  });
+}
+
+export function useDeleteWorkspace(workspaceId: string | null | undefined) {
+  return useMutation({
+    mutationFn: (payload: DeleteWorkspacePayload) => {
+      if (!workspaceId) throw new Error('workspace_required');
+      return deleteWorkspace(workspaceId, payload);
+    },
+  });
+}
+
+export function useDeleteAccount() {
+  return useMutation({
+    mutationFn: (payload: DeleteAccountPayload) => deleteAccount(payload),
+  });
+}
+
+export async function downloadUserExport(jobId: string): Promise<Blob> {
+  return downloadExportJob(jobId);
 }

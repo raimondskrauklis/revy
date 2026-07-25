@@ -64,3 +64,24 @@ export interface CheckoutSessionResponse {
 export interface PortalSessionResponse {
   url: string;
 }
+
+export type ExportJobStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+export interface ExportJobCreateResponse {
+  job_id: string;
+}
+
+export interface ExportJobStatusResponse {
+  status: ExportJobStatus;
+  created_at: string;
+  completed_at: string | null;
+  expires_at: string | null;
+}
+
+export interface DeleteWorkspacePayload {
+  confirm_slug: string;
+}
+
+export interface DeleteAccountPayload {
+  confirm_email: string;
+}

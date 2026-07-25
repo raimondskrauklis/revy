@@ -126,7 +126,45 @@
       "workspace": "Darba vide",
       "team": "Komanda",
       "integrations": "Integrācijas",
-      "billing": "Norēķini"
+      "billing": "Norēķini",
+      "danger": "Bīstamā zona"
+    },
+    "danger": {
+      "export": {
+        "title": "Eksportēt datus",
+        "body": "Lejupielādējiet ZIP ar profilu un darba vides dalībām. Saite ir derīga dažas dienas.",
+        "request": "Pieprasīt eksportu",
+        "download": "Lejupielādēt eksportu",
+        "status": {
+          "pending": "Eksports rindā…",
+          "processing": "Sagatavo eksportu…",
+          "completed": "Eksports ir gatavs.",
+          "failed": "Eksports neizdevās. Mēģiniet vēlreiz."
+        }
+      },
+      "leave": {
+        "title": "Pamest darba vidi",
+        "body": "Noņemiet sevi no šīs darba vides. Zaudēsiet piekļuvi tās datiem.",
+        "action": "Pamest darba vidi",
+        "confirmTitle": "Pamest šo darba vidi?",
+        "confirmBody": "Jūs nekavējoties zaudēsiet piekļuvi šai darba videi."
+      },
+      "deleteWorkspace": {
+        "title": "Dzēst darba vidi",
+        "body": "Neatgriezeniski dzēst šo darba vidi visiem dalībniekiem. Vispirms atceliet aktīvo abonementu.",
+        "action": "Dzēst darba vidi",
+        "confirmTitle": "Dzēst šo darba vidi?",
+        "confirmBody": "To nevar atsaukt. Visi dalībnieki zaudēs piekļuvi.",
+        "confirmMatchLabel": "Ierakstiet {{slug}}, lai apstiprinātu"
+      },
+      "deleteAccount": {
+        "title": "Dzēst kontu",
+        "body": "Deaktivizējiet Revy kontu. Keycloak pieteikšanās netiek dzēsta — sazinieties ar atbalstu pilnai identitātes dzēšanai.",
+        "action": "Dzēst kontu",
+        "confirmTitle": "Dzēst kontu?",
+        "confirmBody": "To nevar atsaukt. Jūs nekavējoties tiksiet izrakstīts.",
+        "confirmMatchLabel": "Ierakstiet {{email}}, lai apstiprinātu"
+      }
     },
     "profile": {
       "emailLabel": "E-pasts",
@@ -472,6 +510,12 @@
     "last_workspace_admin": "Nepieciešams vismaz viens darba vides administrators",
     "plan_upgrade_required": "Lai izmantotu šo funkciju, jauniniet uz Pro",
     "billing_disabled": "Norēķini nav konfigurēti",
+    "subscription_active": "Pirms darba vides dzēšanas atceliet abonementu",
+    "sole_workspace_admin": "Pirms konta dzēšanas nododiet administratora lomu vai dzēsiet darba vidi",
+    "platform_admin_protected": "Platformas administratori šeit nevar dzēst kontu",
+    "account_deleted": "Šis konts ir dzēsts",
+    "export_in_progress": "Eksports jau notiek",
+    "export_expired": "Šī eksporta lejupielāde ir beigusies",
     "not_found_page": {
       "title": "Lapa nav atrasta",
       "body": "Pieprasītā lapa neeksistē."

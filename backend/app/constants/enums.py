@@ -20,6 +20,7 @@ class PlatformRole(str, Enum):
 class WorkspaceStatus(str, Enum):
     active = "active"
     suspended = "suspended"
+    deleted = "deleted"
 
 
 class UserStatus(str, Enum):
@@ -32,6 +33,7 @@ class UserStatus(str, Enum):
     active = "active"
     rejected = "rejected"
     suspended = "suspended"
+    deleted = "deleted"
 
 
 class ItemStatus(str, Enum):
@@ -56,6 +58,15 @@ class GitHubAccountType(str, Enum):
 
     organization = "organization"
     user = "user"
+
+
+class ExportJobStatus(str, Enum):
+    """data_export_jobs.status — W6 account lifecycle."""
+
+    pending = "pending"
+    processing = "processing"
+    completed = "completed"
+    failed = "failed"
 
 
 class GitHubInstallationStatus(str, Enum):

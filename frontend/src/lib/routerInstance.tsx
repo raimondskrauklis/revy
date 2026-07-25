@@ -18,6 +18,7 @@ import { WorkspaceSettingsPage } from '@/features/settings/pages/WorkspaceSettin
 import { TeamSettingsPage } from '@/features/settings/pages/TeamSettingsPage';
 import { IntegrationsSettingsPage } from '@/features/settings/pages/IntegrationsSettingsPage';
 import { BillingSettingsPage } from '@/features/settings/pages/BillingSettingsPage';
+import { DangerZonePage } from '@/features/settings/pages/DangerZonePage';
 import { InstallationsPage } from '@/features/installations/pages/InstallationsPage';
 import { adminRoutes } from '@/features/admin/routes';
 
@@ -103,6 +104,7 @@ export const appRouter = createBrowserRouter([
                 element: <RequirePermission permission="admin:users" />,
                 children: [{ path: 'billing', element: <BillingSettingsPage /> }],
               },
+              { path: 'danger', element: <DangerZonePage /> },
             ],
           },
         ],

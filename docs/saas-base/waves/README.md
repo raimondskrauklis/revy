@@ -11,7 +11,7 @@ Linear **phase-execution** order. General plans stay in [`../`](../README.md); e
 | W2 — Workspace & team | [SAAS_BASE_W2_EXECUTION.md](./SAAS_BASE_W2_EXECUTION.md) | done (`286ec0d`) |
 | W3 — Dashboard | [SAAS_BASE_W3_EXECUTION.md](./SAAS_BASE_W3_EXECUTION.md) | done (`6817a84`) |
 | W4 — Stripe | [SAAS_BASE_W4_EXECUTION.md](./SAAS_BASE_W4_EXECUTION.md) | done (`cdb94e4`) |
-| W5 — Platform admin | [SAAS_BASE_W5_EXECUTION.md](./SAAS_BASE_W5_EXECUTION.md) | pending |
+| W5 — Platform admin | [SAAS_BASE_W5_EXECUTION.md](./SAAS_BASE_W5_EXECUTION.md) | done (`d47e1ec`) |
 | W6 — Lifecycle | [SAAS_BASE_W6_EXECUTION.md](./SAAS_BASE_W6_EXECUTION.md) | pending |
 | W7 — Impersonation | [SAAS_BASE_W7_EXECUTION.md](./SAAS_BASE_W7_EXECUTION.md) | pending |
 

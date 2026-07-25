@@ -95,6 +95,10 @@ class Settings(BaseSettings):
     stripe_checkout_success_url: str | None = None
     stripe_checkout_cancel_url: str | None = None
 
+    # Data export — ACCOUNT_LIFECYCLE.md
+    export_storage_path: str = "/tmp/revy/exports"
+    export_ttl_days: int = 7
+
     # Review policy
     revy_default_review_profile: str = "standard"
     revy_revision_timeout_standard_seconds: int = 900

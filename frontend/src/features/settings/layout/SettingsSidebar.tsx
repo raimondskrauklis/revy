@@ -13,6 +13,7 @@ const WORKSPACE_LINKS = [
   { to: '/settings/team', label: 'settings.nav.team' },
   { to: '/settings/integrations', label: 'settings.nav.integrations' },
   { to: '/settings/billing', label: 'settings.nav.billing' },
+  { to: '/settings/danger', label: 'settings.nav.danger' },
 ] as const;
 
 function linkClassName({ isActive }: { isActive: boolean }): string {

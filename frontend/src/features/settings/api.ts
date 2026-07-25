@@ -4,6 +4,10 @@ import type {
   BillingStatus,
   CheckoutSessionResponse,
   CursorPage,
+  DeleteAccountPayload,
+  DeleteWorkspacePayload,
+  ExportJobCreateResponse,
+  ExportJobStatusResponse,
   Invitation,
   InvitationCreatePayload,
   Member,
@@ -89,4 +93,36 @@ export async function createCheckoutSession(workspaceId: string): Promise<Checko
 export async function createPortalSession(workspaceId: string): Promise<PortalSessionResponse> {
   const response = await apiClient.post(`/workspaces/${workspaceId}/billing/portal-session`);
   return await parseSuccess<PortalSessionResponse>(response);
+}
+
+export async function createExportJob(): Promise<ExportJobCreateResponse> {
+  const response = await apiClient.post('/me/export');
+  return await parseSuccess<ExportJobCreateResponse>(response);
+}
+
+export async function fetchExportJobStatus(jobId: string): Promise<ExportJobStatusResponse> {
+  const response = await apiClient.get(`/me/export/${jobId}`);
+  return await parseSuccess<ExportJobStatusResponse>(response);
+}
+
+export async function downloadExportJob(jobId: string): Promise<Blob> {
+  const response = await apiClient.get(`/me/export/${jobId}/download`, {
+    responseType: 'blob',
+  });
+  return response.data as Blob;
+}
+
+export async function leaveWorkspace(workspaceId: string): Promise<void> {
+  await apiClient.post(`/workspaces/${workspaceId}/leave`);
+}
+
+export async function deleteWorkspace(
+  workspaceId: string,
+  payload: DeleteWorkspacePayload,
+): Promise<void> {
+  await apiClient.delete(`/workspaces/${workspaceId}`, { data: payload });
+}
+
+export async function deleteAccount(payload: DeleteAccountPayload): Promise<void> {
+  await apiClient.delete('/me', { data: payload });
 }

@@ -126,7 +126,45 @@
       "workspace": "Workspace",
       "team": "Team",
       "integrations": "Integrations",
-      "billing": "Billing"
+      "billing": "Billing",
+      "danger": "Danger zone"
+    },
+    "danger": {
+      "export": {
+        "title": "Export your data",
+        "body": "Download a ZIP archive with your profile and workspace memberships. The link expires after a few days.",
+        "request": "Request export",
+        "download": "Download export",
+        "status": {
+          "pending": "Export queued…",
+          "processing": "Preparing your export…",
+          "completed": "Your export is ready.",
+          "failed": "Export failed. Please try again."
+        }
+      },
+      "leave": {
+        "title": "Leave workspace",
+        "body": "Remove yourself from this workspace. You will lose access to its data.",
+        "action": "Leave workspace",
+        "confirmTitle": "Leave this workspace?",
+        "confirmBody": "You will lose access to this workspace immediately."
+      },
+      "deleteWorkspace": {
+        "title": "Delete workspace",
+        "body": "Permanently delete this workspace for all members. Cancel any active subscription first.",
+        "action": "Delete workspace",
+        "confirmTitle": "Delete this workspace?",
+        "confirmBody": "This cannot be undone. All members will lose access.",
+        "confirmMatchLabel": "Type {{slug}} to confirm"
+      },
+      "deleteAccount": {
+        "title": "Delete account",
+        "body": "Deactivate your Revy account. Your Keycloak login is not removed — contact support if you need full identity deletion.",
+        "action": "Delete account",
+        "confirmTitle": "Delete your account?",
+        "confirmBody": "This cannot be undone. You will be signed out immediately.",
+        "confirmMatchLabel": "Type {{email}} to confirm"
+      }
     },
     "profile": {
       "emailLabel": "Email",
@@ -472,6 +510,12 @@
     "last_workspace_admin": "At least one workspace admin is required",
     "plan_upgrade_required": "Upgrade to Pro to use this feature",
     "billing_disabled": "Billing is not configured",
+    "subscription_active": "Cancel your subscription before deleting this workspace",
+    "sole_workspace_admin": "Transfer admin role or delete the workspace before deleting your account",
+    "platform_admin_protected": "Platform administrators cannot delete their account here",
+    "account_deleted": "This account has been deleted",
+    "export_in_progress": "An export is already in progress",
+    "export_expired": "This export download has expired",
     "not_found_page": {
       "title": "Page not found",
       "body": "The page you requested does not exist."

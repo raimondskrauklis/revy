@@ -208,6 +208,8 @@ async def get_current_user(
         raise ForbiddenError(message="Account suspended")
     if user.status == UserStatus.rejected:
         raise ForbiddenError(message="Account rejected")
+    if user.status == UserStatus.deleted:
+        raise ForbiddenError(message="Account deleted", error_code="account_deleted")
 
     return CurrentUser(
         sub=sub,
