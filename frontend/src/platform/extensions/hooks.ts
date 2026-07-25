@@ -1,6 +1,5 @@
 // frontend/src/platform/extensions/hooks.ts
 import { useAuth } from '@/contexts/AuthContext';
-import { useBillingStatus } from '@/features/settings/hooks';
 import { getExtensions } from '@/platform/extensions/registry';
 import type { ExtensionDefinition } from '@/platform/extensions/types';
 import type { ExtensionSlot } from '@/platform/extensions/slots';
@@ -17,9 +16,7 @@ function meetsMinPlan(currentPlan: string, minPlan?: string): boolean {
 
 export function useExtensions(slot: ExtensionSlot): ExtensionDefinition[] {
   const { user } = useAuth();
-  const workspaceId = user?.workspace_id ?? null;
-  const { data: billing } = useBillingStatus(workspaceId);
-  const plan = billing?.plan ?? 'free';
+  const plan = user?.workspace_plan ?? 'free';
 
   return getExtensions(slot, user?.role ?? undefined, user?.platform_role ?? undefined).filter(
     (definition) => meetsMinPlan(plan, definition.minPlan),

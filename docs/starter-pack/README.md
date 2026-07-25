@@ -24,4 +24,4 @@ Execution plans peer-reviewed (final pass 2026-07-24) — see findings § Peer r
 
 **Authority:** `internal-docs/starter-pack/` + `internal-docs/product/revy/` (gitignored). Committed runbooks: `DEV_BOOTSTRAP.md`, `REGISTRATION_FLAGS.md`, `KEYCLOAK_DEV_CHECKLIST.md` (P1); `REVY_PRODUCT_SLICE.md` (P4.1). Agent entry: root [`AGENTS.md`](../../AGENTS.md).
 
-**Next:** Scaffold program complete (P0–P5). CI tests: set `SKIP_CI_TESTS: "false"` in deploy workflow when Actions secrets are ready.
+**Next:** Scaffold program complete (P0–P5). **SaaS base** W0–W8 complete — see [saas-base program](../saas-base/README.md). CI tests: set `SKIP_CI_TESTS: "false"` in deploy workflow when Actions secrets are ready.

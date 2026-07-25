@@ -195,6 +195,9 @@ async def list_invitations(
     stmt = select(WorkspaceInvitationORM).where(WorkspaceInvitationORM.workspace_id == workspace_id)
     if status is not None:
         stmt = stmt.where(WorkspaceInvitationORM.status == status)
+        if status == InvitationStatus.pending:
+            now = datetime.now(UTC)
+            stmt = stmt.where(WorkspaceInvitationORM.expires_at > now)
 
     if params.cursor:
         try:

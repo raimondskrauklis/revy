@@ -4,13 +4,33 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { SettingsLayout } from '@/features/settings/layout/SettingsLayout';
 import { ProfileSettingsPage } from '@/features/settings/pages/ProfileSettingsPage';
+import { AppRole } from '@/shared/types/enums';
 
 vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({ user: null, refetchUser: vi.fn() }),
+  useAuth: vi.fn(),
 }));
 
+import { useAuth } from '@/contexts/AuthContext';
+
 describe('SettingsLayout', () => {
-  it('renders personal and workspace nav links', () => {
+  it('renders personal and workspace nav links for workspace admins', () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: {
+        id: '1',
+        email: 'admin@example.com',
+        full_name: 'Admin',
+        status: 'active',
+        platform_role: null,
+        workspace_id: 'ws-1',
+        workspace_plan: 'pro',
+        role: AppRole.admin,
+        memberships: [],
+        locale: 'en',
+        timezone: 'UTC',
+      },
+      refetchUser: vi.fn(),
+    } as unknown as ReturnType<typeof useAuth>);
+
     render(
       <MemoryRouter initialEntries={['/settings/profile']}>
         <Routes>

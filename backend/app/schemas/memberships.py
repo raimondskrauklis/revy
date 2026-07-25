@@ -20,3 +20,7 @@ class MemberListItem(BaseModel):
 
 class MemberRoleUpdate(BaseModel):
     role: AppRole
+
+
+class MemberCountResponse(BaseModel):
+    count: int

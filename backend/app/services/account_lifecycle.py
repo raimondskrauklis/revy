@@ -22,6 +22,7 @@ async def leave_workspace(
     *,
     workspace_id: UUID,
     user_id: UUID,
+    impersonator_user_id: UUID | None = None,
 ) -> None:
     membership = await session.scalar(
         select(WorkspaceMembershipORM)
@@ -41,6 +42,7 @@ async def leave_workspace(
     await record_audit(
         session,
         actor_user_id=user_id,
+        impersonator_user_id=impersonator_user_id,
         workspace_id=workspace_id,
         action="workspace.left",
         resource_type="workspace",

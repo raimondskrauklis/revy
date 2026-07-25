@@ -36,6 +36,7 @@ export interface MeUser {
   locale: string;
   timezone: string;
   workspace_id: string | null;
+  workspace_plan: string | null;
   role: AppRole | null;
   memberships: MeMembership[];
   impersonation?: MeImpersonation | null;

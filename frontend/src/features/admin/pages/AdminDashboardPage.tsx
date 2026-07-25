@@ -57,6 +57,10 @@ export function AdminDashboardPage() {
               label={t('admin.dashboard.kpis.workspacesSuspended')}
               value={kpis.workspaces_suspended}
             />
+            <KpiCard
+              label={t('admin.dashboard.kpis.workspacesDeleted')}
+              value={kpis.workspaces_deleted}
+            />
             <KpiCard label={t('admin.dashboard.kpis.usersActive')} value={kpis.users_active} />
             <KpiCard
               label={t('admin.dashboard.kpis.usersPendingApproval')}

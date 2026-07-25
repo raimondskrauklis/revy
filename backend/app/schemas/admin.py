@@ -37,6 +37,7 @@ class AdminKpisResponse(BaseModel):
     workspaces_total: int
     workspaces_active: int
     workspaces_suspended: int
+    workspaces_deleted: int
     users_active: int
     users_pending_approval: int
 

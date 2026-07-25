@@ -19,7 +19,7 @@ from app.schemas.billing import BillingStatus, CheckoutSessionRequest
 def _admin_user(workspace_id: uuid.UUID) -> CurrentUser:
     return CurrentUser(
         sub="kc-admin",
-        user_id=uuid.uuid4(),
+        actor_user_id=uuid.uuid4(),
         email="admin@example.com",
         workspace_id=workspace_id,
         role=AppRole.admin,
@@ -77,6 +77,7 @@ async def test_post_checkout_session_commits_and_returns_url():
             workspace_id=workspace_id,
             body=CheckoutSessionRequest(plan="pro"),
             current_user=user,
+            _allowed=user,
             session=session,
         )
 
@@ -105,6 +106,7 @@ async def test_post_checkout_session_propagates_billing_disabled():
                 workspace_id=workspace_id,
                 body=CheckoutSessionRequest(plan="pro"),
                 current_user=user,
+                _allowed=user,
                 session=session,
             )
 
@@ -126,6 +128,7 @@ async def test_post_portal_session_commits_and_returns_url():
         response = await post_portal_session(
             workspace_id=workspace_id,
             current_user=user,
+            _allowed=user,
             session=session,
         )
 

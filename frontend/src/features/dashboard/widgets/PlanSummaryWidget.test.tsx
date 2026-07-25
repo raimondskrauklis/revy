@@ -9,12 +9,7 @@ vi.mock('@/contexts/AuthContext', () => ({
   useAuth: vi.fn(),
 }));
 
-vi.mock('@/features/settings/hooks', () => ({
-  useBillingStatus: vi.fn(),
-}));
-
 import { useAuth } from '@/contexts/AuthContext';
-import { useBillingStatus } from '@/features/settings/hooks';
 
 describe('PlanSummaryWidget', () => {
   it('shows current plan and billing link', () => {
@@ -26,16 +21,13 @@ describe('PlanSummaryWidget', () => {
         status: 'active',
         platform_role: null,
         workspace_id: 'ws-1',
+        workspace_plan: 'pro',
         role: AppRole.admin,
         memberships: [],
         locale: 'en',
         timezone: 'UTC',
       },
     } as unknown as ReturnType<typeof useAuth>);
-    vi.mocked(useBillingStatus).mockReturnValue({
-      data: { plan: 'pro', stripe_enabled: true },
-      isLoading: false,
-    } as unknown as ReturnType<typeof useBillingStatus>);
 
     render(
       <MemoryRouter>

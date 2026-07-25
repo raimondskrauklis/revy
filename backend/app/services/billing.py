@@ -16,12 +16,15 @@ from app.core.exceptions import (
     ServiceUnavailableError,
     ValidationError,
 )
+from app.core.logging import get_logger
 from app.integrations.stripe_client import StripeClientProtocol, get_stripe_client
 from app.models.stripe_webhook_event import StripeWebhookEventORM
 from app.models.workspace_memberships import WorkspaceMembershipORM
 from app.models.workspaces import WorkspaceORM
 from app.schemas.billing import BillingStatus
 from app.services.audit_service import record_audit
+
+logger = get_logger(__name__)
 
 VALID_PLANS = frozenset({"free", "pro"})
 
@@ -297,7 +300,11 @@ async def apply_subscription_event(
             if workspace_id_raw:
                 workspace = await session.get(WorkspaceORM, UUID(workspace_id_raw))
         if workspace is None:
-            raise BillingWebhookError(message="Workspace not found for subscription customer")
+            logger.warning(
+                "stripe_subscription_orphan",
+                extra={"customer_id": customer_id, "event_type": event_type},
+            )
+            return
         new_plan = "free" if event_type == "customer.subscription.deleted" else _plan_from_subscription(
             data_object
         )

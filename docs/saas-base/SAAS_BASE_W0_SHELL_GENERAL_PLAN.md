@@ -18,6 +18,6 @@ Establish **settings shell**, **app chrome**, and **workspace/team backend APIs*
 
 **Depends on:** Completed scaffold (P0–P5).
 
-**Status:** Not started.
+**Status:** Done (shipped).
 
 **Next:** [waves/SAAS_BASE_W0_EXECUTION.md](./waves/SAAS_BASE_W0_EXECUTION.md) → `phase-execution`.

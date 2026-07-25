@@ -12,7 +12,6 @@ from app.schemas.admin import AdminKpisResponse
 
 
 async def get_admin_kpis(session: AsyncSession) -> AdminKpisResponse:
-    workspaces_total = await session.scalar(select(func.count()).select_from(WorkspaceORM))
     workspaces_active = await session.scalar(
         select(func.count())
         .select_from(WorkspaceORM)
@@ -23,6 +22,12 @@ async def get_admin_kpis(session: AsyncSession) -> AdminKpisResponse:
         .select_from(WorkspaceORM)
         .where(WorkspaceORM.status == WorkspaceStatus.suspended)
     )
+    workspaces_deleted = await session.scalar(
+        select(func.count())
+        .select_from(WorkspaceORM)
+        .where(WorkspaceORM.status == WorkspaceStatus.deleted)
+    )
+    workspaces_total = int(workspaces_active or 0) + int(workspaces_suspended or 0)
     users_active = await session.scalar(
         select(func.count()).select_from(UserORM).where(UserORM.status == UserStatus.active)
     )
@@ -33,9 +38,10 @@ async def get_admin_kpis(session: AsyncSession) -> AdminKpisResponse:
     )
 
     return AdminKpisResponse(
-        workspaces_total=int(workspaces_total or 0),
+        workspaces_total=workspaces_total,
         workspaces_active=int(workspaces_active or 0),
         workspaces_suspended=int(workspaces_suspended or 0),
+        workspaces_deleted=int(workspaces_deleted or 0),
         users_active=int(users_active or 0),
         users_pending_approval=int(users_pending_approval or 0),
     )

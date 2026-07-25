@@ -31,6 +31,7 @@ describe('ProfileSettingsPage', () => {
       status: 'active',
       platform_role: null,
       workspace_id: 'ws-1',
+      workspace_plan: null,
       role: AppRole.admin,
       memberships: [],
     });
@@ -44,6 +45,7 @@ describe('ProfileSettingsPage', () => {
         status: 'active',
         platform_role: null,
         workspace_id: 'ws-1',
+        workspace_plan: null,
         role: AppRole.admin,
         memberships: [],
       },
@@ -58,6 +60,7 @@ describe('ProfileSettingsPage', () => {
       status: 'active',
       platform_role: null,
       workspace_id: 'ws-1',
+      workspace_plan: null,
       role: AppRole.admin,
       memberships: [],
     });

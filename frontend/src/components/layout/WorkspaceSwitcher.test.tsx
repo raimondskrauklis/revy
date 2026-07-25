@@ -30,6 +30,7 @@ describe('WorkspaceSwitcher', () => {
         status: 'active',
         platform_role: null,
         workspace_id: 'ws-1',
+        workspace_plan: 'free',
         role: AppRole.admin,
         memberships: [
           {
@@ -60,6 +61,7 @@ describe('WorkspaceSwitcher', () => {
       status: 'active',
       platform_role: null,
       workspace_id: 'ws-2',
+      workspace_plan: null,
       role: AppRole.viewer,
       memberships: [],
     });
@@ -71,6 +73,7 @@ describe('WorkspaceSwitcher', () => {
         status: 'active',
         platform_role: null,
         workspace_id: 'ws-1',
+        workspace_plan: 'free',
         role: AppRole.admin,
         memberships: [
           {

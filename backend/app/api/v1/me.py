@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.auth import CurrentUser, get_current_user, require_impersonation_allowed
 from app.core.database import get_db
 from app.core.exceptions import ForbiddenError
+from app.models.workspaces import WorkspaceORM
 from app.schemas.common import SuccessResponse
 from app.schemas.lifecycle import (
     DeleteAccountRequest,
@@ -18,6 +19,7 @@ from app.schemas.lifecycle import (
 )
 from app.schemas.me import MeImpersonationInfo, MeResponse, MeUpdate, SetActiveWorkspaceRequest
 from app.services.account_lifecycle import delete_account
+from app.services.billing import effective_plan
 from app.services.data_export import (
     create_export_job,
     get_export_job_for_user,
@@ -64,10 +66,13 @@ async def _build_current_me(
         impersonation=impersonation,
     )
     if current_user.workspace_id is not None:
+        workspace = await session.get(WorkspaceORM, current_user.workspace_id)
+        workspace_plan = effective_plan(workspace) if workspace is not None else None
         me = me.model_copy(
             update={
                 "workspace_id": current_user.workspace_id,
                 "role": current_user.role,
+                "workspace_plan": workspace_plan,
             }
         )
     if impersonation is not None and current_user.platform_role is not None:

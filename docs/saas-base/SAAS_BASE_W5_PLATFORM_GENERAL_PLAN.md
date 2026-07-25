@@ -22,6 +22,6 @@ Platform operator surface: workspace oversight, KPIs, audit search, platform con
 
 **Depends on:** W2 (audit table), W4 (plan on workspace detail).
 
-**Status:** Not started.
+**Status:** Done (shipped).
 
 **Next:** [waves/SAAS_BASE_W5_EXECUTION.md](./waves/SAAS_BASE_W5_EXECUTION.md) → `phase-execution`.

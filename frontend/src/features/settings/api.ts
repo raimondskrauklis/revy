@@ -36,6 +36,11 @@ export async function fetchMembers(
   return await parseSuccess<CursorPage<Member>>(response);
 }
 
+export async function fetchMemberCount(workspaceId: string): Promise<{ count: number }> {
+  const response = await apiClient.get(`/workspaces/${workspaceId}/members/count`);
+  return await parseSuccess<{ count: number }>(response);
+}
+
 export async function updateMemberRole(
   workspaceId: string,
   userId: string,

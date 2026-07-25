@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.constants.enums import AppRole, PlatformRole, UserStatus
+from app.constants.enums import AppRole, PlatformRole, UserStatus, WorkspaceStatus
 from app.core.config import settings
 from app.core.exceptions import ForbiddenError, NotFoundError, ValidationError
 from app.core.logging import get_logger
@@ -16,6 +16,7 @@ from app.models.users import UserORM
 from app.models.workspace_memberships import WorkspaceMembershipORM
 from app.models.workspaces import WorkspaceORM
 from app.schemas.me import MeImpersonationInfo, MeMembership, MeResponse, MeUpdate
+from app.services.billing import effective_plan
 from app.services.onboarding import activate_user_with_workspace, resolve_initial_user_status
 
 logger = get_logger(__name__)
@@ -166,7 +167,10 @@ async def build_me_response(
         await session.execute(
             select(WorkspaceMembershipORM, WorkspaceORM)
             .join(WorkspaceORM, WorkspaceORM.id == WorkspaceMembershipORM.workspace_id)
-            .where(WorkspaceMembershipORM.user_id == user.id)
+            .where(
+                WorkspaceMembershipORM.user_id == user.id,
+                WorkspaceORM.status == WorkspaceStatus.active,
+            )
             .order_by(WorkspaceORM.name.asc())
         )
     ).all()
@@ -183,9 +187,12 @@ async def build_me_response(
 
     active_workspace_id: UUID | None = None
     active_role: AppRole | None = None
+    workspace_plan: str | None = None
     if len(memberships) == 1:
         active_workspace_id = memberships[0].workspace_id
         active_role = memberships[0].role
+        _, workspace = membership_rows[0]
+        workspace_plan = effective_plan(workspace)
 
     return MeResponse(
         id=user.id,
@@ -197,6 +204,7 @@ async def build_me_response(
         timezone=user.timezone,
         workspace_id=active_workspace_id,
         role=active_role,
+        workspace_plan=workspace_plan,
         memberships=memberships,
         impersonation=impersonation,
     )
@@ -208,20 +216,27 @@ async def set_active_workspace(
     user_id: UUID,
     workspace_id: UUID,
 ) -> MeResponse:
-    membership = await session.scalar(
-        select(WorkspaceMembershipORM).where(
-            WorkspaceMembershipORM.user_id == user_id,
-            WorkspaceMembershipORM.workspace_id == workspace_id,
+    row = (
+        await session.execute(
+            select(WorkspaceMembershipORM, WorkspaceORM)
+            .join(WorkspaceORM, WorkspaceORM.id == WorkspaceMembershipORM.workspace_id)
+            .where(
+                WorkspaceMembershipORM.user_id == user_id,
+                WorkspaceMembershipORM.workspace_id == workspace_id,
+                WorkspaceORM.status == WorkspaceStatus.active,
+            )
         )
-    )
-    if membership is None:
+    ).first()
+    if row is None:
         raise ForbiddenError(message="Workspace access denied")
 
+    membership, workspace = row
     me = await build_me_response(session, user_id)
     return me.model_copy(
         update={
             "workspace_id": workspace_id,
             "role": membership.role,
+            "workspace_plan": effective_plan(workspace),
         }
     )
 

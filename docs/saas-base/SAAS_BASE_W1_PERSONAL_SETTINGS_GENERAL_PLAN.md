@@ -16,6 +16,6 @@ Ship **personal-scope** settings: profile, security, and appearance.
 
 **Depends on:** W0 (settings shell + user menu).
 
-**Status:** Not started.
+**Status:** Done (shipped).
 
 **Next:** [waves/SAAS_BASE_W1_EXECUTION.md](./waves/SAAS_BASE_W1_EXECUTION.md) → `phase-execution`.

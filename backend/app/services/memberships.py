@@ -118,6 +118,15 @@ async def list_members(
     )
 
 
+async def count_members(session: AsyncSession, *, workspace_id: UUID) -> int:
+    total = await session.scalar(
+        select(func.count())
+        .select_from(WorkspaceMembershipORM)
+        .where(WorkspaceMembershipORM.workspace_id == workspace_id)
+    )
+    return int(total or 0)
+
+
 async def _get_membership(
     session: AsyncSession,
     *,

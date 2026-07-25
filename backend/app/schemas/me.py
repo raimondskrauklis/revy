@@ -39,6 +39,7 @@ class MeResponse(BaseModel):
     locale: str
     timezone: str
     memberships: list[MeMembership]
+    workspace_plan: str | None = None
     impersonation: MeImpersonationInfo | None = None
 
 

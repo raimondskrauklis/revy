@@ -20,6 +20,6 @@ General plan from [SAAS_BASE_FINDINGS.md](./SAAS_BASE_FINDINGS.md). **No executi
 
 **Depends on:** W0, W2, W3.
 
-**Status:** Not started.
+**Status:** Shipped (W4). Hardening: W8 webhook orphan policy + runbook sync.
 
-**Next:** [waves/SAAS_BASE_W4_EXECUTION.md](./waves/SAAS_BASE_W4_EXECUTION.md) → `phase-execution`.
+**Next:** [waves/SAAS_BASE_W8_EXECUTION.md](./waves/SAAS_BASE_W8_EXECUTION.md) (W8.4 billing ops).

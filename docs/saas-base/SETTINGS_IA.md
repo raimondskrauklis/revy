@@ -1,6 +1,6 @@
 # Settings & shell IA (committed)
 
-Repo-safe settings information architecture for SaaS base W0–W7. Full patterns: `internal-docs/starter-pack/docs/frontend/` (THEME.md, state.md, ROUTING.md).
+Repo-safe settings information architecture for SaaS base W0–W8. Full patterns: `internal-docs/starter-pack/docs/frontend/` (THEME.md, state.md, ROUTING.md).
 
 ---
 
@@ -14,6 +14,12 @@ Show **two groups** in settings sidebar — not 10 flat links:
 | **Workspace** | `settings.group.workspace` | General, Team, Integrations, Billing, Danger |
 
 **Rule:** Sidebar lists only routes whose wave has shipped. Unshipped routes are not linked (no “coming soon” pages).
+
+**W8:** Workspace group links filtered by permission — `workspace` and `billing` require `admin:users`; `team`, `integrations`, and `danger` visible to any member. Matches `RequirePermission` on routes.
+
+**Plan display (W8):** `GET /me` returns `workspace_plan: "free" | "pro" | null` for the active workspace. Dashboard extensions, checklist, and plan widget read this field — **not** `GET .../billing` (admin-only for Stripe checkout/portal).
+
+**Tenant status:** `/workspace-suspended` when workspace is suspended; `/me` memberships exclude non-`active` workspaces.
 
 Notifications, API keys: **deferred** — no nav entry until their wave lands.
 
@@ -64,7 +70,7 @@ One registry, multiple slots — avoid separate widget vs integration vs chart r
 ```text
 frontend/src/platform/extensions/
   registry.ts          # registerExtension({ id, slot, component, permission?, order })
-  slots.ts             # Slot enum: dashboard_widget | settings_integration | settings_nav
+  slots.ts             # Slot enum: dashboard_widget | settings_integration
 ```
 
 Products register at app bootstrap (e.g. `registerRevyExtensions()`). Charts reuse `dashboard_widget` slot with `kind: 'chart'`.

@@ -319,6 +319,7 @@
         "workspacesTotal": "Darba vides kopā",
         "workspacesActive": "Aktīvās darba vides",
         "workspacesSuspended": "Aizturētās darba vides",
+        "workspacesDeleted": "Dzēstās darba vides",
         "usersActive": "Aktīvie lietotāji",
         "usersPendingApproval": "Gaida apstiprinājumu"
       },
@@ -474,6 +475,10 @@
       "suspended": {
         "title": "Konts apturēts",
         "body": "Jūsu konts ir apturēts. Sazinieties ar atbalstu."
+      },
+      "workspaceSuspended": {
+        "title": "Darba vide aizturēta",
+        "body": "Šī darba vide ir aizturēta platformas administratora. Sazinieties ar atbalstu, ja nepieciešama piekļuve."
       }
     },
     "unauthorized": {
@@ -539,6 +544,13 @@
     "account_deleted": "Šis konts ir dzēsts",
     "export_in_progress": "Eksports jau notiek",
     "export_expired": "Šī eksporta lejupielāde ir beigusies",
+    "workspace_suspended": "Šī darba vide ir aizturēta",
+    "account_suspended": "Jūsu konts ir apturēts",
+    "impersonation_active": "Jūs jau uzņematies cita lietotāja identitāti",
+    "impersonation_forbidden": "Šo lietotāju nevar uzņemties",
+    "impersonation_restricted": "Šī darbība nav atļauta uzņemšanās laikā",
+    "impersonation_invalid": "Uzņemšanās sesija nav derīga",
+    "impersonation_not_active": "Nav aktīvas uzņemšanās sesijas",
     "not_found_page": {
       "title": "Lapa nav atrasta",
       "body": "Pieprasītā lapa neeksistē."

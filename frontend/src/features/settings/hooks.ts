@@ -1,6 +1,8 @@
 // frontend/src/features/settings/hooks.ts
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
 import { useInfiniteList } from '@/hooks/useInfiniteList';
+import { hasPermission } from '@/lib/permissions';
 import type {
   DeleteAccountPayload,
   DeleteWorkspacePayload,
@@ -139,10 +141,17 @@ export function useRevokeInvitation(workspaceId: string | null | undefined) {
 }
 
 export function useBillingStatus(workspaceId: string | null | undefined) {
+  const { user } = useAuth();
+  const canManageBilling = hasPermission(
+    user?.role ?? undefined,
+    'admin:users',
+    user?.platform_role ?? undefined,
+  );
+
   return useQuery({
     queryKey: settingsQueryKeys.billing(workspaceId ?? ''),
     queryFn: () => fetchBillingStatus(workspaceId!),
-    enabled: Boolean(workspaceId),
+    enabled: Boolean(workspaceId) && canManageBilling,
   });
 }
 

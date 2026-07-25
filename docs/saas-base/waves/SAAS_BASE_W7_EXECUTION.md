@@ -2,7 +2,7 @@
 
 # W7 — Impersonation (execution)
 
-Wave **W7** of [`SAAS_BASE_W7_IMPERSONATION_GENERAL_PLAN.md`](../SAAS_BASE_W7_IMPERSONATION_GENERAL_PLAN.md). Baseline: [`SAAS_BASE_FINDINGS.md`](../SAAS_BASE_FINDINGS.md) Q18, § Audit table. **Depends on W2 (`record_audit` + `impersonator_user_id`), W5 (workspace detail UI), W6 (lifecycle deny-list).** **Final wave.**
+Wave **W7** of [`SAAS_BASE_W7_IMPERSONATION_GENERAL_PLAN.md`](../SAAS_BASE_W7_IMPERSONATION_GENERAL_PLAN.md). Baseline: [`SAAS_BASE_FINDINGS.md`](../SAAS_BASE_FINDINGS.md) Q18, § Audit table. **Depends on W2 (`record_audit` + `impersonator_user_id`), W5 (workspace detail UI), W6 (lifecycle deny-list).** **W7 only** (followed by **W8** hardening).
 
 **Goal:** Super-admin impersonation with server-side session, audit trail, SPA banner, safe route deny list.
 
@@ -151,4 +151,4 @@ npm run lint && npm test -- --run ImpersonationBanner ImpersonationStartModal Bl
 
 **Deploy:** `alembic upgrade head`; document impersonation policy for support staff.
 
-**Next:** none — SaaS base W0–W7 complete after W7.6.
+**Next:** [SAAS_BASE_W8_EXECUTION.md](./SAAS_BASE_W8_EXECUTION.md)

@@ -4,7 +4,7 @@
 
 **Prerequisite:** scaffold P0–P5 complete ([`docs/starter-pack/`](../starter-pack/)).
 
-**Program status:** **complete** — all waves W0–W7 shipped. Next: maintenance and product slices (Revy review pipeline).
+**Program status:** W0–W8 **complete** — see [waves/README.md](./waves/README.md).
 
 **IA:** [SETTINGS_IA.md](./SETTINGS_IA.md) (committed; mirror in `internal-docs/starter-pack/` after W0).
 
@@ -33,6 +33,7 @@
 | W5 | [W5 platform](./SAAS_BASE_W5_PLATFORM_GENERAL_PLAN.md) | Platform admin (W5.1 / W5.2 at execution) |
 | W6 | [W6 lifecycle](./SAAS_BASE_W6_LIFECYCLE_GENERAL_PLAN.md) | Danger zone, export/delete |
 | W7 | [W7 impersonation](./SAAS_BASE_W7_IMPERSONATION_GENERAL_PLAN.md) | Impersonation |
+| W8 | [W8 hardening](./SAAS_BASE_W8_PLATFORM_HARDENING_GENERAL_PLAN.md) | Ship readiness, doc sync, gap closure |
 
 ## Execution
 
@@ -46,6 +47,7 @@
 | W5 | [waves/SAAS_BASE_W5_EXECUTION.md](./waves/SAAS_BASE_W5_EXECUTION.md) | done |
 | W6 | [waves/SAAS_BASE_W6_EXECUTION.md](./waves/SAAS_BASE_W6_EXECUTION.md) | done |
 | W7 | [waves/SAAS_BASE_W7_EXECUTION.md](./waves/SAAS_BASE_W7_EXECUTION.md) | done |
+| W8 | [waves/SAAS_BASE_W8_EXECUTION.md](./waves/SAAS_BASE_W8_EXECUTION.md) | done (`98b10ea`) |
 
 Full table: [waves/README.md](./waves/README.md).
 
@@ -77,4 +79,4 @@ Revy review pipeline; KC realm automation; KC Organizations; per-seat/usage/ente
 
 ## Next
 
-Maintenance and Revy product slices — SaaS base W0–W7 complete.
+SaaS base W0–W8 **complete**. Maintenance: [OPS.md](./OPS.md), [STAGING_VERIFICATION.md](./STAGING_VERIFICATION.md). Continue Revy product slices.

@@ -33,6 +33,7 @@ describe('CompleteProfilePage', () => {
         status: 'pending_profile',
         platform_role: null,
         workspace_id: null,
+        workspace_plan: null,
         role: null,
         memberships: [],
       },
@@ -60,6 +61,7 @@ describe('CompleteProfilePage', () => {
         status: 'pending_profile',
         platform_role: null,
         workspace_id: null,
+        workspace_plan: null,
         role: null,
         memberships: [],
       },
@@ -74,6 +76,7 @@ describe('CompleteProfilePage', () => {
       status: 'active',
       platform_role: null,
       workspace_id: 'ws',
+      workspace_plan: null,
       role: AppRole.admin,
       memberships: [],
     });

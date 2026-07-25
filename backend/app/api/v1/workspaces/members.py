@@ -15,8 +15,8 @@ from app.core.permissions import Permission, require_permission
 from app.core.tenancy import require_same_workspace
 from app.models.users import UserORM
 from app.schemas.common import SuccessResponse
-from app.schemas.memberships import MemberListItem, MemberRoleUpdate
-from app.services.memberships import list_members, remove_member, update_member_role
+from app.schemas.memberships import MemberCountResponse, MemberListItem, MemberRoleUpdate
+from app.services.memberships import count_members, list_members, remove_member, update_member_role
 
 router = APIRouter(prefix="/{workspace_id}/members", tags=["members"])
 
@@ -33,6 +33,19 @@ async def get_workspace_members(
 
     page = await list_members(session, workspace_id=workspace_id, params=params)
     return SuccessResponse(data=page)
+
+
+@router.get("/count", response_model=SuccessResponse[MemberCountResponse])
+async def get_workspace_member_count(
+    workspace_id: UUID,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> SuccessResponse[MemberCountResponse]:
+    require_permission(current_user, Permission.items_view)
+    require_same_workspace(current_user, workspace_id)
+
+    total = await count_members(session, workspace_id=workspace_id)
+    return SuccessResponse(data=MemberCountResponse(count=total))
 
 
 @router.patch("/{user_id}", response_model=SuccessResponse[MemberListItem])

@@ -1,6 +1,9 @@
 // frontend/src/features/settings/layout/SettingsSidebar.tsx
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/contexts/AuthContext';
+import { hasPermission } from '@/lib/permissions';
+import type { Permission } from '@/lib/permissionTypes';
 
 const PERSONAL_LINKS = [
   { to: '/settings/profile', label: 'settings.nav.profile' },
@@ -8,13 +11,17 @@ const PERSONAL_LINKS = [
   { to: '/settings/appearance', label: 'settings.nav.appearance' },
 ] as const;
 
-const WORKSPACE_LINKS = [
-  { to: '/settings/workspace', label: 'settings.nav.workspace' },
+const WORKSPACE_LINKS: ReadonlyArray<{
+  to: string;
+  label: string;
+  permission?: Permission;
+}> = [
+  { to: '/settings/workspace', label: 'settings.nav.workspace', permission: 'admin:users' },
   { to: '/settings/team', label: 'settings.nav.team' },
   { to: '/settings/integrations', label: 'settings.nav.integrations' },
-  { to: '/settings/billing', label: 'settings.nav.billing' },
+  { to: '/settings/billing', label: 'settings.nav.billing', permission: 'admin:users' },
   { to: '/settings/danger', label: 'settings.nav.danger' },
-] as const;
+];
 
 function linkClassName({ isActive }: { isActive: boolean }): string {
   return [
@@ -28,6 +35,17 @@ function linkClassName({ isActive }: { isActive: boolean }): string {
 
 export function SettingsSidebar() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+
+  const workspaceLinks = WORKSPACE_LINKS.filter(
+    (item) =>
+      !item.permission
+      || hasPermission(
+        user?.role ?? undefined,
+        item.permission,
+        user?.platform_role ?? undefined,
+      ),
+  );
 
   return (
     <nav
@@ -54,7 +72,7 @@ export function SettingsSidebar() {
             {t('settings.group.workspace')}
           </h2>
           <ul className="mt-2 space-y-1">
-            {WORKSPACE_LINKS.map((item) => (
+            {workspaceLinks.map((item) => (
               <li key={item.to}>
                 <NavLink to={item.to} className={linkClassName}>
                   {t(item.label)}

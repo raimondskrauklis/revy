@@ -21,6 +21,7 @@ router = APIRouter(tags=["workspaces"])
 async def post_leave_workspace(
     workspace_id: UUID,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    _allowed: Annotated[CurrentUser, Depends(require_impersonation_allowed())],
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
     require_same_workspace(current_user, workspace_id)
@@ -31,6 +32,7 @@ async def post_leave_workspace(
         session,
         workspace_id=workspace_id,
         user_id=current_user.user_id,
+        impersonator_user_id=current_user.impersonator_user_id,
     )
     await session.commit()
 

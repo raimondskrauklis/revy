@@ -228,7 +228,7 @@ async def get_current_user(
     await session.refresh(actor)
 
     if actor.status == UserStatus.suspended:
-        raise ForbiddenError(message="Account suspended")
+        raise ForbiddenError(message="Account suspended", error_code="account_suspended")
     if actor.status == UserStatus.rejected:
         raise ForbiddenError(message="Account rejected")
     if actor.status == UserStatus.deleted:

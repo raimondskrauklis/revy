@@ -18,6 +18,6 @@ General plan from [SAAS_BASE_FINDINGS.md](./SAAS_BASE_FINDINGS.md). **No executi
 
 **Depends on:** W1, W2, W4.
 
-**Status:** Not started.
+**Status:** Done (shipped).
 
 **Next:** [waves/SAAS_BASE_W6_EXECUTION.md](./waves/SAAS_BASE_W6_EXECUTION.md) → `phase-execution`.

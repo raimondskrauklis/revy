@@ -329,3 +329,19 @@ async def test_plan_from_subscription_requires_pro_price():
         await apply_subscription_event(session, event)
 
     assert workspace.plan == "free"
+
+
+@pytest.mark.asyncio
+async def test_apply_subscription_event_orphan_customer_returns_without_error():
+    session = AsyncMock()
+    session.scalar = AsyncMock(return_value=None)
+    session.get = AsyncMock(return_value=None)
+
+    event = {
+        "type": "customer.subscription.deleted",
+        "data": {"object": {"customer": "cus_orphan", "status": "canceled"}},
+    }
+
+    await apply_subscription_event(session, event)
+
+    session.flush.assert_not_awaited()

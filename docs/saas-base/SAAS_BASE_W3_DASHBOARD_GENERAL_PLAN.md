@@ -18,6 +18,6 @@ General plan from [SAAS_BASE_FINDINGS.md](./SAAS_BASE_FINDINGS.md). **No executi
 
 **Depends on:** W0, W1, W2 (audit table + mutation rows).
 
-**Status:** Not started.
+**Status:** Done (shipped).
 
 **Next:** [waves/SAAS_BASE_W3_EXECUTION.md](./waves/SAAS_BASE_W3_EXECUTION.md) → `phase-execution`.

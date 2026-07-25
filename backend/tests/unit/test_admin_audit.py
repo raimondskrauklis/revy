@@ -48,7 +48,7 @@ async def test_list_platform_audit_returns_workspace_id():
 
     session = AsyncMock()
     result = MagicMock()
-    result.all.return_value = [(audit_row, actor)]
+    result.all.return_value = [(audit_row, actor, None)]
     session.execute = AsyncMock(return_value=result)
 
     page = await list_platform_audit(session, params=CursorParams(limit=10))
@@ -70,7 +70,7 @@ async def test_list_platform_audit_applies_filters():
 
     session = AsyncMock()
     result = MagicMock()
-    result.all.return_value = [(audit_row, actor)]
+    result.all.return_value = [(audit_row, actor, None)]
     session.execute = AsyncMock(return_value=result)
 
     page = await list_platform_audit(

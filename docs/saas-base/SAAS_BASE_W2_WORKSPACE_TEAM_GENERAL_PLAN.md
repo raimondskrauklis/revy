@@ -18,6 +18,6 @@ Workspace **admin** manages tenant settings, team, integrations entry, permissio
 
 **Depends on:** W0, W1.
 
-**Status:** Not started.
+**Status:** Done (shipped).
 
 **Next:** [waves/SAAS_BASE_W2_EXECUTION.md](./waves/SAAS_BASE_W2_EXECUTION.md) → `phase-execution`.

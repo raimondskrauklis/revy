@@ -12,6 +12,7 @@ function baseUser(overrides: Partial<MeUser> = {}): MeUser {
     status: 'active',
     platform_role: null,
     workspace_id: 'ws-1',
+    workspace_plan: null,
     role: AppRole.admin,
     memberships: [],
     locale: 'en',

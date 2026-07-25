@@ -2,7 +2,7 @@
 
 Baseline for a **fast-start SaaS foundation** on starter-pack rails. **No execution steps.**
 
-**Status:** baseline-ready — devil's advocate pass incorporated (2026-07-25).
+**Status:** baseline-ready — W0–W8 **shipped** (2026-07-25).
 
 ---
 
@@ -157,7 +157,7 @@ Industry consensus (2025–2026): group by **user mental model and scope**. Wave
 | Workspace detail (read-first) | W5 | **W5** |
 | Platform KPI dashboard | W5 | **W5** |
 | Audit log search (cross-tenant) | W5 | Workspace-scoped read W3; platform search **W5** |
-| Impersonation | W7 | Missing; design locked **W7** | **W7** |
+| Impersonation | W7 | **Shipped** — W8 closes leave deny-list + audit gaps |
 | In-app user directory | **future program** | N/A |
 
 ```text
@@ -250,7 +250,7 @@ Keycloak does **not** assign `super_admin`. App does **not** duplicate KC user C
 
 | Q# | Decision |
 |----|----------|
-| Q1 | Program in `docs/saas-base/` — W0–W7; deferred program explicit |
+| Q1 | Program in `docs/saas-base/` — W0–W8; W8 = hardening + doc sync; deferred program explicit |
 | Q2 | Nested `/settings/*` + two sidebar groups ([SETTINGS_IA.md](./SETTINGS_IA.md)) |
 | Q3 | Shared shell; W5 platform admin (split W5.1/W5.2 at execution) |
 | Q4 | Stripe standard (W4) |
@@ -278,7 +278,7 @@ Keycloak does **not** assign `super_admin`. App does **not** duplicate KC user C
 | Q26 | Items demo keep in Revy |
 | Q27 | `/installations` canonical; settings tab links |
 
-**Waves:** [README.md](./README.md)
+**Waves:** [README.md](./README.md) — W0–W8 **complete**.
 
 ---
 
@@ -393,9 +393,27 @@ Focused synthesis for **what every B2B multi-tenant clone needs** (not full ops 
 
 ## Parking lot
 
-- Execution peer-review on [waves/SAAS_BASE_W0_EXECUTION.md](./waves/SAAS_BASE_W0_EXECUTION.md).
-- Mirror [SETTINGS_IA.md](./SETTINGS_IA.md) → `internal-docs/starter-pack/docs/frontend/patterns/SETTINGS_IA.md` in W0.
-- Fast-start strip list doc (after W0): product folders, env keys, nav entries.
+- Execution peer-review on [waves/SAAS_BASE_W8_EXECUTION.md](./waves/SAAS_BASE_W8_EXECUTION.md) before LOOP.
+- Mirror [SETTINGS_IA.md](./SETTINGS_IA.md) → `internal-docs/starter-pack/docs/frontend/patterns/SETTINGS_IA.md` in W8.6.
+- Fast-start strip list → [FAST_START_STRIP_LIST.md](./FAST_START_STRIP_LIST.md) (W8.6).
+- Remove duplicate `waves/w0`…`w7/` execution copies (W8.6).
+
+### Post-W7 gap closure (W8 scope)
+
+| Gap | W8 subphase |
+|-----|-------------|
+| Billing API called for non-admins on dashboard | W8.1 |
+| Settings sidebar shows admin routes to all | W8.1 |
+| Suspended workspaces in switcher; no tenant status page | W8.1 |
+| `POST leave` allowed while impersonating | W8.2 |
+| Missing impersonation / workspace_suspended i18n | W8.2 |
+| KPI total includes deleted workspaces | W8.3 |
+| Expired invitations in pending list | W8.3 |
+| Checklist member count first-page only | W8.3 |
+| Orphan Stripe webhook retry storm vs findings | W8.4 |
+| Export worker / deploy env not documented | W8.5 |
+| Human gates W4–W7 never run | W8.5 |
+| Findings + runbooks stale vs shipped code | W8.6 |
 
 ---
 

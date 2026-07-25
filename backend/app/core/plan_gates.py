@@ -1,5 +1,9 @@
 # backend/app/core/plan_gates.py
-"""Workspace plan feature gating — boolean features only in v1."""
+"""Workspace plan feature gating — boolean features only in v1.
+
+Gated features (extend PLAN_FEATURES when adding pro-only APIs):
+- installations.create → requires pro plan
+"""
 from __future__ import annotations
 
 from typing import Annotated

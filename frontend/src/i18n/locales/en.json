@@ -319,6 +319,7 @@
         "workspacesTotal": "Total workspaces",
         "workspacesActive": "Active workspaces",
         "workspacesSuspended": "Suspended workspaces",
+        "workspacesDeleted": "Deleted workspaces",
         "usersActive": "Active users",
         "usersPendingApproval": "Pending approval"
       },
@@ -474,6 +475,10 @@
       "suspended": {
         "title": "Account suspended",
         "body": "Your account has been suspended. Contact support for help."
+      },
+      "workspaceSuspended": {
+        "title": "Workspace suspended",
+        "body": "This workspace has been suspended by platform administrators. Contact support if you need access."
       }
     },
     "unauthorized": {
@@ -539,6 +544,13 @@
     "account_deleted": "This account has been deleted",
     "export_in_progress": "An export is already in progress",
     "export_expired": "This export download has expired",
+    "workspace_suspended": "This workspace has been suspended",
+    "account_suspended": "Your account has been suspended",
+    "impersonation_active": "You are already impersonating another user",
+    "impersonation_forbidden": "This user cannot be impersonated",
+    "impersonation_restricted": "This action is not allowed while impersonating",
+    "impersonation_invalid": "Impersonation session is invalid",
+    "impersonation_not_active": "No active impersonation session",
     "not_found_page": {
       "title": "Page not found",
       "body": "The page you requested does not exist."

@@ -32,6 +32,7 @@ export interface AdminKpis {
   workspaces_total: number;
   workspaces_active: number;
   workspaces_suspended: number;
+  workspaces_deleted: number;
   users_active: number;
   users_pending_approval: number;
 }

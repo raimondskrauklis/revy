@@ -67,6 +67,15 @@ export const appRouter = createBrowserRouter([
     ),
   },
   {
+    path: '/workspace-suspended',
+    element: (
+      <StatusGatePage
+        titleKey="auth.status.workspaceSuspended.title"
+        bodyKey="auth.status.workspaceSuspended.body"
+      />
+    ),
+  },
+  {
     path: '/unauthorized',
     element: <UnauthorizedPage />,
   },
