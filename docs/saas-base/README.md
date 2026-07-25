@@ -79,4 +79,6 @@ Revy review pipeline; KC realm automation; KC Organizations; per-seat/usage/ente
 
 ## Next
 
-SaaS base W0–W8 **complete**. Maintenance: [OPS.md](./OPS.md), [STAGING_VERIFICATION.md](./STAGING_VERIFICATION.md), [Stripe billing setup](../utils/STRIPE_BILLING_SETUP.md). Continue Revy product slices.
+SaaS base W0–W8 **complete** (tag `saas-base-v1`). Maintenance: [OPS.md](./OPS.md), [STAGING_VERIFICATION.md](./STAGING_VERIFICATION.md), [Stripe billing setup](../utils/STRIPE_BILLING_SETUP.md).
+
+**Active product program:** [Review pipeline (R0–R7)](../review-pipeline/README.md).
