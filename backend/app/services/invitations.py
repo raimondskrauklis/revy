@@ -11,10 +11,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import AppRole, InvitationStatus, UserStatus
 from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError, ValidationError
+from app.core.pagination import (
+    CursorMeta,
+    CursorParams,
+    CursorResponse,
+    InvalidCursorError,
+    decode_cursor,
+    encode_cursor,
+)
 from app.models.invitations import WorkspaceInvitationORM
 from app.models.users import UserORM
 from app.models.workspace_memberships import WorkspaceMembershipORM
 from app.models.workspaces import WorkspaceORM
+from app.schemas.invitations import InvitationListItem
+from app.services.audit_service import record_audit
 
 INVITATION_TTL_DAYS = 7
 
@@ -53,6 +63,7 @@ async def create_invitation(
     email: str,
     role: AppRole,
     invited_by_user_id: UUID,
+    impersonator_user_id: UUID | None = None,
 ) -> WorkspaceInvitationORM:
     """Create a pending workspace_invitations row."""
     normalized = email.strip().lower()
@@ -103,6 +114,22 @@ async def create_invitation(
     )
     session.add(invitation)
     await session.flush()
+
+    await record_audit(
+        session,
+        actor_user_id=invited_by_user_id,
+        impersonator_user_id=impersonator_user_id,
+        workspace_id=workspace_id,
+        action="workspace_invitation.created",
+        resource_type="workspace_invitation",
+        resource_id=str(invitation.id),
+        metadata={
+            "invitation_id": str(invitation.id),
+            "email": invitation.email,
+            "role": invitation.role.value,
+        },
+    )
+
     return invitation
 
 
@@ -158,3 +185,87 @@ async def accept_invitation(
 
     await session.flush()
     return membership
+
+
+async def list_invitations(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    params: CursorParams,
+    status: InvitationStatus | None = InvitationStatus.pending,
+) -> CursorResponse[InvitationListItem]:
+    stmt = select(WorkspaceInvitationORM).where(WorkspaceInvitationORM.workspace_id == workspace_id)
+    if status is not None:
+        stmt = stmt.where(WorkspaceInvitationORM.status == status)
+        if status == InvitationStatus.pending:
+            now = datetime.now(UTC)
+            stmt = stmt.where(WorkspaceInvitationORM.expires_at > now)
+
+    if params.cursor:
+        try:
+            cursor_ts, cursor_id = decode_cursor(params.cursor)
+        except InvalidCursorError as exc:
+            raise ValidationError(message="Invalid cursor", field="cursor") from exc
+        stmt = stmt.where(
+            (WorkspaceInvitationORM.created_at < cursor_ts)
+            | (
+                (WorkspaceInvitationORM.created_at == cursor_ts)
+                & (WorkspaceInvitationORM.id < cursor_id)
+            )
+        )
+
+    stmt = stmt.order_by(
+        WorkspaceInvitationORM.created_at.desc(),
+        WorkspaceInvitationORM.id.desc(),
+    ).limit(params.limit + 1)
+    result = await session.execute(stmt)
+    rows = list(result.scalars().all())
+
+    has_next = len(rows) > params.limit
+    if has_next:
+        rows = rows[: params.limit]
+
+    next_cursor = None
+    if has_next and rows:
+        last = rows[-1]
+        next_cursor = encode_cursor(last.created_at, last.id)
+
+    return CursorResponse(
+        items=[InvitationListItem.model_validate(row) for row in rows],
+        cursor=CursorMeta(next_cursor=next_cursor, has_next=has_next),
+    )
+
+
+async def revoke_invitation(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    invitation_id: UUID,
+    actor_user_id: UUID | None = None,
+    impersonator_user_id: UUID | None = None,
+) -> WorkspaceInvitationORM:
+    invitation = await session.scalar(
+        select(WorkspaceInvitationORM).where(
+            WorkspaceInvitationORM.id == invitation_id,
+            WorkspaceInvitationORM.workspace_id == workspace_id,
+        )
+    )
+    if invitation is None or invitation.status != InvitationStatus.pending:
+        raise NotFoundError("Invitation not found")
+
+    invitation.status = InvitationStatus.revoked
+    await session.flush()
+
+    if actor_user_id is not None:
+        await record_audit(
+            session,
+            actor_user_id=actor_user_id,
+            impersonator_user_id=impersonator_user_id,
+            workspace_id=workspace_id,
+            action="workspace_invitation.revoked",
+            resource_type="workspace_invitation",
+            resource_id=str(invitation_id),
+            metadata={"invitation_id": str(invitation_id), "email": invitation.email},
+        )
+
+    return invitation

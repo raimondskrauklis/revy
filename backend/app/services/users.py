@@ -3,21 +3,35 @@
 from __future__ import annotations
 
 from uuid import UUID
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.constants.enums import AppRole, PlatformRole, UserStatus
+from app.constants.enums import AppRole, PlatformRole, UserStatus, WorkspaceStatus
 from app.core.config import settings
 from app.core.exceptions import ForbiddenError, NotFoundError, ValidationError
 from app.core.logging import get_logger
 from app.models.users import UserORM
 from app.models.workspace_memberships import WorkspaceMembershipORM
 from app.models.workspaces import WorkspaceORM
-from app.schemas.me import MeMembership, MeResponse
+from app.schemas.me import MeImpersonationInfo, MeMembership, MeResponse, MeUpdate
+from app.services.billing import effective_plan
 from app.services.onboarding import activate_user_with_workspace, resolve_initial_user_status
 
 logger = get_logger(__name__)
+
+SUPPORTED_LOCALES = frozenset({"en", "lv"})
+_ME_PATCH_BLOCKED_STATUSES = frozenset(
+    {
+        UserStatus.pending_activation,
+        UserStatus.pending_email_verification,
+        UserStatus.pending_profile,
+        UserStatus.pending_approval,
+        UserStatus.rejected,
+        UserStatus.suspended,
+    }
+)
 
 BOOTSTRAP_KEYCLOAK_PLACEHOLDER = "bootstrap-pending-first-login"
 
@@ -93,7 +107,58 @@ async def activate_bootstrap_super_admin(
     return user
 
 
-async def build_me_response(session: AsyncSession, user_id: UUID) -> MeResponse:
+def _validate_timezone(timezone: str) -> str:
+    if not timezone or not timezone.strip():
+        raise ValidationError(message="Invalid timezone", field="timezone")
+    try:
+        ZoneInfo(timezone)
+    except ZoneInfoNotFoundError as exc:
+        raise ValidationError(message="Invalid timezone", field="timezone") from exc
+    return timezone
+
+
+async def update_me(
+    session: AsyncSession,
+    *,
+    user_id: UUID,
+    payload: MeUpdate,
+) -> UserORM:
+    user = await session.scalar(select(UserORM).where(UserORM.id == user_id).with_for_update())
+    if user is None:
+        raise NotFoundError("User not found")
+    if user.status in _ME_PATCH_BLOCKED_STATUSES:
+        raise ForbiddenError(message="User cannot update profile in current status")
+
+    updates = payload.model_dump(exclude_unset=True)
+    if not updates:
+        return user
+
+    if "full_name" in updates:
+        full_name = updates["full_name"]
+        user.full_name = full_name.strip() if full_name else None
+
+    if "locale" in updates:
+        locale = updates["locale"]
+        if locale not in SUPPORTED_LOCALES:
+            raise ValidationError(message="Unsupported locale", field="locale")
+        user.locale = locale
+
+    if "timezone" in updates:
+        timezone = updates["timezone"]
+        if timezone is None:
+            raise ValidationError(message="Invalid timezone", field="timezone")
+        user.timezone = _validate_timezone(timezone)
+
+    await session.flush()
+    return user
+
+
+async def build_me_response(
+    session: AsyncSession,
+    user_id: UUID,
+    *,
+    impersonation: MeImpersonationInfo | None = None,
+) -> MeResponse:
     user = await session.get(UserORM, user_id)
     if user is None:
         raise NotFoundError("User not found")
@@ -102,7 +167,10 @@ async def build_me_response(session: AsyncSession, user_id: UUID) -> MeResponse:
         await session.execute(
             select(WorkspaceMembershipORM, WorkspaceORM)
             .join(WorkspaceORM, WorkspaceORM.id == WorkspaceMembershipORM.workspace_id)
-            .where(WorkspaceMembershipORM.user_id == user.id)
+            .where(
+                WorkspaceMembershipORM.user_id == user.id,
+                WorkspaceORM.status == WorkspaceStatus.active,
+            )
             .order_by(WorkspaceORM.name.asc())
         )
     ).all()
@@ -119,9 +187,12 @@ async def build_me_response(session: AsyncSession, user_id: UUID) -> MeResponse:
 
     active_workspace_id: UUID | None = None
     active_role: AppRole | None = None
+    workspace_plan: str | None = None
     if len(memberships) == 1:
         active_workspace_id = memberships[0].workspace_id
         active_role = memberships[0].role
+        _, workspace = membership_rows[0]
+        workspace_plan = effective_plan(workspace)
 
     return MeResponse(
         id=user.id,
@@ -129,9 +200,13 @@ async def build_me_response(session: AsyncSession, user_id: UUID) -> MeResponse:
         full_name=user.full_name,
         status=user.status,
         platform_role=user.platform_role,
+        locale=user.locale,
+        timezone=user.timezone,
         workspace_id=active_workspace_id,
         role=active_role,
+        workspace_plan=workspace_plan,
         memberships=memberships,
+        impersonation=impersonation,
     )
 
 
@@ -141,20 +216,27 @@ async def set_active_workspace(
     user_id: UUID,
     workspace_id: UUID,
 ) -> MeResponse:
-    membership = await session.scalar(
-        select(WorkspaceMembershipORM).where(
-            WorkspaceMembershipORM.user_id == user_id,
-            WorkspaceMembershipORM.workspace_id == workspace_id,
+    row = (
+        await session.execute(
+            select(WorkspaceMembershipORM, WorkspaceORM)
+            .join(WorkspaceORM, WorkspaceORM.id == WorkspaceMembershipORM.workspace_id)
+            .where(
+                WorkspaceMembershipORM.user_id == user_id,
+                WorkspaceMembershipORM.workspace_id == workspace_id,
+                WorkspaceORM.status == WorkspaceStatus.active,
+            )
         )
-    )
-    if membership is None:
+    ).first()
+    if row is None:
         raise ForbiddenError(message="Workspace access denied")
 
+    membership, workspace = row
     me = await build_me_response(session, user_id)
     return me.model_copy(
         update={
             "workspace_id": workspace_id,
             "role": membership.role,
+            "workspace_plan": effective_plan(workspace),
         }
     )
 

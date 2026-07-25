@@ -23,6 +23,8 @@ class UserORM(TimestampedModel):
         Enum(PlatformRole, name="platform_role", native_enum=True),
         nullable=True,
     )
+    locale: Mapped[str] = mapped_column(String(16), nullable=False, default="en", server_default="en")
+    timezone: Mapped[str] = mapped_column(String(64), nullable=False, default="UTC", server_default="UTC")
 
     @property
     def is_super_admin(self) -> bool:

@@ -1,0 +1,14 @@
+[
+  {
+    "id": "saas-w8-hardening",
+    "date": "2026-07-25",
+    "title": "Platform hardening",
+    "summary": "Read-only plan on /me, permission-aware settings nav, suspended workspace gate, impersonation closure, KPI and invitation accuracy, Stripe orphan webhook policy, and ops runbooks."
+  },
+  {
+    "id": "saas-settings-admin",
+    "date": "2026-07-25",
+    "title": "SaaS settings & admin",
+    "summary": "Settings shell, team management, Stripe billing, platform admin console, account lifecycle, and super-admin impersonation with audit trail."
+  }
+]

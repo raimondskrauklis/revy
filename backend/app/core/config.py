@@ -10,6 +10,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
     # Required — set in backend/.env (see .env.example)
@@ -85,6 +86,18 @@ class Settings(BaseSettings):
     revy_repos_root: str | None = None
     revy_worktrees_root: str | None = None
     revy_hf_cache_path: str | None = None
+
+    # Stripe billing — disabled by default; set STRIPE_ENABLED=true with keys in production
+    stripe_enabled: bool = False
+    stripe_secret_key: str | None = None
+    stripe_webhook_secret: str | None = None
+    stripe_price_pro: str | None = None
+    stripe_checkout_success_url: str | None = None
+    stripe_checkout_cancel_url: str | None = None
+
+    # Data export — ACCOUNT_LIFECYCLE.md
+    export_storage_path: str = "/tmp/revy/exports"
+    export_ttl_days: int = 7
 
     # Review policy
     revy_default_review_profile: str = "standard"

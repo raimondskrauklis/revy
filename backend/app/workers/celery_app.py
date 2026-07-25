@@ -24,9 +24,11 @@ celery_app.conf.task_routes = {
     "app.workers.judge_tasks.*": {"queue": "judge"},
     "app.workers.publish_tasks.*": {"queue": "github_publish"},
     "app.workers.maintenance_tasks.*": {"queue": "maintenance"},
+    "app.workers.export_tasks.*": {"queue": "maintenance"},
 }
 celery_app.conf.task_default_queue = "default"
 
 # Register task modules
 from app.workers import email_tasks as _email_tasks  # noqa: F401
+from app.workers import export_tasks as _export_tasks  # noqa: F401
 from app.workers import tasks as _tasks  # noqa: F401

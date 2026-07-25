@@ -88,6 +88,14 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
+    const body = error.response?.data as { error?: string } | undefined;
+    if (error.response?.status === 403 && body?.error === 'workspace_suspended') {
+      if (!window.location.pathname.startsWith('/workspace-suspended')) {
+        window.location.assign('/workspace-suspended');
+      }
+      return Promise.reject(error);
+    }
+
     const keycloak = getKeycloakInstance();
     if (error.response?.status === 401 && keycloak) {
       const isMe = error.config?.url?.includes('/me');

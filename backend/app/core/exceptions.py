@@ -53,6 +53,13 @@ class ServiceUnavailableError(PlatformException):
     error_code = "service_unavailable"
 
 
+class BillingWebhookError(PlatformException):
+    """Stripe webhook could not be applied — return 5xx so Stripe retries."""
+
+    http_status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    error_code = "billing_webhook_error"
+
+
 class RateLimitedError(PlatformException):
     http_status_code = status.HTTP_429_TOO_MANY_REQUESTS
     error_code = "rate_limited"

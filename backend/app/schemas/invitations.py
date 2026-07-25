@@ -36,3 +36,5 @@ class InvitationListItem(BaseModel):
     status: InvitationStatus
     expires_at: datetime
     created_at: datetime
+
+    model_config = {"from_attributes": True}

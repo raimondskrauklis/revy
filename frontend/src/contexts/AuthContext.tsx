@@ -10,6 +10,8 @@ import {
 } from 'react';
 import type Keycloak from 'keycloak-js';
 import { fetchMe, syncStoredWorkspace, type MeUser } from '@/lib/me';
+import { normalizeLanguage } from '@/lib/locale';
+import i18n from '@/i18n/config';
 import { initKeycloak, resetKeycloak, setKeycloakInitialized } from '@/lib/keycloak';
 import { log } from '@/lib/log';
 import { Sentry } from '@/lib/sentry';
@@ -44,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsUserLoading(true);
     try {
       const me = syncStoredWorkspace(await fetchMe());
+      await i18n.changeLanguage(normalizeLanguage(me.locale ?? 'en'));
       setUser(me);
       return me;
     } catch (error) {

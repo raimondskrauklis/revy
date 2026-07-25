@@ -12,6 +12,9 @@ Entry point for AI agents working in this repo.
 | **Keycloak (dev/prod)** | [docs/starter-pack/KEYCLOAK_DEV_CHECKLIST.md](docs/starter-pack/KEYCLOAK_DEV_CHECKLIST.md) |
 | **Registration flags** | [docs/starter-pack/REGISTRATION_FLAGS.md](docs/starter-pack/REGISTRATION_FLAGS.md) |
 | **Revy product slice (P4)** | [docs/starter-pack/REVY_PRODUCT_SLICE.md](docs/starter-pack/REVY_PRODUCT_SLICE.md) |
+| **SaaS base program (W0–W8)** | [docs/saas-base/README.md](docs/saas-base/README.md) — execution: [waves/README.md](docs/saas-base/waves/README.md) |
+| **SaaS ops / staging** | [STAGING_VERIFICATION.md](docs/saas-base/STAGING_VERIFICATION.md), [OPS.md](docs/saas-base/OPS.md) |
+| **Stripe billing setup** | [docs/utils/STRIPE_BILLING_SETUP.md](docs/utils/STRIPE_BILLING_SETUP.md) |
 | **Scaffold program status** | [docs/starter-pack/README.md](docs/starter-pack/README.md) |
 | **Product context (full)** | `internal-docs/product/revy/docs/PLATFORM_CONTEXT.md` |
 | **Architecture (full)** | `internal-docs/product/revy/docs/architecture.md` |

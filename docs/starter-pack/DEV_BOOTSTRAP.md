@@ -170,3 +170,37 @@ Record smoke date + operator in your team notes (not committed).
 cd backend && pipenv run lint && pipenv run pytest tests/unit/ -q
 cd frontend && npm run lint && npm test -- --run
 ```
+
+---
+
+## 9. Migrations 0008–0009 (SaaS base W6–W7)
+
+After W6/W7 ship, `alembic upgrade head` applies:
+
+| Revision | Purpose |
+|----------|---------|
+| `0008` | Data export jobs (`export_jobs`) |
+| `0009` | Impersonation sessions (`impersonation_sessions`) |
+
+---
+
+## 10. Celery worker (export + maintenance)
+
+Data export (W6) and maintenance tasks run on the **`maintenance`** queue:
+
+```bash
+cd backend
+pipenv run celery -A app.workers.celery_app worker -Q maintenance,default --loglevel=info
+```
+
+Set `EXPORT_STORAGE_PATH` (default `/tmp/revy/exports` in dev) and optional `EXPORT_TTL_DAYS` (default `7`) in `backend/.env`. Production: see `deploy/env-examples/backend.env.production.example`.
+
+---
+
+## 11. Ops pointers (W8)
+
+| Topic | Doc |
+|-------|-----|
+| Staging sign-off checklist | [docs/saas-base/STAGING_VERIFICATION.md](../saas-base/STAGING_VERIFICATION.md) |
+| Export worker, Stripe webhook, bootstrap | [docs/saas-base/OPS.md](../saas-base/OPS.md) |
+| Stripe setup | [docs/utils/STRIPE_BILLING_SETUP.md](../utils/STRIPE_BILLING_SETUP.md) |

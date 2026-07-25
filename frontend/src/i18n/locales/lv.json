@@ -11,6 +11,10 @@
     "clear": "Notīrīt",
     "today": "Šodien",
     "remove": "Noņemt",
+    "confirm": "Apstiprināt",
+    "yes": "Jā",
+    "no": "Nē",
+    "loadMore": "Ielādēt vairāk",
     "appName": "Lietotne"
   },
   "nav": {
@@ -24,11 +28,249 @@
     "dark": "Tumšs",
     "system": "Sistēma"
   },
+  "timezones": {
+    "utc": "UTC",
+    "europeRiga": "Rīga",
+    "europeLondon": "Londona",
+    "europeBerlin": "Berlīne",
+    "europeParis": "Parīze",
+    "europeHelsinki": "Helsinki",
+    "europeWarsaw": "Varšava",
+    "europeStockholm": "Stokholma",
+    "americaNewYork": "Ņujorka",
+    "americaChicago": "Čikāga",
+    "americaDenver": "Denvera",
+    "americaLosAngeles": "Losandželosa",
+    "americaToronto": "Toronto",
+    "americaSaoPaulo": "Sanpaulu",
+    "asiaDubai": "Dubaija",
+    "asiaKolkata": "Kalkāta",
+    "asiaSingapore": "Singapūra",
+    "asiaTokyo": "Tokija",
+    "australiaSydney": "Sidneja",
+    "pacificAuckland": "Oklenda"
+  },
   "dashboard": {
-    "welcome": "Pierakstījies kā {{email}}"
+    "noWorkspace": "Izvēlieties darba vidi, lai skatītu informācijas paneli.",
+    "widgetError": "Šo logrīku neizdevās ielādēt.",
+    "welcome": {
+      "greeting": "Laipni lūdzam, {{name}}",
+      "workspace": "Jūs strādājat {{workspace}}"
+    },
+    "checklist": {
+      "title": "Sākt darbu",
+      "progress": "{{completed}} no {{total}} pabeigti",
+      "completeProfile": "Pabeidziet profilu",
+      "inviteTeammate": "Uzaiciniet komandas biedru",
+      "connectIntegration": "Pievienojiet GitHub instalāciju",
+      "setupBilling": "Iestatiet norēķinus"
+    },
+    "quickActions": {
+      "title": "Ātrās darbības",
+      "settings": "Iestatījumi",
+      "installations": "Instalācijas",
+      "inviteTeammate": "Uzaicināt komandas biedru"
+    },
+    "activity": {
+      "title": "Nesenā aktivitāte",
+      "empty": "Vēl nav nesenas aktivitātes.",
+      "workspace.updated": "{{email}} atjaunināja darba vidi",
+      "workspace_member.role_changed": "{{email}} mainīja dalībnieka lomu",
+      "workspace_member.removed": "{{email}} noņēma dalībnieku",
+      "workspace_invitation.created": "{{email}} nosūtīja uzaicinājumu",
+      "workspace_invitation.revoked": "{{email}} atcēla uzaicinājumu"
+    },
+    "installationsSummary": {
+      "title": "GitHub instalācijas",
+      "count_one": "{{count}} instalācija pievienota",
+      "count_other": "{{count}} instalācijas pievienotas",
+      "statusHint": "Lielākā daļa instalāciju ir {{status}}",
+      "manage": "Pārvaldīt instalācijas"
+    },
+    "planSummary": {
+      "title": "Plāns",
+      "current": "Pašreizējais plāns: {{plan}}",
+      "manage": "Pārvaldīt norēķinus"
+    }
+  },
+  "header": {
+    "workspace": {
+      "unknown": "Darba vide",
+      "select": "Izvēlēties darba vidi",
+      "switch": "Mainīt darba vidi",
+      "list": "Jūsu darba vides"
+    },
+    "user": {
+      "menu": "Konta izvēlne",
+      "profile": "Profils un iestatījumi",
+      "admin": "Administrēšana",
+      "signOut": "Iziet"
+    }
   },
   "settings": {
     "title": "Iestatījumi",
+    "shell": {
+      "title": "Iestatījumi"
+    },
+    "group": {
+      "personal": "Personīgie",
+      "workspace": "Darba vide"
+    },
+    "sidebar": {
+      "label": "Iestatījumu sadaļas"
+    },
+    "nav": {
+      "profile": "Profils",
+      "security": "Drošība",
+      "appearance": "Izskats",
+      "workspace": "Darba vide",
+      "team": "Komanda",
+      "integrations": "Integrācijas",
+      "billing": "Norēķini",
+      "danger": "Bīstamā zona"
+    },
+    "danger": {
+      "export": {
+        "title": "Eksportēt datus",
+        "body": "Lejupielādējiet ZIP ar profilu un darba vides dalībām. Saite ir derīga dažas dienas.",
+        "request": "Pieprasīt eksportu",
+        "download": "Lejupielādēt eksportu",
+        "status": {
+          "pending": "Eksports rindā…",
+          "processing": "Sagatavo eksportu…",
+          "completed": "Eksports ir gatavs.",
+          "failed": "Eksports neizdevās. Mēģiniet vēlreiz."
+        }
+      },
+      "leave": {
+        "title": "Pamest darba vidi",
+        "body": "Noņemiet sevi no šīs darba vides. Zaudēsiet piekļuvi tās datiem.",
+        "action": "Pamest darba vidi",
+        "confirmTitle": "Pamest šo darba vidi?",
+        "confirmBody": "Jūs nekavējoties zaudēsiet piekļuvi šai darba videi."
+      },
+      "deleteWorkspace": {
+        "title": "Dzēst darba vidi",
+        "body": "Neatgriezeniski dzēst šo darba vidi visiem dalībniekiem. Vispirms atceliet aktīvo abonementu.",
+        "action": "Dzēst darba vidi",
+        "confirmTitle": "Dzēst šo darba vidi?",
+        "confirmBody": "To nevar atsaukt. Visi dalībnieki zaudēs piekļuvi.",
+        "confirmMatchLabel": "Ierakstiet {{slug}}, lai apstiprinātu"
+      },
+      "deleteAccount": {
+        "title": "Dzēst kontu",
+        "body": "Deaktivizējiet Revy kontu. Keycloak pieteikšanās netiek dzēsta — sazinieties ar atbalstu pilnai identitātes dzēšanai.",
+        "action": "Dzēst kontu",
+        "confirmTitle": "Dzēst kontu?",
+        "confirmBody": "To nevar atsaukt. Jūs nekavējoties tiksiet izrakstīts.",
+        "confirmMatchLabel": "Ierakstiet {{email}}, lai apstiprinātu"
+      }
+    },
+    "profile": {
+      "emailLabel": "E-pasts",
+      "nameLabel": "Attēlojamais vārds",
+      "localeLabel": "Valoda",
+      "timezoneLabel": "Laika josla",
+      "saveSuccess": "Profils saglabāts",
+      "locales": {
+        "en": "Angļu",
+        "lv": "Latviešu"
+      }
+    },
+    "security": {
+      "body": "Paroli, divfaktoru autentifikāciju un aktīvās sesijas pārvalda Keycloak konta konsolē.",
+      "openAccount": "Atvērt konta konsoli"
+    },
+    "appearance": {
+      "body": "Izvēlieties, kā lietotne izskatās šajā ierīcē. Tēmas iestatījums tiek saglabāts lokāli pārlūkā.",
+      "themeLabel": "Tēma"
+    },
+    "workspace": {
+      "nameLabel": "Darba vides nosaukums",
+      "slugLabel": "URL identifikators",
+      "slugImmutable": "Identifikators tiek noteikts darba vides izveides brīdī un to nevar mainīt.",
+      "saveSuccess": "Darba vide saglabāta"
+    },
+    "team": {
+      "noWorkspace": "Izvēlieties darba vidi, lai pārvaldītu komandas dalībniekus.",
+      "members": {
+        "title": "Dalībnieki",
+        "empty": "Vēl nav dalībnieku.",
+        "remove": "Noņemt",
+        "removeConfirm": "Noņemt šo dalībnieku no darba vides?",
+        "columns": {
+          "name": "Vārds",
+          "email": "E-pasts",
+          "role": "Loma",
+          "joined": "Pievienojās",
+          "actions": "Darbības"
+        }
+      },
+      "invitations": {
+        "title": "Gaidošie uzaicinājumi",
+        "empty": "Nav gaidošu uzaicinājumu.",
+        "revoke": "Atsaukt",
+        "revokeConfirm": "Atsaukt šo uzaicinājumu?",
+        "columns": {
+          "email": "E-pasts",
+          "role": "Loma",
+          "expires": "Beidzas",
+          "actions": "Darbības"
+        }
+      },
+      "invite": {
+        "title": "Uzaicināt dalībnieku",
+        "emailLabel": "E-pasts",
+        "roleLabel": "Loma",
+        "submit": "Nosūtīt uzaicinājumu",
+        "success": "Uzaicinājums nosūtīts"
+      },
+      "roles": {
+        "admin": "Administrators",
+        "operator": "Operators",
+        "viewer": "Skatītājs"
+      }
+    },
+    "permissions": {
+      "title": "Lomu atļaujas",
+      "roleColumn": "Loma",
+      "granted": "Jā",
+      "roles": {
+        "admin": "Administrators",
+        "operator": "Operators",
+        "viewer": "Skatītājs"
+      },
+      "perms": {
+        "itemsView": "Skatīt vienumus",
+        "itemsManage": "Pārvaldīt vienumus",
+        "adminUsers": "Pārvaldīt lietotājus",
+        "adminWorkspaces": "Pārvaldīt darba vides",
+        "adminSystem": "Sistēmas administrators"
+      }
+    },
+    "integrations": {
+      "subtitle": "Pievienojiet ārējos pakalpojumus šai darba videi.",
+      "empty": "Nav pieejamu integrāciju.",
+      "github": {
+        "title": "GitHub",
+        "description": "Pievienojiet GitHub App instalācijas koda pārskatīšanai.",
+        "count": "Pievienota {{count}} instalācija",
+        "count_other": "Pievienotas {{count}} instalācijas",
+        "manage": "Pārvaldīt instalācijas"
+      }
+    },
+    "billing": {
+      "currentPlan": "Pašreizējais plāns",
+      "notConfigured": "Norēķini šai videi nav konfigurēti.",
+      "upgrade": "Jaunināt uz Pro",
+      "manage": "Pārvaldīt abonementu",
+      "checkoutSuccess": "Maksājums pabeigts. Plāns drīz tiks atjaunināts.",
+      "checkoutCancel": "Maksājums tika atcelts.",
+      "plans": {
+        "free": "Bezmaksas",
+        "pro": "Pro"
+      }
+    },
     "quietDemo": {
       "title": "Formas elementi",
       "description": "Quiet* komponentes — izmantojiet tās, nevis HTML ievades.",
@@ -58,6 +300,124 @@
     }
   },
   "admin": {
+    "title": "Platformas administrēšana",
+    "backToApp": "Atpakaļ uz lietotni",
+    "sidebar": {
+      "label": "Administrēšanas sadaļas"
+    },
+    "nav": {
+      "dashboard": "Panelis",
+      "workspaces": "Darba vides",
+      "users": "Lietotāji",
+      "audit": "Audits",
+      "settings": "Iestatījumi"
+    },
+    "dashboard": {
+      "title": "Platformas panelis",
+      "description": "Darba vides un lietotāju pārskats visā platformā.",
+      "kpis": {
+        "workspacesTotal": "Darba vides kopā",
+        "workspacesActive": "Aktīvās darba vides",
+        "workspacesSuspended": "Aizturētās darba vides",
+        "workspacesDeleted": "Dzēstās darba vides",
+        "usersActive": "Aktīvie lietotāji",
+        "usersPendingApproval": "Gaida apstiprinājumu"
+      },
+      "pendingApprovalBanner": "{{count}} lietotājs gaida apstiprinājumu",
+      "pendingApprovalBanner_other": "{{count}} lietotāji gaida apstiprinājumu",
+      "reviewPendingUsers": "Skatīt reģistrāciju rindu"
+    },
+    "workspaces": {
+      "title": "Darba vides",
+      "description": "Pārlūkot un pārvaldīt visas nomnieku darba vides.",
+      "searchPlaceholder": "Meklēt pēc nosaukuma vai slug",
+      "statusFilter": "Filtrēt pēc statusa",
+      "empty": "Darba vides nav atrastas.",
+      "notFound": "Darba vide nav atrasta.",
+      "backToList": "Atpakaļ uz darba vidēm",
+      "suspend": "Aizturēt darba vidi",
+      "unsuspend": "Atjaunot darba vidi",
+      "confirmSuspend": "Aizturēt šo darba vidi? Dalībnieki zaudēs piekļuvi nomnieka API.",
+      "confirmUnsuspend": "Atjaunot šo darba vidi aktīvā statusā?",
+      "status": {
+        "all": "Visi statusi",
+        "active": "Aktīva",
+        "suspended": "Aizturēta"
+      },
+      "columns": {
+        "name": "Nosaukums",
+        "slug": "Slug",
+        "status": "Statuss",
+        "plan": "Plāns",
+        "members": "Dalībnieki",
+        "created": "Izveidota"
+      },
+      "detail": {
+        "status": "Statuss",
+        "plan": "Plāns",
+        "members": "Dalībnieki",
+        "stripeCustomer": "Stripe klients",
+        "created": "Izveidota",
+        "updated": "Atjaunināta"
+      },
+      "members": {
+        "title": "Dalībnieki",
+        "description": "Darba vides dalībnieki, pieejami personifikācijai.",
+        "empty": "Dalībnieki nav atrasti.",
+        "columns": {
+          "email": "E-pasts",
+          "role": "Loma",
+          "status": "Statuss",
+          "actions": "Darbības"
+        }
+      }
+    },
+    "impersonation": {
+      "banner": "Personificē {{email}} — {{reason}}",
+      "stop": "Beigt personifikāciju",
+      "start": "Sākt personifikāciju",
+      "startTitle": "Sākt personifikāciju",
+      "startDescription": "Jūs skatīsities lietotni kā {{email}}. Audita žurnālam nepieciešams iemesls.",
+      "reasonLabel": "Iemesls",
+      "reasonPlaceholder": "Atbalsta pieteikums vai izmeklēšanas konteksts",
+      "reasonHint": "Vismaz 10 rakstzīmes. Tiek reģistrēts audita žurnālā."
+    },
+    "audit": {
+      "title": "Audita žurnāls",
+      "description": "Meklēt platformas auditēšanas notikumus visās darba vidēs.",
+      "impersonatorHint": "Personificētāja kolonna rāda platformas administratoru, ja darbība veikta personificējot.",
+      "empty": "Audita notikumi nav atrasti.",
+      "filters": {
+        "workspaceId": "Darba vides ID",
+        "actorUserId": "Darbības veicēja ID",
+        "actionPrefix": "Darbības prefikss",
+        "createdAtFrom": "No datuma",
+        "createdAtTo": "Līdz datumam"
+      },
+      "columns": {
+        "time": "Laiks",
+        "action": "Darbība",
+        "actor": "Veicējs",
+        "impersonator": "Personificētājs",
+        "workspace": "Darba vide"
+      },
+      "actions": {
+        "platform.workspace.viewed": "Darba vide skatīta (admin)",
+        "platform.workspace.suspended": "Darba vide aizturēta",
+        "platform.workspace.unsuspended": "Darba vide atjaunota",
+        "workspace.updated": "Darba vide atjaunināta"
+      }
+    },
+    "settings": {
+      "title": "Platformas iestatījumi",
+      "description": "Tikai lasāma platformas konfigurācija un ārējās administrēšanas saites.",
+      "externalLinks": "Ārējās konsoles",
+      "keycloakAdmin": "Keycloak administrēšanas konsole",
+      "stripeDashboard": "Stripe panelis",
+      "registrationFlags": "Reģistrācijas karodziņi",
+      "requireAdminApproval": "Nepieciešams administratora apstiprinājums",
+      "requireProfileForm": "Nepieciešama profila forma"
+    },
     "users": {
       "title": "Reģistrāciju apstiprinājumi",
       "description": "Lietotāji, kas gaida platformas piekļuvi (B režīms). A režīmā tukšs.",
@@ -115,6 +475,10 @@
       "suspended": {
         "title": "Konts apturēts",
         "body": "Jūsu konts ir apturēts. Sazinieties ar atbalstu."
+      },
+      "workspaceSuspended": {
+        "title": "Darba vide aizturēta",
+        "body": "Šī darba vide ir aizturēta platformas administratora. Sazinieties ar atbalstu, ja nepieciešama piekļuve."
       }
     },
     "unauthorized": {
@@ -171,6 +535,22 @@
     "unauthorized": "Lūdzu, pierakstieties",
     "network_error": "Neizdevās sasniegt serveri",
     "unknown_error": "Kaut kas nogāja greizi",
+    "last_workspace_admin": "Nepieciešams vismaz viens darba vides administrators",
+    "plan_upgrade_required": "Lai izmantotu šo funkciju, jauniniet uz Pro",
+    "billing_disabled": "Norēķini nav konfigurēti",
+    "subscription_active": "Pirms darba vides dzēšanas atceliet abonementu",
+    "sole_workspace_admin": "Pirms konta dzēšanas nododiet administratora lomu vai dzēsiet darba vidi",
+    "platform_admin_protected": "Platformas administratori šeit nevar dzēst kontu",
+    "account_deleted": "Šis konts ir dzēsts",
+    "export_in_progress": "Eksports jau notiek",
+    "export_expired": "Šī eksporta lejupielāde ir beigusies",
+    "workspace_suspended": "Šī darba vide ir aizturēta",
+    "account_suspended": "Jūsu konts ir apturēts",
+    "impersonation_active": "Jūs jau uzņematies cita lietotāja identitāti",
+    "impersonation_forbidden": "Šo lietotāju nevar uzņemties",
+    "impersonation_restricted": "Šī darbība nav atļauta uzņemšanās laikā",
+    "impersonation_invalid": "Uzņemšanās sesija nav derīga",
+    "impersonation_not_active": "Nav aktīvas uzņemšanās sesijas",
     "not_found_page": {
       "title": "Lapa nav atrasta",
       "body": "Pieprasītā lapa neeksistē."

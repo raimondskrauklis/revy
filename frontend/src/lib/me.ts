@@ -19,15 +19,27 @@ export interface MeMembership {
   role: AppRole;
 }
 
+export interface MeImpersonation {
+  active: boolean;
+  actor_user_id: string;
+  target_user_id: string;
+  target_email: string;
+  reason: string;
+}
+
 export interface MeUser {
   id: string;
   email: string;
   full_name: string | null;
   status: UserStatus;
   platform_role: PlatformRole | null;
+  locale: string;
+  timezone: string;
   workspace_id: string | null;
+  workspace_plan: string | null;
   role: AppRole | null;
   memberships: MeMembership[];
+  impersonation?: MeImpersonation | null;
 }
 
 export async function fetchMe(): Promise<MeUser> {
@@ -40,6 +52,17 @@ export async function setActiveWorkspace(workspaceId: string): Promise<MeUser> {
   const me = await parseSuccess<MeUser>(response);
   setStoredWorkspaceId(me.workspace_id);
   return me;
+}
+
+export interface MeUpdatePayload {
+  full_name?: string | null;
+  locale?: string;
+  timezone?: string;
+}
+
+export async function patchMe(payload: MeUpdatePayload): Promise<MeUser> {
+  const response = await apiClient.patch('/me', payload);
+  return parseSuccess<MeUser>(response);
 }
 
 export function syncStoredWorkspace(me: MeUser): MeUser {

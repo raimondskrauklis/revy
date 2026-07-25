@@ -11,6 +11,10 @@
     "clear": "Clear",
     "today": "Today",
     "remove": "Remove",
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No",
+    "loadMore": "Load more",
     "appName": "App"
   },
   "nav": {
@@ -24,11 +28,249 @@
     "dark": "Dark",
     "system": "System"
   },
+  "timezones": {
+    "utc": "UTC",
+    "europeRiga": "Riga",
+    "europeLondon": "London",
+    "europeBerlin": "Berlin",
+    "europeParis": "Paris",
+    "europeHelsinki": "Helsinki",
+    "europeWarsaw": "Warsaw",
+    "europeStockholm": "Stockholm",
+    "americaNewYork": "New York",
+    "americaChicago": "Chicago",
+    "americaDenver": "Denver",
+    "americaLosAngeles": "Los Angeles",
+    "americaToronto": "Toronto",
+    "americaSaoPaulo": "São Paulo",
+    "asiaDubai": "Dubai",
+    "asiaKolkata": "Kolkata",
+    "asiaSingapore": "Singapore",
+    "asiaTokyo": "Tokyo",
+    "australiaSydney": "Sydney",
+    "pacificAuckland": "Auckland"
+  },
   "dashboard": {
-    "welcome": "Signed in as {{email}}"
+    "noWorkspace": "Select a workspace to view the dashboard.",
+    "widgetError": "This widget could not be loaded.",
+    "welcome": {
+      "greeting": "Welcome, {{name}}",
+      "workspace": "You are working in {{workspace}}"
+    },
+    "checklist": {
+      "title": "Get started",
+      "progress": "{{completed}} of {{total}} complete",
+      "completeProfile": "Complete your profile",
+      "inviteTeammate": "Invite a teammate",
+      "connectIntegration": "Connect a GitHub installation",
+      "setupBilling": "Set up billing"
+    },
+    "quickActions": {
+      "title": "Quick actions",
+      "settings": "Settings",
+      "installations": "Installations",
+      "inviteTeammate": "Invite teammate"
+    },
+    "activity": {
+      "title": "Recent activity",
+      "empty": "No recent activity yet.",
+      "workspace.updated": "{{email}} updated the workspace",
+      "workspace_member.role_changed": "{{email}} changed a member role",
+      "workspace_member.removed": "{{email}} removed a member",
+      "workspace_invitation.created": "{{email}} sent an invitation",
+      "workspace_invitation.revoked": "{{email}} revoked an invitation"
+    },
+    "installationsSummary": {
+      "title": "GitHub installations",
+      "count_one": "{{count}} installation connected",
+      "count_other": "{{count}} installations connected",
+      "statusHint": "Most installations are {{status}}",
+      "manage": "Manage installations"
+    },
+    "planSummary": {
+      "title": "Plan",
+      "current": "Current plan: {{plan}}",
+      "manage": "Manage billing"
+    }
+  },
+  "header": {
+    "workspace": {
+      "unknown": "Workspace",
+      "select": "Select workspace",
+      "switch": "Switch workspace",
+      "list": "Your workspaces"
+    },
+    "user": {
+      "menu": "Account menu",
+      "profile": "Profile & settings",
+      "admin": "Admin",
+      "signOut": "Sign out"
+    }
   },
   "settings": {
     "title": "Settings",
+    "shell": {
+      "title": "Settings"
+    },
+    "group": {
+      "personal": "Personal",
+      "workspace": "Workspace"
+    },
+    "sidebar": {
+      "label": "Settings sections"
+    },
+    "nav": {
+      "profile": "Profile",
+      "security": "Security",
+      "appearance": "Appearance",
+      "workspace": "Workspace",
+      "team": "Team",
+      "integrations": "Integrations",
+      "billing": "Billing",
+      "danger": "Danger zone"
+    },
+    "danger": {
+      "export": {
+        "title": "Export your data",
+        "body": "Download a ZIP archive with your profile and workspace memberships. The link expires after a few days.",
+        "request": "Request export",
+        "download": "Download export",
+        "status": {
+          "pending": "Export queued…",
+          "processing": "Preparing your export…",
+          "completed": "Your export is ready.",
+          "failed": "Export failed. Please try again."
+        }
+      },
+      "leave": {
+        "title": "Leave workspace",
+        "body": "Remove yourself from this workspace. You will lose access to its data.",
+        "action": "Leave workspace",
+        "confirmTitle": "Leave this workspace?",
+        "confirmBody": "You will lose access to this workspace immediately."
+      },
+      "deleteWorkspace": {
+        "title": "Delete workspace",
+        "body": "Permanently delete this workspace for all members. Cancel any active subscription first.",
+        "action": "Delete workspace",
+        "confirmTitle": "Delete this workspace?",
+        "confirmBody": "This cannot be undone. All members will lose access.",
+        "confirmMatchLabel": "Type {{slug}} to confirm"
+      },
+      "deleteAccount": {
+        "title": "Delete account",
+        "body": "Deactivate your Revy account. Your Keycloak login is not removed — contact support if you need full identity deletion.",
+        "action": "Delete account",
+        "confirmTitle": "Delete your account?",
+        "confirmBody": "This cannot be undone. You will be signed out immediately.",
+        "confirmMatchLabel": "Type {{email}} to confirm"
+      }
+    },
+    "profile": {
+      "emailLabel": "Email",
+      "nameLabel": "Display name",
+      "localeLabel": "Language",
+      "timezoneLabel": "Timezone",
+      "saveSuccess": "Profile saved",
+      "locales": {
+        "en": "English",
+        "lv": "Latvian"
+      }
+    },
+    "security": {
+      "body": "Password, multi-factor authentication, and active sessions are managed in your Keycloak account console.",
+      "openAccount": "Open account console"
+    },
+    "appearance": {
+      "body": "Choose how the app looks on this device. Theme preference is stored locally in your browser.",
+      "themeLabel": "Theme"
+    },
+    "workspace": {
+      "nameLabel": "Workspace name",
+      "slugLabel": "URL slug",
+      "slugImmutable": "The slug is set when the workspace is created and cannot be changed.",
+      "saveSuccess": "Workspace saved"
+    },
+    "team": {
+      "noWorkspace": "Select a workspace to manage team members.",
+      "members": {
+        "title": "Members",
+        "empty": "No members yet.",
+        "remove": "Remove",
+        "removeConfirm": "Remove this member from the workspace?",
+        "columns": {
+          "name": "Name",
+          "email": "Email",
+          "role": "Role",
+          "joined": "Joined",
+          "actions": "Actions"
+        }
+      },
+      "invitations": {
+        "title": "Pending invitations",
+        "empty": "No pending invitations.",
+        "revoke": "Revoke",
+        "revokeConfirm": "Revoke this invitation?",
+        "columns": {
+          "email": "Email",
+          "role": "Role",
+          "expires": "Expires",
+          "actions": "Actions"
+        }
+      },
+      "invite": {
+        "title": "Invite member",
+        "emailLabel": "Email",
+        "roleLabel": "Role",
+        "submit": "Send invitation",
+        "success": "Invitation sent"
+      },
+      "roles": {
+        "admin": "Admin",
+        "operator": "Operator",
+        "viewer": "Viewer"
+      }
+    },
+    "permissions": {
+      "title": "Role permissions",
+      "roleColumn": "Role",
+      "granted": "Yes",
+      "roles": {
+        "admin": "Admin",
+        "operator": "Operator",
+        "viewer": "Viewer"
+      },
+      "perms": {
+        "itemsView": "View items",
+        "itemsManage": "Manage items",
+        "adminUsers": "Manage users",
+        "adminWorkspaces": "Manage workspaces",
+        "adminSystem": "System admin"
+      }
+    },
+    "integrations": {
+      "subtitle": "Connect external services to this workspace.",
+      "empty": "No integrations available.",
+      "github": {
+        "title": "GitHub",
+        "description": "Connect GitHub App installations for code review.",
+        "count": "{{count}} installation connected",
+        "count_other": "{{count}} installations connected",
+        "manage": "Manage installations"
+      }
+    },
+    "billing": {
+      "currentPlan": "Current plan",
+      "notConfigured": "Billing is not configured for this environment.",
+      "upgrade": "Upgrade to Pro",
+      "manage": "Manage subscription",
+      "checkoutSuccess": "Checkout completed. Your plan will update shortly.",
+      "checkoutCancel": "Checkout was canceled.",
+      "plans": {
+        "free": "Free",
+        "pro": "Pro"
+      }
+    },
     "quietDemo": {
       "title": "Form controls",
       "description": "Quiet* components — use these instead of raw HTML inputs.",
@@ -58,6 +300,124 @@
     }
   },
   "admin": {
+    "title": "Platform admin",
+    "backToApp": "Back to app",
+    "sidebar": {
+      "label": "Admin sections"
+    },
+    "nav": {
+      "dashboard": "Dashboard",
+      "workspaces": "Workspaces",
+      "users": "Users",
+      "audit": "Audit",
+      "settings": "Settings"
+    },
+    "dashboard": {
+      "title": "Platform dashboard",
+      "description": "Overview of workspaces and users across the platform.",
+      "kpis": {
+        "workspacesTotal": "Total workspaces",
+        "workspacesActive": "Active workspaces",
+        "workspacesSuspended": "Suspended workspaces",
+        "workspacesDeleted": "Deleted workspaces",
+        "usersActive": "Active users",
+        "usersPendingApproval": "Pending approval"
+      },
+      "pendingApprovalBanner": "{{count}} user awaiting approval",
+      "pendingApprovalBanner_other": "{{count}} users awaiting approval",
+      "reviewPendingUsers": "Review signup queue"
+    },
+    "workspaces": {
+      "title": "Workspaces",
+      "description": "Browse and manage all tenant workspaces.",
+      "searchPlaceholder": "Search by name or slug",
+      "statusFilter": "Filter by status",
+      "empty": "No workspaces found.",
+      "notFound": "Workspace not found.",
+      "backToList": "Back to workspaces",
+      "suspend": "Suspend workspace",
+      "unsuspend": "Unsuspend workspace",
+      "confirmSuspend": "Suspend this workspace? Members will lose access to tenant APIs.",
+      "confirmUnsuspend": "Restore this workspace to active status?",
+      "status": {
+        "all": "All statuses",
+        "active": "Active",
+        "suspended": "Suspended"
+      },
+      "columns": {
+        "name": "Name",
+        "slug": "Slug",
+        "status": "Status",
+        "plan": "Plan",
+        "members": "Members",
+        "created": "Created"
+      },
+      "detail": {
+        "status": "Status",
+        "plan": "Plan",
+        "members": "Members",
+        "stripeCustomer": "Stripe customer",
+        "created": "Created",
+        "updated": "Updated"
+      },
+      "members": {
+        "title": "Members",
+        "description": "Workspace members available for impersonation.",
+        "empty": "No members found.",
+        "columns": {
+          "email": "Email",
+          "role": "Role",
+          "status": "Status",
+          "actions": "Actions"
+        }
+      }
+    },
+    "impersonation": {
+      "banner": "Impersonating {{email}} — {{reason}}",
+      "stop": "Stop impersonation",
+      "start": "Start impersonation",
+      "startTitle": "Start impersonation",
+      "startDescription": "You will view the app as {{email}}. A reason is required for the audit log.",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Support ticket or investigation context",
+      "reasonHint": "Minimum 10 characters. Recorded in the audit log."
+    },
+    "audit": {
+      "title": "Audit log",
+      "description": "Search platform-wide audit events across all workspaces.",
+      "impersonatorHint": "Impersonator column shows the platform admin when an action was performed while impersonating.",
+      "empty": "No audit events found.",
+      "filters": {
+        "workspaceId": "Workspace ID",
+        "actorUserId": "Actor user ID",
+        "actionPrefix": "Action prefix",
+        "createdAtFrom": "From date",
+        "createdAtTo": "To date"
+      },
+      "columns": {
+        "time": "Time",
+        "action": "Action",
+        "actor": "Actor",
+        "impersonator": "Impersonator",
+        "workspace": "Workspace"
+      },
+      "actions": {
+        "platform.workspace.viewed": "Workspace viewed (admin)",
+        "platform.workspace.suspended": "Workspace suspended",
+        "platform.workspace.unsuspended": "Workspace unsuspended",
+        "workspace.updated": "Workspace updated"
+      }
+    },
+    "settings": {
+      "title": "Platform settings",
+      "description": "Read-only platform configuration and external admin links.",
+      "externalLinks": "External consoles",
+      "keycloakAdmin": "Keycloak Admin Console",
+      "stripeDashboard": "Stripe Dashboard",
+      "registrationFlags": "Registration flags",
+      "requireAdminApproval": "Require admin approval",
+      "requireProfileForm": "Require profile form"
+    },
     "users": {
       "title": "Signup approvals",
       "description": "Review users waiting for platform access (Mode B). Empty in Mode A.",
@@ -115,6 +475,10 @@
       "suspended": {
         "title": "Account suspended",
         "body": "Your account has been suspended. Contact support for help."
+      },
+      "workspaceSuspended": {
+        "title": "Workspace suspended",
+        "body": "This workspace has been suspended by platform administrators. Contact support if you need access."
       }
     },
     "unauthorized": {
@@ -171,6 +535,22 @@
     "unauthorized": "Please sign in",
     "network_error": "Unable to reach the server",
     "unknown_error": "Something went wrong",
+    "last_workspace_admin": "At least one workspace admin is required",
+    "plan_upgrade_required": "Upgrade to Pro to use this feature",
+    "billing_disabled": "Billing is not configured",
+    "subscription_active": "Cancel your subscription before deleting this workspace",
+    "sole_workspace_admin": "Transfer admin role or delete the workspace before deleting your account",
+    "platform_admin_protected": "Platform administrators cannot delete their account here",
+    "account_deleted": "This account has been deleted",
+    "export_in_progress": "An export is already in progress",
+    "export_expired": "This export download has expired",
+    "workspace_suspended": "This workspace has been suspended",
+    "account_suspended": "Your account has been suspended",
+    "impersonation_active": "You are already impersonating another user",
+    "impersonation_forbidden": "This user cannot be impersonated",
+    "impersonation_restricted": "This action is not allowed while impersonating",
+    "impersonation_invalid": "Impersonation session is invalid",
+    "impersonation_not_active": "No active impersonation session",
     "not_found_page": {
       "title": "Page not found",
       "body": "The page you requested does not exist."

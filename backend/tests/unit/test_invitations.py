@@ -11,7 +11,12 @@ from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError, Va
 from app.models.invitations import WorkspaceInvitationORM
 from app.models.users import UserORM
 from app.models.workspace_memberships import WorkspaceMembershipORM
-from app.services.invitations import accept_invitation, create_invitation
+from app.services.invitations import (
+    accept_invitation,
+    create_invitation,
+    list_invitations,
+    revoke_invitation,
+)
 
 
 @pytest.mark.asyncio
@@ -31,7 +36,7 @@ async def test_create_invitation_persists_row():
         invited_by_user_id=inviter_id,
     )
 
-    session.add.assert_called_once()
+    session.add.assert_called()
     assert invitation.email == "colleague@example.com"
     assert invitation.role == AppRole.viewer
     assert invitation.status == InvitationStatus.pending
@@ -269,3 +274,84 @@ async def test_accept_invitation_rejects_expired():
 
     assert invitation.status == InvitationStatus.pending
     session.flush.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_list_invitations_defaults_to_pending():
+    workspace_id = uuid.uuid4()
+    invitation = WorkspaceInvitationORM(
+        workspace_id=workspace_id,
+        email="pending@example.com",
+        role=AppRole.viewer,
+        token="token",
+        invited_by_user_id=uuid.uuid4(),
+        status=InvitationStatus.pending,
+        expires_at=datetime.now(UTC) + timedelta(days=1),
+    )
+    invitation.id = uuid.uuid4()
+    invitation.created_at = datetime.now(UTC)
+
+    session = AsyncMock()
+    result = MagicMock()
+    result.scalars.return_value.all.return_value = [invitation]
+    session.execute = AsyncMock(return_value=result)
+
+    from app.core.pagination import CursorParams
+
+    page = await list_invitations(session, workspace_id=workspace_id, params=CursorParams(limit=50))
+
+    assert len(page.items) == 1
+    assert page.items[0].email == "pending@example.com"
+    assert not hasattr(page.items[0], "token")
+
+
+@pytest.mark.asyncio
+async def test_revoke_invitation_sets_status():
+    workspace_id = uuid.uuid4()
+    invitation_id = uuid.uuid4()
+    invitation = WorkspaceInvitationORM(
+        workspace_id=workspace_id,
+        email="pending@example.com",
+        role=AppRole.viewer,
+        token="token",
+        invited_by_user_id=uuid.uuid4(),
+        status=InvitationStatus.pending,
+        expires_at=datetime.now(UTC) + timedelta(days=1),
+    )
+    invitation.id = invitation_id
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(return_value=invitation)
+    session.flush = AsyncMock()
+
+    revoked = await revoke_invitation(
+        session,
+        workspace_id=workspace_id,
+        invitation_id=invitation_id,
+    )
+
+    assert revoked.status == InvitationStatus.revoked
+
+
+@pytest.mark.asyncio
+async def test_revoke_invitation_not_pending_returns_not_found():
+    workspace_id = uuid.uuid4()
+    invitation = WorkspaceInvitationORM(
+        workspace_id=workspace_id,
+        email="accepted@example.com",
+        role=AppRole.viewer,
+        token="token",
+        invited_by_user_id=uuid.uuid4(),
+        status=InvitationStatus.accepted,
+        expires_at=datetime.now(UTC) + timedelta(days=1),
+    )
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(return_value=invitation)
+
+    with pytest.raises(NotFoundError):
+        await revoke_invitation(
+            session,
+            workspace_id=workspace_id,
+            invitation_id=uuid.uuid4(),
+        )
