@@ -1,6 +1,6 @@
 // frontend/src/lib/keycloak.ts
 import Keycloak from 'keycloak-js';
-import { requireViteEnv } from '@/lib/env';
+import { optionalViteEnv, requireViteEnv } from '@/lib/env';
 
 let keycloakInstance: Keycloak | null = null;
 let isInitialized = false;
@@ -42,4 +42,14 @@ export function isKeycloakInitialized(): boolean {
 export function resetKeycloak(): void {
   keycloakInstance = null;
   isInitialized = false;
+}
+
+export function getKeycloakAccountUrl(): string {
+  const override = optionalViteEnv('VITE_KEYCLOAK_ACCOUNT_URL');
+  if (override) {
+    return override;
+  }
+  const baseUrl = requireViteEnv('VITE_KEYCLOAK_URL').replace(/\/$/, '');
+  const realm = requireViteEnv('VITE_KEYCLOAK_REALM');
+  return `${baseUrl}/realms/${realm}/account`;
 }

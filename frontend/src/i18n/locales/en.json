@@ -24,6 +24,28 @@
     "dark": "Dark",
     "system": "System"
   },
+  "timezones": {
+    "utc": "UTC",
+    "europeRiga": "Riga",
+    "europeLondon": "London",
+    "europeBerlin": "Berlin",
+    "europeParis": "Paris",
+    "europeHelsinki": "Helsinki",
+    "europeWarsaw": "Warsaw",
+    "europeStockholm": "Stockholm",
+    "americaNewYork": "New York",
+    "americaChicago": "Chicago",
+    "americaDenver": "Denver",
+    "americaLosAngeles": "Los Angeles",
+    "americaToronto": "Toronto",
+    "americaSaoPaulo": "São Paulo",
+    "asiaDubai": "Dubai",
+    "asiaKolkata": "Kolkata",
+    "asiaSingapore": "Singapore",
+    "asiaTokyo": "Tokyo",
+    "australiaSydney": "Sydney",
+    "pacificAuckland": "Auckland"
+  },
   "dashboard": {
     "welcome": "Signed in as {{email}}"
   },
@@ -51,6 +73,30 @@
     },
     "sidebar": {
       "label": "Settings sections"
+    },
+    "nav": {
+      "profile": "Profile",
+      "security": "Security",
+      "appearance": "Appearance"
+    },
+    "profile": {
+      "emailLabel": "Email",
+      "nameLabel": "Display name",
+      "localeLabel": "Language",
+      "timezoneLabel": "Timezone",
+      "saveSuccess": "Profile saved",
+      "locales": {
+        "en": "English",
+        "lv": "Latvian"
+      }
+    },
+    "security": {
+      "body": "Password, multi-factor authentication, and active sessions are managed in your Keycloak account console.",
+      "openAccount": "Open account console"
+    },
+    "appearance": {
+      "body": "Choose how the app looks on this device. Theme preference is stored locally in your browser.",
+      "themeLabel": "Theme"
     },
     "quietDemo": {
       "title": "Form controls",

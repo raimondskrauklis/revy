@@ -10,6 +10,9 @@ import { configureErrorHandling } from '@/shared/errors/handlers';
 import App from './App';
 import './index.css';
 import './i18n/config';
+import { initializeTheme } from '@/stores/themeStore';
+
+initializeTheme();
 
 initSentry();
 

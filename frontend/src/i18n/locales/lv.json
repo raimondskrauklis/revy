@@ -24,6 +24,28 @@
     "dark": "Tumšs",
     "system": "Sistēma"
   },
+  "timezones": {
+    "utc": "UTC",
+    "europeRiga": "Rīga",
+    "europeLondon": "Londona",
+    "europeBerlin": "Berlīne",
+    "europeParis": "Parīze",
+    "europeHelsinki": "Helsinki",
+    "europeWarsaw": "Varšava",
+    "europeStockholm": "Stokholma",
+    "americaNewYork": "Ņujorka",
+    "americaChicago": "Čikāga",
+    "americaDenver": "Denvera",
+    "americaLosAngeles": "Losandželosa",
+    "americaToronto": "Toronto",
+    "americaSaoPaulo": "Sanpaulu",
+    "asiaDubai": "Dubaija",
+    "asiaKolkata": "Kalkāta",
+    "asiaSingapore": "Singapūra",
+    "asiaTokyo": "Tokija",
+    "australiaSydney": "Sidneja",
+    "pacificAuckland": "Oklenda"
+  },
   "dashboard": {
     "welcome": "Pierakstījies kā {{email}}"
   },
@@ -51,6 +73,30 @@
     },
     "sidebar": {
       "label": "Iestatījumu sadaļas"
+    },
+    "nav": {
+      "profile": "Profils",
+      "security": "Drošība",
+      "appearance": "Izskats"
+    },
+    "profile": {
+      "emailLabel": "E-pasts",
+      "nameLabel": "Attēlojamais vārds",
+      "localeLabel": "Valoda",
+      "timezoneLabel": "Laika josla",
+      "saveSuccess": "Profils saglabāts",
+      "locales": {
+        "en": "Angļu",
+        "lv": "Latviešu"
+      }
+    },
+    "security": {
+      "body": "Paroli, divfaktoru autentifikāciju un aktīvās sesijas pārvalda Keycloak konta konsolē.",
+      "openAccount": "Atvērt konta konsoli"
+    },
+    "appearance": {
+      "body": "Izvēlieties, kā lietotne izskatās šajā ierīcē. Tēmas iestatījums tiek saglabāts lokāli pārlūkā.",
+      "themeLabel": "Tēma"
     },
     "quietDemo": {
       "title": "Formas elementi",

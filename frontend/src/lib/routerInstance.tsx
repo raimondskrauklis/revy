@@ -12,7 +12,9 @@ import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
 import { AdminUsersPage } from '@/features/admin/pages/AdminUsersPage';
 import { RequirePlatformAdmin } from '@/components/auth/RequirePlatformAdmin';
 import { SettingsLayout } from '@/features/settings/layout/SettingsLayout';
-import { SettingsShellPage } from '@/features/settings/pages/SettingsShellPage';
+import { ProfileSettingsPage } from '@/features/settings/pages/ProfileSettingsPage';
+import { SecuritySettingsPage } from '@/features/settings/pages/SecuritySettingsPage';
+import { AppearanceSettingsPage } from '@/features/settings/pages/AppearanceSettingsPage';
 import { InstallationsPage } from '@/features/installations/pages/InstallationsPage';
 
 export const appRouter = createBrowserRouter([
@@ -82,7 +84,12 @@ export const appRouter = createBrowserRouter([
         children: [
           {
             element: <SettingsLayout />,
-            children: [{ index: true, element: <SettingsShellPage /> }],
+            children: [
+              { index: true, element: <Navigate to="/settings/profile" replace /> },
+              { path: 'profile', element: <ProfileSettingsPage /> },
+              { path: 'security', element: <SecuritySettingsPage /> },
+              { path: 'appearance', element: <AppearanceSettingsPage /> },
+            ],
           },
         ],
       },

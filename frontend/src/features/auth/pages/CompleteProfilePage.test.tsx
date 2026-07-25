@@ -69,6 +69,8 @@ describe('CompleteProfilePage', () => {
       id: '1',
       email: 'user@example.com',
       full_name: 'Ada',
+      locale: 'en',
+      timezone: 'UTC',
       status: 'active',
       platform_role: null,
       workspace_id: 'ws',

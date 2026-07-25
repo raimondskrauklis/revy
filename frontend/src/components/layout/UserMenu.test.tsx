@@ -43,7 +43,7 @@ describe('UserMenu', () => {
     await user.click(screen.getByRole('button', { name: /account menu/i }));
 
     const profileLink = screen.getByRole('link', { name: /profile & settings/i });
-    expect(profileLink).toHaveAttribute('href', '/settings');
+    expect(profileLink).toHaveAttribute('href', '/settings/profile');
 
     await user.click(screen.getByRole('button', { name: /sign out/i }));
     expect(logout).toHaveBeenCalled();

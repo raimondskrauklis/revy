@@ -39,7 +39,7 @@
 | Wave | Execution | Status |
 |------|-----------|--------|
 | W0 | [waves/SAAS_BASE_W0_EXECUTION.md](./waves/SAAS_BASE_W0_EXECUTION.md) | done |
-| W1 | [waves/SAAS_BASE_W1_EXECUTION.md](./waves/SAAS_BASE_W1_EXECUTION.md) | pending |
+| W1 | [waves/SAAS_BASE_W1_EXECUTION.md](./waves/SAAS_BASE_W1_EXECUTION.md) | done |
 | W2 | [waves/SAAS_BASE_W2_EXECUTION.md](./waves/SAAS_BASE_W2_EXECUTION.md) | pending |
 | W3 | [waves/SAAS_BASE_W3_EXECUTION.md](./waves/SAAS_BASE_W3_EXECUTION.md) | pending |
 | W4 | [waves/SAAS_BASE_W4_EXECUTION.md](./waves/SAAS_BASE_W4_EXECUTION.md) | pending |

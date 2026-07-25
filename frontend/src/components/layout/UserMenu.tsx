@@ -43,7 +43,7 @@ export function UserMenu() {
         <ul className="py-1">
           <li>
             <Link
-              to="/settings"
+              to="/settings/profile"
               className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[color:var(--app-text-muted)] hover:bg-[color:var(--app-chip)]"
               onClick={() => setOpen(false)}
             >

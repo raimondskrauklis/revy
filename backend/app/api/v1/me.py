@@ -9,8 +9,8 @@ from app.core.auth import CurrentUser, get_current_user
 from app.core.database import get_db
 from app.core.exceptions import ForbiddenError
 from app.schemas.common import SuccessResponse
-from app.schemas.me import MeResponse, SetActiveWorkspaceRequest
-from app.services.users import build_me_response, set_active_workspace
+from app.schemas.me import MeResponse, MeUpdate, SetActiveWorkspaceRequest
+from app.services.users import build_me_response, set_active_workspace, update_me
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -22,6 +22,29 @@ async def get_me(
 ) -> SuccessResponse[MeResponse]:
     if current_user.user_id is None:
         raise ForbiddenError(message="User not provisioned")
+    me = await build_me_response(session, current_user.user_id)
+    if current_user.workspace_id is not None:
+        me = me.model_copy(
+            update={
+                "workspace_id": current_user.workspace_id,
+                "role": current_user.role,
+            }
+        )
+    return SuccessResponse(data=me)
+
+
+@router.patch("", response_model=SuccessResponse[MeResponse])
+async def patch_me(
+    body: MeUpdate,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> SuccessResponse[MeResponse]:
+    if current_user.user_id is None:
+        raise ForbiddenError(message="User not provisioned")
+
+    await update_me(session, user_id=current_user.user_id, payload=body)
+    await session.commit()
+
     me = await build_me_response(session, current_user.user_id)
     if current_user.workspace_id is not None:
         me = me.model_copy(

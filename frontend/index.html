@@ -7,9 +7,11 @@
     <script>
       (function () {
         const stored = localStorage.getItem('app-theme');
+        const mode =
+          stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system';
         const dark =
-          stored === 'dark' ||
-          (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          mode === 'dark' ||
+          (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
         if (dark) document.documentElement.classList.add('dark');
       })();
     </script>

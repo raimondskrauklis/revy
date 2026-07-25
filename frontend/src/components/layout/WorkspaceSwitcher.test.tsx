@@ -55,6 +55,8 @@ describe('WorkspaceSwitcher', () => {
       id: '1',
       email: 'user@example.com',
       full_name: 'User',
+      locale: 'en',
+      timezone: 'UTC',
       status: 'active',
       platform_role: null,
       workspace_id: 'ws-2',
