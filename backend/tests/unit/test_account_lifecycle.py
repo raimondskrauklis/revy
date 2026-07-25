@@ -183,9 +183,11 @@ async def test_delete_account_blocks_sole_workspace_admin():
     )
     user.id = user_id
     membership = _membership(workspace_id=workspace_id, user_id=user_id, role=AppRole.admin)
+    workspace = WorkspaceORM(slug="acme", name="Acme")
+    workspace.id = workspace_id
 
     session = AsyncMock()
-    session.scalar = AsyncMock(side_effect=[user, 1])
+    session.scalar = AsyncMock(side_effect=[user, workspace, 1])
     session.scalars = AsyncMock(return_value=MagicMock(all=MagicMock(return_value=[membership])))
 
     with pytest.raises(ForbiddenError) as exc_info:

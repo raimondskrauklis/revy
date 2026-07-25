@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import AppRole, PlatformRole, UserStatus, WorkspaceStatus
@@ -14,7 +14,7 @@ from app.models.workspace_memberships import WorkspaceMembershipORM
 from app.models.workspaces import WorkspaceORM
 from app.services.audit_service import record_audit
 from app.services.billing import effective_plan
-from app.services.memberships import _assert_not_last_admin
+from app.services.memberships import _assert_not_last_admin, _count_workspace_admins
 
 
 async def leave_workspace(
@@ -106,16 +106,21 @@ async def _assert_not_sole_workspace_admin(session: AsyncSession, *, user_id: UU
         )
     ).all()
 
+    checked_workspace_ids: set[UUID] = set()
     for membership in admin_memberships:
-        admin_count = await session.scalar(
-            select(func.count())
-            .select_from(WorkspaceMembershipORM)
-            .where(
-                WorkspaceMembershipORM.workspace_id == membership.workspace_id,
-                WorkspaceMembershipORM.role == AppRole.admin,
-            )
+        workspace_id = membership.workspace_id
+        if workspace_id in checked_workspace_ids:
+            continue
+        checked_workspace_ids.add(workspace_id)
+
+        workspace = await session.scalar(
+            select(WorkspaceORM).where(WorkspaceORM.id == workspace_id).with_for_update()
         )
-        if int(admin_count or 0) <= 1:
+        if workspace is None:
+            raise NotFoundError("Workspace not found")
+
+        admin_count = await _count_workspace_admins(session, workspace_id=workspace_id)
+        if admin_count <= 1:
             raise ForbiddenError(
                 message="You are the only admin of a workspace. Transfer admin role or delete the workspace first.",
                 error_code="sole_workspace_admin",
