@@ -27,8 +27,31 @@
   "dashboard": {
     "welcome": "Signed in as {{email}}"
   },
+  "header": {
+    "workspace": {
+      "unknown": "Workspace",
+      "select": "Select workspace",
+      "switch": "Switch workspace",
+      "list": "Your workspaces"
+    },
+    "user": {
+      "menu": "Account menu",
+      "profile": "Profile & settings",
+      "signOut": "Sign out"
+    }
+  },
   "settings": {
     "title": "Settings",
+    "shell": {
+      "title": "Settings"
+    },
+    "group": {
+      "personal": "Personal",
+      "workspace": "Workspace"
+    },
+    "sidebar": {
+      "label": "Settings sections"
+    },
     "quietDemo": {
       "title": "Form controls",
       "description": "Quiet* components — use these instead of raw HTML inputs.",

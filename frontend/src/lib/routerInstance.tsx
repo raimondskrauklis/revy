@@ -11,7 +11,8 @@ import { StatusGatePage } from '@/features/auth/pages/StatusGatePage';
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
 import { AdminUsersPage } from '@/features/admin/pages/AdminUsersPage';
 import { RequirePlatformAdmin } from '@/components/auth/RequirePlatformAdmin';
-import { SettingsPage } from '@/features/settings/pages/SettingsPage';
+import { SettingsLayout } from '@/features/settings/layout/SettingsLayout';
+import { SettingsShellPage } from '@/features/settings/pages/SettingsShellPage';
 import { InstallationsPage } from '@/features/installations/pages/InstallationsPage';
 
 export const appRouter = createBrowserRouter([
@@ -78,7 +79,12 @@ export const appRouter = createBrowserRouter([
       {
         path: '/settings',
         element: <AppShellLayout />,
-        children: [{ index: true, element: <SettingsPage /> }],
+        children: [
+          {
+            element: <SettingsLayout />,
+            children: [{ index: true, element: <SettingsShellPage /> }],
+          },
+        ],
       },
       {
         element: <RequirePlatformAdmin />,

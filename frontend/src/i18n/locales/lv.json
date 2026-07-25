@@ -27,8 +27,31 @@
   "dashboard": {
     "welcome": "Pierakstījies kā {{email}}"
   },
+  "header": {
+    "workspace": {
+      "unknown": "Darba vide",
+      "select": "Izvēlēties darba vidi",
+      "switch": "Mainīt darba vidi",
+      "list": "Jūsu darba vides"
+    },
+    "user": {
+      "menu": "Konta izvēlne",
+      "profile": "Profils un iestatījumi",
+      "signOut": "Iziet"
+    }
+  },
   "settings": {
     "title": "Iestatījumi",
+    "shell": {
+      "title": "Iestatījumi"
+    },
+    "group": {
+      "personal": "Personīgie",
+      "workspace": "Darba vide"
+    },
+    "sidebar": {
+      "label": "Iestatījumu sadaļas"
+    },
     "quietDemo": {
       "title": "Formas elementi",
       "description": "Quiet* komponentes — izmantojiet tās, nevis HTML ievades.",
