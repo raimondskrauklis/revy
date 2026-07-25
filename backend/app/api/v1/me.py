@@ -93,6 +93,7 @@ async def get_me(
 async def patch_me(
     body: MeUpdate,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    _allowed: Annotated[CurrentUser, Depends(require_impersonation_allowed())],
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> SuccessResponse[MeResponse]:
     if current_user.user_id is None:
