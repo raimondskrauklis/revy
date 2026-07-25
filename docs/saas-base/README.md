@@ -60,7 +60,7 @@ Full table: [waves/README.md](./waves/README.md).
 | **Theme** | `localStorage` `app-theme` + `html.dark` per THEME.md; optional Zustand store — no DB column |
 | **Extensions** | Single registry, multiple slots (dashboard, integrations, charts) |
 | **Workspace RBAC** | Fixed 3 roles + read-only matrix |
-| **Billing** | Workspace = Stripe Customer |
+| **Billing** | Workspace = Stripe Customer — setup: [STRIPE_BILLING_SETUP.md](../utils/STRIPE_BILLING_SETUP.md) |
 | **Impersonation** | App-layer sessions; KC JWT unchanged; mandatory reason; audit `impersonator_user_id` |
 
 ---
@@ -79,4 +79,4 @@ Revy review pipeline; KC realm automation; KC Organizations; per-seat/usage/ente
 
 ## Next
 
-SaaS base W0–W8 **complete**. Maintenance: [OPS.md](./OPS.md), [STAGING_VERIFICATION.md](./STAGING_VERIFICATION.md). Continue Revy product slices.
+SaaS base W0–W8 **complete**. Maintenance: [OPS.md](./OPS.md), [STAGING_VERIFICATION.md](./STAGING_VERIFICATION.md), [Stripe billing setup](../utils/STRIPE_BILLING_SETUP.md). Continue Revy product slices.

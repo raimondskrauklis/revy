@@ -6,6 +6,8 @@ Wave **W4** of [`SAAS_BASE_W4_STRIPE_GENERAL_PLAN.md`](../SAAS_BASE_W4_STRIPE_GE
 
 **Goal:** Full Stripe integration — Checkout, Customer Portal, webhooks, plan gates, billing settings UI.
 
+**Operator runbook:** [STRIPE_BILLING_SETUP.md](../../utils/STRIPE_BILLING_SETUP.md) (env, webhook URL, test-mode flow, W8 orphan policy).
+
 **Authority:** `internal-docs/starter-pack/docs/backend/BILLING.md`, `deploy/env-examples/`.
 
 ## Decisions locked for W4
@@ -139,8 +141,8 @@ pipenv run lint && pipenv run pytest tests/unit/test_billing_config.py tests/uni
 npm run lint && npm test -- --run BillingSettingsPage PlanSummaryWidget checklistSteps settings && npm run build
 ```
 
-**Human gate:** Stripe test-mode Checkout + `stripe listen --forward-to localhost:8000/api/v1/webhooks/stripe` verified once on staging — unit gates suffice for commit; operator confirms before prod keys.
+**Human gate:** Stripe test-mode Checkout + `stripe listen --forward-to localhost:8000/api/v1/webhooks/stripe` verified once on staging — see [STRIPE_BILLING_SETUP.md](../../utils/STRIPE_BILLING_SETUP.md); unit gates suffice for commit; operator confirms before prod keys.
 
-**Deploy:** `alembic upgrade head`; set Stripe env vars; configure webhook URL in Stripe Dashboard → `https://<api>/api/v1/webhooks/stripe`.
+**Deploy:** `alembic upgrade head`; set Stripe env vars per [STRIPE_BILLING_SETUP.md](../../utils/STRIPE_BILLING_SETUP.md); configure webhook URL in Stripe Dashboard → `https://<api>/api/v1/webhooks/stripe`.
 
 **Next:** [SAAS_BASE_W5_EXECUTION.md](./SAAS_BASE_W5_EXECUTION.md)

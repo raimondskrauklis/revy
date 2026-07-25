@@ -35,7 +35,7 @@ Notifications, API keys: **deferred** — no nav entry until their wave lands.
 /settings/workspace            W2
 /settings/team                 W2 (includes read-only permissions matrix)
 /settings/integrations         W2 (product cards; Revy → /installations)
-/settings/billing              W4
+/settings/billing              W4 — operator setup: [STRIPE_BILLING_SETUP.md](../utils/STRIPE_BILLING_SETUP.md)
 /settings/danger               W6
 ```
 

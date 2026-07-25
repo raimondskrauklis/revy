@@ -28,7 +28,7 @@ Make SaaS base **production-honest**: no admin-only API calls for viewers, nav m
 | **Impersonation** | Deny `POST .../leave` while impersonating; `impersonator_user_id` on all lifecycle audits |
 | **i18n** | EN+LV for `workspace_suspended`, all `impersonation_*` error codes |
 | **Data accuracy** | Admin KPIs exclude `deleted` workspaces; invitation list excludes expired; accurate member count for checklist |
-| **Billing ops** | Documented orphan-webhook policy (align code with findings); plan semantics (`past_due` → pro) in runbook |
+| **Billing ops** | Documented orphan-webhook policy (align code with findings); plan semantics (`past_due` → pro) in [STRIPE_BILLING_SETUP.md](../utils/STRIPE_BILLING_SETUP.md) |
 | **Deploy** | `EXPORT_*` in deploy examples; Celery `maintenance` queue documented; export + Stripe staging steps |
 | **Docs** | Findings, general plans, READMEs, SETTINGS_IA, AGENTS.md, DEV_BOOTSTRAP, runbooks, fast-start strip list; remove `waves/w0`…`w7` duplicates |
 

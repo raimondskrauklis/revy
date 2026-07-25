@@ -4,7 +4,7 @@ How to configure Stripe for Revy on a **droplet** (staging/production). Revy use
 
 **Verified against:** [Stripe API keys](https://docs.stripe.com/keys), [Webhooks](https://docs.stripe.com/webhooks), [Checkout fulfillment](https://docs.stripe.com/checkout/fulfillment), Revy W4 (`docs/saas-base/waves/SAAS_BASE_W4_EXECUTION.md`).
 
-**Related:** `deploy/env-examples/backend.env.production.example`, `backend/.env.example`, `deploy/nginx/revy.createit.digital.conf`.
+**Related:** `deploy/env-examples/backend.env.production.example`, `backend/.env.example`, `deploy/nginx/revy.createit.digital.conf`, [OPS.md](../saas-base/OPS.md), [STAGING_VERIFICATION.md](../saas-base/STAGING_VERIFICATION.md).
 
 ---
 

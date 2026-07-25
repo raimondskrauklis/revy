@@ -316,6 +316,7 @@ Focused synthesis for **what every B2B multi-tenant clone needs** (not full ops 
 | [Stripe webhooks](https://docs.stripe.com/billing/subscriptions/webhooks) | `checkout.session.completed`, `customer.subscription.updated/deleted`, `invoice.paid`, `invoice.payment_failed` | **Adopt** |
 | [DesignRevision 2026](https://designrevision.com/blog/saas-stripe-integration) | Stripe = source of truth; webhooks sync DB; idempotent handlers | **Adopt** |
 | [BILLING.md](internal-docs/starter-pack/docs/backend/BILLING.md) | Bill **workspace** not user; `require_plan_feature()` in API | **Adopt** |
+| [STRIPE_BILLING_SETUP.md](../utils/STRIPE_BILLING_SETUP.md) | Committed operator runbook — env, webhooks, test mode, orphan policy (W8) | **Adopt** |
 | Laravel Cashier pattern ([hafiz.dev](https://hafiz.dev/blog/stripe-integration-in-laravel-complete-guide-to-subscriptions-one-time-payments)) | `Billable` on Team/Workspace model, not User | **Adopt** concept |
 
 ### Platform admin (W5 scope)
@@ -435,7 +436,7 @@ Focused synthesis for **what every B2B multi-tenant clone needs** (not full ops 
 | Items demo clutter | Keep in Revy; document in fast-start strip list |
 | No peer review | Required before each wave execution (per README) |
 
-**Stripe W4 deploy note:** webhook route needs raw body for signature; document in W4 execution — Stripe CLI for dev, public URL + `STRIPE_WEBHOOK_SECRET` in deploy env examples; idempotency via existing `core/idempotency.py` on Checkout create only if needed — webhooks use Stripe event id dedupe table or idempotency keys.
+**Stripe W4 deploy note:** see committed runbook [STRIPE_BILLING_SETUP.md](../utils/STRIPE_BILLING_SETUP.md) — webhook route needs raw body for signature; Stripe CLI for dev, public URL + `STRIPE_WEBHOOK_SECRET` in deploy env examples; idempotency via `stripe_webhook_events` table (Stripe event id dedupe).
 
 ---
 
@@ -463,6 +464,7 @@ Focused synthesis for **what every B2B multi-tenant clone needs** (not full ops 
 | `docs/starter-pack/SCAFFOLD_FINDINGS.md` | Platform foundation baseline |
 | `internal-docs/starter-pack/docs/CROSS_CUTTING.md` | Defined vs partial concerns |
 | `internal-docs/starter-pack/docs/backend/BILLING.md` | Stripe + plan gating spec |
+| [STRIPE_BILLING_SETUP.md](../utils/STRIPE_BILLING_SETUP.md) | Committed Stripe operator runbook (env, webhooks, staging) |
 | `internal-docs/starter-pack/docs/backend/ACCOUNT_LIFECYCLE.md` | Export / delete / retention |
 | `internal-docs/starter-pack/docs/backend/AUDIT.md` | Audit log sketch |
 | `internal-docs/starter-pack/docs/backend/TENANCY.md` | Workspace isolation |

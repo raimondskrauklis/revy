@@ -40,6 +40,8 @@ Run on **staging** before production SaaS base sign-off (W0–W8). Code may ship
 
 ## Stripe billing (W4)
 
+See [STRIPE_BILLING_SETUP.md](../utils/STRIPE_BILLING_SETUP.md) for env vars, webhook URL, and test-mode flow.
+
 | # | Step | Pass |
 |---|------|------|
 | 12 | Admin: Settings → Billing → Upgrade → Stripe Checkout (test card `4242…`) | ☐ |

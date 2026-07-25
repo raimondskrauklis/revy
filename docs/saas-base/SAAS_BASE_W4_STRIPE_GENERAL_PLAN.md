@@ -6,7 +6,7 @@ General plan from [SAAS_BASE_FINDINGS.md](./SAAS_BASE_FINDINGS.md). **No executi
 
 **Cross-cutting:** unit tests; idempotent webhook handling; secrets in env only; EN+LV for billing UI strings.
 
-**Authority:** `internal-docs/starter-pack/docs/backend/BILLING.md`, [Stripe SaaS guide](https://docs.stripe.com/saas).
+**Authority:** `internal-docs/starter-pack/docs/backend/BILLING.md`, [Stripe SaaS guide](https://docs.stripe.com/saas), committed runbook [STRIPE_BILLING_SETUP.md](../utils/STRIPE_BILLING_SETUP.md).
 
 ---
 
