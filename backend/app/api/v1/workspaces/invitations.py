@@ -36,12 +36,14 @@ async def get_workspace_invitations(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
     params: Annotated[CursorParams, Depends(get_cursor_params)],
-    status: Annotated[InvitationStatus | None, Query()] = InvitationStatus.pending,
+    invitation_status: Annotated[InvitationStatus | None, Query(alias="status")] = InvitationStatus.pending,
 ) -> SuccessResponse[CursorResponse[InvitationListItem]]:
     require_permission(current_user, Permission.admin_users)
     require_same_workspace(current_user, workspace_id)
 
-    page = await list_invitations(session, workspace_id=workspace_id, params=params, status=status)
+    page = await list_invitations(
+        session, workspace_id=workspace_id, params=params, status=invitation_status
+    )
     return SuccessResponse(data=page)
 
 

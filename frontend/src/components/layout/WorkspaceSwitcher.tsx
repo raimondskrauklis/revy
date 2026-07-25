@@ -5,6 +5,8 @@ import { ChevronsUpDown } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { setActiveWorkspace } from '@/lib/me';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { mapApiError } from '@/shared/errors';
+import { showDomainErrorToast } from '@/shared/errors/toasts';
 
 export function WorkspaceSwitcher() {
   const { t } = useTranslation();
@@ -36,6 +38,8 @@ export function WorkspaceSwitcher() {
       await setActiveWorkspace(workspaceId);
       await refetchUser();
       setOpen(false);
+    } catch (error) {
+      showDomainErrorToast(mapApiError(error));
     } finally {
       setSwitching(false);
     }
