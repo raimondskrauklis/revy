@@ -83,6 +83,11 @@
       "count_other": "{{count}} installations connected",
       "statusHint": "Most installations are {{status}}",
       "manage": "Manage installations"
+    },
+    "planSummary": {
+      "title": "Plan",
+      "current": "Current plan: {{plan}}",
+      "manage": "Manage billing"
     }
   },
   "header": {
@@ -116,7 +121,8 @@
       "appearance": "Appearance",
       "workspace": "Workspace",
       "team": "Team",
-      "integrations": "Integrations"
+      "integrations": "Integrations",
+      "billing": "Billing"
     },
     "profile": {
       "emailLabel": "Email",
@@ -209,6 +215,18 @@
         "count": "{{count}} installation connected",
         "count_other": "{{count}} installations connected",
         "manage": "Manage installations"
+      }
+    },
+    "billing": {
+      "currentPlan": "Current plan",
+      "notConfigured": "Billing is not configured for this environment.",
+      "upgrade": "Upgrade to Pro",
+      "manage": "Manage subscription",
+      "checkoutSuccess": "Checkout completed. Your plan will update shortly.",
+      "checkoutCancel": "Checkout was canceled.",
+      "plans": {
+        "free": "Free",
+        "pro": "Pro"
       }
     },
     "quietDemo": {
@@ -354,6 +372,8 @@
     "network_error": "Unable to reach the server",
     "unknown_error": "Something went wrong",
     "last_workspace_admin": "At least one workspace admin is required",
+    "plan_upgrade_required": "Upgrade to Pro to use this feature",
+    "billing_disabled": "Billing is not configured",
     "not_found_page": {
       "title": "Page not found",
       "body": "The page you requested does not exist."

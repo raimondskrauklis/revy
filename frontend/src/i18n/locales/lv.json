@@ -83,6 +83,11 @@
       "count_other": "{{count}} instalācijas pievienotas",
       "statusHint": "Lielākā daļa instalāciju ir {{status}}",
       "manage": "Pārvaldīt instalācijas"
+    },
+    "planSummary": {
+      "title": "Plāns",
+      "current": "Pašreizējais plāns: {{plan}}",
+      "manage": "Pārvaldīt norēķinus"
     }
   },
   "header": {
@@ -116,7 +121,8 @@
       "appearance": "Izskats",
       "workspace": "Darba vide",
       "team": "Komanda",
-      "integrations": "Integrācijas"
+      "integrations": "Integrācijas",
+      "billing": "Norēķini"
     },
     "profile": {
       "emailLabel": "E-pasts",
@@ -209,6 +215,18 @@
         "count": "Pievienota {{count}} instalācija",
         "count_other": "Pievienotas {{count}} instalācijas",
         "manage": "Pārvaldīt instalācijas"
+      }
+    },
+    "billing": {
+      "currentPlan": "Pašreizējais plāns",
+      "notConfigured": "Norēķini šai videi nav konfigurēti.",
+      "upgrade": "Jaunināt uz Pro",
+      "manage": "Pārvaldīt abonementu",
+      "checkoutSuccess": "Maksājums pabeigts. Plāns drīz tiks atjaunināts.",
+      "checkoutCancel": "Maksājums tika atcelts.",
+      "plans": {
+        "free": "Bezmaksas",
+        "pro": "Pro"
       }
     },
     "quietDemo": {
@@ -354,6 +372,8 @@
     "network_error": "Neizdevās sasniegt serveri",
     "unknown_error": "Kaut kas nogāja greizi",
     "last_workspace_admin": "Nepieciešams vismaz viens darba vides administrators",
+    "plan_upgrade_required": "Lai izmantotu šo funkciju, jauniniet uz Pro",
+    "billing_disabled": "Norēķini nav konfigurēti",
     "not_found_page": {
       "title": "Lapa nav atrasta",
       "body": "Pieprasītā lapa neeksistē."

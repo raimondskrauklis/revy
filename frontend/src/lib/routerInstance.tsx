@@ -19,6 +19,7 @@ import { AppearanceSettingsPage } from '@/features/settings/pages/AppearanceSett
 import { WorkspaceSettingsPage } from '@/features/settings/pages/WorkspaceSettingsPage';
 import { TeamSettingsPage } from '@/features/settings/pages/TeamSettingsPage';
 import { IntegrationsSettingsPage } from '@/features/settings/pages/IntegrationsSettingsPage';
+import { BillingSettingsPage } from '@/features/settings/pages/BillingSettingsPage';
 import { InstallationsPage } from '@/features/installations/pages/InstallationsPage';
 
 export const appRouter = createBrowserRouter([
@@ -99,6 +100,10 @@ export const appRouter = createBrowserRouter([
               },
               { path: 'team', element: <TeamSettingsPage /> },
               { path: 'integrations', element: <IntegrationsSettingsPage /> },
+              {
+                element: <RequirePermission permission="admin:users" />,
+                children: [{ path: 'billing', element: <BillingSettingsPage /> }],
+              },
             ],
           },
         ],

@@ -24,11 +24,28 @@ const baseContext = {
   workspaceId: 'ws-1',
   memberCount: 1,
   installationCount: 0,
+  plan: 'free',
 };
 
 describe('checklistSteps', () => {
-  it('hides billing step when unavailable', () => {
+  it('shows billing step for admins when not on pro', () => {
     const steps = evaluateChecklist(baseUser(), baseContext);
+    const billing = steps.find((step) => step.id === 'setup_billing');
+
+    expect(billing).toBeDefined();
+    expect(billing?.isComplete).toBe(false);
+    expect(billing?.href).toBe('/settings/billing');
+  });
+
+  it('marks billing complete on pro plan', () => {
+    const steps = evaluateChecklist(baseUser(), { ...baseContext, plan: 'pro' });
+    const billing = steps.find((step) => step.id === 'setup_billing');
+
+    expect(billing?.isComplete).toBe(true);
+  });
+
+  it('hides billing step for viewers', () => {
+    const steps = evaluateChecklist(baseUser({ role: AppRole.viewer }), baseContext);
 
     expect(steps.map((step) => step.id)).not.toContain('setup_billing');
   });
@@ -63,6 +80,7 @@ describe('checklistSteps', () => {
         ...baseContext,
         memberCount: 2,
         installationCount: 1,
+        plan: 'pro',
       }),
     ).toBe(false);
   });

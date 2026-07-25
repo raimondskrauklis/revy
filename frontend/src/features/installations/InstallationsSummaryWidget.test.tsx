@@ -49,7 +49,7 @@ describe('InstallationsSummaryWidget', () => {
       },
     } as unknown as ReturnType<typeof useAuth>);
     vi.mocked(useChecklistContext).mockReturnValue({
-      data: { workspaceId: 'ws-1', memberCount: 1, installationCount: 2 },
+      data: { workspaceId: 'ws-1', memberCount: 1, installationCount: 2, plan: 'free' },
       isLoading: false,
     } as unknown as ReturnType<typeof useChecklistContext>);
 

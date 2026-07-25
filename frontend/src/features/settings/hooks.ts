@@ -1,15 +1,6 @@
 // frontend/src/features/settings/hooks.ts
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useInfiniteList } from '@/hooks/useInfiniteList';
-import {
-  createInvitation,
-  fetchInvitations,
-  fetchMembers,
-  patchWorkspace,
-  removeMember,
-  revokeInvitation,
-  updateMemberRole,
-} from '@/features/settings/api';
 import type {
   Invitation,
   InvitationCreatePayload,
@@ -17,12 +8,25 @@ import type {
   MemberRoleUpdatePayload,
   WorkspaceUpdatePayload,
 } from '@/features/settings/types';
+import {
+  createCheckoutSession,
+  createInvitation,
+  createPortalSession,
+  fetchBillingStatus,
+  fetchInvitations,
+  fetchMembers,
+  patchWorkspace,
+  removeMember,
+  revokeInvitation,
+  updateMemberRole,
+} from '@/features/settings/api';
 
 export const settingsQueryKeys = {
   workspace: (workspaceId: string) => ['settings', 'workspace', workspaceId] as const,
   members: (workspaceId: string) => ['settings', 'members', workspaceId] as const,
   invitations: (workspaceId: string, status = 'pending') =>
     ['settings', 'invitations', workspaceId, status] as const,
+  billing: (workspaceId: string) => ['settings', 'billing', workspaceId] as const,
 };
 
 export function useMembers(workspaceId: string | null | undefined) {
@@ -121,6 +125,32 @@ export function useRevokeInvitation(workspaceId: string | null | undefined) {
           queryKey: settingsQueryKeys.invitations(workspaceId),
         });
       }
+    },
+  });
+}
+
+export function useBillingStatus(workspaceId: string | null | undefined) {
+  return useQuery({
+    queryKey: settingsQueryKeys.billing(workspaceId ?? ''),
+    queryFn: () => fetchBillingStatus(workspaceId!),
+    enabled: Boolean(workspaceId),
+  });
+}
+
+export function useCreateCheckoutSession(workspaceId: string | null | undefined) {
+  return useMutation({
+    mutationFn: () => {
+      if (!workspaceId) throw new Error('workspace_required');
+      return createCheckoutSession(workspaceId);
+    },
+  });
+}
+
+export function useCreatePortalSession(workspaceId: string | null | undefined) {
+  return useMutation({
+    mutationFn: () => {
+      if (!workspaceId) throw new Error('workspace_required');
+      return createPortalSession(workspaceId);
     },
   });
 }

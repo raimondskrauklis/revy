@@ -30,6 +30,7 @@ export function SetupChecklistWidget() {
     workspaceId,
     memberCount: context.memberCount,
     installationCount: context.installationCount,
+    plan: context.plan,
   };
 
   if (!hasIncompleteChecklistSteps(user, checklistContext)) {

@@ -51,3 +51,16 @@ export interface InvitationCreatePayload {
   email: string;
   role: AppRole;
 }
+
+export interface BillingStatus {
+  plan: string;
+  stripe_enabled: boolean;
+}
+
+export interface CheckoutSessionResponse {
+  url: string;
+}
+
+export interface PortalSessionResponse {
+  url: string;
+}

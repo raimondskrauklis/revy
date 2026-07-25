@@ -87,6 +87,14 @@ class Settings(BaseSettings):
     revy_worktrees_root: str | None = None
     revy_hf_cache_path: str | None = None
 
+    # Stripe billing — disabled by default; set STRIPE_ENABLED=true with keys in production
+    stripe_enabled: bool = False
+    stripe_secret_key: str | None = None
+    stripe_webhook_secret: str | None = None
+    stripe_price_pro: str | None = None
+    stripe_checkout_success_url: str | None = None
+    stripe_checkout_cancel_url: str | None = None
+
     # Review policy
     revy_default_review_profile: str = "standard"
     revy_revision_timeout_standard_seconds: int = 900

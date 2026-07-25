@@ -6,6 +6,7 @@ export interface ChecklistContext {
   workspaceId: string | null;
   memberCount: number;
   installationCount: number;
+  plan: string;
 }
 
 export interface ChecklistStep {
@@ -48,8 +49,9 @@ export const CHECKLIST_STEPS: ChecklistStep[] = [
   {
     id: 'setup_billing',
     labelKey: 'dashboard.checklist.setupBilling',
-    available: false,
-    isComplete: () => false,
+    href: '/settings/billing',
+    available: (me) => hasPermission(me.role ?? undefined, 'admin:users', me.platform_role ?? undefined),
+    isComplete: (_me, ctx) => ctx.plan === 'pro',
   },
 ];
 

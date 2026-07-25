@@ -1,11 +1,14 @@
 // frontend/src/features/settings/api.ts
 import apiClient, { parseSuccess } from '@/lib/api';
 import type {
+  BillingStatus,
+  CheckoutSessionResponse,
   CursorPage,
   Invitation,
   InvitationCreatePayload,
   Member,
   MemberRoleUpdatePayload,
+  PortalSessionResponse,
   Workspace,
   WorkspaceUpdatePayload,
 } from '@/features/settings/types';
@@ -69,4 +72,21 @@ export async function createInvitation(
 ): Promise<Invitation> {
   const response = await apiClient.post(`/workspaces/${workspaceId}/invitations`, payload);
   return await parseSuccess<Invitation>(response);
+}
+
+export async function fetchBillingStatus(workspaceId: string): Promise<BillingStatus> {
+  const response = await apiClient.get(`/workspaces/${workspaceId}/billing`);
+  return await parseSuccess<BillingStatus>(response);
+}
+
+export async function createCheckoutSession(workspaceId: string): Promise<CheckoutSessionResponse> {
+  const response = await apiClient.post(`/workspaces/${workspaceId}/billing/checkout-session`, {
+    plan: 'pro',
+  });
+  return await parseSuccess<CheckoutSessionResponse>(response);
+}
+
+export async function createPortalSession(workspaceId: string): Promise<PortalSessionResponse> {
+  const response = await apiClient.post(`/workspaces/${workspaceId}/billing/portal-session`);
+  return await parseSuccess<PortalSessionResponse>(response);
 }

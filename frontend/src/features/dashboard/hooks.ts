@@ -2,7 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchWorkspaceAudit } from '@/features/dashboard/api';
 import { fetchInstallations } from '@/features/installations/api';
-import { fetchMembers } from '@/features/settings/api';
+import { fetchBillingStatus, fetchMembers } from '@/features/settings/api';
 
 export const dashboardQueryKeys = {
   audit: (workspaceId: string, limit?: number) =>
@@ -28,14 +28,16 @@ export function useChecklistContext(workspaceId: string | null | undefined) {
   return useQuery({
     queryKey: dashboardQueryKeys.checklistContext(workspaceId ?? ''),
     queryFn: async () => {
-      const [membersPage, installations] = await Promise.all([
+      const [membersPage, installations, billing] = await Promise.all([
         fetchMembers(workspaceId!),
         fetchInstallations(workspaceId!),
+        fetchBillingStatus(workspaceId!),
       ]);
       return {
         workspaceId: workspaceId!,
         memberCount: membersPage.items.length,
         installationCount: installations.length,
+        plan: billing.plan,
       };
     },
     enabled: Boolean(workspaceId),
