@@ -64,6 +64,7 @@ async def delete_workspace_invitation(
         workspace_id=workspace_id,
         invitation_id=invitation_id,
         actor_user_id=current_user.user_id,
+        impersonator_user_id=current_user.impersonator_user_id,
     )
     await session.commit()
 
@@ -98,6 +99,7 @@ async def post_workspace_invitation(
         email=body.email,
         role=body.role,
         invited_by_user_id=current_user.user_id,
+        impersonator_user_id=current_user.impersonator_user_id,
     )
     await session.commit()
     payload = invitation_to_payload(invitation)

@@ -67,6 +67,7 @@ async def patch_workspace_member(
         user_id=user_id,
         role=body.role,
         actor_user_id=current_user.user_id,
+        impersonator_user_id=current_user.impersonator_user_id,
     )
     await session.commit()
 
@@ -99,5 +100,6 @@ async def delete_workspace_member(
         workspace_id=workspace_id,
         user_id=user_id,
         actor_user_id=current_user.user_id,
+        impersonator_user_id=current_user.impersonator_user_id,
     )
     await session.commit()

@@ -2,7 +2,7 @@
 """Workspace membership service — TENANCY.md."""
 import uuid
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -72,6 +72,33 @@ async def test_update_member_role_demotes_viewer():
     )
 
     assert updated.role == AppRole.operator
+
+
+@pytest.mark.asyncio
+async def test_update_member_role_records_impersonator_in_audit():
+    workspace_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    actor_id = uuid.uuid4()
+    impersonator_id = uuid.uuid4()
+    membership = _membership(workspace_id=workspace_id, user_id=user_id, role=AppRole.viewer)
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(return_value=membership)
+    session.flush = AsyncMock()
+
+    with patch("app.services.memberships.record_audit", AsyncMock()) as record_audit:
+        await update_member_role(
+            session,
+            workspace_id=workspace_id,
+            user_id=user_id,
+            role=AppRole.operator,
+            actor_user_id=actor_id,
+            impersonator_user_id=impersonator_id,
+        )
+
+    record_audit.assert_awaited_once()
+    assert record_audit.await_args.kwargs["actor_user_id"] == actor_id
+    assert record_audit.await_args.kwargs["impersonator_user_id"] == impersonator_id
 
 
 @pytest.mark.asyncio

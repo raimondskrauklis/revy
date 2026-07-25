@@ -17,6 +17,7 @@ async def update_workspace(
     workspace_id: UUID,
     name: str,
     actor_user_id: UUID | None = None,
+    impersonator_user_id: UUID | None = None,
 ) -> WorkspaceORM:
     workspace = await session.get(WorkspaceORM, workspace_id)
     if workspace is None:
@@ -34,6 +35,7 @@ async def update_workspace(
         await record_audit(
             session,
             actor_user_id=actor_user_id,
+            impersonator_user_id=impersonator_user_id,
             workspace_id=workspace_id,
             action="workspace.updated",
             resource_type="workspace",

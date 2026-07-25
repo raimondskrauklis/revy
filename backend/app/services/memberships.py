@@ -153,6 +153,7 @@ async def update_member_role(
     user_id: UUID,
     role: AppRole,
     actor_user_id: UUID | None = None,
+    impersonator_user_id: UUID | None = None,
 ) -> WorkspaceMembershipORM:
     membership = await _get_membership(session, workspace_id=workspace_id, user_id=user_id)
     old_role = membership.role
@@ -165,6 +166,7 @@ async def update_member_role(
         await record_audit(
             session,
             actor_user_id=actor_user_id,
+            impersonator_user_id=impersonator_user_id,
             workspace_id=workspace_id,
             action="workspace_member.role_changed",
             resource_type="workspace_member",
@@ -185,6 +187,7 @@ async def remove_member(
     workspace_id: UUID,
     user_id: UUID,
     actor_user_id: UUID | None = None,
+    impersonator_user_id: UUID | None = None,
 ) -> None:
     membership = await _get_membership(session, workspace_id=workspace_id, user_id=user_id)
     removed_role = membership.role
@@ -196,6 +199,7 @@ async def remove_member(
         await record_audit(
             session,
             actor_user_id=actor_user_id,
+            impersonator_user_id=impersonator_user_id,
             workspace_id=workspace_id,
             action="workspace_member.removed",
             resource_type="workspace_member",

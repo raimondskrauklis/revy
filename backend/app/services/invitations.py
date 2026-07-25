@@ -63,6 +63,7 @@ async def create_invitation(
     email: str,
     role: AppRole,
     invited_by_user_id: UUID,
+    impersonator_user_id: UUID | None = None,
 ) -> WorkspaceInvitationORM:
     """Create a pending workspace_invitations row."""
     normalized = email.strip().lower()
@@ -117,6 +118,7 @@ async def create_invitation(
     await record_audit(
         session,
         actor_user_id=invited_by_user_id,
+        impersonator_user_id=impersonator_user_id,
         workspace_id=workspace_id,
         action="workspace_invitation.created",
         resource_type="workspace_invitation",
@@ -240,6 +242,7 @@ async def revoke_invitation(
     workspace_id: UUID,
     invitation_id: UUID,
     actor_user_id: UUID | None = None,
+    impersonator_user_id: UUID | None = None,
 ) -> WorkspaceInvitationORM:
     invitation = await session.scalar(
         select(WorkspaceInvitationORM).where(
@@ -257,6 +260,7 @@ async def revoke_invitation(
         await record_audit(
             session,
             actor_user_id=actor_user_id,
+            impersonator_user_id=impersonator_user_id,
             workspace_id=workspace_id,
             action="workspace_invitation.revoked",
             resource_type="workspace_invitation",

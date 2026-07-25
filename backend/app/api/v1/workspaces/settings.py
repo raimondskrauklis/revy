@@ -40,6 +40,7 @@ async def patch_workspace(
         workspace_id=workspace_id,
         name=body.name,
         actor_user_id=current_user.user_id,
+        impersonator_user_id=current_user.impersonator_user_id,
     )
     await session.commit()
     return SuccessResponse(data=WorkspaceResponse.model_validate(updated))
