@@ -35,6 +35,11 @@ async def patch_workspace(
     if workspace is None:
         raise NotFoundError("Workspace not found")
 
-    updated = await update_workspace(session, workspace_id=workspace_id, name=body.name)
+    updated = await update_workspace(
+        session,
+        workspace_id=workspace_id,
+        name=body.name,
+        actor_user_id=current_user.user_id,
+    )
     await session.commit()
     return SuccessResponse(data=WorkspaceResponse.model_validate(updated))

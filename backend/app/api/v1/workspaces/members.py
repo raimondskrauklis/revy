@@ -53,6 +53,7 @@ async def patch_workspace_member(
         workspace_id=workspace_id,
         user_id=user_id,
         role=body.role,
+        actor_user_id=current_user.user_id,
     )
     await session.commit()
 
@@ -80,5 +81,10 @@ async def delete_workspace_member(
     if current_user.user_id is None:
         raise ForbiddenError(message="User not provisioned")
 
-    await remove_member(session, workspace_id=workspace_id, user_id=user_id)
+    await remove_member(
+        session,
+        workspace_id=workspace_id,
+        user_id=user_id,
+        actor_user_id=current_user.user_id,
+    )
     await session.commit()

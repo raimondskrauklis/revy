@@ -11,6 +11,7 @@
     "clear": "Clear",
     "today": "Today",
     "remove": "Remove",
+    "confirm": "Confirm",
     "appName": "App"
   },
   "nav": {
@@ -77,7 +78,10 @@
     "nav": {
       "profile": "Profile",
       "security": "Security",
-      "appearance": "Appearance"
+      "appearance": "Appearance",
+      "workspace": "Workspace",
+      "team": "Team",
+      "integrations": "Integrations"
     },
     "profile": {
       "emailLabel": "Email",
@@ -97,6 +101,80 @@
     "appearance": {
       "body": "Choose how the app looks on this device. Theme preference is stored locally in your browser.",
       "themeLabel": "Theme"
+    },
+    "workspace": {
+      "nameLabel": "Workspace name",
+      "slugLabel": "URL slug",
+      "slugImmutable": "The slug is set when the workspace is created and cannot be changed.",
+      "saveSuccess": "Workspace saved"
+    },
+    "team": {
+      "noWorkspace": "Select a workspace to manage team members.",
+      "members": {
+        "title": "Members",
+        "empty": "No members yet.",
+        "remove": "Remove",
+        "removeConfirm": "Remove this member from the workspace?",
+        "columns": {
+          "name": "Name",
+          "email": "Email",
+          "role": "Role",
+          "joined": "Joined",
+          "actions": "Actions"
+        }
+      },
+      "invitations": {
+        "title": "Pending invitations",
+        "empty": "No pending invitations.",
+        "revoke": "Revoke",
+        "revokeConfirm": "Revoke this invitation?",
+        "columns": {
+          "email": "Email",
+          "role": "Role",
+          "expires": "Expires",
+          "actions": "Actions"
+        }
+      },
+      "invite": {
+        "title": "Invite member",
+        "emailLabel": "Email",
+        "roleLabel": "Role",
+        "submit": "Send invitation",
+        "success": "Invitation sent"
+      },
+      "roles": {
+        "admin": "Admin",
+        "operator": "Operator",
+        "viewer": "Viewer"
+      }
+    },
+    "permissions": {
+      "title": "Role permissions",
+      "roleColumn": "Role",
+      "granted": "Yes",
+      "roles": {
+        "admin": "Admin",
+        "operator": "Operator",
+        "viewer": "Viewer"
+      },
+      "perms": {
+        "itemsView": "View items",
+        "itemsManage": "Manage items",
+        "adminUsers": "Manage users",
+        "adminWorkspaces": "Manage workspaces",
+        "adminSystem": "System admin"
+      }
+    },
+    "integrations": {
+      "subtitle": "Connect external services to this workspace.",
+      "empty": "No integrations available.",
+      "github": {
+        "title": "GitHub",
+        "description": "Connect GitHub App installations for code review.",
+        "count": "{{count}} installation connected",
+        "count_other": "{{count}} installations connected",
+        "manage": "Manage installations"
+      }
     },
     "quietDemo": {
       "title": "Form controls",
@@ -240,6 +318,7 @@
     "unauthorized": "Please sign in",
     "network_error": "Unable to reach the server",
     "unknown_error": "Something went wrong",
+    "last_workspace_admin": "At least one workspace admin is required",
     "not_found_page": {
       "title": "Page not found",
       "body": "The page you requested does not exist."

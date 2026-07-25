@@ -12,6 +12,13 @@ const WORKSPACE_ROLE_PERMISSIONS: Record<AppRole, ReadonlySet<Permission>> = {
   [AppRole.viewer]: new Set(['items:view']),
 };
 
+/** Workspace role → permission list for settings matrix UI. */
+export const ROLE_PERMISSIONS: Record<AppRole, readonly Permission[]> = {
+  [AppRole.admin]: ['items:view', 'items:manage', 'admin:users'],
+  [AppRole.operator]: ['items:view', 'items:manage'],
+  [AppRole.viewer]: ['items:view'],
+};
+
 export function hasPermission(
   workspaceRole: AppRole | undefined,
   permission: Permission,

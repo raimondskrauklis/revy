@@ -11,8 +11,10 @@ import App from './App';
 import './index.css';
 import './i18n/config';
 import { initializeTheme } from '@/stores/themeStore';
+import { registerRevyExtensions } from '@/platform/extensions/registerRevy';
 
 initializeTheme();
+registerRevyExtensions();
 
 initSentry();
 

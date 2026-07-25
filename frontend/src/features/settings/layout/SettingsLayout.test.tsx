@@ -10,7 +10,7 @@ vi.mock('@/contexts/AuthContext', () => ({
 }));
 
 describe('SettingsLayout', () => {
-  it('renders personal nav links and workspace group label only', () => {
+  it('renders personal and workspace nav links', () => {
     render(
       <MemoryRouter initialEntries={['/settings/profile']}>
         <Routes>
@@ -34,7 +34,14 @@ describe('SettingsLayout', () => {
       'href',
       '/settings/appearance',
     );
-    expect(screen.getByText('Workspace')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /workspace/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^workspace$/i })).toHaveAttribute(
+      'href',
+      '/settings/workspace',
+    );
+    expect(screen.getByRole('link', { name: /^team$/i })).toHaveAttribute('href', '/settings/team');
+    expect(screen.getByRole('link', { name: /^integrations$/i })).toHaveAttribute(
+      'href',
+      '/settings/integrations',
+    );
   });
 });

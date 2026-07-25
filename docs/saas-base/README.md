@@ -40,7 +40,7 @@
 |------|-----------|--------|
 | W0 | [waves/SAAS_BASE_W0_EXECUTION.md](./waves/SAAS_BASE_W0_EXECUTION.md) | done |
 | W1 | [waves/SAAS_BASE_W1_EXECUTION.md](./waves/SAAS_BASE_W1_EXECUTION.md) | done |
-| W2 | [waves/SAAS_BASE_W2_EXECUTION.md](./waves/SAAS_BASE_W2_EXECUTION.md) | pending |
+| W2 | [waves/SAAS_BASE_W2_EXECUTION.md](./waves/SAAS_BASE_W2_EXECUTION.md) | done |
 | W3 | [waves/SAAS_BASE_W3_EXECUTION.md](./waves/SAAS_BASE_W3_EXECUTION.md) | pending |
 | W4 | [waves/SAAS_BASE_W4_EXECUTION.md](./waves/SAAS_BASE_W4_EXECUTION.md) | pending |
 | W5 | [waves/SAAS_BASE_W5_EXECUTION.md](./waves/SAAS_BASE_W5_EXECUTION.md) | pending |

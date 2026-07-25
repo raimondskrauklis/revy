@@ -21,6 +21,7 @@ from app.models.users import UserORM
 from app.models.workspace_memberships import WorkspaceMembershipORM
 from app.models.workspaces import WorkspaceORM
 from app.schemas.memberships import MemberListItem
+from app.services.audit_service import record_audit
 
 
 async def _count_workspace_admins(session: AsyncSession, *, workspace_id: UUID) -> int:
@@ -142,12 +143,30 @@ async def update_member_role(
     workspace_id: UUID,
     user_id: UUID,
     role: AppRole,
+    actor_user_id: UUID | None = None,
 ) -> WorkspaceMembershipORM:
     membership = await _get_membership(session, workspace_id=workspace_id, user_id=user_id)
+    old_role = membership.role
     if membership.role == AppRole.admin and role != AppRole.admin:
         await _assert_not_last_admin(session, workspace_id=workspace_id, membership=membership)
     membership.role = role
     await session.flush()
+
+    if actor_user_id is not None and old_role != role:
+        await record_audit(
+            session,
+            actor_user_id=actor_user_id,
+            workspace_id=workspace_id,
+            action="workspace_member.role_changed",
+            resource_type="workspace_member",
+            resource_id=str(user_id),
+            metadata={
+                "user_id": str(user_id),
+                "old_role": old_role.value,
+                "new_role": role.value,
+            },
+        )
+
     return membership
 
 
@@ -156,8 +175,21 @@ async def remove_member(
     *,
     workspace_id: UUID,
     user_id: UUID,
+    actor_user_id: UUID | None = None,
 ) -> None:
     membership = await _get_membership(session, workspace_id=workspace_id, user_id=user_id)
+    removed_role = membership.role
     await _assert_not_last_admin(session, workspace_id=workspace_id, membership=membership)
     await session.delete(membership)
     await session.flush()
+
+    if actor_user_id is not None:
+        await record_audit(
+            session,
+            actor_user_id=actor_user_id,
+            workspace_id=workspace_id,
+            action="workspace_member.removed",
+            resource_type="workspace_member",
+            resource_id=str(user_id),
+            metadata={"user_id": str(user_id), "role": removed_role.value},
+        )

@@ -24,6 +24,7 @@ from app.models.users import UserORM
 from app.models.workspace_memberships import WorkspaceMembershipORM
 from app.models.workspaces import WorkspaceORM
 from app.schemas.invitations import InvitationListItem
+from app.services.audit_service import record_audit
 
 INVITATION_TTL_DAYS = 7
 
@@ -112,6 +113,21 @@ async def create_invitation(
     )
     session.add(invitation)
     await session.flush()
+
+    await record_audit(
+        session,
+        actor_user_id=invited_by_user_id,
+        workspace_id=workspace_id,
+        action="workspace_invitation.created",
+        resource_type="workspace_invitation",
+        resource_id=str(invitation.id),
+        metadata={
+            "invitation_id": str(invitation.id),
+            "email": invitation.email,
+            "role": invitation.role.value,
+        },
+    )
+
     return invitation
 
 
@@ -220,6 +236,7 @@ async def revoke_invitation(
     *,
     workspace_id: UUID,
     invitation_id: UUID,
+    actor_user_id: UUID | None = None,
 ) -> WorkspaceInvitationORM:
     invitation = await session.scalar(
         select(WorkspaceInvitationORM).where(
@@ -232,4 +249,16 @@ async def revoke_invitation(
 
     invitation.status = InvitationStatus.revoked
     await session.flush()
+
+    if actor_user_id is not None:
+        await record_audit(
+            session,
+            actor_user_id=actor_user_id,
+            workspace_id=workspace_id,
+            action="workspace_invitation.revoked",
+            resource_type="workspace_invitation",
+            resource_id=str(invitation_id),
+            metadata={"invitation_id": str(invitation_id), "email": invitation.email},
+        )
+
     return invitation

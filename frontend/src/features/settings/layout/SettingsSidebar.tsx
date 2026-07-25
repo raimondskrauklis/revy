@@ -8,6 +8,12 @@ const PERSONAL_LINKS = [
   { to: '/settings/appearance', label: 'settings.nav.appearance' },
 ] as const;
 
+const WORKSPACE_LINKS = [
+  { to: '/settings/workspace', label: 'settings.nav.workspace' },
+  { to: '/settings/team', label: 'settings.nav.team' },
+  { to: '/settings/integrations', label: 'settings.nav.integrations' },
+] as const;
+
 function linkClassName({ isActive }: { isActive: boolean }): string {
   return [
     'block rounded-lg px-3 py-2 text-sm',
@@ -45,6 +51,15 @@ export function SettingsSidebar() {
           <h2 className="px-3 text-xs font-semibold uppercase tracking-wide text-[color:var(--app-text-muted)]">
             {t('settings.group.workspace')}
           </h2>
+          <ul className="mt-2 space-y-1">
+            {WORKSPACE_LINKS.map((item) => (
+              <li key={item.to}>
+                <NavLink to={item.to} className={linkClassName}>
+                  {t(item.label)}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </nav>

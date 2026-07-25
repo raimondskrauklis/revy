@@ -36,7 +36,7 @@ async def test_create_invitation_persists_row():
         invited_by_user_id=inviter_id,
     )
 
-    session.add.assert_called_once()
+    session.add.assert_called()
     assert invitation.email == "colleague@example.com"
     assert invitation.role == AppRole.viewer
     assert invitation.status == InvitationStatus.pending

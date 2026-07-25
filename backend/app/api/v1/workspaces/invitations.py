@@ -57,7 +57,12 @@ async def delete_workspace_invitation(
     if current_user.user_id is None:
         raise ForbiddenError(message="User not provisioned")
 
-    await revoke_invitation(session, workspace_id=workspace_id, invitation_id=invitation_id)
+    await revoke_invitation(
+        session,
+        workspace_id=workspace_id,
+        invitation_id=invitation_id,
+        actor_user_id=current_user.user_id,
+    )
     await session.commit()
 
 

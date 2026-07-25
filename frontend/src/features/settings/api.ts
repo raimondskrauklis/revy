@@ -3,6 +3,7 @@ import apiClient, { parseSuccess } from '@/lib/api';
 import type {
   CursorPage,
   Invitation,
+  InvitationCreatePayload,
   Member,
   MemberRoleUpdatePayload,
   Workspace,
@@ -60,4 +61,12 @@ export async function revokeInvitation(
   invitationId: string,
 ): Promise<void> {
   await apiClient.delete(`/workspaces/${workspaceId}/invitations/${invitationId}`);
+}
+
+export async function createInvitation(
+  workspaceId: string,
+  payload: InvitationCreatePayload,
+): Promise<Invitation> {
+  const response = await apiClient.post(`/workspaces/${workspaceId}/invitations`, payload);
+  return await parseSuccess<Invitation>(response);
 }

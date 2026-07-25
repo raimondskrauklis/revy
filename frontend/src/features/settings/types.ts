@@ -46,3 +46,8 @@ export interface WorkspaceUpdatePayload {
 export interface MemberRoleUpdatePayload {
   role: AppRole;
 }
+
+export interface InvitationCreatePayload {
+  email: string;
+  role: AppRole;
+}

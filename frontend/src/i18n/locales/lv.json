@@ -11,6 +11,7 @@
     "clear": "Notīrīt",
     "today": "Šodien",
     "remove": "Noņemt",
+    "confirm": "Apstiprināt",
     "appName": "Lietotne"
   },
   "nav": {
@@ -77,7 +78,10 @@
     "nav": {
       "profile": "Profils",
       "security": "Drošība",
-      "appearance": "Izskats"
+      "appearance": "Izskats",
+      "workspace": "Darba vide",
+      "team": "Komanda",
+      "integrations": "Integrācijas"
     },
     "profile": {
       "emailLabel": "E-pasts",
@@ -97,6 +101,80 @@
     "appearance": {
       "body": "Izvēlieties, kā lietotne izskatās šajā ierīcē. Tēmas iestatījums tiek saglabāts lokāli pārlūkā.",
       "themeLabel": "Tēma"
+    },
+    "workspace": {
+      "nameLabel": "Darba vides nosaukums",
+      "slugLabel": "URL identifikators",
+      "slugImmutable": "Identifikators tiek noteikts darba vides izveides brīdī un to nevar mainīt.",
+      "saveSuccess": "Darba vide saglabāta"
+    },
+    "team": {
+      "noWorkspace": "Izvēlieties darba vidi, lai pārvaldītu komandas dalībniekus.",
+      "members": {
+        "title": "Dalībnieki",
+        "empty": "Vēl nav dalībnieku.",
+        "remove": "Noņemt",
+        "removeConfirm": "Noņemt šo dalībnieku no darba vides?",
+        "columns": {
+          "name": "Vārds",
+          "email": "E-pasts",
+          "role": "Loma",
+          "joined": "Pievienojās",
+          "actions": "Darbības"
+        }
+      },
+      "invitations": {
+        "title": "Gaidošie uzaicinājumi",
+        "empty": "Nav gaidošu uzaicinājumu.",
+        "revoke": "Atsaukt",
+        "revokeConfirm": "Atsaukt šo uzaicinājumu?",
+        "columns": {
+          "email": "E-pasts",
+          "role": "Loma",
+          "expires": "Beidzas",
+          "actions": "Darbības"
+        }
+      },
+      "invite": {
+        "title": "Uzaicināt dalībnieku",
+        "emailLabel": "E-pasts",
+        "roleLabel": "Loma",
+        "submit": "Nosūtīt uzaicinājumu",
+        "success": "Uzaicinājums nosūtīts"
+      },
+      "roles": {
+        "admin": "Administrators",
+        "operator": "Operators",
+        "viewer": "Skatītājs"
+      }
+    },
+    "permissions": {
+      "title": "Lomu atļaujas",
+      "roleColumn": "Loma",
+      "granted": "Jā",
+      "roles": {
+        "admin": "Administrators",
+        "operator": "Operators",
+        "viewer": "Skatītājs"
+      },
+      "perms": {
+        "itemsView": "Skatīt vienumus",
+        "itemsManage": "Pārvaldīt vienumus",
+        "adminUsers": "Pārvaldīt lietotājus",
+        "adminWorkspaces": "Pārvaldīt darba vides",
+        "adminSystem": "Sistēmas administrators"
+      }
+    },
+    "integrations": {
+      "subtitle": "Pievienojiet ārējos pakalpojumus šai darba videi.",
+      "empty": "Nav pieejamu integrāciju.",
+      "github": {
+        "title": "GitHub",
+        "description": "Pievienojiet GitHub App instalācijas koda pārskatīšanai.",
+        "count": "Pievienota {{count}} instalācija",
+        "count_other": "Pievienotas {{count}} instalācijas",
+        "manage": "Pārvaldīt instalācijas"
+      }
     },
     "quietDemo": {
       "title": "Formas elementi",
@@ -240,6 +318,7 @@
     "unauthorized": "Lūdzu, pierakstieties",
     "network_error": "Neizdevās sasniegt serveri",
     "unknown_error": "Kaut kas nogāja greizi",
+    "last_workspace_admin": "Nepieciešams vismaz viens darba vides administrators",
     "not_found_page": {
       "title": "Lapa nav atrasta",
       "body": "Pieprasītā lapa neeksistē."

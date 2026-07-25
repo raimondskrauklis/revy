@@ -11,10 +11,14 @@ import { StatusGatePage } from '@/features/auth/pages/StatusGatePage';
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
 import { AdminUsersPage } from '@/features/admin/pages/AdminUsersPage';
 import { RequirePlatformAdmin } from '@/components/auth/RequirePlatformAdmin';
+import { RequirePermission } from '@/components/auth/RequirePermission';
 import { SettingsLayout } from '@/features/settings/layout/SettingsLayout';
 import { ProfileSettingsPage } from '@/features/settings/pages/ProfileSettingsPage';
 import { SecuritySettingsPage } from '@/features/settings/pages/SecuritySettingsPage';
 import { AppearanceSettingsPage } from '@/features/settings/pages/AppearanceSettingsPage';
+import { WorkspaceSettingsPage } from '@/features/settings/pages/WorkspaceSettingsPage';
+import { TeamSettingsPage } from '@/features/settings/pages/TeamSettingsPage';
+import { IntegrationsSettingsPage } from '@/features/settings/pages/IntegrationsSettingsPage';
 import { InstallationsPage } from '@/features/installations/pages/InstallationsPage';
 
 export const appRouter = createBrowserRouter([
@@ -89,6 +93,12 @@ export const appRouter = createBrowserRouter([
               { path: 'profile', element: <ProfileSettingsPage /> },
               { path: 'security', element: <SecuritySettingsPage /> },
               { path: 'appearance', element: <AppearanceSettingsPage /> },
+              {
+                element: <RequirePermission permission="admin:users" />,
+                children: [{ path: 'workspace', element: <WorkspaceSettingsPage /> }],
+              },
+              { path: 'team', element: <TeamSettingsPage /> },
+              { path: 'integrations', element: <IntegrationsSettingsPage /> },
             ],
           },
         ],

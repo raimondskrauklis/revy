@@ -6,6 +6,7 @@ vi.mock('@/lib/api', () => ({
   default: {
     get: vi.fn(),
     patch: vi.fn(),
+    post: vi.fn(),
     delete: vi.fn(),
   },
   parseSuccess: vi.fn(),
@@ -13,6 +14,7 @@ vi.mock('@/lib/api', () => ({
 
 import apiClient, { parseSuccess } from '@/lib/api';
 import {
+  createInvitation,
   fetchInvitations,
   fetchMembers,
   patchWorkspace,
@@ -98,5 +100,29 @@ describe('settings api', () => {
     await revokeInvitation('ws-1', 'inv-1');
 
     expect(apiClient.delete).toHaveBeenCalledWith('/workspaces/ws-1/invitations/inv-1');
+  });
+
+  it('createInvitation posts invitation payload', async () => {
+    const invitation = {
+      id: 'inv-1',
+      email: 'new@example.com',
+      role: AppRole.viewer,
+      status: 'pending' as const,
+      expires_at: '2026-12-31T00:00:00Z',
+      created_at: '2026-01-01T00:00:00Z',
+    };
+    vi.mocked(apiClient.post).mockResolvedValue({ data: {} });
+    vi.mocked(parseSuccess).mockResolvedValue(invitation);
+
+    const result = await createInvitation('ws-1', {
+      email: 'new@example.com',
+      role: AppRole.viewer,
+    });
+
+    expect(apiClient.post).toHaveBeenCalledWith('/workspaces/ws-1/invitations', {
+      email: 'new@example.com',
+      role: AppRole.viewer,
+    });
+    expect(result).toEqual(invitation);
   });
 });
