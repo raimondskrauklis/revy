@@ -12,6 +12,9 @@
     "today": "Today",
     "remove": "Remove",
     "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No",
+    "loadMore": "Load more",
     "appName": "App"
   },
   "nav": {
@@ -100,6 +103,7 @@
     "user": {
       "menu": "Account menu",
       "profile": "Profile & settings",
+      "admin": "Admin",
       "signOut": "Sign out"
     }
   },
@@ -258,6 +262,100 @@
     }
   },
   "admin": {
+    "title": "Platform admin",
+    "backToApp": "Back to app",
+    "sidebar": {
+      "label": "Admin sections"
+    },
+    "nav": {
+      "dashboard": "Dashboard",
+      "workspaces": "Workspaces",
+      "users": "Users",
+      "audit": "Audit",
+      "settings": "Settings"
+    },
+    "dashboard": {
+      "title": "Platform dashboard",
+      "description": "Overview of workspaces and users across the platform.",
+      "kpis": {
+        "workspacesTotal": "Total workspaces",
+        "workspacesActive": "Active workspaces",
+        "workspacesSuspended": "Suspended workspaces",
+        "usersActive": "Active users",
+        "usersPendingApproval": "Pending approval"
+      },
+      "pendingApprovalBanner": "{{count}} user awaiting approval",
+      "pendingApprovalBanner_other": "{{count}} users awaiting approval",
+      "reviewPendingUsers": "Review signup queue"
+    },
+    "workspaces": {
+      "title": "Workspaces",
+      "description": "Browse and manage all tenant workspaces.",
+      "searchPlaceholder": "Search by name or slug",
+      "statusFilter": "Filter by status",
+      "empty": "No workspaces found.",
+      "notFound": "Workspace not found.",
+      "backToList": "Back to workspaces",
+      "suspend": "Suspend workspace",
+      "unsuspend": "Unsuspend workspace",
+      "confirmSuspend": "Suspend this workspace? Members will lose access to tenant APIs.",
+      "confirmUnsuspend": "Restore this workspace to active status?",
+      "status": {
+        "all": "All statuses",
+        "active": "Active",
+        "suspended": "Suspended"
+      },
+      "columns": {
+        "name": "Name",
+        "slug": "Slug",
+        "status": "Status",
+        "plan": "Plan",
+        "members": "Members",
+        "created": "Created"
+      },
+      "detail": {
+        "status": "Status",
+        "plan": "Plan",
+        "members": "Members",
+        "stripeCustomer": "Stripe customer",
+        "created": "Created",
+        "updated": "Updated"
+      }
+    },
+    "audit": {
+      "title": "Audit log",
+      "description": "Search platform-wide audit events across all workspaces.",
+      "empty": "No audit events found.",
+      "filters": {
+        "workspaceId": "Workspace ID",
+        "actorUserId": "Actor user ID",
+        "actionPrefix": "Action prefix",
+        "createdAtFrom": "From date",
+        "createdAtTo": "To date"
+      },
+      "columns": {
+        "time": "Time",
+        "action": "Action",
+        "actor": "Actor",
+        "workspace": "Workspace"
+      },
+      "actions": {
+        "platform.workspace.viewed": "Workspace viewed (admin)",
+        "platform.workspace.suspended": "Workspace suspended",
+        "platform.workspace.unsuspended": "Workspace unsuspended",
+        "workspace.updated": "Workspace updated"
+      }
+    },
+    "settings": {
+      "title": "Platform settings",
+      "description": "Read-only platform configuration and external admin links.",
+      "externalLinks": "External consoles",
+      "keycloakAdmin": "Keycloak Admin Console",
+      "stripeDashboard": "Stripe Dashboard",
+      "registrationFlags": "Registration flags",
+      "requireAdminApproval": "Require admin approval",
+      "requireProfileForm": "Require profile form"
+    },
     "users": {
       "title": "Signup approvals",
       "description": "Review users waiting for platform access (Mode B). Empty in Mode A.",

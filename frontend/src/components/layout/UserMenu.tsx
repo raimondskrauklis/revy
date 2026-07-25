@@ -2,8 +2,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, Shield, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { isPlatformAdmin } from '@/lib/permissions';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 function displayName(email: string, fullName: string | null): string {
@@ -20,6 +21,7 @@ export function UserMenu() {
   }
 
   const name = displayName(user.email, user.full_name);
+  const showAdminLink = isPlatformAdmin(user.platform_role ?? undefined);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -41,6 +43,18 @@ export function UserMenu() {
           <p className="truncate text-xs text-[color:var(--app-text-muted)]">{user.email}</p>
         </div>
         <ul className="py-1">
+          {showAdminLink ? (
+            <li>
+              <Link
+                to="/admin"
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[color:var(--app-text-muted)] hover:bg-[color:var(--app-chip)]"
+                onClick={() => setOpen(false)}
+              >
+                <Shield className="h-4 w-4" aria-hidden />
+                {t('header.user.admin')}
+              </Link>
+            </li>
+          ) : null}
           <li>
             <Link
               to="/settings/profile"

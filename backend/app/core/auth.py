@@ -13,7 +13,7 @@ from jwt.exceptions import PyJWKSetError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.constants.enums import AppRole, PlatformRole, UserStatus
+from app.constants.enums import AppRole, PlatformRole, UserStatus, WorkspaceStatus
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.exceptions import ForbiddenError, ServiceUnavailableError, UnauthorizedError
@@ -21,6 +21,7 @@ from app.core.jwks import JwkSigningKeyNotFoundError, jwks_client, signing_key_f
 from app.core.logging import get_logger
 from app.models.users import UserORM
 from app.models.workspace_memberships import WorkspaceMembershipORM
+from app.models.workspaces import WorkspaceORM
 from app.services.onboarding import maybe_auto_provision_user
 from app.services.users import activate_bootstrap_super_admin, ensure_user_from_token
 
@@ -145,6 +146,12 @@ async def _resolve_active_workspace(
         match = next((m for m in memberships if m.workspace_id == requested), None)
         if match is None:
             raise ForbiddenError(message="Workspace access denied")
+        workspace = await session.get(WorkspaceORM, match.workspace_id)
+        if workspace is not None and workspace.status == WorkspaceStatus.suspended:
+            raise ForbiddenError(
+                message="Workspace suspended",
+                error_code="workspace_suspended",
+            )
         return match.workspace_id, match.role
 
     if len(memberships) == 1:

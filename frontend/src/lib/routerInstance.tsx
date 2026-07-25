@@ -9,8 +9,6 @@ import { UnauthorizedPage } from '@/features/auth/pages/UnauthorizedPage';
 import { CompleteProfilePage } from '@/features/auth/pages/CompleteProfilePage';
 import { StatusGatePage } from '@/features/auth/pages/StatusGatePage';
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
-import { AdminUsersPage } from '@/features/admin/pages/AdminUsersPage';
-import { RequirePlatformAdmin } from '@/components/auth/RequirePlatformAdmin';
 import { RequirePermission } from '@/components/auth/RequirePermission';
 import { SettingsLayout } from '@/features/settings/layout/SettingsLayout';
 import { ProfileSettingsPage } from '@/features/settings/pages/ProfileSettingsPage';
@@ -21,6 +19,7 @@ import { TeamSettingsPage } from '@/features/settings/pages/TeamSettingsPage';
 import { IntegrationsSettingsPage } from '@/features/settings/pages/IntegrationsSettingsPage';
 import { BillingSettingsPage } from '@/features/settings/pages/BillingSettingsPage';
 import { InstallationsPage } from '@/features/installations/pages/InstallationsPage';
+import { adminRoutes } from '@/features/admin/routes';
 
 export const appRouter = createBrowserRouter([
   { path: '/', element: <Navigate to="/dashboard" replace /> },
@@ -108,16 +107,7 @@ export const appRouter = createBrowserRouter([
           },
         ],
       },
-      {
-        element: <RequirePlatformAdmin />,
-        children: [
-          {
-            path: '/admin/users',
-            element: <AppShellLayout />,
-            children: [{ index: true, element: <AdminUsersPage /> }],
-          },
-        ],
-      },
+      adminRoutes,
     ],
   },
   { path: '*', element: <NotFoundPage /> },

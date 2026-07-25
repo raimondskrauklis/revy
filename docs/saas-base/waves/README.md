@@ -9,8 +9,8 @@ Linear **phase-execution** order. General plans stay in [`../`](../README.md); e
 | W0 — Shell & workspace APIs | [SAAS_BASE_W0_EXECUTION.md](./SAAS_BASE_W0_EXECUTION.md) | done (`67660cf`) |
 | W1 — Personal settings | [SAAS_BASE_W1_EXECUTION.md](./SAAS_BASE_W1_EXECUTION.md) | done (`2bfa195`) |
 | W2 — Workspace & team | [SAAS_BASE_W2_EXECUTION.md](./SAAS_BASE_W2_EXECUTION.md) | done (`286ec0d`) |
-| W3 — Dashboard | [SAAS_BASE_W3_EXECUTION.md](./SAAS_BASE_W3_EXECUTION.md) | done |
-| W4 — Stripe | [SAAS_BASE_W4_EXECUTION.md](./SAAS_BASE_W4_EXECUTION.md) | pending |
+| W3 — Dashboard | [SAAS_BASE_W3_EXECUTION.md](./SAAS_BASE_W3_EXECUTION.md) | done (`6817a84`) |
+| W4 — Stripe | [SAAS_BASE_W4_EXECUTION.md](./SAAS_BASE_W4_EXECUTION.md) | done (`cdb94e4`) |
 | W5 — Platform admin | [SAAS_BASE_W5_EXECUTION.md](./SAAS_BASE_W5_EXECUTION.md) | pending |
 | W6 — Lifecycle | [SAAS_BASE_W6_EXECUTION.md](./SAAS_BASE_W6_EXECUTION.md) | pending |
 | W7 — Impersonation | [SAAS_BASE_W7_EXECUTION.md](./SAAS_BASE_W7_EXECUTION.md) | pending |

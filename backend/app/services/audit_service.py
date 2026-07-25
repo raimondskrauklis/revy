@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
+from datetime import UTC, date, datetime, time
 from typing import Any
 from uuid import UUID
 
@@ -20,6 +22,7 @@ from app.core.pagination import (
 )
 from app.models.audit_log import AuditLogORM
 from app.models.users import UserORM
+from app.schemas.admin import PlatformAuditListItem
 from app.schemas.audit import AuditListItem
 
 _METADATA_MAX_BYTES = 4096
@@ -104,6 +107,84 @@ async def list_workspace_audit(
                 actor_user_id=audit_row.actor_user_id,
                 actor_email=actor.email,
                 metadata=_cap_metadata(audit_row.metadata_json),
+            )
+        )
+
+    next_cursor = None
+    if has_next and rows:
+        last_row, _ = rows[-1]
+        next_cursor = encode_cursor(last_row.created_at, last_row.id)
+
+    return CursorResponse(
+        items=items,
+        cursor=CursorMeta(next_cursor=next_cursor, has_next=has_next),
+    )
+
+
+@dataclass(frozen=True)
+class PlatformAuditFilters:
+    workspace_id: UUID | None = None
+    actor_user_id: UUID | None = None
+    action_prefix: str | None = None
+    created_at_from: date | None = None
+    created_at_to: date | None = None
+
+
+async def list_platform_audit(
+    session: AsyncSession,
+    *,
+    params: CursorParams,
+    filters: PlatformAuditFilters | None = None,
+) -> CursorResponse[PlatformAuditListItem]:
+    active_filters = filters or PlatformAuditFilters()
+    stmt = select(AuditLogORM, UserORM).join(UserORM, UserORM.id == AuditLogORM.actor_user_id)
+
+    if active_filters.workspace_id is not None:
+        stmt = stmt.where(AuditLogORM.workspace_id == active_filters.workspace_id)
+    if active_filters.actor_user_id is not None:
+        stmt = stmt.where(AuditLogORM.actor_user_id == active_filters.actor_user_id)
+    if active_filters.action_prefix:
+        stmt = stmt.where(AuditLogORM.action.startswith(active_filters.action_prefix))
+    if active_filters.created_at_from is not None:
+        start = datetime.combine(active_filters.created_at_from, time.min, tzinfo=UTC)
+        stmt = stmt.where(AuditLogORM.created_at >= start)
+    if active_filters.created_at_to is not None:
+        end = datetime.combine(active_filters.created_at_to, time.max, tzinfo=UTC)
+        stmt = stmt.where(AuditLogORM.created_at <= end)
+
+    if params.cursor:
+        try:
+            cursor_ts, cursor_id = decode_cursor(params.cursor)
+        except InvalidCursorError as exc:
+            raise ValidationError(message="Invalid cursor", field="cursor") from exc
+        stmt = stmt.where(
+            (AuditLogORM.created_at < cursor_ts)
+            | ((AuditLogORM.created_at == cursor_ts) & (AuditLogORM.id < cursor_id))
+        )
+
+    stmt = stmt.order_by(AuditLogORM.created_at.desc(), AuditLogORM.id.desc()).limit(
+        params.limit + 1
+    )
+    result = await session.execute(stmt)
+    rows = list(result.all())
+
+    has_next = len(rows) > params.limit
+    if has_next:
+        rows = rows[: params.limit]
+
+    items: list[PlatformAuditListItem] = []
+    for audit_row, actor in rows:
+        items.append(
+            PlatformAuditListItem(
+                id=audit_row.id,
+                created_at=audit_row.created_at,
+                action=audit_row.action,
+                resource_type=audit_row.resource_type,
+                resource_id=audit_row.resource_id,
+                actor_user_id=audit_row.actor_user_id,
+                actor_email=actor.email,
+                metadata=_cap_metadata(audit_row.metadata_json),
+                workspace_id=audit_row.workspace_id,
             )
         )
 

@@ -12,6 +12,9 @@
     "today": "Šodien",
     "remove": "Noņemt",
     "confirm": "Apstiprināt",
+    "yes": "Jā",
+    "no": "Nē",
+    "loadMore": "Ielādēt vairāk",
     "appName": "Lietotne"
   },
   "nav": {
@@ -100,6 +103,7 @@
     "user": {
       "menu": "Konta izvēlne",
       "profile": "Profils un iestatījumi",
+      "admin": "Administrēšana",
       "signOut": "Iziet"
     }
   },
@@ -258,6 +262,100 @@
     }
   },
   "admin": {
+    "title": "Platformas administrēšana",
+    "backToApp": "Atpakaļ uz lietotni",
+    "sidebar": {
+      "label": "Administrēšanas sadaļas"
+    },
+    "nav": {
+      "dashboard": "Panelis",
+      "workspaces": "Darba vides",
+      "users": "Lietotāji",
+      "audit": "Audits",
+      "settings": "Iestatījumi"
+    },
+    "dashboard": {
+      "title": "Platformas panelis",
+      "description": "Darba vides un lietotāju pārskats visā platformā.",
+      "kpis": {
+        "workspacesTotal": "Darba vides kopā",
+        "workspacesActive": "Aktīvās darba vides",
+        "workspacesSuspended": "Aizturētās darba vides",
+        "usersActive": "Aktīvie lietotāji",
+        "usersPendingApproval": "Gaida apstiprinājumu"
+      },
+      "pendingApprovalBanner": "{{count}} lietotājs gaida apstiprinājumu",
+      "pendingApprovalBanner_other": "{{count}} lietotāji gaida apstiprinājumu",
+      "reviewPendingUsers": "Skatīt reģistrāciju rindu"
+    },
+    "workspaces": {
+      "title": "Darba vides",
+      "description": "Pārlūkot un pārvaldīt visas nomnieku darba vides.",
+      "searchPlaceholder": "Meklēt pēc nosaukuma vai slug",
+      "statusFilter": "Filtrēt pēc statusa",
+      "empty": "Darba vides nav atrastas.",
+      "notFound": "Darba vide nav atrasta.",
+      "backToList": "Atpakaļ uz darba vidēm",
+      "suspend": "Aizturēt darba vidi",
+      "unsuspend": "Atjaunot darba vidi",
+      "confirmSuspend": "Aizturēt šo darba vidi? Dalībnieki zaudēs piekļuvi nomnieka API.",
+      "confirmUnsuspend": "Atjaunot šo darba vidi aktīvā statusā?",
+      "status": {
+        "all": "Visi statusi",
+        "active": "Aktīva",
+        "suspended": "Aizturēta"
+      },
+      "columns": {
+        "name": "Nosaukums",
+        "slug": "Slug",
+        "status": "Statuss",
+        "plan": "Plāns",
+        "members": "Dalībnieki",
+        "created": "Izveidota"
+      },
+      "detail": {
+        "status": "Statuss",
+        "plan": "Plāns",
+        "members": "Dalībnieki",
+        "stripeCustomer": "Stripe klients",
+        "created": "Izveidota",
+        "updated": "Atjaunināta"
+      }
+    },
+    "audit": {
+      "title": "Audita žurnāls",
+      "description": "Meklēt platformas auditēšanas notikumus visās darba vidēs.",
+      "empty": "Audita notikumi nav atrasti.",
+      "filters": {
+        "workspaceId": "Darba vides ID",
+        "actorUserId": "Darbības veicēja ID",
+        "actionPrefix": "Darbības prefikss",
+        "createdAtFrom": "No datuma",
+        "createdAtTo": "Līdz datumam"
+      },
+      "columns": {
+        "time": "Laiks",
+        "action": "Darbība",
+        "actor": "Veicējs",
+        "workspace": "Darba vide"
+      },
+      "actions": {
+        "platform.workspace.viewed": "Darba vide skatīta (admin)",
+        "platform.workspace.suspended": "Darba vide aizturēta",
+        "platform.workspace.unsuspended": "Darba vide atjaunota",
+        "workspace.updated": "Darba vide atjaunināta"
+      }
+    },
+    "settings": {
+      "title": "Platformas iestatījumi",
+      "description": "Tikai lasāma platformas konfigurācija un ārējās administrēšanas saites.",
+      "externalLinks": "Ārējās konsoles",
+      "keycloakAdmin": "Keycloak administrēšanas konsole",
+      "stripeDashboard": "Stripe panelis",
+      "registrationFlags": "Reģistrācijas karodziņi",
+      "requireAdminApproval": "Nepieciešams administratora apstiprinājums",
+      "requireProfileForm": "Nepieciešama profila forma"
+    },
     "users": {
       "title": "Reģistrāciju apstiprinājumi",
       "description": "Lietotāji, kas gaida platformas piekļuvi (B režīms). A režīmā tukšs.",

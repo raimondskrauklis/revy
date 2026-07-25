@@ -53,3 +53,13 @@ export function getKeycloakAccountUrl(): string {
   const realm = requireViteEnv('VITE_KEYCLOAK_REALM');
   return `${baseUrl}/realms/${realm}/account`;
 }
+
+export function getKeycloakAdminConsoleUrl(): string {
+  const override = optionalViteEnv('VITE_KEYCLOAK_ADMIN_URL');
+  if (override) {
+    return override;
+  }
+  const baseUrl = requireViteEnv('VITE_KEYCLOAK_URL').replace(/\/$/, '');
+  const realm = requireViteEnv('VITE_KEYCLOAK_REALM');
+  return `${baseUrl}/admin/${realm}/console/`;
+}
