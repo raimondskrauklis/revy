@@ -48,7 +48,42 @@
     "pacificAuckland": "Oklenda"
   },
   "dashboard": {
-    "welcome": "Pierakstījies kā {{email}}"
+    "noWorkspace": "Izvēlieties darba vidi, lai skatītu informācijas paneli.",
+    "widgetError": "Šo logrīku neizdevās ielādēt.",
+    "welcome": {
+      "greeting": "Laipni lūdzam, {{name}}",
+      "workspace": "Jūs strādājat {{workspace}}"
+    },
+    "checklist": {
+      "title": "Sākt darbu",
+      "progress": "{{completed}} no {{total}} pabeigti",
+      "completeProfile": "Pabeidziet profilu",
+      "inviteTeammate": "Uzaiciniet komandas biedru",
+      "connectIntegration": "Pievienojiet GitHub instalāciju",
+      "setupBilling": "Iestatiet norēķinus"
+    },
+    "quickActions": {
+      "title": "Ātrās darbības",
+      "settings": "Iestatījumi",
+      "installations": "Instalācijas",
+      "inviteTeammate": "Uzaicināt komandas biedru"
+    },
+    "activity": {
+      "title": "Nesenā aktivitāte",
+      "empty": "Vēl nav nesenas aktivitātes.",
+      "workspace.updated": "{{email}} atjaunināja darba vidi",
+      "workspace_member.role_changed": "{{email}} mainīja dalībnieka lomu",
+      "workspace_member.removed": "{{email}} noņēma dalībnieku",
+      "workspace_invitation.created": "{{email}} nosūtīja uzaicinājumu",
+      "workspace_invitation.revoked": "{{email}} atcēla uzaicinājumu"
+    },
+    "installationsSummary": {
+      "title": "GitHub instalācijas",
+      "count_one": "{{count}} instalācija pievienota",
+      "count_other": "{{count}} instalācijas pievienotas",
+      "statusHint": "Lielākā daļa instalāciju ir {{status}}",
+      "manage": "Pārvaldīt instalācijas"
+    }
   },
   "header": {
     "workspace": {

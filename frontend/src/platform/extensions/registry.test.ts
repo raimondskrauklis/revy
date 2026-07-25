@@ -64,4 +64,39 @@ describe('extension registry', () => {
 
     expect(extensions.map((item) => item.id)).toEqual(['admin-only']);
   });
+
+  it('throws when registering duplicate extension id', () => {
+    registerExtension({
+      id: 'dup',
+      slot: 'dashboard_widget',
+      component: StubCard,
+    });
+
+    expect(() =>
+      registerExtension({
+        id: 'dup',
+        slot: 'dashboard_widget',
+        component: StubCard,
+      }),
+    ).toThrow(/already registered/i);
+  });
+
+  it('returns dashboard_widget extensions for a slot', () => {
+    registerExtension({
+      id: 'widget-a',
+      slot: 'dashboard_widget',
+      component: StubCard,
+      order: 10,
+    });
+    registerExtension({
+      id: 'widget-b',
+      slot: 'dashboard_widget',
+      component: StubCard,
+      order: 5,
+    });
+
+    const extensions = getExtensions('dashboard_widget', AppRole.viewer);
+
+    expect(extensions.map((item) => item.id)).toEqual(['widget-b', 'widget-a']);
+  });
 });

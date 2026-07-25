@@ -1,21 +1,17 @@
 // frontend/src/platform/extensions/registry.ts
-import type { ComponentType } from 'react';
 import { hasPermission } from '@/lib/permissions';
-import type { Permission } from '@/lib/permissionTypes';
-import type { ExtensionSlot } from '@/platform/extensions/slots';
 import type { AppRole, PlatformRole } from '@/shared/types/enums';
+import type { ExtensionDefinition } from '@/platform/extensions/types';
+import type { ExtensionSlot } from '@/platform/extensions/slots';
 
-export interface ExtensionDefinition {
-  id: string;
-  slot: ExtensionSlot;
-  component: ComponentType;
-  permission?: Permission;
-  order?: number;
-}
+export type { ExtensionDefinition } from '@/platform/extensions/types';
 
 const extensions: ExtensionDefinition[] = [];
 
 export function registerExtension(definition: ExtensionDefinition): void {
+  if (extensions.some((item) => item.id === definition.id)) {
+    throw new Error(`Extension already registered: ${definition.id}`);
+  }
   extensions.push(definition);
 }
 

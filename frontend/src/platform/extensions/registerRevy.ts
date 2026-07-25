@@ -1,4 +1,5 @@
 // frontend/src/platform/extensions/registerRevy.ts
+import { InstallationsSummaryWidget } from '@/features/installations/InstallationsSummaryWidget';
 import { RevyGitHubIntegrationCard } from '@/features/installations/RevyGitHubIntegrationCard';
 import { registerExtension } from '@/platform/extensions/registry';
 
@@ -9,5 +10,12 @@ export function registerRevyExtensions(): void {
     component: RevyGitHubIntegrationCard,
     permission: 'items:view',
     order: 10,
+  });
+  registerExtension({
+    id: 'installations-summary',
+    slot: 'dashboard_widget',
+    component: InstallationsSummaryWidget,
+    permission: 'items:view',
+    order: 20,
   });
 }

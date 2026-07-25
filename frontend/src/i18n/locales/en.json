@@ -48,7 +48,42 @@
     "pacificAuckland": "Auckland"
   },
   "dashboard": {
-    "welcome": "Signed in as {{email}}"
+    "noWorkspace": "Select a workspace to view the dashboard.",
+    "widgetError": "This widget could not be loaded.",
+    "welcome": {
+      "greeting": "Welcome, {{name}}",
+      "workspace": "You are working in {{workspace}}"
+    },
+    "checklist": {
+      "title": "Get started",
+      "progress": "{{completed}} of {{total}} complete",
+      "completeProfile": "Complete your profile",
+      "inviteTeammate": "Invite a teammate",
+      "connectIntegration": "Connect a GitHub installation",
+      "setupBilling": "Set up billing"
+    },
+    "quickActions": {
+      "title": "Quick actions",
+      "settings": "Settings",
+      "installations": "Installations",
+      "inviteTeammate": "Invite teammate"
+    },
+    "activity": {
+      "title": "Recent activity",
+      "empty": "No recent activity yet.",
+      "workspace.updated": "{{email}} updated the workspace",
+      "workspace_member.role_changed": "{{email}} changed a member role",
+      "workspace_member.removed": "{{email}} removed a member",
+      "workspace_invitation.created": "{{email}} sent an invitation",
+      "workspace_invitation.revoked": "{{email}} revoked an invitation"
+    },
+    "installationsSummary": {
+      "title": "GitHub installations",
+      "count_one": "{{count}} installation connected",
+      "count_other": "{{count}} installations connected",
+      "statusHint": "Most installations are {{status}}",
+      "manage": "Manage installations"
+    }
   },
   "header": {
     "workspace": {
