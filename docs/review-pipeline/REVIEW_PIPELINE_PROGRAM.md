@@ -31,7 +31,7 @@ git show saas-base-v1   # annotated tag → dacfc5b
 |-----|-----------|---------|
 | `saas-base-v1` | `dacfc5b` | SaaS base W0–W8 complete; P4 installations slice |
 
-Future product milestones: `review-r0-v1`, `v0.2.0`, etc. Pushing matching tags triggers [`.github/workflows/release-tag.yml`](../../.github/workflows/release-tag.yml) (GitHub Release with generated notes).
+Future product milestones: `review-r0-v1`, `v0.2.0`, etc. Pushing a tag whose commit **includes** `.github/workflows/release-tag.yml` triggers an automatic GitHub Release. Tags on older commits (e.g. `saas-base-v1`) may need a one-time `gh release create` or **Actions → Release tag → Run workflow** with the tag name.
 
 ---
 

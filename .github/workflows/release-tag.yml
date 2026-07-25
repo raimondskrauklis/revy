@@ -8,6 +8,12 @@ on:
       - "saas-base-v*"
       - "review-r*-v*"
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Existing tag to publish as a GitHub Release"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -23,5 +29,6 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
           generate_release_notes: true
-          prerelease: ${{ contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
+          prerelease: ${{ contains(github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name, '-alpha') || contains(github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name, '-beta') || contains(github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name, '-rc') }}
