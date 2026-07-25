@@ -8,6 +8,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LayoutDashboard, Plug, Settings } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { ImpersonationBanner } from '@/features/admin/components/ImpersonationBanner';
 import { StackShell } from '@/components/layout/StackShell';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher';
@@ -71,6 +72,7 @@ export function AppShellLayout() {
       </aside>
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <ImpersonationBanner />
         <AppHeader />
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
           <Outlet />

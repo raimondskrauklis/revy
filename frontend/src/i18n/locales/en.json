@@ -358,11 +358,33 @@
         "stripeCustomer": "Stripe customer",
         "created": "Created",
         "updated": "Updated"
+      },
+      "members": {
+        "title": "Members",
+        "description": "Workspace members available for impersonation.",
+        "empty": "No members found.",
+        "columns": {
+          "email": "Email",
+          "role": "Role",
+          "status": "Status",
+          "actions": "Actions"
+        }
       }
+    },
+    "impersonation": {
+      "banner": "Impersonating {{email}} — {{reason}}",
+      "stop": "Stop impersonation",
+      "start": "Start impersonation",
+      "startTitle": "Start impersonation",
+      "startDescription": "You will view the app as {{email}}. A reason is required for the audit log.",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Support ticket or investigation context",
+      "reasonHint": "Minimum 10 characters. Recorded in the audit log."
     },
     "audit": {
       "title": "Audit log",
       "description": "Search platform-wide audit events across all workspaces.",
+      "impersonatorHint": "Impersonator column shows the platform admin when an action was performed while impersonating.",
       "empty": "No audit events found.",
       "filters": {
         "workspaceId": "Workspace ID",
@@ -375,6 +397,7 @@
         "time": "Time",
         "action": "Action",
         "actor": "Actor",
+        "impersonator": "Impersonator",
         "workspace": "Workspace"
       },
       "actions": {

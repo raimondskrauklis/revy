@@ -19,6 +19,14 @@ export interface MeMembership {
   role: AppRole;
 }
 
+export interface MeImpersonation {
+  active: boolean;
+  actor_user_id: string;
+  target_user_id: string;
+  target_email: string;
+  reason: string;
+}
+
 export interface MeUser {
   id: string;
   email: string;
@@ -30,6 +38,7 @@ export interface MeUser {
   workspace_id: string | null;
   role: AppRole | null;
   memberships: MeMembership[];
+  impersonation?: MeImpersonation | null;
 }
 
 export async function fetchMe(): Promise<MeUser> {

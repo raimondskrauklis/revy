@@ -27,4 +27,6 @@ class AuditListItem(BaseModel):
     resource_id: str | None
     actor_user_id: UUID
     actor_email: str
+    impersonator_user_id: UUID | None = None
+    impersonator_email: str | None = None
     metadata: dict[str, Any]

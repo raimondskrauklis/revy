@@ -1,6 +1,7 @@
 // frontend/src/features/admin/routes.tsx
 import { Navigate } from 'react-router-dom';
 import { RequirePlatformAdmin } from '@/components/auth/RequirePlatformAdmin';
+import { BlockAdminWhileImpersonating } from '@/components/auth/BlockAdminWhileImpersonating';
 import { AdminLayout } from '@/features/admin/layout/AdminLayout';
 import { AdminDashboardPage } from '@/features/admin/pages/AdminDashboardPage';
 import { AdminSettingsPage } from '@/features/admin/pages/AdminSettingsPage';
@@ -13,16 +14,21 @@ export const adminRoutes = {
   element: <RequirePlatformAdmin />,
   children: [
     {
-      path: '/admin',
-      element: <AdminLayout />,
+      element: <BlockAdminWhileImpersonating />,
       children: [
-        { index: true, element: <Navigate to="/admin/dashboard" replace /> },
-        { path: 'dashboard', element: <AdminDashboardPage /> },
-        { path: 'workspaces', element: <WorkspacesPage /> },
-        { path: 'workspaces/:workspaceId', element: <WorkspaceDetailPage /> },
-        { path: 'users', element: <AdminUsersPage /> },
-        { path: 'audit', element: <AuditSearchPage /> },
-        { path: 'settings', element: <AdminSettingsPage /> },
+        {
+          path: '/admin',
+          element: <AdminLayout />,
+          children: [
+            { index: true, element: <Navigate to="/admin/dashboard" replace /> },
+            { path: 'dashboard', element: <AdminDashboardPage /> },
+            { path: 'workspaces', element: <WorkspacesPage /> },
+            { path: 'workspaces/:workspaceId', element: <WorkspaceDetailPage /> },
+            { path: 'users', element: <AdminUsersPage /> },
+            { path: 'audit', element: <AuditSearchPage /> },
+            { path: 'settings', element: <AdminSettingsPage /> },
+          ],
+        },
       ],
     },
   ],

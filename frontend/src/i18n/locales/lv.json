@@ -358,11 +358,33 @@
         "stripeCustomer": "Stripe klients",
         "created": "Izveidota",
         "updated": "Atjaunināta"
+      },
+      "members": {
+        "title": "Dalībnieki",
+        "description": "Darba vides dalībnieki, pieejami personifikācijai.",
+        "empty": "Dalībnieki nav atrasti.",
+        "columns": {
+          "email": "E-pasts",
+          "role": "Loma",
+          "status": "Statuss",
+          "actions": "Darbības"
+        }
       }
+    },
+    "impersonation": {
+      "banner": "Personificē {{email}} — {{reason}}",
+      "stop": "Beigt personifikāciju",
+      "start": "Sākt personifikāciju",
+      "startTitle": "Sākt personifikāciju",
+      "startDescription": "Jūs skatīsities lietotni kā {{email}}. Audita žurnālam nepieciešams iemesls.",
+      "reasonLabel": "Iemesls",
+      "reasonPlaceholder": "Atbalsta pieteikums vai izmeklēšanas konteksts",
+      "reasonHint": "Vismaz 10 rakstzīmes. Tiek reģistrēts audita žurnālā."
     },
     "audit": {
       "title": "Audita žurnāls",
       "description": "Meklēt platformas auditēšanas notikumus visās darba vidēs.",
+      "impersonatorHint": "Personificētāja kolonna rāda platformas administratoru, ja darbība veikta personificējot.",
       "empty": "Audita notikumi nav atrasti.",
       "filters": {
         "workspaceId": "Darba vides ID",
@@ -375,6 +397,7 @@
         "time": "Laiks",
         "action": "Darbība",
         "actor": "Veicējs",
+        "impersonator": "Personificētājs",
         "workspace": "Darba vide"
       },
       "actions": {

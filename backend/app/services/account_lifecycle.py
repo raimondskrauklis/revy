@@ -54,6 +54,7 @@ async def delete_workspace(
     workspace_id: UUID,
     confirm_slug: str,
     actor_user_id: UUID,
+    impersonator_user_id: UUID | None = None,
 ) -> None:
     workspace = await session.scalar(
         select(WorkspaceORM).where(WorkspaceORM.id == workspace_id).with_for_update()
@@ -84,6 +85,7 @@ async def delete_workspace(
     await record_audit(
         session,
         actor_user_id=actor_user_id,
+        impersonator_user_id=impersonator_user_id,
         workspace_id=workspace_id,
         action="workspace.deleted",
         resource_type="workspace",
@@ -123,6 +125,7 @@ async def delete_account(
     *,
     user_id: UUID,
     confirm_email: str,
+    impersonator_user_id: UUID | None = None,
 ) -> None:
     user = await session.scalar(select(UserORM).where(UserORM.id == user_id).with_for_update())
     if user is None:
@@ -153,6 +156,7 @@ async def delete_account(
     await record_audit(
         session,
         actor_user_id=user_id,
+        impersonator_user_id=impersonator_user_id,
         workspace_id=None,
         action="user.deleted",
         resource_type="user",

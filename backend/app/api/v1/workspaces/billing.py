@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth import CurrentUser, get_current_user
+from app.core.auth import CurrentUser, get_current_user, require_impersonation_allowed
 from app.core.database import get_db
 from app.core.exceptions import ForbiddenError, NotFoundError
 from app.core.permissions import Permission, require_permission
@@ -46,6 +46,7 @@ async def post_checkout_session(
     workspace_id: UUID,
     body: CheckoutSessionRequest,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    _allowed: Annotated[CurrentUser, Depends(require_impersonation_allowed())],
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> SuccessResponse[CheckoutSessionResponse]:
     require_permission(current_user, Permission.admin_users)
@@ -63,6 +64,7 @@ async def post_checkout_session(
         plan=body.plan,
         actor_user_id=current_user.user_id,
         actor_email=current_user.email,
+        impersonator_user_id=current_user.impersonator_user_id,
     )
     await session.commit()
     return SuccessResponse(data=CheckoutSessionResponse(url=url))
@@ -72,6 +74,7 @@ async def post_checkout_session(
 async def post_portal_session(
     workspace_id: UUID,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    _allowed: Annotated[CurrentUser, Depends(require_impersonation_allowed())],
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> SuccessResponse[PortalSessionResponse]:
     require_permission(current_user, Permission.admin_users)
@@ -87,6 +90,7 @@ async def post_portal_session(
         session,
         workspace_id=workspace_id,
         actor_user_id=current_user.user_id,
+        impersonator_user_id=current_user.impersonator_user_id,
     )
     await session.commit()
     return SuccessResponse(data=PortalSessionResponse(url=url))

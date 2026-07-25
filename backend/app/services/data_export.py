@@ -48,6 +48,7 @@ async def create_export_job(
     session: AsyncSession,
     *,
     user_id: UUID,
+    impersonator_user_id: UUID | None = None,
 ) -> DataExportJobORM:
     active = await _get_active_job(session, user_id=user_id)
     if active is not None:
@@ -63,6 +64,7 @@ async def create_export_job(
     await record_audit(
         session,
         actor_user_id=user_id,
+        impersonator_user_id=impersonator_user_id,
         workspace_id=None,
         action="user.export_requested",
         resource_type="data_export_job",

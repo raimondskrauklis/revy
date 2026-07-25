@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
-from app.core.auth import CurrentUser, require_super_admin
+from app.core.auth import CurrentUser, require_impersonation_allowed, require_super_admin
 from app.core.database import get_db
 from app.core.idempotency import idempotency_guard
 from app.schemas.common import SuccessResponse
@@ -26,6 +26,7 @@ router = APIRouter(prefix="/users", tags=["admin-users"])
 @router.get("/pending", response_model=SuccessResponse[list[PendingUserResponse]])
 async def get_pending_users(
     _admin: Annotated[CurrentUser, Depends(require_super_admin())],
+    _allowed: Annotated[CurrentUser, Depends(require_impersonation_allowed())],
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> SuccessResponse[list[PendingUserResponse]]:
     users = await list_pending_users(session)
@@ -38,6 +39,7 @@ async def get_pending_users(
 async def post_approve_user(
     user_id: UUID,
     _admin: Annotated[CurrentUser, Depends(require_super_admin())],
+    _allowed: Annotated[CurrentUser, Depends(require_impersonation_allowed())],
     session: Annotated[AsyncSession, Depends(get_db)],
     idempotent: Annotated[JSONResponse | None, Depends(idempotency_guard)] = None,
 ) -> SuccessResponse[MeResponse] | JSONResponse:
@@ -53,6 +55,7 @@ async def post_approve_user(
 async def post_reject_user(
     user_id: UUID,
     _admin: Annotated[CurrentUser, Depends(require_super_admin())],
+    _allowed: Annotated[CurrentUser, Depends(require_impersonation_allowed())],
     session: Annotated[AsyncSession, Depends(get_db)],
     idempotent: Annotated[JSONResponse | None, Depends(idempotency_guard)] = None,
 ) -> SuccessResponse[PendingUserResponse] | JSONResponse:

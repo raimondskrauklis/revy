@@ -18,6 +18,14 @@ class MeMembership(BaseModel):
     role: AppRole
 
 
+class MeImpersonationInfo(BaseModel):
+    active: bool
+    actor_user_id: UUID
+    target_user_id: UUID
+    target_email: str
+    reason: str
+
+
 class MeResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -31,6 +39,7 @@ class MeResponse(BaseModel):
     locale: str
     timezone: str
     memberships: list[MeMembership]
+    impersonation: MeImpersonationInfo | None = None
 
 
 class MeUpdate(BaseModel):

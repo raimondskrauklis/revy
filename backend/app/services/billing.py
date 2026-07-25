@@ -90,6 +90,7 @@ async def create_checkout_session(
     plan: str,
     actor_user_id: UUID,
     actor_email: str | None,
+    impersonator_user_id: UUID | None = None,
     stripe_client: StripeClientProtocol | None = None,
 ) -> str:
     _require_stripe_enabled()
@@ -127,6 +128,7 @@ async def create_checkout_session(
     await record_audit(
         session,
         actor_user_id=actor_user_id,
+        impersonator_user_id=impersonator_user_id,
         workspace_id=workspace_id,
         action="billing.checkout_started",
         resource_type="workspace",
@@ -141,6 +143,7 @@ async def create_portal_session(
     *,
     workspace_id: UUID,
     actor_user_id: UUID,
+    impersonator_user_id: UUID | None = None,
     stripe_client: StripeClientProtocol | None = None,
 ) -> str:
     _require_stripe_enabled()
@@ -162,6 +165,7 @@ async def create_portal_session(
     await record_audit(
         session,
         actor_user_id=actor_user_id,
+        impersonator_user_id=impersonator_user_id,
         workspace_id=workspace_id,
         action="billing.portal_opened",
         resource_type="workspace",

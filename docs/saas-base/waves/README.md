@@ -12,7 +12,7 @@ Linear **phase-execution** order. General plans stay in [`../`](../README.md); e
 | W3 — Dashboard | [SAAS_BASE_W3_EXECUTION.md](./SAAS_BASE_W3_EXECUTION.md) | done (`6817a84`) |
 | W4 — Stripe | [SAAS_BASE_W4_EXECUTION.md](./SAAS_BASE_W4_EXECUTION.md) | done (`cdb94e4`) |
 | W5 — Platform admin | [SAAS_BASE_W5_EXECUTION.md](./SAAS_BASE_W5_EXECUTION.md) | done (`d47e1ec`) |
-| W6 — Lifecycle | [SAAS_BASE_W6_EXECUTION.md](./SAAS_BASE_W6_EXECUTION.md) | pending |
-| W7 — Impersonation | [SAAS_BASE_W7_EXECUTION.md](./SAAS_BASE_W7_EXECUTION.md) | pending |
+| W6 — Lifecycle | [SAAS_BASE_W6_EXECUTION.md](./SAAS_BASE_W6_EXECUTION.md) | done (`1abc05e`) |
+| W7 — Impersonation | [SAAS_BASE_W7_EXECUTION.md](./SAAS_BASE_W7_EXECUTION.md) | done |
 
-**Next:** `phase-execution` from [SAAS_BASE_W0_EXECUTION.md](./SAAS_BASE_W0_EXECUTION.md) (all waves peer-reviewed).
+**Program status:** complete — SaaS base W0–W7 shipped.

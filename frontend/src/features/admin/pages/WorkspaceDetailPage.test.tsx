@@ -7,12 +7,20 @@ import { WorkspaceDetailPage } from '@/features/admin/pages/WorkspaceDetailPage'
 
 vi.mock('@/features/admin/api', () => ({
   fetchAdminWorkspaceDetail: vi.fn(),
+  fetchAdminWorkspaceMembers: vi.fn(),
   suspendAdminWorkspace: vi.fn(),
   unsuspendAdminWorkspace: vi.fn(),
 }));
 
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({
+    refetchUser: vi.fn(),
+  }),
+}));
+
 import {
   fetchAdminWorkspaceDetail,
+  fetchAdminWorkspaceMembers,
   suspendAdminWorkspace,
 } from '@/features/admin/api';
 
@@ -31,6 +39,10 @@ const workspace = {
 describe('WorkspaceDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(fetchAdminWorkspaceMembers).mockResolvedValue({
+      items: [],
+      cursor: { next_cursor: null, has_next: false },
+    });
   });
 
   it('renders workspace detail', async () => {

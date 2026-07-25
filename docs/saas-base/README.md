@@ -1,10 +1,10 @@
 # SaaS base program (Revy repo)
 
-**Fast-start foundation** for B2B multi-tenant apps on starter-pack rails — settings, dashboard, workspace admin, Stripe, platform ops, lifecycle. Revy is first consumer; product code (`installations`, reviewer) stays **additive**.
+**Fast-start foundation** for B2B multi-tenant apps on starter-pack rails — settings, dashboard, workspace admin, Stripe, platform ops, lifecycle, impersonation. Revy is first consumer; product code (`installations`, reviewer) stays **additive**.
 
 **Prerequisite:** scaffold P0–P5 complete ([`docs/starter-pack/`](../starter-pack/)).
 
-**Quality over speed** — W0–W7 sequence work; waves gate nav links, not scope hiding.
+**Program status:** **complete** — all waves W0–W7 shipped. Next: maintenance and product slices (Revy review pipeline).
 
 **IA:** [SETTINGS_IA.md](./SETTINGS_IA.md) (committed; mirror in `internal-docs/starter-pack/` after W0).
 
@@ -41,11 +41,11 @@
 | W0 | [waves/SAAS_BASE_W0_EXECUTION.md](./waves/SAAS_BASE_W0_EXECUTION.md) | done |
 | W1 | [waves/SAAS_BASE_W1_EXECUTION.md](./waves/SAAS_BASE_W1_EXECUTION.md) | done |
 | W2 | [waves/SAAS_BASE_W2_EXECUTION.md](./waves/SAAS_BASE_W2_EXECUTION.md) | done |
-| W3 | [waves/SAAS_BASE_W3_EXECUTION.md](./waves/SAAS_BASE_W3_EXECUTION.md) | pending |
-| W4 | [waves/SAAS_BASE_W4_EXECUTION.md](./waves/SAAS_BASE_W4_EXECUTION.md) | pending |
-| W5 | [waves/SAAS_BASE_W5_EXECUTION.md](./waves/SAAS_BASE_W5_EXECUTION.md) | pending |
-| W6 | [waves/SAAS_BASE_W6_EXECUTION.md](./waves/SAAS_BASE_W6_EXECUTION.md) | pending |
-| W7 | [waves/SAAS_BASE_W7_EXECUTION.md](./waves/SAAS_BASE_W7_EXECUTION.md) | pending |
+| W3 | [waves/SAAS_BASE_W3_EXECUTION.md](./waves/SAAS_BASE_W3_EXECUTION.md) | done |
+| W4 | [waves/SAAS_BASE_W4_EXECUTION.md](./waves/SAAS_BASE_W4_EXECUTION.md) | done |
+| W5 | [waves/SAAS_BASE_W5_EXECUTION.md](./waves/SAAS_BASE_W5_EXECUTION.md) | done |
+| W6 | [waves/SAAS_BASE_W6_EXECUTION.md](./waves/SAAS_BASE_W6_EXECUTION.md) | done |
+| W7 | [waves/SAAS_BASE_W7_EXECUTION.md](./waves/SAAS_BASE_W7_EXECUTION.md) | done |
 
 Full table: [waves/README.md](./waves/README.md).
 
@@ -59,6 +59,7 @@ Full table: [waves/README.md](./waves/README.md).
 | **Extensions** | Single registry, multiple slots (dashboard, integrations, charts) |
 | **Workspace RBAC** | Fixed 3 roles + read-only matrix |
 | **Billing** | Workspace = Stripe Customer |
+| **Impersonation** | App-layer sessions; KC JWT unchanged; mandatory reason; audit `impersonator_user_id` |
 
 ---
 
@@ -76,4 +77,4 @@ Revy review pipeline; KC realm automation; KC Organizations; per-seat/usage/ente
 
 ## Next
 
-`phase-execution` from [waves/SAAS_BASE_W0_EXECUTION.md](./waves/SAAS_BASE_W0_EXECUTION.md) — all W0–W7 execution plans peer-reviewed.
+Maintenance and Revy product slices — SaaS base W0–W7 complete.

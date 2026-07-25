@@ -1,0 +1,8 @@
+[
+  {
+    "id": "saas-settings-admin",
+    "date": "2026-07-25",
+    "title": "SaaS settings & admin",
+    "summary": "Settings shell, team management, Stripe billing, platform admin console, account lifecycle, and super-admin impersonation with audit trail."
+  }
+]

@@ -10,6 +10,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.core.exceptions import ValidationError
 from app.core.pagination import (
@@ -63,15 +64,39 @@ async def record_audit(
     return row
 
 
+def _audit_list_item(
+    audit_row: AuditLogORM,
+    actor: UserORM,
+    impersonator: UserORM | None,
+) -> AuditListItem:
+    return AuditListItem(
+        id=audit_row.id,
+        created_at=audit_row.created_at,
+        action=audit_row.action,
+        resource_type=audit_row.resource_type,
+        resource_id=audit_row.resource_id,
+        actor_user_id=audit_row.actor_user_id,
+        actor_email=actor.email,
+        impersonator_user_id=audit_row.impersonator_user_id,
+        impersonator_email=impersonator.email if impersonator else None,
+        metadata=_cap_metadata(audit_row.metadata_json),
+    )
+
+
 async def list_workspace_audit(
     session: AsyncSession,
     *,
     workspace_id: UUID,
     params: CursorParams,
 ) -> CursorResponse[AuditListItem]:
+    impersonator_user = aliased(UserORM)
     stmt = (
-        select(AuditLogORM, UserORM)
+        select(AuditLogORM, UserORM, impersonator_user)
         .join(UserORM, UserORM.id == AuditLogORM.actor_user_id)
+        .outerjoin(
+            impersonator_user,
+            impersonator_user.id == AuditLogORM.impersonator_user_id,
+        )
         .where(AuditLogORM.workspace_id == workspace_id)
     )
 
@@ -95,24 +120,14 @@ async def list_workspace_audit(
     if has_next:
         rows = rows[: params.limit]
 
-    items: list[AuditListItem] = []
-    for audit_row, actor in rows:
-        items.append(
-            AuditListItem(
-                id=audit_row.id,
-                created_at=audit_row.created_at,
-                action=audit_row.action,
-                resource_type=audit_row.resource_type,
-                resource_id=audit_row.resource_id,
-                actor_user_id=audit_row.actor_user_id,
-                actor_email=actor.email,
-                metadata=_cap_metadata(audit_row.metadata_json),
-            )
-        )
+    items = [
+        _audit_list_item(audit_row, actor, impersonator)
+        for audit_row, actor, impersonator in rows
+    ]
 
     next_cursor = None
     if has_next and rows:
-        last_row, _ = rows[-1]
+        last_row, _, _ = rows[-1]
         next_cursor = encode_cursor(last_row.created_at, last_row.id)
 
     return CursorResponse(
@@ -137,7 +152,15 @@ async def list_platform_audit(
     filters: PlatformAuditFilters | None = None,
 ) -> CursorResponse[PlatformAuditListItem]:
     active_filters = filters or PlatformAuditFilters()
-    stmt = select(AuditLogORM, UserORM).join(UserORM, UserORM.id == AuditLogORM.actor_user_id)
+    impersonator_user = aliased(UserORM)
+    stmt = (
+        select(AuditLogORM, UserORM, impersonator_user)
+        .join(UserORM, UserORM.id == AuditLogORM.actor_user_id)
+        .outerjoin(
+            impersonator_user,
+            impersonator_user.id == AuditLogORM.impersonator_user_id,
+        )
+    )
 
     if active_filters.workspace_id is not None:
         stmt = stmt.where(AuditLogORM.workspace_id == active_filters.workspace_id)
@@ -173,24 +196,18 @@ async def list_platform_audit(
         rows = rows[: params.limit]
 
     items: list[PlatformAuditListItem] = []
-    for audit_row, actor in rows:
+    for audit_row, actor, impersonator in rows:
+        base = _audit_list_item(audit_row, actor, impersonator)
         items.append(
             PlatformAuditListItem(
-                id=audit_row.id,
-                created_at=audit_row.created_at,
-                action=audit_row.action,
-                resource_type=audit_row.resource_type,
-                resource_id=audit_row.resource_id,
-                actor_user_id=audit_row.actor_user_id,
-                actor_email=actor.email,
-                metadata=_cap_metadata(audit_row.metadata_json),
+                **base.model_dump(),
                 workspace_id=audit_row.workspace_id,
             )
         )
 
     next_cursor = None
     if has_next and rows:
-        last_row, _ = rows[-1]
+        last_row, _, _ = rows[-1]
         next_cursor = encode_cursor(last_row.created_at, last_row.id)
 
     return CursorResponse(

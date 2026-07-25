@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth import CurrentUser, get_current_user
+from app.core.auth import CurrentUser, get_current_user, require_impersonation_allowed
 from app.core.database import get_db
 from app.core.exceptions import ForbiddenError
 from app.core.permissions import Permission, require_permission
@@ -40,6 +40,7 @@ async def delete_workspace_route(
     workspace_id: UUID,
     body: DeleteWorkspaceRequest,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    _allowed: Annotated[CurrentUser, Depends(require_impersonation_allowed())],
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
     require_permission(current_user, Permission.admin_users)
@@ -52,5 +53,6 @@ async def delete_workspace_route(
         workspace_id=workspace_id,
         confirm_slug=body.confirm_slug,
         actor_user_id=current_user.user_id,
+        impersonator_user_id=current_user.impersonator_user_id,
     )
     await session.commit()

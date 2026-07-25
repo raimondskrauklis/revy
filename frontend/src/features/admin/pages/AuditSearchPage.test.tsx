@@ -27,7 +27,7 @@ describe('AuditSearchPage', () => {
     });
   });
 
-  it('lists audit events', async () => {
+  it('lists audit events with impersonator column', async () => {
     vi.mocked(fetchPlatformAudit).mockResolvedValue({
       items: [
         {
@@ -37,7 +37,9 @@ describe('AuditSearchPage', () => {
           resource_type: 'workspace',
           resource_id: 'ws-1',
           actor_user_id: 'u1',
-          actor_email: 'admin@example.com',
+          actor_email: 'member@example.com',
+          impersonator_user_id: 'admin-1',
+          impersonator_email: 'admin@example.com',
           metadata: {},
           workspace_id: 'ws-1',
         },
@@ -49,6 +51,7 @@ describe('AuditSearchPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/workspace viewed/i)).toBeInTheDocument();
+      expect(screen.getByText('member@example.com')).toBeInTheDocument();
       expect(screen.getByText('admin@example.com')).toBeInTheDocument();
     });
   });

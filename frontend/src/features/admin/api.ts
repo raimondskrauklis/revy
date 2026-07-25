@@ -49,8 +49,27 @@ export interface PlatformAuditListItem {
   resource_id: string | null;
   actor_user_id: string;
   actor_email: string;
+  impersonator_user_id: string | null;
+  impersonator_email: string | null;
   metadata: Record<string, unknown>;
   workspace_id: string | null;
+}
+
+export interface AdminWorkspaceMember {
+  user_id: string;
+  email: string;
+  full_name: string | null;
+  status: UserStatus;
+  role: string;
+  joined_at: string;
+}
+
+export interface ActiveImpersonation {
+  active: boolean;
+  target_user_id?: string;
+  target_email?: string;
+  reason?: string;
+  started_at?: string;
 }
 
 export interface AdminWorkspaceListParams {
@@ -124,4 +143,28 @@ export async function fetchPlatformAudit(
 ): Promise<CursorPage<PlatformAuditListItem>> {
   const response = await apiClient.get('/admin/audit', { params });
   return parseSuccess<CursorPage<PlatformAuditListItem>>(response);
+}
+
+export async function fetchAdminWorkspaceMembers(
+  workspaceId: string,
+  params?: { cursor?: string; limit?: number },
+): Promise<CursorPage<AdminWorkspaceMember>> {
+  const response = await apiClient.get(`/admin/workspaces/${workspaceId}/members`, { params });
+  return parseSuccess<CursorPage<AdminWorkspaceMember>>(response);
+}
+
+export async function startImpersonation(
+  userId: string,
+  reason: string,
+): Promise<ActiveImpersonation> {
+  const response = await apiClient.post('/admin/impersonation/start', {
+    user_id: userId,
+    reason,
+  });
+  return parseSuccess<ActiveImpersonation>(response);
+}
+
+export async function stopImpersonation(): Promise<ActiveImpersonation> {
+  const response = await apiClient.post('/admin/impersonation/stop');
+  return parseSuccess<ActiveImpersonation>(response);
 }

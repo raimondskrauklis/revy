@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, status
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth import CurrentUser, get_current_user
+from app.core.auth import CurrentUser, get_current_user, require_impersonation_allowed
 from app.core.database import get_db
 from app.core.exceptions import ForbiddenError
 from app.schemas.common import SuccessResponse
@@ -16,27 +16,53 @@ from app.schemas.lifecycle import (
     ExportJobCreateResponse,
     ExportJobStatusResponse,
 )
-from app.schemas.me import MeResponse, MeUpdate, SetActiveWorkspaceRequest
+from app.schemas.me import MeImpersonationInfo, MeResponse, MeUpdate, SetActiveWorkspaceRequest
 from app.services.account_lifecycle import delete_account
 from app.services.data_export import (
     create_export_job,
     get_export_job_for_user,
     resolve_download_path,
 )
+from app.services.impersonation import get_active_session
 from app.services.users import build_me_response, set_active_workspace, update_me
 from app.workers.export_tasks import run_data_export_job
 
 router = APIRouter(prefix="/me", tags=["me"])
 
 
-@router.get("", response_model=SuccessResponse[MeResponse])
-async def get_me(
-    current_user: Annotated[CurrentUser, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
-) -> SuccessResponse[MeResponse]:
+async def _impersonation_info(
+    session: AsyncSession,
+    current_user: CurrentUser,
+) -> MeImpersonationInfo | None:
+    if not current_user.is_impersonating or current_user.actor_user_id is None:
+        return None
+
+    active_session = await get_active_session(session, actor_user_id=current_user.actor_user_id)
+    if active_session is None:
+        return None
+
+    return MeImpersonationInfo(
+        active=True,
+        actor_user_id=current_user.actor_user_id,
+        target_user_id=active_session.target_user_id,
+        target_email=current_user.email or "",
+        reason=active_session.reason,
+    )
+
+
+async def _build_current_me(
+    session: AsyncSession,
+    current_user: CurrentUser,
+) -> MeResponse:
     if current_user.user_id is None:
         raise ForbiddenError(message="User not provisioned")
-    me = await build_me_response(session, current_user.user_id)
+
+    impersonation = await _impersonation_info(session, current_user)
+    me = await build_me_response(
+        session,
+        current_user.user_id,
+        impersonation=impersonation,
+    )
     if current_user.workspace_id is not None:
         me = me.model_copy(
             update={
@@ -44,6 +70,17 @@ async def get_me(
                 "role": current_user.role,
             }
         )
+    if impersonation is not None and current_user.platform_role is not None:
+        me = me.model_copy(update={"platform_role": current_user.platform_role})
+    return me
+
+
+@router.get("", response_model=SuccessResponse[MeResponse])
+async def get_me(
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> SuccessResponse[MeResponse]:
+    me = await _build_current_me(session, current_user)
     return SuccessResponse(data=me)
 
 
@@ -59,14 +96,7 @@ async def patch_me(
     await update_me(session, user_id=current_user.user_id, payload=body)
     await session.commit()
 
-    me = await build_me_response(session, current_user.user_id)
-    if current_user.workspace_id is not None:
-        me = me.model_copy(
-            update={
-                "workspace_id": current_user.workspace_id,
-                "role": current_user.role,
-            }
-        )
+    me = await _build_current_me(session, current_user)
     return SuccessResponse(data=me)
 
 
@@ -91,6 +121,7 @@ async def patch_active_workspace(
 async def delete_me(
     body: DeleteAccountRequest,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    _allowed: Annotated[CurrentUser, Depends(require_impersonation_allowed())],
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> None:
     if current_user.user_id is None:
@@ -100,6 +131,7 @@ async def delete_me(
         session,
         user_id=current_user.user_id,
         confirm_email=body.confirm_email,
+        impersonator_user_id=current_user.impersonator_user_id,
     )
     await session.commit()
 
@@ -107,12 +139,17 @@ async def delete_me(
 @router.post("/export", response_model=SuccessResponse[ExportJobCreateResponse])
 async def post_export_job(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    _allowed: Annotated[CurrentUser, Depends(require_impersonation_allowed())],
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> SuccessResponse[ExportJobCreateResponse]:
     if current_user.user_id is None:
         raise ForbiddenError(message="User not provisioned")
 
-    job = await create_export_job(session, user_id=current_user.user_id)
+    job = await create_export_job(
+        session,
+        user_id=current_user.user_id,
+        impersonator_user_id=current_user.impersonator_user_id,
+    )
     await session.commit()
     run_data_export_job.delay(str(job.id))
     return SuccessResponse(data=ExportJobCreateResponse(job_id=job.id))

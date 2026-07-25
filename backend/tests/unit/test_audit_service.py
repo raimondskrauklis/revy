@@ -47,7 +47,8 @@ def _audit_row(
     actor_id: uuid.UUID,
     action: str = "workspace.updated",
     metadata: dict | None = None,
-) -> tuple[AuditLogORM, UserORM]:
+    impersonator_id: uuid.UUID | None = None,
+) -> tuple[AuditLogORM, UserORM, UserORM | None]:
     actor = UserORM(
         keycloak_user_id="kc-1",
         email="actor@example.com",
@@ -56,8 +57,19 @@ def _audit_row(
     )
     actor.id = actor_id
 
+    impersonator = None
+    if impersonator_id is not None:
+        impersonator = UserORM(
+            keycloak_user_id="kc-admin",
+            email="admin@example.com",
+            full_name="Admin",
+            status=UserStatus.active,
+        )
+        impersonator.id = impersonator_id
+
     row = AuditLogORM(
         actor_user_id=actor_id,
+        impersonator_user_id=impersonator_id,
         workspace_id=workspace_id,
         action=action,
         resource_type="workspace",
@@ -66,18 +78,39 @@ def _audit_row(
     )
     row.id = uuid.uuid4()
     row.created_at = datetime.now(UTC)
-    return row, actor
+    return row, actor, impersonator
+
+
+@pytest.mark.asyncio
+async def test_record_audit_persists_impersonator():
+    session = AsyncMock()
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    actor_id = uuid.uuid4()
+    impersonator_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+
+    row = await record_audit(
+        session,
+        actor_user_id=actor_id,
+        impersonator_user_id=impersonator_id,
+        workspace_id=workspace_id,
+        action="workspace.updated",
+    )
+
+    assert row.impersonator_user_id == impersonator_id
 
 
 @pytest.mark.asyncio
 async def test_list_workspace_audit_returns_joined_rows():
     workspace_id = uuid.uuid4()
     actor_id = uuid.uuid4()
-    audit_row, actor = _audit_row(workspace_id=workspace_id, actor_id=actor_id)
+    audit_row, actor, impersonator = _audit_row(workspace_id=workspace_id, actor_id=actor_id)
 
     session = AsyncMock()
     result = MagicMock()
-    result.all.return_value = [(audit_row, actor)]
+    result.all.return_value = [(audit_row, actor, impersonator)]
     session.execute = AsyncMock(return_value=result)
 
     page = await list_workspace_audit(
@@ -95,7 +128,7 @@ async def test_list_workspace_audit_caps_oversized_metadata():
     workspace_id = uuid.uuid4()
     actor_id = uuid.uuid4()
     large_metadata = {"payload": "x" * 5000}
-    audit_row, actor = _audit_row(
+    audit_row, actor, impersonator = _audit_row(
         workspace_id=workspace_id,
         actor_id=actor_id,
         metadata=large_metadata,
@@ -103,7 +136,7 @@ async def test_list_workspace_audit_caps_oversized_metadata():
 
     session = AsyncMock()
     result = MagicMock()
-    result.all.return_value = [(audit_row, actor)]
+    result.all.return_value = [(audit_row, actor, impersonator)]
     session.execute = AsyncMock(return_value=result)
 
     page = await list_workspace_audit(
@@ -138,15 +171,16 @@ async def test_list_workspace_audit_passes_through_small_metadata():
     workspace_id = uuid.uuid4()
     actor_id = uuid.uuid4()
     metadata = {"old_name": "Acme", "new_name": "Acme Corp"}
-    audit_row, actor = _audit_row(
+    audit_row, actor, impersonator = _audit_row(
         workspace_id=workspace_id,
         actor_id=actor_id,
         metadata=metadata,
+        impersonator_id=uuid.uuid4(),
     )
 
     session = AsyncMock()
     result = MagicMock()
-    result.all.return_value = [(audit_row, actor)]
+    result.all.return_value = [(audit_row, actor, impersonator)]
     session.execute = AsyncMock(return_value=result)
 
     page = await list_workspace_audit(
@@ -154,4 +188,5 @@ async def test_list_workspace_audit_passes_through_small_metadata():
     )
 
     assert page.items[0].metadata == metadata
+    assert page.items[0].impersonator_email == "admin@example.com"
     assert len(json.dumps(page.items[0].metadata).encode("utf-8")) <= 4096

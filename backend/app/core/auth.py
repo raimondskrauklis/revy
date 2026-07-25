@@ -22,6 +22,7 @@ from app.core.logging import get_logger
 from app.models.users import UserORM
 from app.models.workspace_memberships import WorkspaceMembershipORM
 from app.models.workspaces import WorkspaceORM
+from app.services.impersonation import get_active_session
 from app.services.onboarding import maybe_auto_provision_user
 from app.services.users import activate_bootstrap_super_admin, ensure_user_from_token
 
@@ -35,13 +36,32 @@ ACTIVE_WORKSPACE_HEADER = "X-Workspace-Id"
 @dataclass
 class CurrentUser:
     sub: str
-    user_id: UUID | None = None
+    actor_user_id: UUID | None = None
+    impersonated_user_id: UUID | None = None
     email: str | None = None
     platform_role: PlatformRole | None = None
     workspace_id: UUID | None = None
     role: AppRole | None = None
     status: UserStatus | None = None
     roles: frozenset[str] = frozenset()
+
+    @property
+    def user_id(self) -> UUID | None:
+        return self.effective_user_id
+
+    @property
+    def effective_user_id(self) -> UUID | None:
+        return self.impersonated_user_id or self.actor_user_id
+
+    @property
+    def impersonator_user_id(self) -> UUID | None:
+        if self.impersonated_user_id is None:
+            return None
+        return self.actor_user_id
+
+    @property
+    def is_impersonating(self) -> bool:
+        return self.impersonated_user_id is not None
 
     @property
     def is_super_admin(self) -> bool:
@@ -161,6 +181,15 @@ async def _resolve_active_workspace(
     return None, None
 
 
+def _assert_effective_user_active(status: UserStatus) -> None:
+    if status == UserStatus.suspended:
+        raise ForbiddenError(message="Account suspended")
+    if status == UserStatus.rejected:
+        raise ForbiddenError(message="Account rejected")
+    if status == UserStatus.deleted:
+        raise ForbiddenError(message="Account deleted", error_code="account_deleted")
+
+
 async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
     session: Annotated[AsyncSession, Depends(get_db)],
@@ -175,50 +204,67 @@ async def get_current_user(
     if not sub:
         raise UnauthorizedError("Invalid token: missing sub")
 
-    user = await ensure_user_from_token(
+    actor = await ensure_user_from_token(
         session,
         sub=sub,
         email=str(email) if email else None,
         email_verified=bool(payload.get("email_verified")),
     )
-    if user is None:
+    if actor is None:
         raise UnauthorizedError("User not provisioned")
 
     given_name = payload.get("given_name")
     family_name = payload.get("family_name")
     display_name = " ".join(part for part in (given_name, family_name) if part) or None
-    user = await maybe_auto_provision_user(
+    actor = await maybe_auto_provision_user(
         session,
-        user,
+        actor,
         display_name=str(display_name) if display_name else None,
         email_verified=bool(payload.get("email_verified")),
     )
 
-    user = await activate_bootstrap_super_admin(session, user, sub=sub)
+    actor = await activate_bootstrap_super_admin(session, actor, sub=sub)
     await session.commit()
-    await session.refresh(user)
+    await session.refresh(actor)
+
+    if actor.status == UserStatus.suspended:
+        raise ForbiddenError(message="Account suspended")
+    if actor.status == UserStatus.rejected:
+        raise ForbiddenError(message="Account rejected")
+    if actor.status == UserStatus.deleted:
+        raise ForbiddenError(message="Account deleted", error_code="account_deleted")
+
+    impersonated_user_id: UUID | None = None
+    active_session = await get_active_session(session, actor_user_id=actor.id)
+    if active_session is not None:
+        impersonated_user_id = active_session.target_user_id
+
+    effective = actor
+    if impersonated_user_id is not None:
+        target = await session.get(UserORM, impersonated_user_id)
+        if target is None:
+            raise ForbiddenError(
+                message="Impersonation target not found",
+                error_code="impersonation_invalid",
+            )
+        effective = target
+        _assert_effective_user_active(effective.status)
 
     workspace_id, role = await _resolve_active_workspace(
         session,
-        user,
+        effective,
         header_workspace_id=x_workspace_id,
     )
 
-    if user.status == UserStatus.suspended:
-        raise ForbiddenError(message="Account suspended")
-    if user.status == UserStatus.rejected:
-        raise ForbiddenError(message="Account rejected")
-    if user.status == UserStatus.deleted:
-        raise ForbiddenError(message="Account deleted", error_code="account_deleted")
-
     return CurrentUser(
         sub=sub,
-        user_id=user.id,
-        email=user.email,
-        platform_role=user.platform_role,
+        actor_user_id=actor.id,
+        impersonated_user_id=impersonated_user_id,
+        email=effective.email,
+        platform_role=actor.platform_role,
         workspace_id=workspace_id,
         role=role,
-        status=user.status,
+        status=effective.status,
     )
 
 
@@ -226,6 +272,18 @@ def require_super_admin():
     async def _guard(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
         if not user.is_super_admin:
             raise ForbiddenError("Platform administrator required")
+        return user
+
+    return _guard
+
+
+def require_impersonation_allowed():
+    async def _guard(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+        if user.is_impersonating:
+            raise ForbiddenError(
+                message="Action not allowed while impersonating",
+                error_code="impersonation_restricted",
+            )
         return user
 
     return _guard

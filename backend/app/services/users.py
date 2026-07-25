@@ -15,7 +15,7 @@ from app.core.logging import get_logger
 from app.models.users import UserORM
 from app.models.workspace_memberships import WorkspaceMembershipORM
 from app.models.workspaces import WorkspaceORM
-from app.schemas.me import MeMembership, MeResponse, MeUpdate
+from app.schemas.me import MeImpersonationInfo, MeMembership, MeResponse, MeUpdate
 from app.services.onboarding import activate_user_with_workspace, resolve_initial_user_status
 
 logger = get_logger(__name__)
@@ -152,7 +152,12 @@ async def update_me(
     return user
 
 
-async def build_me_response(session: AsyncSession, user_id: UUID) -> MeResponse:
+async def build_me_response(
+    session: AsyncSession,
+    user_id: UUID,
+    *,
+    impersonation: MeImpersonationInfo | None = None,
+) -> MeResponse:
     user = await session.get(UserORM, user_id)
     if user is None:
         raise NotFoundError("User not found")
@@ -193,6 +198,7 @@ async def build_me_response(session: AsyncSession, user_id: UUID) -> MeResponse:
         workspace_id=active_workspace_id,
         role=active_role,
         memberships=memberships,
+        impersonation=impersonation,
     )
 
 

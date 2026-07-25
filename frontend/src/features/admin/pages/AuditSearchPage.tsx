@@ -72,6 +72,7 @@ export function AuditSearchPage() {
           {t('admin.audit.title')}
         </h1>
         <p className="text-sm text-[color:var(--app-text-muted)]">{t('admin.audit.description')}</p>
+        <p className="text-xs text-[color:var(--app-text-muted)]">{t('admin.audit.impersonatorHint')}</p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -119,6 +120,7 @@ export function AuditSearchPage() {
                 <th className="px-4 py-3 font-medium">{t('admin.audit.columns.time')}</th>
                 <th className="px-4 py-3 font-medium">{t('admin.audit.columns.action')}</th>
                 <th className="px-4 py-3 font-medium">{t('admin.audit.columns.actor')}</th>
+                <th className="px-4 py-3 font-medium">{t('admin.audit.columns.impersonator')}</th>
                 <th className="px-4 py-3 font-medium">{t('admin.audit.columns.workspace')}</th>
               </tr>
             </thead>
@@ -133,6 +135,9 @@ export function AuditSearchPage() {
                   </td>
                   <td className="px-4 py-3">{auditActionLabel(t, item.action)}</td>
                   <td className="px-4 py-3 text-[color:var(--app-text-muted)]">{item.actor_email}</td>
+                  <td className="px-4 py-3 text-[color:var(--app-text-muted)]">
+                    {item.impersonator_email ?? '—'}
+                  </td>
                   <td className="px-4 py-3 text-[color:var(--app-text-muted)]">
                     {item.workspace_id ?? '—'}
                   </td>
