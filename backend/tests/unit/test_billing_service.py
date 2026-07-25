@@ -6,7 +6,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.constants.enums import WorkspaceStatus
-from app.core.exceptions import NotFoundError, ServiceUnavailableError, ValidationError
+from app.core.exceptions import (
+    BillingWebhookError,
+    NotFoundError,
+    ServiceUnavailableError,
+    ValidationError,
+)
 from app.models.workspaces import WorkspaceORM
 from app.services.billing import (
     apply_subscription_event,
@@ -211,6 +216,7 @@ async def test_apply_subscription_event_checkout_completed():
         "data": {
             "object": {
                 "customer": "cus_new",
+                "payment_status": "paid",
                 "metadata": {
                     "workspace_id": str(workspace.id),
                     "plan": "pro",
@@ -241,6 +247,81 @@ async def test_apply_subscription_event_subscription_deleted_sets_free():
     event = {
         "type": "customer.subscription.deleted",
         "data": {"object": {"customer": "cus_existing", "status": "canceled"}},
+    }
+
+    with patch("app.services.billing.settings") as mock_settings:
+        mock_settings.stripe_price_pro = "price_pro_test"
+        await apply_subscription_event(session, event)
+
+    assert workspace.plan == "free"
+
+
+@pytest.mark.asyncio
+async def test_apply_subscription_event_checkout_unpaid_raises():
+    workspace = _workspace()
+    session = AsyncMock()
+    session.get = AsyncMock(return_value=workspace)
+
+    event = {
+        "type": "checkout.session.completed",
+        "data": {
+            "object": {
+                "customer": "cus_new",
+                "payment_status": "unpaid",
+                "metadata": {
+                    "workspace_id": str(workspace.id),
+                    "plan": "pro",
+                },
+            }
+        },
+    }
+
+    with pytest.raises(BillingWebhookError):
+        await apply_subscription_event(session, event)
+
+
+@pytest.mark.asyncio
+async def test_apply_subscription_event_checkout_missing_workspace_raises():
+    session = AsyncMock()
+
+    event = {
+        "type": "checkout.session.completed",
+        "data": {
+            "object": {
+                "customer": "cus_new",
+                "payment_status": "paid",
+                "metadata": {"plan": "pro"},
+            }
+        },
+    }
+
+    with pytest.raises(BillingWebhookError):
+        await apply_subscription_event(session, event)
+
+
+@pytest.mark.asyncio
+async def test_plan_from_subscription_requires_pro_price():
+    workspace = _workspace(plan="free", customer_id="cus_existing")
+    admin_id = uuid.uuid4()
+    session = AsyncMock()
+    session.get = AsyncMock(return_value=workspace)
+    session.scalar = AsyncMock(side_effect=[workspace, admin_id])
+    session.flush = AsyncMock()
+    session.add = MagicMock()
+
+    event = {
+        "type": "customer.subscription.updated",
+        "data": {
+            "object": {
+                "customer": "cus_existing",
+                "status": "active",
+                "items": {
+                    "data": [
+                        {"price": {"id": "price_legacy_other"}},
+                    ]
+                },
+            }
+        },
     }
 
     with patch("app.services.billing.settings") as mock_settings:
