@@ -47,7 +47,7 @@
 | W5 | [waves/SAAS_BASE_W5_EXECUTION.md](./waves/SAAS_BASE_W5_EXECUTION.md) | done |
 | W6 | [waves/SAAS_BASE_W6_EXECUTION.md](./waves/SAAS_BASE_W6_EXECUTION.md) | done |
 | W7 | [waves/SAAS_BASE_W7_EXECUTION.md](./waves/SAAS_BASE_W7_EXECUTION.md) | done |
-| W8 | [waves/SAAS_BASE_W8_EXECUTION.md](./waves/SAAS_BASE_W8_EXECUTION.md) | done (`98b10ea`) |
+| W8 | [waves/SAAS_BASE_W8_EXECUTION.md](./waves/SAAS_BASE_W8_EXECUTION.md) | done (`2145b41`) |
 
 Full table: [waves/README.md](./waves/README.md).
 

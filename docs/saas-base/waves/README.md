@@ -14,6 +14,6 @@ Linear **phase-execution** order. General plans stay in [`../`](../README.md); e
 | W5 — Platform admin | [SAAS_BASE_W5_EXECUTION.md](./SAAS_BASE_W5_EXECUTION.md) | done (`d47e1ec`) |
 | W6 — Lifecycle | [SAAS_BASE_W6_EXECUTION.md](./SAAS_BASE_W6_EXECUTION.md) | done (`1abc05e`) |
 | W7 — Impersonation | [SAAS_BASE_W7_EXECUTION.md](./SAAS_BASE_W7_EXECUTION.md) | done (`3d5e33f`) |
-| W8 — Platform hardening | [SAAS_BASE_W8_EXECUTION.md](./SAAS_BASE_W8_EXECUTION.md) | done (`98b10ea`) |
+| W8 — Platform hardening | [SAAS_BASE_W8_EXECUTION.md](./SAAS_BASE_W8_EXECUTION.md) | done (`2145b41`) |
 
 **Program status:** W0–W8 **complete**.
