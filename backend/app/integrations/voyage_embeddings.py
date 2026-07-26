@@ -2,6 +2,8 @@
 """Voyage AI embeddings client — R3 indexing."""
 from __future__ import annotations
 
+import asyncio
+
 import httpx
 
 from app.core.config import settings
@@ -12,6 +14,8 @@ logger = get_logger(__name__)
 
 VOYAGE_API_URL = "https://api.voyageai.com/v1/embeddings"
 BATCH_SIZE = 128
+MAX_EMBED_REQUEST_RETRIES = 5
+RETRYABLE_STATUS_CODES = frozenset({429, 503})
 _FLEXIBLE_DIMENSION_MODEL_PREFIXES = (
     "voyage-code-3",
     "voyage-4",
@@ -23,6 +27,64 @@ _FLEXIBLE_DIMENSION_MODEL_PREFIXES = (
 def _model_supports_output_dimension(model: str) -> bool:
     normalized = model.strip().lower()
     return any(normalized.startswith(prefix) for prefix in _FLEXIBLE_DIMENSION_MODEL_PREFIXES)
+
+
+def _retry_after_seconds(response: httpx.Response, attempt: int) -> float:
+    retry_after = response.headers.get("Retry-After")
+    if retry_after:
+        try:
+            return max(float(retry_after), 1.0)
+        except ValueError:
+            pass
+    return min(60.0, 2.0**attempt)
+
+
+def _log_voyage_error(response: httpx.Response) -> None:
+    if response.status_code < 400:
+        return
+    logger.error(
+        "voyage_embeddings_request_failed",
+        extra={
+            "status_code": response.status_code,
+            "model": settings.revy_embedding_model,
+            "body": response.text[:2000],
+        },
+    )
+
+
+async def _post_embeddings(
+    client: httpx.AsyncClient,
+    *,
+    api_key: str,
+    body: dict[str, object],
+) -> httpx.Response:
+    for attempt in range(MAX_EMBED_REQUEST_RETRIES):
+        response = await client.post(
+            VOYAGE_API_URL,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json=body,
+            timeout=60.0,
+        )
+        if response.status_code not in RETRYABLE_STATUS_CODES:
+            return response
+        if attempt >= MAX_EMBED_REQUEST_RETRIES - 1:
+            _log_voyage_error(response)
+            return response
+        wait_seconds = _retry_after_seconds(response, attempt)
+        logger.warning(
+            "voyage_embeddings_rate_limited",
+            extra={
+                "status_code": response.status_code,
+                "attempt": attempt + 1,
+                "wait_seconds": wait_seconds,
+                "model": settings.revy_embedding_model,
+            },
+        )
+        await asyncio.sleep(wait_seconds)
+    raise RuntimeError("voyage_embeddings_retry_exhausted")
 
 
 def _embedding_request_body(texts: list[str], *, input_type: str) -> dict[str, object]:
@@ -62,24 +124,12 @@ async def embed_texts(
     vectors: list[list[float]] = []
     for start in range(0, len(texts), BATCH_SIZE):
         batch = texts[start : start + BATCH_SIZE]
-        response = await client.post(
-            VOYAGE_API_URL,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            json=_embedding_request_body(batch, input_type="document"),
-            timeout=60.0,
+        response = await _post_embeddings(
+            client,
+            api_key=api_key,
+            body=_embedding_request_body(batch, input_type="document"),
         )
-        if response.status_code >= 400:
-            logger.error(
-                "voyage_embeddings_request_failed",
-                extra={
-                    "status_code": response.status_code,
-                    "model": settings.revy_embedding_model,
-                    "body": response.text[:2000],
-                },
-            )
+        _log_voyage_error(response)
         response.raise_for_status()
         data = response.json()
         items = data.get("data")
@@ -108,24 +158,12 @@ async def embed_query(client: httpx.AsyncClient, query: str) -> list[float]:
             error_code="embeddings_disabled",
         )
 
-    response = await client.post(
-        VOYAGE_API_URL,
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
-        json=_embedding_request_body([query], input_type="query"),
-        timeout=60.0,
+    response = await _post_embeddings(
+        client,
+        api_key=api_key,
+        body=_embedding_request_body([query], input_type="query"),
     )
-    if response.status_code >= 400:
-        logger.error(
-            "voyage_embeddings_request_failed",
-            extra={
-                "status_code": response.status_code,
-                "model": settings.revy_embedding_model,
-                "body": response.text[:2000],
-            },
-        )
+    _log_voyage_error(response)
     response.raise_for_status()
     data = response.json()
     items = data.get("data")
