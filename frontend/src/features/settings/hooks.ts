@@ -10,6 +10,7 @@ import type {
   InvitationCreatePayload,
   Member,
   MemberRoleUpdatePayload,
+  ModelPolicyPatch,
   WorkspaceUpdatePayload,
 } from '@/features/settings/types';
 import {
@@ -24,8 +25,11 @@ import {
   fetchExportJobStatus,
   fetchInvitations,
   fetchMembers,
+  fetchModelCatalog,
+  fetchModelPolicy,
   fetchWorkspace,
   leaveWorkspace,
+  patchModelPolicy,
   patchWorkspace,
   removeMember,
   revokeInvitation,
@@ -38,6 +42,8 @@ export const settingsQueryKeys = {
   invitations: (workspaceId: string, status = 'pending') =>
     ['settings', 'invitations', workspaceId, status] as const,
   billing: (workspaceId: string) => ['settings', 'billing', workspaceId] as const,
+  modelPolicy: (workspaceId: string) => ['settings', 'modelPolicy', workspaceId] as const,
+  modelCatalog: (workspaceId: string) => ['settings', 'modelCatalog', workspaceId] as const,
   exportJob: (jobId: string) => ['settings', 'export', jobId] as const,
 };
 
@@ -76,6 +82,40 @@ export function usePatchWorkspace(workspaceId: string | null | undefined) {
     onSuccess: async () => {
       if (workspaceId) {
         await queryClient.invalidateQueries({ queryKey: settingsQueryKeys.workspace(workspaceId) });
+      }
+    },
+  });
+}
+
+export function useModelPolicy(workspaceId: string | null | undefined) {
+  return useQuery({
+    queryKey: settingsQueryKeys.modelPolicy(workspaceId ?? ''),
+    queryFn: () => fetchModelPolicy(workspaceId!),
+    enabled: Boolean(workspaceId),
+  });
+}
+
+export function useModelCatalog(workspaceId: string | null | undefined) {
+  return useQuery({
+    queryKey: settingsQueryKeys.modelCatalog(workspaceId ?? ''),
+    queryFn: () => fetchModelCatalog(workspaceId!),
+    enabled: Boolean(workspaceId),
+  });
+}
+
+export function usePatchModelPolicy(workspaceId: string | null | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: ModelPolicyPatch) => {
+      if (!workspaceId) throw new Error('workspace_required');
+      return patchModelPolicy(workspaceId, payload);
+    },
+    onSuccess: async () => {
+      if (workspaceId) {
+        await queryClient.invalidateQueries({
+          queryKey: settingsQueryKeys.modelPolicy(workspaceId),
+        });
       }
     },
   });

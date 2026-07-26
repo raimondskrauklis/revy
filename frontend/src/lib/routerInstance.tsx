@@ -13,6 +13,7 @@ import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
 import { RequirePermission } from '@/components/auth/RequirePermission';
 import { SettingsLayout } from '@/features/settings/layout/SettingsLayout';
 import { ProfileSettingsPage } from '@/features/settings/pages/ProfileSettingsPage';
+import { ReviewSettingsPage } from '@/features/settings/pages/ReviewSettingsPage';
 import { SecuritySettingsPage } from '@/features/settings/pages/SecuritySettingsPage';
 import { AppearanceSettingsPage } from '@/features/settings/pages/AppearanceSettingsPage';
 import { WorkspaceSettingsPage } from '@/features/settings/pages/WorkspaceSettingsPage';
@@ -130,7 +131,10 @@ export const appRouter = createBrowserRouter([
               { path: 'appearance', element: <AppearanceSettingsPage /> },
               {
                 element: <RequirePermission permission="admin:users" />,
-                children: [{ path: 'workspace', element: <WorkspaceSettingsPage /> }],
+                children: [
+                  { path: 'workspace', element: <WorkspaceSettingsPage /> },
+                  { path: 'review', element: <ReviewSettingsPage /> },
+                ],
               },
               { path: 'team', element: <TeamSettingsPage /> },
               { path: 'integrations', element: <IntegrationsSettingsPage /> },

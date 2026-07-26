@@ -125,6 +125,7 @@
       "security": "Security",
       "appearance": "Appearance",
       "workspace": "Workspace",
+      "review": "Review",
       "team": "Team",
       "integrations": "Integrations",
       "billing": "Billing",
@@ -190,11 +191,24 @@
       "nameLabel": "Workspace name",
       "slugLabel": "URL slug",
       "slugImmutable": "The slug is set when the workspace is created and cannot be changed.",
-      "saveSuccess": "Workspace saved",
-      "reviewAutostartTitle": "Automated reviews",
-      "reviewAutostartBody": "When enabled, Revy indexes and reviews pull requests automatically when they are opened or updated. Disable to run reviews manually or via @revy review on GitHub.",
-      "reviewAutostartLabel": "Autostart review on pull request open and update",
-      "autostartSaveSuccess": "Review autostart setting saved"
+      "saveSuccess": "Workspace saved"
+    },
+    "review": {
+      "automationTitle": "Automated reviews",
+      "automationBody": "When enabled, Revy indexes and reviews pull requests automatically when they are opened or updated. Disable to run reviews manually or via @revy review on GitHub.",
+      "autostartLabel": "Autostart review on pull request open and update",
+      "autostartSaveSuccess": "Review autostart setting saved",
+      "modelsTitle": "Models",
+      "modelsBody": "Override platform defaults per pipeline role. Choose Platform default to inherit environment configuration.",
+      "modelsSaveSuccess": "Model policy saved",
+      "platformDefault": "Platform default",
+      "sameProviderWarning": "Reviewer and judge currently use the same provider family. Cross-family review is recommended for higher-quality escalation.",
+      "roles": {
+        "reviewer_standard": "Reviewer — standard profile",
+        "reviewer_deep": "Reviewer — deep profile",
+        "reviewer_critical": "Reviewer — critical profile",
+        "judge": "Judge (escalation)"
+      }
     },
     "team": {
       "noWorkspace": "Select a workspace to manage team members.",

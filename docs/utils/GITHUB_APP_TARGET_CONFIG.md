@@ -238,6 +238,8 @@ pipenv run celery -A app.workers.celery_app worker \
 | `GET/POST` | `/api/v1/workspaces/{id}/installations` | JWT |
 | `GET` | `/api/v1/workspaces/{id}/installations/{id}/repositories` | JWT |
 | `POST` | `/api/v1/workspaces/{id}/installations/{id}/sync-repositories` | JWT (admin) |
+| `GET/PATCH` | `/api/v1/workspaces/{id}/model-policy` | JWT (`admin:users`) |
+| `GET` | `/api/v1/workspaces/{id}/model-catalog` | JWT (`admin:users`) |
 | R2+ | PR / revision APIs | JWT |
 | R4+ | Review / findings APIs | JWT |
 | R6 | (publish is worker → GitHub API, not inbound) | installation token |

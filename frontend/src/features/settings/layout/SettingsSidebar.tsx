@@ -17,6 +17,7 @@ const WORKSPACE_LINKS: ReadonlyArray<{
   permission?: Permission;
 }> = [
   { to: '/settings/workspace', label: 'settings.nav.workspace', permission: 'admin:users' },
+  { to: '/settings/review', label: 'settings.nav.review', permission: 'admin:users' },
   { to: '/settings/team', label: 'settings.nav.team' },
   { to: '/settings/integrations', label: 'settings.nav.integrations' },
   { to: '/settings/billing', label: 'settings.nav.billing', permission: 'admin:users' },

@@ -69,6 +69,18 @@ Model policy M1 — use when operators prefer IAM over `ANTHROPIC_API_KEY`.
 
 Grant the API/worker IAM role `bedrock:InvokeModel` on the chosen model(s). After a judge run, verify `judge_provider` / `judge_model_id` on `github_finding_judge_outcomes`.
 
+### Workspace model policy (M2)
+
+Per-workspace overrides live in `workspace_model_policies`. Platform env remains the fallback when no row exists for a role.
+
+| API | Purpose |
+|-----|---------|
+| `GET /api/v1/workspaces/{id}/model-policy` | Current overrides + `review_autostart_enabled` |
+| `PATCH /api/v1/workspaces/{id}/model-policy` | Set/clear per-role model (`null` = platform default) |
+| `GET /api/v1/workspaces/{id}/model-catalog` | Dropdown options filtered by platform-enabled providers |
+
+Admins configure via `/settings/review` (M3). Run migration `0023_workspace_model_policies` before deploy.
+
 ---
 
 ## Staging sign-off

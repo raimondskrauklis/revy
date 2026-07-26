@@ -1,5 +1,7 @@
 # Model policy & providers
 
+**Status:** Shipped M0–M3 on branch `feat/model-policy-m0` (PR #35).
+
 Findings and plans for **which models run where** in the review pipeline — embeddings, reviewer, judge, and future jury.
 
 | Doc | Purpose |

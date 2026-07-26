@@ -125,6 +125,7 @@
       "security": "Drošība",
       "appearance": "Izskats",
       "workspace": "Darba vide",
+      "review": "Pārskatīšana",
       "team": "Komanda",
       "integrations": "Integrācijas",
       "billing": "Norēķini",
@@ -190,11 +191,24 @@
       "nameLabel": "Darba vides nosaukums",
       "slugLabel": "URL identifikators",
       "slugImmutable": "Identifikators tiek noteikts darba vides izveides brīdī un to nevar mainīt.",
-      "saveSuccess": "Darba vide saglabāta",
-      "reviewAutostartTitle": "Automātiskās pārskatīšanas",
-      "reviewAutostartBody": "Ieslēgts — Revy automātiski indeksē un pārskata pull request, kad tie tiek atvērti vai atjaunināti. Izslēdziet, lai pārskatīšanu palaistu manuāli vai ar @revy review GitHub komentārā.",
-      "reviewAutostartLabel": "Automātiski pārskatīt pull request atvēršanā un atjauninājumā",
-      "autostartSaveSuccess": "Automātiskās pārskatīšanas iestatījums saglabāts"
+      "saveSuccess": "Darba vide saglabāta"
+    },
+    "review": {
+      "automationTitle": "Automātiskās pārskatīšanas",
+      "automationBody": "Ieslēgts — Revy automātiski indeksē un pārskata pull request, kad tie tiek atvērti vai atjaunināti. Izslēdziet, lai pārskatīšanu palaistu manuāli vai ar @revy review GitHub komentārā.",
+      "autostartLabel": "Automātiski pārskatīt pull request atvēršanā un atjauninājumā",
+      "autostartSaveSuccess": "Automātiskās pārskatīšanas iestatījums saglabāts",
+      "modelsTitle": "Modeļi",
+      "modelsBody": "Pārrakstiet platformas noklusējumus katram lomai. Izvēlieties Platformas noklusējums, lai mantotu vides konfigurāciju.",
+      "modelsSaveSuccess": "Modeļu politika saglabāta",
+      "platformDefault": "Platformas noklusējums",
+      "sameProviderWarning": "Pārskatītājs un tiesnesis pašlaik izmanto vienu pakalpojumu sniedzēju. Ieteicams izmantot dažādus sniedzējus kvalitatīvākai eskalācijai.",
+      "roles": {
+        "reviewer_standard": "Pārskatītājs — standarta profils",
+        "reviewer_deep": "Pārskatītājs — dziļais profils",
+        "reviewer_critical": "Pārskatītājs — kritiskais profils",
+        "judge": "Tiesnesis (eskalācija)"
+      }
     },
     "team": {
       "noWorkspace": "Izvēlieties darba vidi, lai pārvaldītu komandas dalībniekus.",

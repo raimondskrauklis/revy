@@ -1,8 +1,8 @@
 # Model policy — findings
 
-Baseline for **multi-provider model configuration** (Moonshot, Anthropic, Voyage, AWS Bedrock) and a future **workspace admin UI** to pick models per pipeline role.
+Baseline for **multi-provider model configuration** (Moonshot, Anthropic, Voyage, AWS Bedrock) and **workspace admin UI** to pick models per pipeline role.
 
-**Date:** 2026-07-26
+**Date:** 2026-07-26 · **Implementation:** M0–M3 shipped on `feat/model-policy-m0` (PR #35).
 
 ---
 
@@ -23,9 +23,10 @@ Baseline for **multi-provider model configuration** (Moonshot, Anthropic, Voyage
 
 | Field | Purpose |
 |-------|---------|
-| `workspaces.review_autostart_enabled` | Automation on/off (R8) — **not** model choice |
+| `workspaces.review_autostart_enabled` | Automation on/off (R8) — editable on `/settings/review` |
+| `workspace_model_policies` | Per-role model overrides (embedding, reviewer, judge) — M2 API + M3 UI |
 
-No `workspace_review_policy` table yet — referenced as **future** in [REVIEW_PIPELINE_PRODUCT_PATTERNS.md](../review-pipeline/REVIEW_PIPELINE_PRODUCT_PATTERNS.md) and R8/R9 plans.
+No `workspace_review_policy` custom-rules table yet — referenced as **future** in [REVIEW_PIPELINE_PRODUCT_PATTERNS.md](../review-pipeline/REVIEW_PIPELINE_PRODUCT_PATTERNS.md) and R8/R9 plans.
 
 ### Cross-model pattern (shipped)
 
@@ -34,16 +35,14 @@ No `workspace_review_policy` table yet — referenced as **future** in [REVIEW_P
 
 ---
 
-## 2. Gaps
+## 2. Gaps (post M0–M3)
 
 | Gap | Impact |
 |-----|--------|
-| No **provider abstraction** for LLM/embeddings | Each new vendor = new integration module + scattered `if provider` |
-| No **AWS Bedrock** path | Operators with AWS accounts cannot use IAM + Bedrock model IDs |
-| No **per-workspace** model policy | All tenants share platform env; no admin dropdowns |
-| Judge hardcoded to `anthropic_review` | Cannot point judge at Bedrock Claude without code change |
 | Credentials only via env | No UI for “which keys are configured”; secrets stay on droplet |
 | **Jury** undefined in code | Industry patterns (majority vote, shuffled-diff) are **defer/future** only |
+| Embedding provider in workspace UI | Out of v1 — dimension migration risk (MP-D5) |
+| Plan / volume gates | Tie model tier to `workspace_plan` (free → standard only) — deferred |
 
 ---
 
@@ -249,4 +248,4 @@ Moonshot reviewer can remain direct until a Bedrock reviewer model is chosen exp
 | Findings | baseline-ready |
 | General plan | done |
 | Execution waves M0–M3 | done — peer-reviewed 2026-07-26 |
-| Implementation | **pending** — start `phase-execution` at [MODEL_POLICY_M0_EXECUTION.md](./waves/MODEL_POLICY_M0_EXECUTION.md) |
+| Implementation | **done** — M0 `22c35ab`, M1 `91fe16a`, M2+M3 on `feat/model-policy-m0` (PR #35) |
