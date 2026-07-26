@@ -5,6 +5,8 @@ How to receive GitHub App webhooks against a local Revy API. Production uses the
 **Endpoint:** `POST /api/v1/webhooks/github`  
 **Authority:** `internal-docs/product/revy/docs/WEBHOOKS.md`
 
+**Production / staging droplet:** no smee.io — webhook URL is `https://<api-host>/api/v1/webhooks/github`. Full setup (App ID vs installation ID, PEM permissions, install-before-register, verify script): [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md).
+
 ---
 
 ## Prerequisites

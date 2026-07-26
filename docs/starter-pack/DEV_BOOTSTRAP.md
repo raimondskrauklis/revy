@@ -94,7 +94,7 @@ Test DB (optional local check):
 pipenv run alembic -x test=true upgrade head
 ```
 
-Optional: register a test GitHub installation via **Installations** in the dashboard (dev manual register form).
+Optional: register a test GitHub installation via **Installations** in the dashboard — **install the app on GitHub first**, then use the installation ID from `https://github.com/settings/installations/<id>` (not the App ID). See [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md).
 
 ---
 

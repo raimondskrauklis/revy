@@ -37,6 +37,56 @@ OAuth “Install Revy” button in the product UI is **not shipped yet** — ins
 
 ---
 
+## App ID vs installation ID (do not mix)
+
+GitHub assigns **two different numbers**. Using the wrong one in `.env` or the Revy register form is a common setup mistake.
+
+| ID | What it is | Where to find it | Used in |
+|----|------------|------------------|---------|
+| **App ID** | The GitHub App itself (one per app) | App settings → **About** → **App ID** (`https://github.com/settings/apps/<slug>`) | `GITHUB_APP_ID` in backend `.env` |
+| **Installation ID** | One install of that app on a user/org | After **Install App** → URL `https://github.com/settings/installations/<id>` | Revy **Register installation** form only |
+
+```text
+Create app → App ID → .env (GITHUB_APP_ID)
+Install app on GitHub account/org → Installation ID → Revy UI register form
+```
+
+**Order matters:** complete **Install App** on GitHub **before** registering in Revy. Registering an ID from the app settings page (or before install) will not work.
+
+`REVY_BOT_LOGIN` must match the app slug: `<app-slug>[bot]` (e.g. `revybot[bot]`).
+
+**Verify on droplet** (uses real PEM + env; replace `INSTALLATION_ID`):
+
+```bash
+docker exec revy-api python <<'PY'
+import asyncio, httpx
+from app.core.config import settings
+from app.integrations.github_api import create_app_jwt
+
+INSTALLATION_ID = 0  # paste from github.com/settings/installations/<id>
+
+async def main() -> None:
+    print("GITHUB_APP_ID (env):", settings.github_app_id)
+    jwt = create_app_jwt()
+    h = {"Authorization": f"Bearer {jwt}", "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
+    async with httpx.AsyncClient(timeout=30.0) as c:
+        app = await c.get("https://api.github.com/app", headers=h)
+        print("GET /app:", app.status_code)
+        if app.status_code == 200:
+            data = app.json()
+            print("app_id (GitHub):", data.get("id"), "slug:", data.get("slug"))
+            print("env matches app:", str(settings.github_app_id) == str(data.get("id")))
+        tok = await c.post(f"https://api.github.com/app/installations/{INSTALLATION_ID}/access_tokens", headers=h)
+        print("token mint:", tok.status_code, "(expect 201)")
+
+asyncio.run(main())
+PY
+```
+
+Account ID for the register form: `gh api user --jq .id` (personal) or org API for organizations.
+
+---
+
 ## Prerequisites (Revy side)
 
 1. **Migrations** through `0011_github_repositories` (includes `0010_github_webhook_deliveries`):
@@ -205,9 +255,23 @@ Source: [GitHub webhook events](https://docs.github.com/en/webhooks/webhook-even
 | Environment | Path |
 |-------------|------|
 | **Local** | Outside the repo, e.g. `~/.config/revy/github-app.pem` |
-| **Droplet** | `/mnt/revy/secrets/github-app.pem` (`chmod 600`, owned by `deploy`) |
+| **Droplet** | `/mnt/revy_volume/secrets/github-app.pem` (block volume; see PEM permissions below) |
 
-Set `GITHUB_APP_PRIVATE_KEY_PATH` to that absolute path. **Never** commit the key or put it in `.env` as inline text.
+Set `GITHUB_APP_PRIVATE_KEY_PATH` to that **in-container** absolute path (same as host path when mounted by `deploy.yml`). **Never** commit the key or put it in `.env` as inline text.
+
+### Droplet PEM permissions (Docker)
+
+`revy-api` and `revy-worker` run as **`appuser`** (`backend/Dockerfile`). A PEM owned `deploy:deploy` with mode `600` causes `PermissionError` inside the container.
+
+After placing the key on the volume:
+
+```bash
+# appuser is uid 1000 in backend/Dockerfile
+sudo chown 1000:deploy /mnt/revy_volume/secrets/github-app.pem
+sudo chmod 640 /mnt/revy_volume/secrets/github-app.pem
+```
+
+`deploy.yml` applies this on deploy when the file exists. Re-run manually if you add the PEM outside CI.
 
 ---
 
@@ -238,7 +302,7 @@ See `deploy/env-examples/backend.env.production.example`:
 
 ```env
 GITHUB_APP_ID=123456
-GITHUB_APP_PRIVATE_KEY_PATH=/mnt/revy/secrets/github-app.pem
+GITHUB_APP_PRIVATE_KEY_PATH=/mnt/revy_volume/secrets/github-app.pem
 GITHUB_WEBHOOK_SECRET=<same-as-github-app-webhook-secret>
 REVY_BOT_LOGIN=revy[bot]
 ```
@@ -281,20 +345,24 @@ You also need:
 
 ## Step 6 — Register installation in Revy
 
+**Prerequisite:** Step 5 (**Install App** on GitHub) completed — use the installation ID from `https://github.com/settings/installations/<id>`, not the App ID from **About**.
+
 Until OAuth install ships, link the GitHub installation to a **workspace** manually:
 
-1. Log in to Revy as a workspace **admin**.
+1. Log in to Revy as a workspace **admin** on a **pro** workspace (`installations.create` plan gate).
 2. Open **Installations** (`/installations`) or **Settings → Integrations**.
 3. Submit the **Register installation** form:
 
    | Field | Source |
    |-------|--------|
-   | Installation ID | GitHub installation URL |
-   | Account login | Org/user slug |
-   | Account ID | GitHub numeric account id |
+   | Installation ID | `https://github.com/settings/installations/<INSTALLATION_ID>` |
+   | Account login | Org/user slug (e.g. `raimondskrauklis`) |
+   | Account ID | `gh api user --jq .id` (personal) or org numeric id |
    | Account type | `organization` or `user` |
 
 API equivalent: `POST /api/v1/workspaces/{workspace_id}/installations` (workspace admin).
+
+**Security (interim):** the form does not call GitHub to prove ownership — it only stores the mapping. Real auth is webhook HMAC + app PEM for API. OAuth install from Revy (future) will replace manual register. One `github_installation_id` can link to only one workspace (`ConflictError` otherwise).
 
 Webhook `installation` events only update rows that **already exist** in `github_installations`. Unregistered installation IDs are logged and acknowledged with **200** (no retry storm).
 
@@ -351,13 +419,15 @@ Set GitHub App webhook URL to the smee channel (or forward target). Keep `GITHUB
 ## Deploy checklist
 
 1. `alembic upgrade head` on target database (through `0011`).
-2. Place `github-app.pem` on droplet volume; `chmod 600`.
-3. Set all four `GITHUB_*` env vars on API + worker containers.
-4. GitHub App webhook URL → `https://<api-host>/api/v1/webhooks/github`.
-5. Webhook secret matches `GITHUB_WEBHOOK_SECRET`.
-6. Celery worker: `-Q github_events,repo_sync,…` (see [REVY_PRODUCT_SLICE.md](../starter-pack/REVY_PRODUCT_SLICE.md)).
-7. Register each installation per workspace in Revy UI.
-8. Confirm **Recent deliveries** show 200.
+2. Place `github-app.pem` at `/mnt/revy_volume/secrets/github-app.pem`; `chown 1000:deploy`, `chmod 640` (see **Droplet PEM permissions** above).
+3. Set `GITHUB_APP_ID` (**App ID**, not installation ID), `GITHUB_APP_PRIVATE_KEY_PATH`, `GITHUB_WEBHOOK_SECRET`, `REVY_BOT_LOGIN` in `/mnt/revy_volume/backend/.env`.
+4. **Install App** on GitHub for each target account/org; note each **installation ID**.
+5. GitHub App webhook URL → `https://<api-host>/api/v1/webhooks/github`.
+6. Webhook secret matches `GITHUB_WEBHOOK_SECRET`.
+7. Celery worker: `-Q github_events,repo_sync,indexing,review,reconciliation,judge,github_publish,…` (see `.github/workflows/deploy.yml`).
+8. Register each **installation ID** per workspace in Revy UI (pro plan).
+9. Run **Verify on droplet** script (`token mint: 201`).
+10. Confirm **Recent deliveries** show 200; open a test PR for autostart / `@revy review`.
 
 ---
 
@@ -393,7 +463,10 @@ If you later **cache** installation tokens, store as `TEXT` (≥520 chars) and t
 | `422` invalid signature | Secret mismatch between GitHub App and backend env |
 | Webhook `200` but installation unchanged | Installation not registered in Revy (`github_installations` row missing) |
 | `503 github_api_disabled` | Missing `GITHUB_APP_ID` or `GITHUB_APP_PRIVATE_KEY_PATH` |
-| Repos not listed | No `installation_repositories` event yet — run **Sync repositories** |
+| `PermissionError` on PEM in container | PEM mode `600` owned by `deploy` — fix permissions (see **Droplet PEM permissions**) |
+| `GET /app` 401 or token mint fails | Wrong `GITHUB_APP_ID` (often installation ID pasted into `.env`) or PEM mismatch |
+| `plan_upgrade_required` on register | Workspace `plan` not `pro` — Stripe checkout or ops `UPDATE workspaces SET plan='pro'` |
+| Repos not listed | App not installed, wrong installation ID in Revy, or no `installation_repositories` webhook — run **Sync repositories** |
 | Task not running | Celery worker not consuming `github_events` / `repo_sync` |
 | Webhook 404 | Wrong path — must be `/api/v1/webhooks/github` (nginx must route `/api/v1`) |
 

@@ -1,19 +1,36 @@
 // frontend/src/features/settings/pages/SecuritySettingsPage.test.tsx
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { SecuritySettingsPage } from '@/features/settings/pages/SecuritySettingsPage';
 
+const openKeycloakAccountConsole = vi.fn();
+
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: vi.fn(() => ({
+    keycloak: {
+      createAccountUrl: vi.fn(() => 'https://auth.example.com/realms/revy/account?client=revy-web'),
+    },
+  })),
+}));
+
 vi.mock('@/lib/keycloak', () => ({
-  getKeycloakAccountUrl: vi.fn(() => 'https://auth.example.com/realms/revy/account'),
+  openKeycloakAccountConsole: (...args: unknown[]) => openKeycloakAccountConsole(...args),
 }));
 
 describe('SecuritySettingsPage', () => {
-  it('links to Keycloak account console', () => {
+  it('opens Keycloak account console via active SSO session', async () => {
+    const user = userEvent.setup();
+    openKeycloakAccountConsole.mockClear();
+
     render(<SecuritySettingsPage />);
 
-    const link = screen.getByRole('link', { name: /open account console/i });
-    expect(link).toHaveAttribute('href', 'https://auth.example.com/realms/revy/account');
-    expect(link).toHaveAttribute('target', '_blank');
-    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    await user.click(screen.getByRole('button', { name: /open account console/i }));
+
+    expect(openKeycloakAccountConsole).toHaveBeenCalledWith(
+      expect.objectContaining({
+        createAccountUrl: expect.any(Function),
+      }),
+    );
   });
 });

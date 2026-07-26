@@ -37,7 +37,9 @@
 ### Track F — Post-merge ops (before R8 dogfood)
 
 - [ ] `alembic upgrade head` on staging/prod (through `0021` for `voyage-code-3` embeddings)
-- [ ] Env: `MOONSHOT_API_KEY`, `VOYAGE_API_KEY` (`REVY_EMBEDDING_MODEL=voyage-code-3`, `REVY_EMBEDDING_DIMENSIONS=1024`), `REVY_BOT_LOGIN`; optional `ANTHROPIC_API_KEY` + `REVY_ANTHROPIC_MODEL=claude-sonnet-5`
+- [ ] GitHub App: **Install App** on target account → register **installation ID** in Revy (pro plan) — see [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) § App ID vs installation ID
+- [ ] PEM: `/mnt/revy_volume/secrets/github-app.pem` readable by container (`chown 1000:deploy`, `chmod 640`); `token mint: 201` verify script in setup doc
+- [ ] Env: `MOONSHOT_API_KEY`, `VOYAGE_API_KEY` (`REVY_EMBEDDING_MODEL=voyage-code-3`, `REVY_EMBEDDING_DIMENSIONS=1024`), `REVY_BOT_LOGIN=<slug>[bot]`; optional `ANTHROPIC_API_KEY` + `REVY_ANTHROPIC_MODEL=claude-sonnet-5`
 - [ ] Redeploy or restart worker so droplet runs latest `deploy.yml` `-Q` list:
   `github_events,repo_sync,indexing,review,reconciliation,judge,github_publish,maintenance,default,notifications,heavy`
 - [ ] Staging e2e: autostart + `@revy review` + toggle off ([GITHUB_WEBHOOK_DEV.md](./GITHUB_WEBHOOK_DEV.md) § R8)

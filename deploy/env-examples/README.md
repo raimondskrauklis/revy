@@ -6,7 +6,7 @@ Canonical env examples for local development and production. Copy from here — 
 
 | Group | Local dev | Production droplet | GitHub Actions |
 |-------|-----------|-------------------|----------------|
-| Backend | `backend/.env` | `/mnt/revy/backend/.env` | `CI_*` test secrets |
+| Backend | `backend/.env` | `/mnt/revy_volume/backend/.env` | `CI_*` test secrets |
 | Frontend `VITE_*` | `frontend/.env.local` | Baked at CI build — **not** on droplet | Repository secrets |
 | Keycloak | — | `/mnt/revy_volume/keycloak/config/` | `deploy/keycloak/config/` |
 | Deploy | — | — | `DOCR_TOKEN`, `DROPLET_IP`, `SSH_PRIVATE_KEY` |
@@ -21,7 +21,7 @@ Production frontend is static `serve -s dist` — changing `VITE_*` requires **r
 | File | Copy to |
 |------|---------|
 | `backend/.env.example` | `backend/.env` (local dev — canonical) |
-| `backend.env.production.example` | droplet `/mnt/revy/backend/.env` (deploy phase) |
+| `backend.env.production.example` | droplet `/mnt/revy_volume/backend/.env` (deploy phase) |
 | `frontend.env.local.example` | `frontend/.env.local` |
 | `frontend.env.production.example` | GitHub Actions secrets (build-time `VITE_*`) |
 | `github-actions.secrets.example` | GitHub → Settings → Secrets checklist |
