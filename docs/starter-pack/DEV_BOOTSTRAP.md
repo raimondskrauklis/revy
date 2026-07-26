@@ -206,3 +206,4 @@ Set `EXPORT_STORAGE_PATH` (default `/tmp/revy/exports` in dev) and optional `EXP
 | Staging sign-off checklist | [docs/saas-base/STAGING_VERIFICATION.md](../saas-base/STAGING_VERIFICATION.md) |
 | Export worker, Stripe webhook, bootstrap | [docs/saas-base/OPS.md](../saas-base/OPS.md) |
 | Stripe setup | [docs/utils/STRIPE_BILLING_SETUP.md](../utils/STRIPE_BILLING_SETUP.md) |
+| Review pipeline ops | [GITHUB_WEBHOOK_DEV.md](../review-pipeline/GITHUB_WEBHOOK_DEV.md) (R0+) |

@@ -135,3 +135,41 @@ async def get_github_installation(
     if row is None:
         raise NotFoundError("GitHub installation not found")
     return row
+
+
+_INSTALLATION_ACTION_STATUS: dict[str, GitHubInstallationStatus] = {
+    "deleted": GitHubInstallationStatus.removed,
+    "suspend": GitHubInstallationStatus.suspended,
+    "unsuspend": GitHubInstallationStatus.active,
+    "created": GitHubInstallationStatus.active,
+    "new_permissions_accepted": GitHubInstallationStatus.active,
+}
+
+
+async def apply_installation_webhook_event(
+    session: AsyncSession,
+    *,
+    github_installation_id: int,
+    action: str,
+) -> None:
+    from app.core.logging import get_logger
+
+    logger = get_logger(__name__)
+    installation = await _find_installation_by_github_id(session, github_installation_id)
+    if installation is None:
+        logger.warning(
+            "github_installation_orphan",
+            extra={"github_installation_id": github_installation_id, "action": action},
+        )
+        return
+
+    new_status = _INSTALLATION_ACTION_STATUS.get(action)
+    if new_status is None:
+        logger.info(
+            "github_installation_action_ignored",
+            extra={"github_installation_id": github_installation_id, "action": action},
+        )
+        return
+
+    installation.status = new_status
+    await session.flush()
