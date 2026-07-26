@@ -128,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsUserLoading(false);
     Sentry.setUser(null);
     void logoutKeycloakSession();
-  }, [keycloak]);
+  }, []);
 
   return (
     <AuthContext.Provider
