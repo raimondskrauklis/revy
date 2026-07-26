@@ -7,7 +7,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "2026_07_26_2100_0022_review_run_and_judge_model_metadata"
-down_revision = "2026_07_26_1910_0020_keycloak_webhook_deliveries_received_at_idx"
+down_revision = "2026_07_26_2000_0021_github_code_chunks_embedding_dim"
 branch_labels = None
 depends_on = None
 
