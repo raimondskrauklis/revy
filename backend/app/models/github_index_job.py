@@ -7,7 +7,7 @@ import uuid
 from sqlalchemy import ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.constants.enums import GitHubIndexJobStatus
+from app.constants.enums import GitHubIndexJobStatus, GitHubIndexJobTriggerSource
 from app.models.base import TimestampedModel
 
 
@@ -32,3 +32,9 @@ class GitHubIndexJobORM(TimestampedModel):
     )
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     chunk_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    trigger_source: Mapped[GitHubIndexJobTriggerSource] = mapped_column(
+        String(length=32),
+        nullable=False,
+        default=GitHubIndexJobTriggerSource.manual,
+        server_default=GitHubIndexJobTriggerSource.manual.value,
+    )

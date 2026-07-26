@@ -190,7 +190,11 @@
       "nameLabel": "Darba vides nosaukums",
       "slugLabel": "URL identifikators",
       "slugImmutable": "Identifikators tiek noteikts darba vides izveides brīdī un to nevar mainīt.",
-      "saveSuccess": "Darba vide saglabāta"
+      "saveSuccess": "Darba vide saglabāta",
+      "reviewAutostartTitle": "Automātiskās pārskatīšanas",
+      "reviewAutostartBody": "Ieslēgts — Revy automātiski indeksē un pārskata pull request, kad tie tiek atvērti vai atjaunināti. Izslēdziet, lai pārskatīšanu palaistu manuāli vai ar @revy review GitHub komentārā.",
+      "reviewAutostartLabel": "Automātiski pārskatīt pull request atvēršanā un atjauninājumā",
+      "autostartSaveSuccess": "Automātiskās pārskatīšanas iestatījums saglabāts"
     },
     "team": {
       "noWorkspace": "Izvēlieties darba vidi, lai pārvaldītu komandas dalībniekus.",

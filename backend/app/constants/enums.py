@@ -110,6 +110,14 @@ class GitHubIndexJobStatus(str, Enum):
     failed = "failed"
 
 
+class GitHubIndexJobTriggerSource(str, Enum):
+    """github_index_jobs.trigger_source — R8 pipeline orchestration."""
+
+    manual = "manual"
+    autostart = "autostart"
+    command = "command"
+
+
 class GitHubReviewRunStatus(str, Enum):
     """github_review_runs.status — R4 review run."""
 

@@ -24,6 +24,19 @@ function makePullRequest(id: string): GitHubPullRequest {
   };
 }
 
+describe('fetchPullRequest', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('returns the pull request from the single-PR API', async () => {
+    const target = makePullRequest('pr-2');
+    vi.spyOn(api, 'fetchPullRequest').mockResolvedValue(target);
+
+    await expect(api.fetchPullRequest('ws', 'repo', 'pr-2')).resolves.toBe(target);
+  });
+});
+
 describe('findPullRequestInList', () => {
   afterEach(() => {
     vi.restoreAllMocks();

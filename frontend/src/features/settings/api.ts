@@ -18,6 +18,11 @@ import type {
 } from '@/features/settings/types';
 import type { InvitationStatus } from '@/features/settings/types';
 
+export async function fetchWorkspace(workspaceId: string): Promise<Workspace> {
+  const response = await apiClient.get(`/workspaces/${workspaceId}`);
+  return await parseSuccess<Workspace>(response);
+}
+
 export async function patchWorkspace(
   workspaceId: string,
   payload: WorkspaceUpdatePayload,

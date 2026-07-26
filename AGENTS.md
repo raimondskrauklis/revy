@@ -13,7 +13,7 @@ Entry point for AI agents working in this repo.
 | **Registration flags** | [docs/starter-pack/REGISTRATION_FLAGS.md](docs/starter-pack/REGISTRATION_FLAGS.md) |
 | **Revy product slice (P4)** | [docs/starter-pack/REVY_PRODUCT_SLICE.md](docs/starter-pack/REVY_PRODUCT_SLICE.md) |
 | **SaaS base program (W0–W8)** | [docs/saas-base/README.md](docs/saas-base/README.md) — tag `saas-base-v1` |
-| **Review pipeline program (R0–R8)** | [docs/review-pipeline/README.md](docs/review-pipeline/README.md) — R0–R7 on `main`; **R8** active ([execution](docs/review-pipeline/waves/REVIEW_PIPELINE_R8_EXECUTION.md)) |
+| **Review pipeline program (R0–R8)** | [docs/review-pipeline/README.md](docs/review-pipeline/README.md) — R0–R7 on `main`; R8 in PR [#31](https://github.com/raimondskrauklis/revy/pull/31) |
 | **SaaS ops / staging** | [STAGING_VERIFICATION.md](docs/saas-base/STAGING_VERIFICATION.md), [OPS.md](docs/saas-base/OPS.md) |
 | **Stripe billing setup** | [docs/utils/STRIPE_BILLING_SETUP.md](docs/utils/STRIPE_BILLING_SETUP.md) |
 | **Scaffold program status** | [docs/starter-pack/README.md](docs/starter-pack/README.md) |

@@ -279,6 +279,18 @@ def _index_job_fixture() -> tuple[AsyncMock, GitHubIndexJobORM, GitHubPullReques
 
 
 @pytest.mark.asyncio
+async def test_run_index_job_skips_non_pending_status():
+    session, job, _revision = _index_job_fixture()
+    job.status = GitHubIndexJobStatus.processing
+
+    with patch("app.services.github_indexing.download_repository_tarball", AsyncMock()) as download_mock:
+        result = await run_index_job(session, index_job_id=job.id)
+
+    assert result.status == GitHubIndexJobStatus.processing
+    download_mock.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_run_index_job_preserves_chunks_when_embed_fails():
     session, job, revision = _index_job_fixture()
 

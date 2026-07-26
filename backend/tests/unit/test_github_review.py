@@ -128,6 +128,28 @@ def test_parse_finding_row_accepts_valid():
 
 
 @pytest.mark.asyncio
+async def test_run_review_run_skips_non_pending_status():
+    review_run_id = uuid.uuid4()
+    run = GitHubReviewRunORM(
+        revision_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        status=GitHubReviewRunStatus.processing,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    run.id = review_run_id
+
+    session = AsyncMock()
+    session.get = AsyncMock(return_value=run)
+
+    with patch("app.services.github_review._collect_context_chunks", AsyncMock()) as collect_mock:
+        result = await github_review.run_review_run(session, review_run_id=review_run_id)
+
+    assert result.status == GitHubReviewRunStatus.processing
+    collect_mock.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_run_review_run_invalid_json_marks_failed():
     review_run_id = uuid.uuid4()
     workspace_id = uuid.uuid4()

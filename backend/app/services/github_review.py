@@ -227,6 +227,13 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> GitHu
     if run is None:
         raise NotFoundError("Review run not found")
 
+    if run.status != GitHubReviewRunStatus.pending:
+        logger.info(
+            "github_review_run_skip_non_pending",
+            extra={"review_run_id": str(review_run_id), "status": run.status.value},
+        )
+        return run
+
     run.status = GitHubReviewRunStatus.processing
     run.error_message = None
     await session.flush()

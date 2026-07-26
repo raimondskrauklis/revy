@@ -29,6 +29,17 @@ export async function fetchInstallationRepositories(
   return await parseSuccess<CursorPage<GitHubRepository>>(response);
 }
 
+export async function fetchPullRequest(
+  workspaceId: string,
+  repositoryId: string,
+  pullRequestId: string,
+): Promise<GitHubPullRequest> {
+  const response = await apiClient.get(
+    `/workspaces/${workspaceId}/repositories/${repositoryId}/pull-requests/${pullRequestId}`,
+  );
+  return await parseSuccess<GitHubPullRequest>(response);
+}
+
 export async function fetchPullRequests(
   workspaceId: string,
   repositoryId: string,

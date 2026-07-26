@@ -24,6 +24,7 @@ import {
   fetchExportJobStatus,
   fetchInvitations,
   fetchMembers,
+  fetchWorkspace,
   leaveWorkspace,
   patchWorkspace,
   removeMember,
@@ -53,6 +54,14 @@ export function useInvitations(workspaceId: string | null | undefined, enabled =
     queryKey: [...settingsQueryKeys.invitations(workspaceId ?? '')],
     queryFn: (cursor) => fetchInvitations(workspaceId!, 'pending', cursor ?? undefined),
     enabled: Boolean(workspaceId) && enabled,
+  });
+}
+
+export function useWorkspaceSettings(workspaceId: string | null | undefined) {
+  return useQuery({
+    queryKey: settingsQueryKeys.workspace(workspaceId ?? ''),
+    queryFn: () => fetchWorkspace(workspaceId!),
+    enabled: Boolean(workspaceId),
   });
 }
 

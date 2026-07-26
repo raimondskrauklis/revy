@@ -19,6 +19,22 @@ from app.services.workspaces import update_workspace
 router = APIRouter(tags=["workspaces"])
 
 
+@router.get("/{workspace_id}", response_model=SuccessResponse[WorkspaceResponse])
+async def get_workspace(
+    workspace_id: UUID,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> SuccessResponse[WorkspaceResponse]:
+    require_permission(current_user, Permission.admin_users)
+    require_same_workspace(current_user, workspace_id)
+
+    workspace = await session.get(WorkspaceORM, workspace_id)
+    if workspace is None:
+        raise NotFoundError("Workspace not found")
+
+    return SuccessResponse(data=WorkspaceResponse.model_validate(workspace))
+
+
 @router.patch("/{workspace_id}", response_model=SuccessResponse[WorkspaceResponse])
 async def patch_workspace(
     workspace_id: UUID,
@@ -39,6 +55,7 @@ async def patch_workspace(
         session,
         workspace_id=workspace_id,
         name=body.name,
+        review_autostart_enabled=body.review_autostart_enabled,
         actor_user_id=current_user.user_id,
         impersonator_user_id=current_user.impersonator_user_id,
     )

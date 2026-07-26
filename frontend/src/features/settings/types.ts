@@ -10,6 +10,7 @@ export interface Workspace {
   name: string;
   slug: string;
   status: WorkspaceStatus;
+  review_autostart_enabled: boolean;
 }
 
 export interface Member {
@@ -40,7 +41,8 @@ export interface CursorPage<T> {
 }
 
 export interface WorkspaceUpdatePayload {
-  name: string;
+  name?: string;
+  review_autostart_enabled?: boolean;
 }
 
 export interface MemberRoleUpdatePayload {
