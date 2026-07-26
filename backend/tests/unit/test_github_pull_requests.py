@@ -120,6 +120,40 @@ async def test_apply_pull_request_synchronize_appends_revision():
 
 
 @pytest.mark.asyncio
+async def test_apply_pull_request_synchronize_same_sha_skips_revision():
+    installation = _installation()
+    repository = _repository(installation)
+    existing = GitHubPullRequestORM(
+        repository_id=repository.id,
+        workspace_id=repository.workspace_id,
+        installation_id=repository.installation_id,
+        github_pull_request_id=_PR_GITHUB_ID,
+        number=7,
+        title="Add feature",
+        state=GitHubPullRequestState.open,
+        head_sha="same-sha",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=1,
+    )
+    existing.id = uuid.uuid4()
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[installation, repository, existing])
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    await apply_pull_request_webhook_event(
+        session,
+        _pull_request_payload(action="synchronize", head_sha="same-sha"),
+    )
+
+    assert existing.revision_count == 1
+    session.add.assert_not_called()
+    session.flush.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_apply_pull_request_orphan_repository_no_op():
     installation = _installation()
     session = AsyncMock()
