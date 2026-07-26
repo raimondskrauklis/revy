@@ -132,7 +132,7 @@ REVY_HF_CACHE_PATH=/data/hf-cache
 
 | Backend | When | Model (examples) | Required env |
 |---------|------|------------------|--------------|
-| **Voyage API** (default) | Production / first deploy | `voyage-3-lite` (shipped), eval → `voyage-code-3` | `VOYAGE_API_KEY`, `REVY_EMBEDDING_MODEL`, `REVY_EMBEDDING_DIMENSIONS` |
+| **Voyage API** (default) | Production / first deploy | `voyage-code-3` @ 1024 (migration `0021`) | `VOYAGE_API_KEY`, `REVY_EMBEDDING_MODEL`, `REVY_EMBEDDING_DIMENSIONS` |
 | **Local / HF** (parallel) | Experiments, air-gapped | `jina-embeddings-v2-base-code` (CPU), `nomic-embed-code` (GPU) | `REVY_EMBEDDING_BACKEND=local`, `REVY_HF_CACHE_PATH`, `REVY_LOCAL_EMBEDDING_MODEL` |
 
 **Reranker (future §11.3 stage 3):** `REVY_RERANKER_BACKEND=bge-reranker-v2-m3` (self-hosted) or Voyage rerank API — not required for R3 v1 dense search.
@@ -140,8 +140,8 @@ REVY_HF_CACHE_PATH=/data/hf-cache
 ```env
 REVY_EMBEDDING_BACKEND=voyage
 VOYAGE_API_KEY=
-REVY_EMBEDDING_MODEL=voyage-3-lite
-REVY_EMBEDDING_DIMENSIONS=512
+REVY_EMBEDDING_MODEL=voyage-code-3
+REVY_EMBEDDING_DIMENSIONS=1024
 # REVY_HF_CACHE_PATH=/data/hf-cache
 # REVY_LOCAL_EMBEDDING_MODEL=jina-embeddings-v2-base-code
 # REVY_RERANKER_BACKEND=bge-reranker-v2-m3
@@ -157,7 +157,7 @@ REVY_EMBEDDING_DIMENSIONS=512
 | Deep | `kimi-k3` | `REVY_MOONSHOT_MODEL_DEEP` |
 | Critical | `kimi-k3` | `REVY_MOONSHOT_MODEL_CRITICAL` |
 
-**Secondary (R5 judge):** Anthropic Claude — independent-family cross-check / escalation only (not the R4 default reviewer). See `internal-docs/product/revy/docs/architecture.md` §13–14.
+**Secondary (R5 judge):** Anthropic Claude — independent-family cross-check / escalation only (not the R4 default reviewer). Default model `claude-sonnet-5` (`REVY_ANTHROPIC_MODEL`). See `internal-docs/product/revy/docs/architecture.md` §13–14.
 
 ```env
 REVY_LLM_PROVIDER=moonshot
@@ -166,7 +166,7 @@ REVY_MOONSHOT_MODEL_STANDARD=kimi-k2.7-code
 REVY_MOONSHOT_MODEL_DEEP=kimi-k3
 REVY_MOONSHOT_MODEL_CRITICAL=kimi-k3
 ANTHROPIC_API_KEY=
-# REVY_ANTHROPIC_MODEL=claude-sonnet-4-20250514
+REVY_ANTHROPIC_MODEL=claude-sonnet-5
 ```
 
 **Bedrock (optional M1):** IAM auth instead of `ANTHROPIC_API_KEY` for judge and/or reviewer.

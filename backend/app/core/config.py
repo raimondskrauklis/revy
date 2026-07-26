@@ -89,7 +89,7 @@ class Settings(BaseSettings):
     revy_moonshot_model_standard: str = "kimi-k2.7-code"
     revy_moonshot_model_deep: str = "kimi-k3"
     revy_moonshot_model_critical: str = "kimi-k3"
-    revy_anthropic_model: str = "claude-sonnet-4-20250514"
+    revy_anthropic_model: str = "claude-sonnet-5"
     moonshot_api_key: str | None = None
     anthropic_api_key: str | None = None
     voyage_api_key: str | None = None
@@ -106,8 +106,8 @@ class Settings(BaseSettings):
     revy_hf_cache_path: str | None = None
 
     # Embeddings — R3 indexing (Voyage)
-    revy_embedding_model: str = "voyage-3-lite"
-    revy_embedding_dimensions: int = 512
+    revy_embedding_model: str = "voyage-code-3"
+    revy_embedding_dimensions: int = 1024
 
     # Stripe billing — disabled by default; set STRIPE_ENABLED=true with keys in production
     stripe_enabled: bool = False

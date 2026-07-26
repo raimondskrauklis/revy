@@ -31,7 +31,7 @@ async def test_complete_review_returns_content():
 
     with patch("app.integrations.anthropic_review.settings") as mock_settings:
         mock_settings.anthropic_api_key = "test-key"
-        mock_settings.revy_anthropic_model = "claude-sonnet-4-20250514"
+        mock_settings.revy_anthropic_model = "claude-sonnet-5"
         content = await complete_review(client, user_prompt="review")
 
     assert json.loads(content)["findings"] == []

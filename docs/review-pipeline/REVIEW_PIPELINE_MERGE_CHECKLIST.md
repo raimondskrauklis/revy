@@ -75,7 +75,7 @@ Per-PR gate: Greptile resolved + CI green + rebase onto previous merge + tag.
 ## Phase 3 — Post-merge ops
 
 - [ ] `alembic upgrade head` (`0014`–`0016`)
-- [ ] Env: `MOONSHOT_API_KEY`, `VOYAGE_API_KEY`, `REVY_BOT_LOGIN`; optional `ANTHROPIC_API_KEY`
+- [ ] Env: `MOONSHOT_API_KEY`, `VOYAGE_API_KEY` (`REVY_EMBEDDING_MODEL=voyage-code-3`, `REVY_EMBEDDING_DIMENSIONS=1024`), `REVY_BOT_LOGIN`; optional `ANTHROPIC_API_KEY` + `REVY_ANTHROPIC_MODEL=claude-sonnet-5`
 - [ ] Worker `-Q`: `github_events,repo_sync,indexing,review,reconciliation,judge,github_publish,maintenance,default,notifications,heavy`
 - [ ] Staging e2e (Phase 4 matrix)
 

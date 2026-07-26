@@ -12,9 +12,10 @@ Phase **R3** of [REVIEW_PIPELINE_R3_INDEXING_GENERAL_PLAN.md](../REVIEW_PIPELINE
 
 ## Decisions locked for R3
 
-- **Tables:** `github_index_jobs` (per revision run), `github_code_chunks` (text + `vector(512)` embedding).
-- **Embedding (v1 shipped):** Voyage API — `VOYAGE_API_KEY` required; model `voyage-3-lite`, dim **512** (`REVY_EMBEDDING_MODEL`, `REVY_EMBEDDING_DIMENSIONS`); disabled when key empty → `503 embeddings_disabled`.
-- **Embedding (parallel track — architecture §11.3.1):** `REVY_EMBEDDING_BACKEND=voyage` (default) \| `local` when self-hosted backend ships; local candidates `jina-embeddings-v2-base-code` (CPU), `nomic-embed-code` (GPU); weights cache `REVY_HF_CACHE_PATH`. Eval upgrade for API path: `voyage-code-3` (Matryoshka dims; architecture default eval dim 1024).
+- **Tables:** `github_index_jobs` (per revision run), `github_code_chunks` (text + `vector(1024)` embedding; migration `0021`).
+- **Embedding (production default):** Voyage API — `VOYAGE_API_KEY` required; model `voyage-code-3`, dim **1024** (`REVY_EMBEDDING_MODEL`, `REVY_EMBEDDING_DIMENSIONS`); `output_dimension` sent for Matryoshka models; disabled when key empty → `503 embeddings_disabled`.
+- **Embedding (R3 v1 shipped):** `voyage-3-lite` @ 512 (`0013` only) — upgrade requires `0021` + re-index.
+- **Embedding (parallel track — architecture §11.3.1):** `REVY_EMBEDDING_BACKEND=voyage` (default) \| `local` when self-hosted backend ships; local candidates `jina-embeddings-v2-base-code` (CPU), `nomic-embed-code` (GPU); weights cache `REVY_HF_CACHE_PATH`.
 - **Reranker (future retrieval stack §11.3):** parallel API (`voyage` rerank) vs local `bge-reranker-v2-m3` via `REVY_RERANKER_BACKEND` — not in R3 v1.
 - **Source fetch:** GitHub tarball `GET /repos/{owner}/{repo}/tarball/{ref}` → extract under `REVY_WORKTREES_ROOT/{revision_id}`.
 - **Chunking:** line-aware splits, max 2000 chars, skip binary paths + `node_modules`/`.git`/vendor dirs.
@@ -87,7 +88,7 @@ pipenv run lint && pipenv run pytest \
   -q
 ```
 
-**Deploy:** `alembic upgrade head`; set `VOYAGE_API_KEY`, `REVY_WORKTREES_ROOT`; worker consumes `indexing` queue.
+**Deploy:** `alembic upgrade head` (through `0021` for `voyage-code-3`); set `VOYAGE_API_KEY`, `REVY_EMBEDDING_MODEL=voyage-code-3`, `REVY_EMBEDDING_DIMENSIONS=1024`, `REVY_WORKTREES_ROOT`; worker consumes `indexing` queue. Re-index after `0021` (migration clears existing embeddings).
 
 **Human gate:** index one revision on staging; `github_code_chunks` rows with non-null embeddings.
 

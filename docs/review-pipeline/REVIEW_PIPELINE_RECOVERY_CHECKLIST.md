@@ -36,8 +36,8 @@
 
 ### Track F — Post-merge ops (before R8 dogfood)
 
-- [ ] `alembic upgrade head` on staging/prod (`0014`–`0018` after R8 merge)
-- [ ] Env: `MOONSHOT_API_KEY`, `VOYAGE_API_KEY`, `REVY_BOT_LOGIN`; optional `ANTHROPIC_API_KEY`
+- [ ] `alembic upgrade head` on staging/prod (through `0021` for `voyage-code-3` embeddings)
+- [ ] Env: `MOONSHOT_API_KEY`, `VOYAGE_API_KEY` (`REVY_EMBEDDING_MODEL=voyage-code-3`, `REVY_EMBEDDING_DIMENSIONS=1024`), `REVY_BOT_LOGIN`; optional `ANTHROPIC_API_KEY` + `REVY_ANTHROPIC_MODEL=claude-sonnet-5`
 - [ ] Redeploy or restart worker so droplet runs latest `deploy.yml` `-Q` list:
   `github_events,repo_sync,indexing,review,reconciliation,judge,github_publish,maintenance,default,notifications,heavy`
 - [ ] Staging e2e: autostart + `@revy review` + toggle off ([GITHUB_WEBHOOK_DEV.md](./GITHUB_WEBHOOK_DEV.md) § R8)

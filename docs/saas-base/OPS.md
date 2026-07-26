@@ -10,7 +10,17 @@ Short pointers for running the W0–W8 platform on staging/production. Full depl
 cd backend && pipenv run alembic upgrade head
 ```
 
-Required through **`0009_impersonation_sessions`** for SaaS base W6–W7.
+Required through **`0021_github_code_chunks_embedding_dim`** for review pipeline embeddings (`voyage-code-3` @ 1024). SaaS base W6–W7 needs through **`0009_impersonation_sessions`**.
+
+**Droplet:**
+
+```bash
+docker run --rm \
+  --network revy-net \
+  --env-file /mnt/revy_volume/backend/.env \
+  registry.digitalocean.com/revy-container-registry/revy-api:latest \
+  alembic upgrade head
+```
 
 ---
 
@@ -37,8 +47,18 @@ Production example: `deploy/env-examples/backend.env.production.example`.
 One-time per environment — see [DEV_BOOTSTRAP.md](../starter-pack/DEV_BOOTSTRAP.md) §5 and `internal-docs/starter-pack/docs/backend/BOOTSTRAP_SUPER_ADMIN.md`.
 
 1. Set `BOOTSTRAP_SUPER_ADMIN_EMAIL` in backend env.
-2. `pipenv run python -m scripts.seed_bootstrap_super_admin`
+2. Run seed **before** API start (local: `pipenv run python -m scripts.seed_bootstrap_super_admin`; droplet: one-off `docker run … python -m scripts.seed_bootstrap_super_admin` — see DEV_BOOTSTRAP §5).
 3. Remove env var after first successful login; register same email in Keycloak.
+
+## Review pipeline env (staging/prod)
+
+| Var | Purpose |
+|-----|---------|
+| `VOYAGE_API_KEY` | R3 embeddings — `REVY_EMBEDDING_MODEL=voyage-code-3`, `REVY_EMBEDDING_DIMENSIONS=1024` |
+| `MOONSHOT_API_KEY` | R4 primary reviewer (`kimi-k2.7-code` / `kimi-k3` by profile) |
+| `ANTHROPIC_API_KEY` | R5 judge (optional); `REVY_ANTHROPIC_MODEL=claude-sonnet-5` |
+
+Example: `deploy/env-examples/backend.env.production.example`.
 
 ---
 

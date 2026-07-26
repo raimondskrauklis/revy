@@ -10,9 +10,9 @@ Run on **staging** before production SaaS base sign-off (W0–W8). Code may ship
 
 | # | Step | Pass |
 |---|------|------|
-| 1 | Open staging SPA → Keycloak login | ☐ |
+| 1 | Open staging SPA `/` → landing; `/login` → Keycloak | ☐ |
 | 2 | `GET /api/v1/me` → `status: active`, memberships | ☐ |
-| 3 | Bootstrap super_admin (if fresh env): seed script + KC same email → first login | ☐ |
+| 3 | Bootstrap super_admin (if fresh env): seed via one-off docker **before** API start + KC same email → first login | ☐ |
 | 4 | Mode A registration: new user lands on dashboard without approval | ☐ |
 
 ---

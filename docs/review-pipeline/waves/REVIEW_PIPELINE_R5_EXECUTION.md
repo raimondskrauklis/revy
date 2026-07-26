@@ -18,7 +18,7 @@ Locked in findings as **R5-Q1–Q3** (execution peer-review 2026-07-26):
 
 - **Queues:** `reconcile_tasks` on `reconciliation`; `judge_tasks` on `judge` (routes exist in `celery_app.py`).
 - **Trigger:** enqueue reconcile after R4 review run `completed`; judge runs on reconcile output when R5-Q3 matches.
-- **Primary model:** Moonshot findings from R4 unchanged; judge uses Anthropic when `ANTHROPIC_API_KEY` set.
+- **Primary model:** Moonshot findings from R4 unchanged; judge uses Anthropic (`claude-sonnet-5` default) when `ANTHROPIC_API_KEY` set.
 - **Judge skip:** when `ANTHROPIC_API_KEY` unset — reconcile completes; judge outcomes omitted (not failed).
 - **Judge outcome:** `upheld` \| `dismissed` \| `modified` on `github_finding_judge_outcomes`; links to `group_id` + `review_run_id`. `dismissed` → mark group `resolved` or downgrade per service logic (unit-tested).
 - **API:** `GET …/pull-requests/{pr_id}/findings/reconciled` — cursor list for workspace members (`items_view`).
@@ -91,7 +91,7 @@ pipenv run lint && pipenv run pytest \
   -q
 ```
 
-**Deploy:** `alembic upgrade head`; `ANTHROPIC_API_KEY` optional (judge path); worker `-Q` includes `reconciliation,judge`.
+**Deploy:** `alembic upgrade head`; `ANTHROPIC_API_KEY` optional (`REVY_ANTHROPIC_MODEL=claude-sonnet-5` default); worker `-Q` includes `reconciliation,judge`.
 
 **Human gate:** complete R4 review run → reconcile groups stable across second run on new revision.
 
