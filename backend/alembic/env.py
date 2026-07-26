@@ -133,6 +133,7 @@ async def run_async_migrations() -> None:
         poolclass=pool.NullPool,
     )
     async with connectable.connect() as connection:
+        await connection.execution_options(isolation_level="AUTOCOMMIT")
         await connection.run_sync(do_run_migrations)
     await connectable.dispose()
 

@@ -1,12 +1,12 @@
 # Review pipeline — execution index
 
-Execution files (`REVIEW_PIPELINE_R*_EXECUTION.md`) are created after findings + general plan — same pattern as [SaaS base waves](../saas-base/waves/README.md).
+Linear **phase-execution** order. General plan: [REVIEW_PIPELINE_GENERAL_PLAN.md](../REVIEW_PIPELINE_GENERAL_PLAN.md).
 
-**Start:** [REVIEW_PIPELINE_PROGRAM.md](../REVIEW_PIPELINE_PROGRAM.md) → findings → general plan → execution files here.
+**Authority:** [REVIEW_PIPELINE_FINDINGS.md](../REVIEW_PIPELINE_FINDINGS.md), `internal-docs/product/revy/docs/WEBHOOKS.md`.
 
 | Phase | File | Status |
 |-------|------|--------|
-| R0 — GitHub webhooks | — | not started |
+| R0 — GitHub webhooks | [REVIEW_PIPELINE_R0_EXECUTION.md](./REVIEW_PIPELINE_R0_EXECUTION.md) | ready for LOOP |
 | R1 — Repository sync | — | not started |
 | R2 — PR ingestion | — | not started |
 | R3 — Indexing | — | not started |
@@ -14,3 +14,7 @@ Execution files (`REVIEW_PIPELINE_R*_EXECUTION.md`) are created after findings +
 | R5 — Reconcile + judge | — | not started |
 | R6 — GitHub publish | — | not started |
 | R7 — Reviewer UI | — | not started |
+
+**Program status:** Findings + general plan + R0 execution ready. Start branch `feat/review-r0-webhooks`.
+
+**SaaS base:** frozen at tag `saas-base-v1`; infra patch `saas-base-v1.1` (Alembic AUTOCOMMIT).

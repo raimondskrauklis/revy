@@ -13,7 +13,9 @@
 | Doc | Purpose |
 |-----|---------|
 | [REVIEW_PIPELINE_PROGRAM.md](./REVIEW_PIPELINE_PROGRAM.md) | Strategy, branching, phased roadmap R0–R7 |
-| [REVY_PRODUCT_SLICE.md](../starter-pack/REVY_PRODUCT_SLICE.md) | Shipped P4: `github_installations` + `/installations` UI |
+| [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) | Baseline inventory, decisions, gaps |
+| [REVIEW_PIPELINE_GENERAL_PLAN.md](./REVIEW_PIPELINE_GENERAL_PLAN.md) | Phase goals (R0–R7) |
+| [REVY_PRODUCT_SLICE.md](../starter-pack/REVY_PRODUCT_SLICE.md) | Shipped P4: `github_installations` |
 | [SAAS_BASE_FINDINGS.md](../saas-base/SAAS_BASE_FINDINGS.md) | SaaS base complete — out of scope for R* |
 
 **Full product authority (contributors):** `internal-docs/product/revy/docs/architecture.md`, `PLATFORM_CONTEXT.md`, `deploy/docs/implementation.revy.md`.
@@ -27,7 +29,7 @@
 | Phase | Focus | Status |
 |-------|--------|--------|
 | **P4** | `github_installation` list + dev register | **shipped** |
-| **R0** | GitHub webhooks + event ingestion | not started |
+| **R0** | GitHub webhooks + event ingestion | [execution](./waves/REVIEW_PIPELINE_R0_EXECUTION.md) ready |
 | **R1** | Repository / branch metadata sync | not started |
 | **R2** | Pull request ingestion + revisions | not started |
 | **R3** | Indexing (chunks, embeddings, pgvector) | not started |
@@ -54,6 +56,5 @@
 
 ## Next
 
-1. Read [REVIEW_PIPELINE_PROGRAM.md](./REVIEW_PIPELINE_PROGRAM.md) § branching.
-2. Run `create-findings` on review pipeline scope → `REVIEW_PIPELINE_FINDINGS.md`.
-3. First implementation branch: `feat/review-r0-webhooks`.
+1. Read [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) and [waves/REVIEW_PIPELINE_R0_EXECUTION.md](./waves/REVIEW_PIPELINE_R0_EXECUTION.md).
+2. Branch `feat/review-r0-webhooks` → `phase-execution` from R0 execution file.

@@ -86,6 +86,8 @@ pipenv run alembic upgrade head
 pipenv run alembic current
 ```
 
+**Verify:** `pipenv run alembic current` prints a revision id (not empty). Online migrations use `AUTOCOMMIT` in `backend/alembic/env.py` — without it, asyncpg rolls back on disconnect and you get no tables / no `alembic_version` despite success logs.
+
 Test DB (optional local check):
 
 ```bash
