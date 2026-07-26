@@ -14,14 +14,13 @@ import { normalizeLanguage } from '@/lib/locale';
 import i18n from '@/i18n/config';
 import {
   getKeycloakInstance,
-  getPostLogoutRedirectUri,
   initKeycloak,
   setKeycloakInitialized,
 } from '@/lib/keycloak';
 import { log } from '@/lib/log';
 import { Sentry } from '@/lib/sentry';
 import { mapApiError, showDomainErrorToast } from '@/shared/errors';
-import { setStoredWorkspaceId } from '@/lib/api';
+import { logoutKeycloakSession } from '@/lib/api';
 
 const PROVISION_ERROR_CODES = new Set(['provision_email_required', 'identity_email_conflict']);
 
@@ -128,8 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setIsUserLoading(false);
     Sentry.setUser(null);
-    setStoredWorkspaceId(null);
-    void keycloak?.logout({ redirectUri: getPostLogoutRedirectUri() });
+    void logoutKeycloakSession();
   }, [keycloak]);
 
   return (

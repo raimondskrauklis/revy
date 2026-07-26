@@ -29,6 +29,12 @@ export function setStoredWorkspaceId(workspaceId: string | null): void {
   }
 }
 
+export async function logoutKeycloakSession(): Promise<void> {
+  setStoredWorkspaceId(null);
+  const keycloak = getKeycloakInstance();
+  await keycloak?.logout({ redirectUri: getPostLogoutRedirectUri() });
+}
+
 async function refreshKeycloakToken(): Promise<string | null> {
   const keycloak = getKeycloakInstance();
   if (!keycloak?.authenticated) return null;
@@ -48,7 +54,7 @@ async function refreshKeycloakToken(): Promise<string | null> {
         i18n.t('auth.sessionExpired.title'),
         i18n.t('auth.sessionExpired.body'),
       );
-      await keycloak.logout({ redirectUri: getPostLogoutRedirectUri() });
+      await logoutKeycloakSession();
       return null;
     } finally {
       setTimeout(() => {
@@ -104,7 +110,7 @@ apiClient.interceptors.response.use(
           i18n.t('auth.sessionExpired.title'),
           i18n.t('auth.sessionExpired.body'),
         );
-        await keycloak.logout({ redirectUri: getPostLogoutRedirectUri() });
+        await logoutKeycloakSession();
       }
     }
     return Promise.reject(error);
