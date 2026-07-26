@@ -1,11 +1,19 @@
 # backend/app/workers/celery_app.py
 """Celery app — broker/backend from app.core.config (no localhost fallbacks)."""
 from celery import Celery
+from celery.signals import worker_process_init
 
 from app.core.config import settings
 from app.core.sentry import init_sentry
 
 init_sentry()
+
+
+@worker_process_init.connect
+def _reset_database_engine_after_fork(**_kwargs: object) -> None:
+    from app.core.database import reset_async_engine_for_fork
+
+    reset_async_engine_for_fork()
 
 celery_app = Celery(
     "app",
