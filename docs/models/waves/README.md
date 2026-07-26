@@ -9,7 +9,7 @@ Linear **phase-execution** order. General plan: [`../MODEL_POLICY_GENERAL_PLAN.m
 | M0 — Model role foundations | [MODEL_POLICY_M0_EXECUTION.md](./MODEL_POLICY_M0_EXECUTION.md) | done (`22c35ab`) |
 | M1 — AWS Bedrock LLM provider | [MODEL_POLICY_M1_EXECUTION.md](./MODEL_POLICY_M1_EXECUTION.md) | done (`91fe16a`) |
 | M2 — Workspace model policy (API) | [MODEL_POLICY_M2_EXECUTION.md](./MODEL_POLICY_M2_EXECUTION.md) | done (`4fededb`) |
-| M3 — Review settings UI | [MODEL_POLICY_M3_EXECUTION.md](./MODEL_POLICY_M3_EXECUTION.md) | done (pending commit) |
+| M3 — Review settings UI | [MODEL_POLICY_M3_EXECUTION.md](./MODEL_POLICY_M3_EXECUTION.md) | done (`e1b0b8b`) |
 
 **LOOP order:** M0 → M1 → M2 → M3 (strict — each phase depends on prior).
 
