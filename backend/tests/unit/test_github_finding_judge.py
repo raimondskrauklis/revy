@@ -12,10 +12,10 @@ from app.constants.enums import (
     GitHubReviewRunStatus,
     ReviewProfile,
 )
+from app.core.exceptions import ServiceUnavailableError
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_review_run import GitHubReviewRunORM
-from app.core.exceptions import ServiceUnavailableError
 from app.services.github_finding_judge import is_judge_candidate, run_judge_for_review_run
 
 
