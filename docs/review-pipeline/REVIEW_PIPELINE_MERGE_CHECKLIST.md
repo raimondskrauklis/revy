@@ -4,9 +4,21 @@
 
 **Stack (strict order):** [#23](https://github.com/raimondskrauklis/revy/pull/23) docs → [#24](https://github.com/raimondskrauklis/revy/pull/24) R4 → [#25](https://github.com/raimondskrauklis/revy/pull/25) R5 → [#26](https://github.com/raimondskrauklis/revy/pull/26) R6 → [#27](https://github.com/raimondskrauklis/revy/pull/27) R7.
 
-**Babysit skill:** `/babysit-pr` or `.cursor/skills/babysit-pr` — unresolved Greptile threads only.
+**Last updated:** 2026-07-26 — babysit pass in progress; see § Status below.
 
-**Recovery context:** [REVIEW_PIPELINE_RECOVERY_CHECKLIST.md](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md) · **States:** [findings § domain states](./REVIEW_PIPELINE_FINDINGS.md#domain-states-enums)
+---
+
+## Status (2026-07-26)
+
+| PR | Babysit fixes pushed | CI | Greptile | Notes |
+|----|----------------------|-----|----------|-------|
+| **#23** | — | green | 3 open threads (stale vs #27) | **Recommend close** — doc sync landed on [#27](https://github.com/raimondskrauklis/revy/pull/27) |
+| **#24** | none needed | green | clean | Ready after #23 decision |
+| **#25** | `f05ae6b` inline judge docs | pending re-run | re-review pending | Rebased stack head |
+| **#26** | `05b2f72` publish guards + retries | pending re-run | re-review pending | Rebased onto #25 |
+| **#27** | `ad3f6ba` UI fixes + full doc sync | pending re-run | re-review pending | Includes `REVIEW_PIPELINE_MERGE_CHECKLIST.md` |
+
+**After each push:** wait for Greptile + resolve threads on GitHub; rebase higher PRs if lower PR changes.
 
 ---
 
