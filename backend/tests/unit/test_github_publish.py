@@ -23,6 +23,7 @@ from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullReque
 from app.models.github_repository import GitHubRepositoryORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.services import github_publish
+from app.services.github_publish import PublishJobRetryableError
 
 
 def test_compute_check_conclusion_failure_on_critical():
@@ -287,3 +288,27 @@ async def test_run_publish_job_updates_existing_sha():
     assert result.github_check_run_id == 50
     update_mock.assert_awaited_once()
     create_check_mock.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_create_publish_job_for_review_run_skips_when_pending_exists():
+    review_run_id = uuid.uuid4()
+    run = GitHubReviewRunORM(
+        revision_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    run.id = review_run_id
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[run, uuid.uuid4()])
+
+    result = await github_publish.create_publish_job_for_review_run(
+        session,
+        review_run_id=review_run_id,
+    )
+
+    assert result is None
+    session.add.assert_not_called()

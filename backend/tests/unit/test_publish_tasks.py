@@ -34,3 +34,32 @@ def test_publish_review_run_task_runs():
 
     run_mock.assert_awaited_once()
     session.commit.assert_awaited_once()
+    run_mock.assert_awaited_with(
+        session,
+        publish_job_id=job.id,
+        persist_github_surface=True,
+    )
+
+
+def test_publish_for_review_run_enqueues_publish_review_run():
+    job_id = uuid.uuid4()
+
+    session = AsyncMock()
+    session.commit = AsyncMock()
+
+    db_context = MagicMock()
+    db_context.__aenter__ = AsyncMock(return_value=session)
+    db_context.__aexit__ = AsyncMock(return_value=None)
+
+    with patch("app.workers.publish_tasks.get_db_context", return_value=db_context):
+        with patch(
+            "app.workers.publish_tasks.create_publish_job_for_review_run",
+            AsyncMock(return_value=job_id),
+        ):
+            with patch(
+                "app.workers.publish_tasks.publish_review_run.delay",
+            ) as delay_mock:
+                publish_tasks.publish_for_review_run.run(str(uuid.uuid4()))
+
+    delay_mock.assert_called_once_with(str(job_id))
+    session.commit.assert_awaited_once()

@@ -35,6 +35,68 @@ logger = get_logger(__name__)
 SUMMARY_ROW_CAP = 50
 
 
+class PublishJobRetryableError(Exception):
+    """Transient publish failure — Celery should retry after persisting progress."""
+
+
+async def mark_publish_job_failed(
+    session: AsyncSession,
+    *,
+    publish_job_id: UUID,
+    error_message: str,
+) -> None:
+    job = await session.get(GitHubPublishJobORM, publish_job_id)
+    if job is None:
+        return
+    if job.status in (GitHubPublishJobStatus.pending, GitHubPublishJobStatus.processing):
+        job.status = GitHubPublishJobStatus.failed
+        job.error_message = error_message[:2000]
+        await session.flush()
+
+
+async def create_publish_job_for_review_run(
+    session: AsyncSession,
+    *,
+    review_run_id: UUID,
+) -> UUID | None:
+    """Create a pending publish job under row lock, or None if skipped."""
+    run = await session.scalar(
+        select(GitHubReviewRunORM)
+        .where(GitHubReviewRunORM.id == review_run_id)
+        .with_for_update()
+    )
+    if run is None or run.status != GitHubReviewRunStatus.completed:
+        return None
+
+    pending = await session.scalar(
+        select(GitHubPublishJobORM.id)
+        .where(
+            GitHubPublishJobORM.review_run_id == run.id,
+            GitHubPublishJobORM.status.in_(
+                (GitHubPublishJobStatus.pending, GitHubPublishJobStatus.processing),
+            ),
+        )
+        .limit(1)
+    )
+    if pending is not None:
+        return None
+
+    revision = await session.get(GitHubPullRequestRevisionORM, run.revision_id)
+    if revision is None:
+        return None
+
+    job = GitHubPublishJobORM(
+        review_run_id=run.id,
+        revision_id=run.revision_id,
+        workspace_id=run.workspace_id,
+        head_sha=revision.head_sha,
+        status=GitHubPublishJobStatus.pending,
+    )
+    session.add(job)
+    await session.flush()
+    return job.id
+
+
 def compute_check_conclusion(groups: list[GitHubFindingGroupORM]) -> str:
     active = [g for g in groups if g.state == GitHubFindingGroupState.active]
     if any(g.severity in (FindingSeverity.error, FindingSeverity.critical) for g in active):
@@ -219,7 +281,12 @@ def enqueue_publish_for_review_run(review_run_id: UUID) -> None:
     publish_for_review_run.delay(str(review_run_id))
 
 
-async def run_publish_job(session: AsyncSession, *, publish_job_id: UUID) -> GitHubPublishJobORM:
+async def run_publish_job(
+    session: AsyncSession,
+    *,
+    publish_job_id: UUID,
+    persist_github_surface: bool = False,
+) -> GitHubPublishJobORM:
     job = await session.get(GitHubPublishJobORM, publish_job_id)
     if job is None:
         raise NotFoundError("Publish job not found")
@@ -270,12 +337,45 @@ async def run_publish_job(session: AsyncSession, *, publish_job_id: UUID) -> Git
         pull_request_id=pull_request.id,
         head_sha=job.head_sha,
     )
-    is_update = existing is not None and existing.id != job.id
-    post_inline = not is_update
+    if job.github_check_run_id is not None:
+        is_update = True
+        post_inline = False
+    else:
+        is_update = existing is not None and existing.id != job.id
+        post_inline = not is_update
 
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
-            if is_update and existing is not None and existing.github_check_run_id is not None:
+            if job.github_check_run_id is not None:
+                await github_api.update_check_run(
+                    client,
+                    github_installation_id=installation.github_installation_id,
+                    owner=owner,
+                    repo=repo_name,
+                    check_run_id=job.github_check_run_id,
+                    conclusion=conclusion,
+                    summary=summary,
+                )
+                if job.github_comment_id is not None:
+                    await github_api.update_issue_comment(
+                        client,
+                        github_installation_id=installation.github_installation_id,
+                        owner=owner,
+                        repo=repo_name,
+                        comment_id=job.github_comment_id,
+                        body=summary,
+                    )
+                else:
+                    comment_id = await github_api.create_issue_comment(
+                        client,
+                        github_installation_id=installation.github_installation_id,
+                        owner=owner,
+                        repo=repo_name,
+                        issue_number=pull_request.number,
+                        body=summary,
+                    )
+                    job.github_comment_id = comment_id
+            elif is_update and existing is not None and existing.github_check_run_id is not None:
                 job.github_check_run_id = existing.github_check_run_id
                 await github_api.update_check_run(
                     client,
@@ -327,6 +427,10 @@ async def run_publish_job(session: AsyncSession, *, publish_job_id: UUID) -> Git
                     body=summary,
                 )
                 job.github_comment_id = comment_id
+
+            await session.flush()
+            if persist_github_surface:
+                await session.commit()
 
             if post_inline:
                 inline_findings = list(
@@ -382,7 +486,8 @@ async def run_publish_job(session: AsyncSession, *, publish_job_id: UUID) -> Git
             "github_publish_job_failed",
             extra={"publish_job_id": str(publish_job_id), "error": str(exc)},
         )
-        job.status = GitHubPublishJobStatus.failed
-        job.error_message = str(exc)[:2000]
-        await session.flush()
-        raise
+        if not persist_github_surface:
+            job.status = GitHubPublishJobStatus.failed
+            job.error_message = str(exc)[:2000]
+            await session.flush()
+        raise PublishJobRetryableError(str(exc)) from exc
