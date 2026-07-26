@@ -99,3 +99,12 @@ class GitHubPullRequestReviewState(str, Enum):
     commented = "commented"
     dismissed = "dismissed"
     pending = "pending"
+
+
+class GitHubIndexJobStatus(str, Enum):
+    """github_index_jobs.status — R3 indexing."""
+
+    pending = "pending"
+    processing = "processing"
+    completed = "completed"
+    failed = "failed"

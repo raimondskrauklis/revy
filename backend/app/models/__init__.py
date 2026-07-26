@@ -4,6 +4,8 @@
 from app.models.audit_log import AuditLogORM
 from app.models.base import AuditableModel, Base, TimestampedModel, utc_now
 from app.models.data_export_job import DataExportJobORM
+from app.models.github_code_chunk import GitHubCodeChunkORM
+from app.models.github_index_job import GitHubIndexJobORM
 from app.models.github_installation import GitHubInstallationORM
 from app.models.github_pull_request import (
     GitHubPullRequestORM,
@@ -24,6 +26,8 @@ __all__ = [
     "AuditableModel",
     "Base",
     "DataExportJobORM",
+    "GitHubCodeChunkORM",
+    "GitHubIndexJobORM",
     "GitHubInstallationORM",
     "GitHubPullRequestORM",
     "GitHubPullRequestReviewORM",

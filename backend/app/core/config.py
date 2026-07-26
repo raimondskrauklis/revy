@@ -87,6 +87,10 @@ class Settings(BaseSettings):
     revy_worktrees_root: str | None = None
     revy_hf_cache_path: str | None = None
 
+    # Embeddings — R3 indexing (Voyage)
+    revy_embedding_model: str = "voyage-3-lite"
+    revy_embedding_dimensions: int = 512
+
     # Stripe billing — disabled by default; set STRIPE_ENABLED=true with keys in production
     stripe_enabled: bool = False
     stripe_secret_key: str | None = None
@@ -140,6 +144,14 @@ class Settings(BaseSettings):
             and self.github_app_private_key_path
             and self.github_app_private_key_path.strip()
         )
+
+    @property
+    def embeddings_enabled(self) -> bool:
+        return bool(self.voyage_api_key and self.voyage_api_key.strip())
+
+    @property
+    def revy_worktrees_path(self) -> str:
+        return self.revy_worktrees_root or "/tmp/revy/worktrees"
 
 
 settings = Settings()

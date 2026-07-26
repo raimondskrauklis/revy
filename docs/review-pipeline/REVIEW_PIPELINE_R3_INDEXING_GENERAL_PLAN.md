@@ -18,7 +18,7 @@ Chunk and embed repository content at a given revision so the R4 review stage ha
 
 **Depends on:** R2 (PR + revision entities exist).
 
-**Status:** Not started.
+**Status:** Shipped — tag `review-r3-v1`.
 
 **Next:** `create-execution-plan` when R2 ships — [waves/REVIEW_PIPELINE_R3_EXECUTION.md](./waves/REVIEW_PIPELINE_R3_EXECUTION.md) (to be created).
 
