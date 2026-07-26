@@ -93,6 +93,11 @@ def test_judge_llm_enabled_anthropic():
     assert settings.judge_llm_enabled() is True
 
 
+def test_judge_llm_enabled_moonshot_is_false():
+    settings = _test_settings(moonshot_api_key="key", revy_judge_provider="moonshot")
+    assert settings.judge_llm_enabled() is False
+
+
 def test_reviewer_llm_enabled_disabled_without_key():
     settings = _test_settings(moonshot_api_key=None, revy_reviewer_provider="moonshot")
     assert settings.reviewer_llm_enabled() is False
@@ -207,6 +212,45 @@ async def test_dispatch_bedrock_judge():
         region="eu-central-1",
         timeout_seconds=30.0,
     )
+
+
+@pytest.mark.asyncio
+async def test_call_judge_llm_rejects_unsupported_provider():
+    from app.integrations.llm_dispatch import call_judge_llm
+
+    client = AsyncMock()
+    model_ref = ModelRef(provider="moonshot", model_id="kimi-k3")
+    with pytest.raises(ServiceUnavailableError) as exc_info:
+        await call_judge_llm(
+            client,
+            model_ref=model_ref,
+            user_prompt="prompt",
+            timeout_seconds=30.0,
+        )
+    assert exc_info.value.error_code == "llm_disabled"
+
+
+@pytest.mark.asyncio
+async def test_resolve_workspace_override_rejects_moonshot_judge():
+    from app.models.workspace_model_policy import WorkspaceModelPolicyORM
+
+    session = AsyncMock()
+    workspace_id = uuid.uuid4()
+    row = WorkspaceModelPolicyORM(
+        workspace_id=workspace_id,
+        role=ModelRole.judge.value,
+        provider="moonshot",
+        model_id="kimi-k3",
+        region=None,
+    )
+    session.scalar = AsyncMock(return_value=row)
+    with (
+        patch("app.services.model_policy.is_valid_catalog_entry", return_value=True),
+        patch("app.services.model_policy.settings") as mock_settings,
+        pytest.raises(ServiceUnavailableError),
+    ):
+        mock_settings.moonshot_api_key = "key"
+        await resolve_model(session, workspace_id, ModelRole.judge)
 
 
 @pytest.mark.asyncio

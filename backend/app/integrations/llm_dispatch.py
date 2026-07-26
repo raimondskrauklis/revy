@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import httpx
 
+from app.constants.model_registry import SUPPORTED_JUDGE_PROVIDERS
+from app.core.exceptions import ServiceUnavailableError
 from app.integrations import anthropic_review, bedrock_review, moonshot_review
 from app.services.model_policy import ModelRef
 
@@ -50,6 +52,11 @@ async def call_judge_llm(
     timeout_seconds: float,
 ) -> dict:
     provider = model_ref.provider.strip().lower()
+    if provider not in SUPPORTED_JUDGE_PROVIDERS:
+        raise ServiceUnavailableError(
+            message=f"Judge provider is not supported: {provider}",
+            error_code="llm_disabled",
+        )
     if provider == "anthropic":
         return await anthropic_review.judge_finding(
             client,
@@ -64,4 +71,7 @@ async def call_judge_llm(
             region=model_ref.region,
             timeout_seconds=timeout_seconds,
         )
-    raise NotImplementedError(f"Judge provider not implemented: {provider}")
+    raise ServiceUnavailableError(
+        message=f"Judge provider is not supported: {provider}",
+        error_code="llm_disabled",
+    )

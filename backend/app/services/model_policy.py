@@ -10,7 +10,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.model_policy import ModelRole
-from app.constants.model_registry import BEDROCK_CATALOG_EXAMPLES, PLATFORM_MODEL_DEFAULTS
+from app.constants.model_registry import (
+    BEDROCK_CATALOG_EXAMPLES,
+    PLATFORM_MODEL_DEFAULTS,
+    SUPPORTED_JUDGE_PROVIDERS,
+)
 from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError, ValidationError
 from app.models.workspace_model_policy import WorkspaceModelPolicyORM
@@ -69,6 +73,8 @@ def _provider_credentials_configured(
     model_id: str | None = None,
 ) -> bool:
     normalized = provider.strip().lower()
+    if role == ModelRole.judge and normalized not in SUPPORTED_JUDGE_PROVIDERS:
+        return False
     if normalized == "moonshot":
         return bool(settings.moonshot_api_key and settings.moonshot_api_key.strip())
     if normalized == "anthropic":

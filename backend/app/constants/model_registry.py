@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from app.constants.model_policy import ModelRole
 
 SUPPORTED_LLM_PROVIDERS = frozenset({"moonshot", "anthropic", "bedrock"})
+SUPPORTED_JUDGE_PROVIDERS = frozenset({"anthropic", "bedrock"})
 
 
 @dataclass(frozen=True, slots=True)
