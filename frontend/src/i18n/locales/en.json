@@ -542,7 +542,11 @@
       "body": "You do not have permission to view this page.",
       "goBack": "Go back",
       "goHome": "Go home",
-      "signedInAs": "Signed in as {{email}}"
+      "signedInAs": "Signed in as {{email}}",
+      "sessionFailed": {
+        "title": "Couldn't load your account",
+        "body": "You're signed in to SSO, but we couldn't load your Revy profile. Sign out and try again, or contact support if this continues."
+      }
     },
     "actions": {
       "signOut": "Sign out"

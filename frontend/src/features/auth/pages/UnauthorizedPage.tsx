@@ -7,33 +7,40 @@ export function UnauthorizedPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const sessionWithoutProfile = !user;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[color:var(--app-canvas)] p-6">
       <div className="max-w-md space-y-4 text-center">
         <h1 className="text-xl font-semibold text-[color:var(--app-text-strong)]">
-          {t('auth.unauthorized.title')}
+          {t(sessionWithoutProfile ? 'auth.unauthorized.sessionFailed.title' : 'auth.unauthorized.title')}
         </h1>
-        <p className="text-sm text-[color:var(--app-text-muted)]">{t('auth.unauthorized.body')}</p>
+        <p className="text-sm text-[color:var(--app-text-muted)]">
+          {t(sessionWithoutProfile ? 'auth.unauthorized.sessionFailed.body' : 'auth.unauthorized.body')}
+        </p>
         {user?.email && (
           <p className="text-xs text-[color:var(--app-text-subtle)]">
             {t('auth.unauthorized.signedInAs', { email: user.email })}
           </p>
         )}
         <div className="flex flex-wrap justify-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="min-h-11 px-4 rounded-lg ring-1 ring-[color:var(--app-ring)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
-          >
-            {t('auth.unauthorized.goBack')}
-          </button>
-          <Link
-            to="/dashboard"
-            className="min-h-11 inline-flex items-center px-4 rounded-lg bg-[color:var(--app-cta-bg)] text-[color:var(--app-cta-fg)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
-          >
-            {t('auth.unauthorized.goHome')}
-          </Link>
+          {!sessionWithoutProfile ? (
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="min-h-11 px-4 rounded-lg ring-1 ring-[color:var(--app-ring)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
+            >
+              {t('auth.unauthorized.goBack')}
+            </button>
+          ) : null}
+          {!sessionWithoutProfile ? (
+            <Link
+              to="/dashboard"
+              className="min-h-11 inline-flex items-center px-4 rounded-lg bg-[color:var(--app-cta-bg)] text-[color:var(--app-cta-fg)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
+            >
+              {t('auth.unauthorized.goHome')}
+            </Link>
+          ) : null}
           <button
             type="button"
             onClick={() => logout()}

@@ -13,11 +13,24 @@ function displayName(email: string, fullName: string | null): string {
 
 export function UserMenu() {
   const { t } = useTranslation();
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
   const [open, setOpen] = useState(false);
 
-  if (!user) {
+  if (!isAuthenticated) {
     return null;
+  }
+
+  if (!user) {
+    return (
+      <button
+        type="button"
+        onClick={() => logout()}
+        className="flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-sm text-[color:var(--app-text-muted)] hover:bg-[color:var(--app-chip)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
+      >
+        <LogOut className="h-4 w-4 shrink-0" aria-hidden />
+        <span>{t('header.user.signOut')}</span>
+      </button>
+    );
   }
 
   const name = displayName(user.email, user.full_name);
