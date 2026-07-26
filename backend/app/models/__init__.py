@@ -10,6 +10,7 @@ from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_finding_judge_outcome import GitHubFindingJudgeOutcomeORM
 from app.models.github_index_job import GitHubIndexJobORM
 from app.models.github_installation import GitHubInstallationORM
+from app.models.github_publish_job import GitHubPublishJobORM
 from app.models.github_pull_request import (
     GitHubPullRequestORM,
     GitHubPullRequestReviewORM,
@@ -36,6 +37,7 @@ __all__ = [
     "GitHubFindingORM",
     "GitHubIndexJobORM",
     "GitHubInstallationORM",
+    "GitHubPublishJobORM",
     "GitHubPullRequestORM",
     "GitHubPullRequestReviewORM",
     "GitHubPullRequestRevisionORM",

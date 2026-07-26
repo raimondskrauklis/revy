@@ -161,3 +161,12 @@ class GitHubJudgeOutcome(str, Enum):
     upheld = "upheld"
     dismissed = "dismissed"
     modified = "modified"
+
+
+class GitHubPublishJobStatus(str, Enum):
+    """github_publish_jobs.status — R6 GitHub publish."""
+
+    pending = "pending"
+    processing = "processing"
+    completed = "completed"
+    failed = "failed"
