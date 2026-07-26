@@ -18,12 +18,13 @@ from app.constants.enums import (
 from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError
 from app.core.logging import get_logger
-from app.integrations import anthropic_review
+from app.integrations import anthropic_review, llm_dispatch
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_finding_judge_outcome import GitHubFindingJudgeOutcomeORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.services.github_finding_reconcile import severity_rank
+from app.services.model_policy import ModelRole, resolve_model
 
 logger = get_logger(__name__)
 
@@ -51,7 +52,7 @@ def _build_judge_prompt(*, group: GitHubFindingGroupORM) -> str:
 
 async def run_judge_for_review_run(session: AsyncSession, *, review_run_id: UUID) -> int:
     """Run judge on escalation candidates. Returns outcome count (0 when skipped)."""
-    if not settings.anthropic_api_key or not settings.anthropic_api_key.strip():
+    if not settings.judge_llm_enabled():
         return 0
 
     run = await session.get(GitHubReviewRunORM, review_run_id)
@@ -79,6 +80,7 @@ async def run_judge_for_review_run(session: AsyncSession, *, review_run_id: UUID
         candidates.append((finding, group))
 
     judged = 0
+    model_ref = await resolve_model(session, run.workspace_id, ModelRole.judge)
     async with httpx.AsyncClient(timeout=float(settings.revy_revision_timeout_standard_seconds)) as client:
         for _finding, group in candidates[:JUDGE_MAX_PER_RUN]:
             existing = await session.scalar(
@@ -91,9 +93,11 @@ async def run_judge_for_review_run(session: AsyncSession, *, review_run_id: UUID
                 continue
 
             try:
-                raw = await anthropic_review.judge_finding(
+                raw = await llm_dispatch.call_judge_llm(
                     client,
+                    model_ref=model_ref,
                     user_prompt=_build_judge_prompt(group=group),
+                    timeout_seconds=float(settings.revy_revision_timeout_standard_seconds),
                 )
                 outcome_str, notes = anthropic_review.parse_judge_outcome(raw)
             except (httpx.HTTPError, ValueError, ServiceUnavailableError) as exc:
@@ -110,6 +114,8 @@ async def run_judge_for_review_run(session: AsyncSession, *, review_run_id: UUID
                     review_run_id=review_run_id,
                     workspace_id=run.workspace_id,
                     outcome=outcome,
+                    judge_provider=model_ref.provider,
+                    judge_model_id=model_ref.model_id,
                     judge_notes=notes,
                 )
             )

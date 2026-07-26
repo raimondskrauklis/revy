@@ -33,6 +33,7 @@ async def complete_review(
     client: httpx.AsyncClient,
     *,
     user_prompt: str,
+    model_id: str | None = None,
     timeout_seconds: float | None = None,
 ) -> str:
     _require_anthropic_enabled()
@@ -51,7 +52,7 @@ async def complete_review(
             "Content-Type": "application/json",
         },
         json={
-            "model": settings.revy_anthropic_model,
+            "model": model_id or settings.revy_anthropic_model,
             "max_tokens": 4096,
             "system": REVIEW_SYSTEM_PROMPT,
             "messages": [{"role": "user", "content": user_prompt}],
@@ -105,6 +106,7 @@ async def judge_finding(
     client: httpx.AsyncClient,
     *,
     user_prompt: str,
+    model_id: str | None = None,
     timeout_seconds: float | None = None,
 ) -> dict:
     _require_anthropic_enabled()
@@ -123,7 +125,7 @@ async def judge_finding(
             "Content-Type": "application/json",
         },
         json={
-            "model": settings.revy_anthropic_model,
+            "model": model_id or settings.revy_anthropic_model,
             "max_tokens": 1024,
             "system": JUDGE_SYSTEM_PROMPT,
             "messages": [{"role": "user", "content": user_prompt}],

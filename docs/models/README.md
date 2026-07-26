@@ -1,0 +1,13 @@
+# Model policy & providers
+
+Findings and plans for **which models run where** in the review pipeline — embeddings, reviewer, judge, and future jury.
+
+| Doc | Purpose |
+|-----|---------|
+| [MODEL_POLICY_FINDINGS.md](./MODEL_POLICY_FINDINGS.md) | Baseline — current code, gaps, Bedrock, UI, deferred patterns |
+| [MODEL_POLICY_GENERAL_PLAN.md](./MODEL_POLICY_GENERAL_PLAN.md) | Phased plan — M0–M3 (locked decisions) |
+| [waves/README.md](./waves/README.md) | Execution index — phase-execution LOOP order |
+
+**Related:** [review-pipeline/REVIEW_PIPELINE_PRODUCT_PATTERNS.md](../review-pipeline/REVIEW_PIPELINE_PRODUCT_PATTERNS.md) (cross-model jury, grounding, R9), [utils/GITHUB_APP_TARGET_CONFIG.md](../utils/GITHUB_APP_TARGET_CONFIG.md) (today’s env vars).
+
+**Authority (product):** `internal-docs/product/revy/docs/architecture.md` §11.3 (embeddings), §13–14 (LLM review + judge).

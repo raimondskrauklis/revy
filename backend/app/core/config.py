@@ -1,8 +1,12 @@
 # backend/app/core/config.py
 """Application settings — fail-fast on missing required env (no URL defaults in code)."""
 import json
+import logging
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
+_revy_llm_provider_alias_logged = False
 
 
 class Settings(BaseSettings):
@@ -78,8 +82,10 @@ class Settings(BaseSettings):
     keycloak_webhook_secret: str | None = None
     revy_bot_login: str = "revy[bot]"
 
-    # Model providers
-    revy_llm_provider: str = "moonshot"
+    # Model providers — MODEL_POLICY M0
+    revy_reviewer_provider: str | None = None
+    revy_judge_provider: str = "anthropic"
+    revy_llm_provider: str = "moonshot"  # deprecated alias for revy_reviewer_provider
     revy_moonshot_model_standard: str = "kimi-k2.7-code"
     revy_moonshot_model_deep: str = "kimi-k3"
     revy_moonshot_model_critical: str = "kimi-k3"
@@ -160,13 +166,44 @@ class Settings(BaseSettings):
         return bool(self.voyage_api_key and self.voyage_api_key.strip())
 
     @property
-    def llm_enabled(self) -> bool:
-        provider = (self.revy_llm_provider or "moonshot").strip().lower()
+    def effective_reviewer_provider(self) -> str:
+        global _revy_llm_provider_alias_logged
+        explicit = (self.revy_reviewer_provider or "").strip().lower()
+        if explicit:
+            return explicit
+        if not _revy_llm_provider_alias_logged:
+            logger.warning(
+                "revy_llm_provider is deprecated; set REVY_REVIEWER_PROVIDER instead",
+            )
+            _revy_llm_provider_alias_logged = True
+        return (self.revy_llm_provider or "moonshot").strip().lower()
+
+    @property
+    def effective_judge_provider(self) -> str:
+        return (self.revy_judge_provider or "anthropic").strip().lower()
+
+    def reviewer_llm_enabled(self) -> bool:
+        provider = self.effective_reviewer_provider
         if provider == "moonshot":
             return bool(self.moonshot_api_key and self.moonshot_api_key.strip())
         if provider == "anthropic":
             return bool(self.anthropic_api_key and self.anthropic_api_key.strip())
+        if provider == "bedrock":
+            return False
         return False
+
+    def judge_llm_enabled(self) -> bool:
+        provider = self.effective_judge_provider
+        if provider == "anthropic":
+            return bool(self.anthropic_api_key and self.anthropic_api_key.strip())
+        if provider == "bedrock":
+            return False
+        return False
+
+    @property
+    def llm_enabled(self) -> bool:
+        """Deprecated — use ``reviewer_llm_enabled()``."""
+        return self.reviewer_llm_enabled()
 
     def revy_revision_timeout_seconds(self, profile: str) -> int:
         normalized = (profile or self.revy_default_review_profile).strip().lower()

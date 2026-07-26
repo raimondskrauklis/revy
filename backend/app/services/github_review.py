@@ -19,7 +19,7 @@ from app.constants.enums import (
 from app.core.config import settings
 from app.core.exceptions import ConflictError, NotFoundError, ServiceUnavailableError
 from app.core.logging import get_logger
-from app.integrations import anthropic_review, moonshot_review
+from app.integrations import llm_dispatch, moonshot_review
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
 from app.models.github_review_run import GitHubReviewRunORM
@@ -30,6 +30,7 @@ from app.services.github_indexing import (
     get_latest_index_job,
     search_revision_chunks,
 )
+from app.services.model_policy import ModelRef, resolve_model, review_profile_to_model_role
 
 logger = get_logger(__name__)
 
@@ -53,7 +54,7 @@ async def create_review_run(
     revision_id: UUID,
     profile: ReviewProfile = ReviewProfile.standard,
 ) -> GitHubReviewRunORM:
-    if not settings.llm_enabled:
+    if not settings.reviewer_llm_enabled():
         raise ServiceUnavailableError(
             message="LLM API is not configured",
             error_code="llm_disabled",
@@ -105,13 +106,11 @@ async def create_review_run(
             error_code="review_in_progress",
         )
 
-    provider = (settings.revy_llm_provider or "moonshot").strip().lower()
     run = GitHubReviewRunORM(
         revision_id=revision_id,
         workspace_id=workspace_id,
         status=GitHubReviewRunStatus.pending,
         profile=profile,
-        provider=provider,
     )
     session.add(run)
     await session.flush()
@@ -204,18 +203,12 @@ def _parse_finding_row(raw: dict) -> dict | None:
     }
 
 
-async def _call_llm(*, profile: str, prompt: str) -> str:
-    provider = (settings.revy_llm_provider or "moonshot").strip().lower()
+async def _call_llm(*, model_ref: ModelRef, profile: str, prompt: str) -> str:
     timeout = float(settings.revy_revision_timeout_seconds(profile))
     async with httpx.AsyncClient(timeout=timeout) as client:
-        if provider == "anthropic":
-            return await anthropic_review.complete_review(
-                client,
-                user_prompt=prompt,
-                timeout_seconds=timeout,
-            )
-        return await moonshot_review.complete_review(
+        return await llm_dispatch.call_review_llm(
             client,
+            model_ref=model_ref,
             profile=profile,
             user_prompt=prompt,
             timeout_seconds=timeout,
@@ -265,7 +258,17 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> GitHu
             pr_title=pull_request.title,
         )
         prompt = _build_review_prompt(pr_title=pull_request.title, chunks=chunks)
-        raw_json = await _call_llm(profile=run.profile.value, prompt=prompt)
+        model_role = review_profile_to_model_role(run.profile.value)
+        model_ref = await resolve_model(session, run.workspace_id, model_role)
+        run.provider = model_ref.provider
+        run.model_id = model_ref.model_id
+        await session.flush()
+
+        raw_json = await _call_llm(
+            model_ref=model_ref,
+            profile=run.profile.value,
+            prompt=prompt,
+        )
 
         try:
             raw_findings = moonshot_review.parse_review_json(raw_json)

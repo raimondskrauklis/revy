@@ -18,13 +18,14 @@ from app.core.exceptions import ConflictError, ServiceUnavailableError
 from app.models.github_index_job import GitHubIndexJobORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.services import github_review
+from app.services.model_policy import ModelRef
 
 
 @pytest.mark.asyncio
 async def test_create_review_run_disabled_llm_raises():
     session = AsyncMock()
     with patch("app.services.github_review.settings") as mock_settings:
-        mock_settings.llm_enabled = False
+        mock_settings.reviewer_llm_enabled.return_value = False
         with pytest.raises(ServiceUnavailableError) as exc:
             await github_review.create_review_run(
                 session,
@@ -44,7 +45,7 @@ async def test_create_review_run_index_required_raises():
     session.scalar = AsyncMock(return_value=None)
 
     with patch("app.services.github_review.settings") as mock_settings:
-        mock_settings.llm_enabled = True
+        mock_settings.reviewer_llm_enabled.return_value = True
         mock_settings.embeddings_enabled = True
         mock_settings.github_api_enabled = True
         mock_settings.revy_llm_provider = "moonshot"
@@ -80,7 +81,7 @@ async def test_create_review_run_review_in_progress_raises():
     session.scalar = AsyncMock(return_value=uuid.uuid4())
 
     with patch("app.services.github_review.settings") as mock_settings:
-        mock_settings.llm_enabled = True
+        mock_settings.reviewer_llm_enabled.return_value = True
         mock_settings.embeddings_enabled = True
         mock_settings.github_api_enabled = True
         mock_settings.revy_llm_provider = "moonshot"
@@ -200,10 +201,14 @@ async def test_run_review_run_invalid_json_marks_failed():
         AsyncMock(return_value=[]),
     ):
         with patch(
-            "app.services.github_review._call_llm",
-            AsyncMock(return_value="not-json"),
+            "app.services.github_review.resolve_model",
+            AsyncMock(return_value=ModelRef(provider="moonshot", model_id="kimi-k2.7-code")),
         ):
-            result = await github_review.run_review_run(session, review_run_id=review_run_id)
+            with patch(
+                "app.services.github_review._call_llm",
+                AsyncMock(return_value="not-json"),
+            ):
+                result = await github_review.run_review_run(session, review_run_id=review_run_id)
 
     assert result.status == GitHubReviewRunStatus.failed
     assert result.error_message is not None
@@ -280,10 +285,14 @@ async def test_run_review_run_happy_path_persists_findings():
         AsyncMock(return_value=[]),
     ):
         with patch(
-            "app.services.github_review._call_llm",
-            AsyncMock(return_value=llm_payload),
+            "app.services.github_review.resolve_model",
+            AsyncMock(return_value=ModelRef(provider="moonshot", model_id="kimi-k2.7-code")),
         ):
-            result = await github_review.run_review_run(session, review_run_id=review_run_id)
+            with patch(
+                "app.services.github_review._call_llm",
+                AsyncMock(return_value=llm_payload),
+            ):
+                result = await github_review.run_review_run(session, review_run_id=review_run_id)
 
     assert result.status == GitHubReviewRunStatus.completed
     assert session.add.call_count == 1

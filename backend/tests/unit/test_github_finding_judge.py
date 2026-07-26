@@ -17,6 +17,7 @@ from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.services.github_finding_judge import is_judge_candidate, run_judge_for_review_run
+from app.services.model_policy import ModelRef
 
 
 def test_is_judge_candidate_error():
@@ -41,7 +42,7 @@ def test_is_judge_candidate_info_bug_false():
 async def test_run_judge_skipped_without_api_key():
     session = AsyncMock()
     with patch("app.services.github_finding_judge.settings") as mock_settings:
-        mock_settings.anthropic_api_key = None
+        mock_settings.judge_llm_enabled.return_value = False
         count = await run_judge_for_review_run(session, review_run_id=uuid.uuid4())
     assert count == 0
 
@@ -94,13 +95,17 @@ async def test_run_judge_dismissed_resolves_group():
     session.flush = AsyncMock()
 
     with patch("app.services.github_finding_judge.settings") as mock_settings:
-        mock_settings.anthropic_api_key = "test-key"
+        mock_settings.judge_llm_enabled.return_value = True
         mock_settings.revy_revision_timeout_standard_seconds = 900
         with patch(
-            "app.services.github_finding_judge.anthropic_review.judge_finding",
-            AsyncMock(return_value={"outcome": "dismissed", "notes": "false positive"}),
+            "app.services.github_finding_judge.resolve_model",
+            AsyncMock(return_value=ModelRef(provider="anthropic", model_id="claude-test")),
         ):
-            count = await run_judge_for_review_run(session, review_run_id=review_run_id)
+            with patch(
+                "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
+                AsyncMock(return_value={"outcome": "dismissed", "notes": "false positive"}),
+            ):
+                count = await run_judge_for_review_run(session, review_run_id=review_run_id)
 
     assert count == 1
     assert group.state == GitHubFindingGroupState.resolved
@@ -154,18 +159,22 @@ async def test_run_judge_service_unavailable_continues():
     session.flush = AsyncMock()
 
     with patch("app.services.github_finding_judge.settings") as mock_settings:
-        mock_settings.anthropic_api_key = "test-key"
+        mock_settings.judge_llm_enabled.return_value = True
         mock_settings.revy_revision_timeout_standard_seconds = 900
         with patch(
-            "app.services.github_finding_judge.anthropic_review.judge_finding",
-            AsyncMock(
-                side_effect=ServiceUnavailableError(
-                    message="Anthropic judge response invalid",
-                    error_code="llm_error",
-                )
-            ),
+            "app.services.github_finding_judge.resolve_model",
+            AsyncMock(return_value=ModelRef(provider="anthropic", model_id="claude-test")),
         ):
-            count = await run_judge_for_review_run(session, review_run_id=review_run_id)
+            with patch(
+                "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
+                AsyncMock(
+                    side_effect=ServiceUnavailableError(
+                        message="Anthropic judge response invalid",
+                        error_code="llm_error",
+                    )
+                ),
+            ):
+                count = await run_judge_for_review_run(session, review_run_id=review_run_id)
 
     assert count == 0
     assert group.state == GitHubFindingGroupState.active

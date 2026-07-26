@@ -14,7 +14,7 @@ from app.integrations.moonshot_review import complete_review, parse_review_json
 async def test_complete_review_disabled_raises():
     client = AsyncMock(spec=httpx.AsyncClient)
     with patch("app.integrations.moonshot_review.settings") as mock_settings:
-        mock_settings.llm_enabled = False
+        mock_settings.moonshot_api_key = None
         with pytest.raises(ServiceUnavailableError) as exc:
             await complete_review(client, profile="standard", user_prompt="review this")
     assert exc.value.error_code == "llm_disabled"
@@ -32,7 +32,6 @@ async def test_complete_review_returns_content():
     client.post = AsyncMock(return_value=response)
 
     with patch("app.integrations.moonshot_review.settings") as mock_settings:
-        mock_settings.llm_enabled = True
         mock_settings.moonshot_api_key = "test-key"
         mock_settings.revy_moonshot_model_for_profile.return_value = "kimi-k2.7-code"
         content = await complete_review(client, profile="standard", user_prompt="review")
