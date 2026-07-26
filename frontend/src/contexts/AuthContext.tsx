@@ -12,7 +12,12 @@ import type Keycloak from 'keycloak-js';
 import { fetchMe, syncStoredWorkspace, type MeUser } from '@/lib/me';
 import { normalizeLanguage } from '@/lib/locale';
 import i18n from '@/i18n/config';
-import { initKeycloak, resetKeycloak, setKeycloakInitialized } from '@/lib/keycloak';
+import {
+  getKeycloakInstance,
+  initKeycloak,
+  resetKeycloak,
+  setKeycloakInitialized,
+} from '@/lib/keycloak';
 import { log } from '@/lib/log';
 import { Sentry } from '@/lib/sentry';
 import { mapApiError, showDomainErrorToast } from '@/shared/errors';
@@ -42,7 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const postLoginRedirect = useRef<string | undefined>(undefined);
 
   const refetchUser = useCallback(async (): Promise<MeUser | null> => {
-    if (!isAuthenticated) {
+    const keycloak = getKeycloakInstance();
+    if (!keycloak?.authenticated) {
       setUser(null);
       return null;
     }
@@ -63,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsUserLoading(false);
     }
-  }, [isAuthenticated]);
+  }, []);
 
   useEffect(() => {
     if (initialized.current) return;
@@ -79,6 +85,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then((authenticated) => {
         setKeycloak(kc);
         setIsAuthenticated(authenticated);
+        if (authenticated) {
+          setIsUserLoading(true);
+        }
         setKeycloakInitialized();
       })
       .finally(() => setIsLoading(false));

@@ -17,7 +17,6 @@ function renderCallback() {
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
         <Route path="/login" element={<div>Login</div>} />
         <Route path="/dashboard" element={<div>Dashboard</div>} />
-        <Route path="/unauthorized" element={<div>Unauthorized</div>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -32,7 +31,7 @@ describe('AuthCallbackPage', () => {
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: false,
       isLoading: false,
-      refetchUser: vi.fn(),
+      isUserLoading: false,
     } as unknown as ReturnType<typeof useAuth>);
 
     renderCallback();
@@ -41,33 +40,28 @@ describe('AuthCallbackPage', () => {
     });
   });
 
-  it('redirects to dashboard when profile loads', async () => {
-    const refetchUser = vi.fn().mockResolvedValue({ id: '1' });
+  it('waits for profile load before redirecting to dashboard', async () => {
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
-      refetchUser,
+      isUserLoading: true,
     } as unknown as ReturnType<typeof useAuth>);
 
     renderCallback();
-    await waitFor(() => {
-      expect(refetchUser).toHaveBeenCalled();
-      expect(screen.getByText('Dashboard')).toBeInTheDocument();
-    });
+    expect(screen.getByText(/loading/i)).toBeInTheDocument();
+    expect(screen.queryByText('Dashboard')).not.toBeInTheDocument();
   });
 
-  it('redirects to unauthorized when profile fails to load', async () => {
-    const refetchUser = vi.fn().mockResolvedValue(null);
+  it('redirects to dashboard after profile load settles', async () => {
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
-      refetchUser,
+      isUserLoading: false,
     } as unknown as ReturnType<typeof useAuth>);
 
     renderCallback();
     await waitFor(() => {
-      expect(refetchUser).toHaveBeenCalled();
-      expect(screen.getByText('Unauthorized')).toBeInTheDocument();
+      expect(screen.getByText('Dashboard')).toBeInTheDocument();
     });
   });
 });

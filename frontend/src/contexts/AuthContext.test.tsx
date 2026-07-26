@@ -10,6 +10,10 @@ vi.mock('@/lib/keycloak', () => ({
     init: vi.fn().mockResolvedValue(true),
     login: vi.fn(),
     logout: vi.fn(),
+    authenticated: true,
+  })),
+  getKeycloakInstance: vi.fn(() => ({
+    authenticated: true,
   })),
   resetKeycloak: vi.fn(),
   setKeycloakInitialized: vi.fn(),

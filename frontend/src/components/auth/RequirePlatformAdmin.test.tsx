@@ -43,6 +43,7 @@ describe('RequirePlatformAdmin', () => {
 
   it('shows loading while user profile is hydrating', () => {
     vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: true,
       user: null,
       isLoading: false,
       isUserLoading: true,

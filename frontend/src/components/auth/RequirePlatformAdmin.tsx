@@ -6,9 +6,11 @@ import { isPlatformAdmin } from '@/lib/permissions';
 
 export function RequirePlatformAdmin() {
   const { t } = useTranslation();
-  const { user, isLoading, isUserLoading } = useAuth();
+  const { user, isLoading, isUserLoading, isAuthenticated } = useAuth();
 
-  if (isLoading || (isUserLoading && user == null)) {
+  const awaitingProfile = isAuthenticated && user == null;
+
+  if (isLoading || (awaitingProfile && isUserLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[color:var(--app-canvas)]">
         <p className="text-[color:var(--app-text-muted)]">{t('auth.loading')}</p>
@@ -17,7 +19,7 @@ export function RequirePlatformAdmin() {
   }
 
   if (!isPlatformAdmin(user?.platform_role ?? undefined)) {
-    return <Navigate to="/unauthorized" replace />;
+    return <Navigate to="/unauthorized" replace state={{ reason: 'permission' }} />;
   }
 
   return <Outlet />;

@@ -18,7 +18,7 @@ export function RequirePermission({ permission }: RequirePermissionProps) {
       user?.platform_role ?? undefined,
     )
   ) {
-    return <Navigate to="/unauthorized" replace />;
+    return <Navigate to="/unauthorized" replace state={{ reason: 'permission' }} />;
   }
 
   return <Outlet />;
