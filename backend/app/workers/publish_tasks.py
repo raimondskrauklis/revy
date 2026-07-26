@@ -20,6 +20,41 @@ from app.workers.celery_app import celery_app
 logger = get_logger(__name__)
 
 
+async def _execute_publish_review_run(publish_job_id: str) -> None:
+    async with get_db_context() as session:
+        job = await run_publish_job(
+            session,
+            publish_job_id=UUID(publish_job_id),
+            persist_github_surface=True,
+        )
+        await session.commit()
+        logger.info(
+            "github_publish_complete",
+            extra={
+                "publish_job_id": publish_job_id,
+                "status": job.status.value,
+                "check_run_id": job.github_check_run_id,
+            },
+        )
+
+
+async def _run_publish_review_run_inline(publish_job_id: str) -> None:
+    try:
+        await _execute_publish_review_run(publish_job_id)
+    except (PublishJobRetryableError, Exception) as exc:  # noqa: BLE001
+        logger.error(
+            "github_publish_inline_failed",
+            extra={"publish_job_id": publish_job_id, "error": str(exc)},
+        )
+        async with get_db_context() as session:
+            await mark_publish_job_failed(
+                session,
+                publish_job_id=UUID(publish_job_id),
+                error_message=str(exc),
+            )
+            await session.commit()
+
+
 def dispatch_publish_review_run(publish_job_id: str) -> None:
     """Enqueue publish work; run inline if the broker rejects the task."""
     try:
@@ -29,7 +64,12 @@ def dispatch_publish_review_run(publish_job_id: str) -> None:
             "github_publish_enqueue_failed_running_inline",
             extra={"publish_job_id": publish_job_id, "error": str(exc)},
         )
-        publish_review_run.run(publish_job_id)
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            publish_review_run.run(publish_job_id)
+        else:
+            loop.create_task(_run_publish_review_run_inline(publish_job_id))  # noqa: RUF006
 
 
 def _finalize_publish_failure(
@@ -61,25 +101,8 @@ def _finalize_publish_failure(
     queue="github_publish",
 )
 def publish_review_run(self, publish_job_id: str) -> None:
-    async def _run() -> None:
-        async with get_db_context() as session:
-            job = await run_publish_job(
-                session,
-                publish_job_id=UUID(publish_job_id),
-                persist_github_surface=True,
-            )
-            await session.commit()
-            logger.info(
-                "github_publish_complete",
-                extra={
-                    "publish_job_id": publish_job_id,
-                    "status": job.status.value,
-                    "check_run_id": job.github_check_run_id,
-                },
-            )
-
     try:
-        asyncio.run(_run())
+        asyncio.run(_execute_publish_review_run(publish_job_id))
     except (PublishJobRetryableError, Exception) as exc:
         logger.error(
             "github_publish_task_failed",
