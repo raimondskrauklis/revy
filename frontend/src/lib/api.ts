@@ -3,7 +3,7 @@ import axios, { AxiosError } from 'axios';
 import type { InternalAxiosRequestConfig } from 'axios';
 import i18n from '@/i18n/config';
 import { requireViteEnv } from '@/lib/env';
-import { getKeycloakInstance } from '@/lib/keycloak';
+import { getKeycloakInstance, getPostLogoutRedirectUri } from '@/lib/keycloak';
 import { log } from '@/lib/log';
 import { toast } from '@/lib/toast';
 
@@ -29,6 +29,12 @@ export function setStoredWorkspaceId(workspaceId: string | null): void {
   }
 }
 
+export async function logoutKeycloakSession(): Promise<void> {
+  setStoredWorkspaceId(null);
+  const keycloak = getKeycloakInstance();
+  await keycloak?.logout({ redirectUri: getPostLogoutRedirectUri() });
+}
+
 async function refreshKeycloakToken(): Promise<string | null> {
   const keycloak = getKeycloakInstance();
   if (!keycloak?.authenticated) return null;
@@ -48,7 +54,7 @@ async function refreshKeycloakToken(): Promise<string | null> {
         i18n.t('auth.sessionExpired.title'),
         i18n.t('auth.sessionExpired.body'),
       );
-      await keycloak.logout({ redirectUri: `${window.location.origin}/login` });
+      await logoutKeycloakSession();
       return null;
     } finally {
       setTimeout(() => {
@@ -104,7 +110,7 @@ apiClient.interceptors.response.use(
           i18n.t('auth.sessionExpired.title'),
           i18n.t('auth.sessionExpired.body'),
         );
-        await keycloak.logout({ redirectUri: `${window.location.origin}/login` });
+        await logoutKeycloakSession();
       }
     }
     return Promise.reject(error);

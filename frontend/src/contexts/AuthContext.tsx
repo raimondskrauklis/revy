@@ -15,12 +15,12 @@ import i18n from '@/i18n/config';
 import {
   getKeycloakInstance,
   initKeycloak,
-  resetKeycloak,
   setKeycloakInitialized,
 } from '@/lib/keycloak';
 import { log } from '@/lib/log';
 import { Sentry } from '@/lib/sentry';
 import { mapApiError, showDomainErrorToast } from '@/shared/errors';
+import { logoutKeycloakSession } from '@/lib/api';
 
 const PROVISION_ERROR_CODES = new Set(['provision_email_required', 'identity_email_conflict']);
 
@@ -123,11 +123,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(() => {
-    resetKeycloak();
+    setIsAuthenticated(false);
     setUser(null);
+    setIsUserLoading(false);
     Sentry.setUser(null);
-    keycloak?.logout({ redirectUri: `${window.location.origin}/` });
-  }, [keycloak]);
+    void logoutKeycloakSession();
+  }, []);
 
   return (
     <AuthContext.Provider

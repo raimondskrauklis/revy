@@ -44,6 +44,10 @@ export function resetKeycloak(): void {
   isInitialized = false;
 }
 
+export function getPostLogoutRedirectUri(): string {
+  return `${window.location.origin}/login`;
+}
+
 export function getKeycloakAccountUrl(): string {
   const override = optionalViteEnv('VITE_KEYCLOAK_ACCOUNT_URL');
   if (override) {
