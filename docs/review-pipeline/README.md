@@ -30,7 +30,7 @@
 |-------|--------|--------|
 | **P4** | `github_installation` list + dev register | **shipped** |
 | **R0** | GitHub webhooks + event ingestion | shipped (`review-r0-v1` → `754c88c`) |
-| **R1** | Repository / branch metadata sync | shipped (`review-r1-v1` → `fd29fd5`) |
+| **R1** | Repository / branch metadata sync | shipped (`review-r1-v1` → `dddfde0`) |
 | **R2** | Pull request ingestion + revisions | not started |
 | **R3** | Indexing (chunks, embeddings, pgvector) | not started |
 | **R4** | Review run (LLM stages) | not started |

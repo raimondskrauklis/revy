@@ -32,7 +32,7 @@ git show saas-base-v1   # annotated tag → dacfc5b
 | `saas-base-v1` | `dacfc5b` | SaaS base W0–W8 complete; P4 installations slice |
 | `saas-base-v1.1` | `48c361e` | Alembic AUTOCOMMIT fix; review pipeline findings + R0 execution |
 | `review-r0-v1` | `754c88c` | GitHub webhook ingestion (`POST /api/v1/webhooks/github`), delivery dedupe, `github_events` worker |
-| `review-r1-v1` | `fd29fd5` | Repository metadata sync (`github_repositories`), `repo_sync` worker, list/sync API |
+| `review-r1-v1` | `dddfde0` | Repository metadata sync (`github_repositories`), `repo_sync` worker, list/sync API |
 
 Future product milestones: `review-r2-v1`, `v0.2.0`, etc. Pushing a tag whose commit **includes** `.github/workflows/release-tag.yml` triggers an automatic GitHub Release. Tags on older commits (e.g. `saas-base-v1`) may need a one-time `gh release create` or **Actions → Release tag → Run workflow** with the tag name.
 
