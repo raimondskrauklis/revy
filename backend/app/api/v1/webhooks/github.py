@@ -13,7 +13,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.exceptions import ServiceUnavailableError, ValidationError
 from app.integrations.github_webhook import verify_github_signature
-from app.services.github_webhooks import accept_github_webhook
+from app.services.github_webhooks import accept_github_webhook, enqueue_github_event
 
 router = APIRouter()
 
@@ -60,11 +60,15 @@ async def post_github_webhook(
     if not isinstance(payload, dict):
         raise ValidationError(message="Webhook payload must be a JSON object", field="body")
 
-    await accept_github_webhook(
+    accepted = await accept_github_webhook(
         session,
         delivery_id=github_delivery,
         event_type=github_event,
         payload=payload,
     )
     await session.commit()
+    # Commit-before-enqueue so the worker sees the delivery row. A crash between
+    # commit and enqueue can leave an unprocessed delivery that GitHub will not retry.
+    if accepted:
+        enqueue_github_event(github_delivery)
     return Response(status_code=status.HTTP_200_OK)

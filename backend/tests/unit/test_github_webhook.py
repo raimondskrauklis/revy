@@ -70,7 +70,6 @@ async def test_post_github_webhook_requires_signature():
 @pytest.mark.asyncio
 async def test_post_github_webhook_processes_new_delivery():
     session = AsyncMock()
-    session.commit = AsyncMock()
     secret = "local-webhook-secret"
     payload = {
         "action": "created",
@@ -82,21 +81,64 @@ async def test_post_github_webhook_processes_new_delivery():
     with patch("app.api.v1.webhooks.github.settings") as mock_settings:
         mock_settings.github_webhooks_enabled = True
         mock_settings.github_webhook_secret = secret
+        call_order: list[str] = []
+
+        async def _commit() -> None:
+            call_order.append("commit")
+
+        session.commit = AsyncMock(side_effect=_commit)
+
         with patch(
             "app.api.v1.webhooks.github.accept_github_webhook",
             AsyncMock(return_value=True),
         ) as accept_mock:
-            response = await post_github_webhook(
-                request=request,
-                session=session,
-                github_signature=_signature(body, secret),
-                github_event="installation",
-                github_delivery="delivery-new",
-            )
+            with patch(
+                "app.api.v1.webhooks.github.enqueue_github_event",
+                side_effect=lambda _delivery_id: call_order.append("enqueue"),
+            ) as enqueue_mock:
+                response = await post_github_webhook(
+                    request=request,
+                    session=session,
+                    github_signature=_signature(body, secret),
+                    github_event="installation",
+                    github_delivery="delivery-new",
+                )
 
     assert response.status_code == 200
     accept_mock.assert_awaited_once()
     session.commit.assert_awaited_once()
+    enqueue_mock.assert_called_once_with("delivery-new")
+    assert call_order == ["commit", "enqueue"]
+
+
+@pytest.mark.asyncio
+async def test_post_github_webhook_duplicate_skips_enqueue():
+    session = AsyncMock()
+    session.commit = AsyncMock()
+    secret = "local-webhook-secret"
+    payload = {"installation": {"id": 12345}}
+    body = json.dumps(payload).encode()
+    request = _request_with_body(body)
+
+    with patch("app.api.v1.webhooks.github.settings") as mock_settings:
+        mock_settings.github_webhooks_enabled = True
+        mock_settings.github_webhook_secret = secret
+        with patch(
+            "app.api.v1.webhooks.github.accept_github_webhook",
+            AsyncMock(return_value=False),
+        ):
+            with patch("app.api.v1.webhooks.github.enqueue_github_event") as enqueue_mock:
+                response = await post_github_webhook(
+                    request=request,
+                    session=session,
+                    github_signature=_signature(body, secret),
+                    github_event="installation",
+                    github_delivery="delivery-dup",
+                )
+
+    assert response.status_code == 200
+    session.commit.assert_awaited_once()
+    enqueue_mock.assert_not_called()
 
 
 @pytest.mark.asyncio

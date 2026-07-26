@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
 from app.models.github_webhook_delivery import GitHubWebhookDeliveryORM
 
 logger = get_logger(__name__)
+
+_UNIQUE_VIOLATION_PG_CODE = "23505"
 
 SUPPORTED_EVENTS = frozenset({
     "installation",
@@ -27,6 +30,11 @@ def extract_installation_id(payload: dict[str, Any]) -> int | None:
         if isinstance(raw_id, int):
             return raw_id
     return None
+
+
+def _is_unique_violation(exc: IntegrityError) -> bool:
+    orig = exc.orig
+    return orig is not None and getattr(orig, "pgcode", None) == _UNIQUE_VIOLATION_PG_CODE
 
 
 async def try_record_delivery(
@@ -49,7 +57,17 @@ async def try_record_delivery(
             payload_json=payload,
         )
     )
-    await session.flush()
+    try:
+        async with session.begin_nested():
+            await session.flush()
+    except IntegrityError as exc:
+        if not _is_unique_violation(exc):
+            raise
+        logger.info(
+            "github_webhook_duplicate_delivery",
+            extra={"delivery_id": delivery_id},
+        )
+        return False
     return True
 
 
@@ -81,8 +99,4 @@ async def accept_github_webhook(
         installation_id=installation_id,
         payload=payload,
     )
-    if not is_new:
-        return False
-
-    enqueue_github_event(delivery_id)
-    return True
+    return is_new
