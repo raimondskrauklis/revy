@@ -1,0 +1,36 @@
+# backend/tests/unit/test_review_tasks.py
+"""Review Celery tasks — R4."""
+import uuid
+from unittest.mock import AsyncMock, MagicMock, patch
+
+from app.constants.enums import GitHubReviewRunStatus, ReviewProfile
+from app.models.github_review_run import GitHubReviewRunORM
+from app.workers import review_tasks
+
+
+def test_review_pull_request_revision_runs_job():
+    run = GitHubReviewRunORM(
+        revision_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    run.id = uuid.uuid4()
+
+    session = AsyncMock()
+    session.commit = AsyncMock()
+
+    db_context = MagicMock()
+    db_context.__aenter__ = AsyncMock(return_value=session)
+    db_context.__aexit__ = AsyncMock(return_value=None)
+
+    with patch("app.workers.review_tasks.get_db_context", return_value=db_context):
+        with patch(
+            "app.workers.review_tasks.run_review_run",
+            AsyncMock(return_value=run),
+        ) as run_mock:
+            review_tasks.review_pull_request_revision.run(str(run.id))
+
+    run_mock.assert_awaited_once()
+    session.commit.assert_awaited_once()

@@ -108,3 +108,40 @@ class GitHubIndexJobStatus(str, Enum):
     processing = "processing"
     completed = "completed"
     failed = "failed"
+
+
+class GitHubReviewRunStatus(str, Enum):
+    """github_review_runs.status — R4 review run."""
+
+    pending = "pending"
+    processing = "processing"
+    completed = "completed"
+    failed = "failed"
+
+
+class ReviewProfile(str, Enum):
+    """Review depth tier — R4 LLM model + timeout selection."""
+
+    standard = "standard"
+    deep = "deep"
+    critical = "critical"
+
+
+class FindingSeverity(str, Enum):
+    """github_findings.severity — R4 structured findings."""
+
+    info = "info"
+    warning = "warning"
+    error = "error"
+    critical = "critical"
+
+
+class FindingCategory(str, Enum):
+    """github_findings.category — R4 structured findings."""
+
+    security = "security"
+    bug = "bug"
+    performance = "performance"
+    style = "style"
+    maintainability = "maintainability"
+    other = "other"

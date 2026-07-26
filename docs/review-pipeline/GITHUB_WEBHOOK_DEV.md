@@ -146,3 +146,21 @@ SELECT file_path, chunk_index FROM github_code_chunks ORDER BY created_at DESC L
 ```
 
 **Related:** [DEV_BOOTSTRAP.md](../starter-pack/DEV_BOOTSTRAP.md), [REVIEW_PIPELINE_R2_EXECUTION.md](./waves/REVIEW_PIPELINE_R2_EXECUTION.md), [REVIEW_PIPELINE_R3_EXECUTION.md](./waves/REVIEW_PIPELINE_R3_EXECUTION.md)
+
+---
+
+## Review run (R4)
+
+Requires `MOONSHOT_API_KEY` (`REVY_LLM_PROVIDER=moonshot`), completed R3 index (`VOYAGE_API_KEY`), GitHub App API, and worker on `review` queue.
+
+1. Complete indexing for the revision (R3)
+2. `POST …/pull-requests/{pr_id}/revisions/{revision_id}/review` with optional `{"profile":"standard|deep|critical"}` (workspace admin)
+3. Poll `GET …/revisions/{revision_id}/review-run` until `status=completed`
+4. List findings: `GET …/revisions/{revision_id}/findings`
+
+Verify:
+
+```sql
+SELECT status, profile, provider FROM github_review_runs ORDER BY created_at DESC LIMIT 3;
+SELECT severity, category, title FROM github_findings ORDER BY created_at DESC LIMIT 10;
+```
