@@ -1,7 +1,10 @@
 # backend/tests/unit/test_publish_tasks.py
 """Publish Celery tasks — R6."""
+import asyncio
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from app.constants.enums import GitHubPublishJobStatus
 from app.models.github_publish_job import GitHubPublishJobORM
@@ -74,3 +77,21 @@ def test_dispatch_publish_review_run_falls_back_to_inline_run():
             publish_tasks.dispatch_publish_review_run("job-id")
 
     run_mock.assert_called_once_with("job-id")
+
+
+@pytest.mark.asyncio
+async def test_dispatch_publish_review_run_schedules_inline_when_loop_running():
+    with patch(
+        "app.workers.publish_tasks.publish_review_run.delay",
+        side_effect=ConnectionError("broker down"),
+    ):
+        with patch("app.workers.publish_tasks.publish_review_run.run") as run_mock:
+            with patch(
+                "app.workers.publish_tasks._run_publish_review_run_inline",
+                new_callable=AsyncMock,
+            ) as inline_mock:
+                publish_tasks.dispatch_publish_review_run("job-id")
+                await asyncio.sleep(0)
+
+    run_mock.assert_not_called()
+    inline_mock.assert_awaited_once_with("job-id")
