@@ -14,7 +14,7 @@
 | `main` head | R0–R3 shipped; tags `review-r0-v1` … `review-r3-v1` |
 | R4 execution plan | On `main` (`waves/REVIEW_PIPELINE_R4_EXECUTION.md`) |
 | R4 code WIP | Git stash `r4-wip-pre-recovery` on branch `feat/review-r4-review-run` — **do not merge until Track 4** |
-| Greptile backlog | Unresolved on merged PRs #8–#11 (see Track 2) |
+| Greptile backlog | Audit PRs #15–#18 triaged; fix PRs #19–#21 open |
 | Worker deploy | `deploy.yml` still `-Q default,notifications,heavy` |
 
 ---
@@ -35,14 +35,14 @@
 
 ## Track 2a — Audit PRs (do not merge)
 
-**Audit tip:** Point base/head branches at **feature commits** (not docs-sync tags) — see PRs #15–#18.
+**Audit tip:** Point base/head branches at **feature commits** (not docs-sync tags) — see PRs #15–#18. **Closed** = GitHub PR closed after triage; fixes land in Track 2b PRs (never merge audit branches).
 
-| Phase | Branch | Base | Head commit | PR # | Greptile done | Closed |
+| Phase | Branch | Base | Head commit | PR # | Greptile done | Closed (not merged) |
 |-------|--------|------|-------------|------|---------------|--------|
-| R0 | `audit/review-r0-retro` | `saas-base-v1.1` (`48c361e`) | `d017dfc` | #15 | [ ] | [ ] |
-| R1 | `audit/review-r1-retro` | `d017dfc` | `fd29fd5` | #16 | [ ] | [ ] |
-| R2 | `audit/review-r2-retro` | `fd29fd5` | `035f304` | #17 | [ ] | [ ] |
-| R3 | `audit/review-r3-retro` | `035f304` | `a299d14` | #18 | [ ] | [ ] |
+| R0 | `audit/review-r0-retro` | `saas-base-v1.1` (`48c361e`) | `d017dfc` | #15 | [x] | [x] |
+| R1 | `audit/review-r1-retro` | `d017dfc` | `fd29fd5` | #16 | [x] | [x] |
+| R2 | `audit/review-r2-retro` | `fd29fd5` | `035f304` | #17 | [x] | [x] |
+| R3 | `audit/review-r3-retro` | `035f304` | `a299d14` | #18 | [x] | [x] |
 
 **Known P1 (pre-audit):**
 
@@ -57,10 +57,11 @@
 
 | # | Branch | Fix | PR # | Merged |
 |---|--------|-----|------|--------|
-| 1 | `fix/review-r1-github-api-errors` | Use `_request()` in repo list pagination | #13 | [ ] |
-| 2 | `fix/review-r2-synchronize-dedup` | Skip `_append_revision` when SHA unchanged | #14 | [ ] |
-| 3 | `fix/review-r0-webhook-commit-order` | Commit before enqueue; dedupe hardening | | [ ] |
-| 4 | `fix/review-r3-index-job-safety` | Delete chunks after embed; fail job on exception | | [ ] |
+| 1 | `fix/review-r1-github-api-errors` | Use `_request()` in repo list pagination | #13 | [x] |
+| 2 | `fix/review-r2-synchronize-dedup` | Skip `_append_revision` when SHA unchanged | #14 | [x] |
+| 3 | `fix/review-r0-webhook-commit-order` | Commit before enqueue; dedupe hardening | #19 | [ ] |
+| 4 | `fix/review-r3-index-job-safety` | Delete chunks after embed; chunk pagination | #20 | [ ] |
+| 5 | `fix/review-r2-concurrent-pr-insert` | IntegrityError retry on concurrent PR insert | #21 | [ ] |
 
 Each: tests + `pipenv run lint` + `babysit-pr` until Greptile clean.
 
@@ -86,7 +87,7 @@ Each: tests + `pipenv run lint` + `babysit-pr` until Greptile clean.
 
 ## Track 4 — R4 phase-execution
 
-**Prerequisites:** Track 1 merged; Track 2b #1–#2 merged (required); #3–#4 merged (recommended before R4 staging e2e); **manual** `execution-peer-review` on R4 execution doc (separate agent — [ ]).
+**Prerequisites:** Track 1 merged; Track 2b #1–#2 merged (required); #3–#5 merged (recommended before R4 staging e2e); **manual** `execution-peer-review` on R4 execution doc (separate agent — [ ]).
 
 **Branch:** `feat/review-r4-review-run` (rebase on `main`)
 
