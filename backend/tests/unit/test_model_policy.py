@@ -295,7 +295,11 @@ async def test_resolve_workspace_override_skips_catalog_when_display_only():
         region="us-east-1",
     )
     session.scalar = AsyncMock(return_value=row)
-    with patch("app.services.model_policy.is_valid_catalog_entry", return_value=False):
+    with (
+        patch("app.services.model_policy.is_valid_catalog_entry", return_value=False),
+        patch("app.services.model_policy.settings") as mock_settings,
+    ):
+        mock_settings.aws_region = "us-east-1"
         model_ref = await resolve_model(
             session,
             workspace_id,

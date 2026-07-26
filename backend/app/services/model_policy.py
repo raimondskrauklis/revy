@@ -164,9 +164,9 @@ async def _resolve_workspace_override(
             field=role.value,
         )
 
-    region = row.region
-    if provider == "bedrock" and not region:
-        region = settings.aws_region
+    region = None
+    if provider == "bedrock":
+        region = (settings.aws_region or "").strip() or None
     if require_credentials:
         _assert_provider_credentials(provider, role=role, model_id=model_id)
     return ModelRef(provider=provider, model_id=model_id, region=region)

@@ -47,6 +47,22 @@ def _ref_to_entry(model_ref: ModelRef) -> ModelPolicyEntry:
     )
 
 
+def _bedrock_region_for_patch(*, field: str, client_region: str | None) -> str:
+    """Bedrock region is platform-scoped — workspace admins cannot redirect inference."""
+    platform_region = catalog_region_for_provider("bedrock")
+    if not platform_region:
+        raise ValidationError(
+            message="AWS region is not configured for Bedrock",
+            field=field,
+        )
+    if client_region is not None and client_region.strip() != platform_region:
+        raise ValidationError(
+            message="Bedrock region must match platform AWS region",
+            field=field,
+        )
+    return platform_region
+
+
 async def get_workspace_model_policy(
     session: AsyncSession,
     *,
@@ -90,7 +106,8 @@ async def patch_workspace_model_policy(
         return await get_workspace_model_policy(session, workspace_id=workspace_id)
 
     changed_roles: list[str] = []
-    for field, value in updates.items():
+    for field in updates:
+        value = getattr(body, field)
         role = _ROLE_FIELD_MAP[field]
         if value is None:
             result = await session.execute(
@@ -111,9 +128,15 @@ async def patch_workspace_model_policy(
                 field=field,
             )
 
-        region = value.region
-        if region is None and provider == "bedrock":
-            region = catalog_region_for_provider(provider)
+        if provider == "bedrock":
+            region = _bedrock_region_for_patch(field=field, client_region=value.region)
+        elif value.region is not None:
+            raise ValidationError(
+                message="Region is only valid for Bedrock models",
+                field=field,
+            )
+        else:
+            region = None
 
         existing = await session.scalar(
             select(WorkspaceModelPolicyORM).where(
