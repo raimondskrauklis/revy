@@ -67,6 +67,8 @@ async def post_github_webhook(
         payload=payload,
     )
     await session.commit()
+    # Commit-before-enqueue so the worker sees the delivery row. A crash between
+    # commit and enqueue can leave an unprocessed delivery that GitHub will not retry.
     if accepted:
         enqueue_github_event(github_delivery)
     return Response(status_code=status.HTTP_200_OK)

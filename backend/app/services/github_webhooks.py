@@ -12,6 +12,8 @@ from app.models.github_webhook_delivery import GitHubWebhookDeliveryORM
 
 logger = get_logger(__name__)
 
+_UNIQUE_VIOLATION_PG_CODE = "23505"
+
 SUPPORTED_EVENTS = frozenset({
     "installation",
     "installation_repositories",
@@ -28,6 +30,11 @@ def extract_installation_id(payload: dict[str, Any]) -> int | None:
         if isinstance(raw_id, int):
             return raw_id
     return None
+
+
+def _is_unique_violation(exc: IntegrityError) -> bool:
+    orig = exc.orig
+    return orig is not None and getattr(orig, "pgcode", None) == _UNIQUE_VIOLATION_PG_CODE
 
 
 async def try_record_delivery(
@@ -51,9 +58,15 @@ async def try_record_delivery(
         )
     )
     try:
-        await session.flush()
-    except IntegrityError:
-        await session.rollback()
+        async with session.begin_nested():
+            await session.flush()
+    except IntegrityError as exc:
+        if not _is_unique_violation(exc):
+            raise
+        logger.info(
+            "github_webhook_duplicate_delivery",
+            extra={"delivery_id": delivery_id},
+        )
         return False
     return True
 
