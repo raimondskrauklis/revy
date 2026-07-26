@@ -27,7 +27,16 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("delivery_id"),
     )
+    op.create_index(
+        "ix_keycloak_webhook_deliveries_received_at",
+        "keycloak_webhook_deliveries",
+        ["received_at"],
+    )
 
 
 def downgrade() -> None:
+    op.drop_index(
+        "ix_keycloak_webhook_deliveries_received_at",
+        table_name="keycloak_webhook_deliveries",
+    )
     op.drop_table("keycloak_webhook_deliveries")

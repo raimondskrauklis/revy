@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import ServiceUnavailableError
+from app.core.exceptions import ConflictError, ServiceUnavailableError, UnauthorizedError
 from app.core.logging import get_logger
 from app.models.keycloak_webhook_delivery import KeycloakWebhookDeliveryORM
 from app.services.keycloak_provisioning import (
@@ -33,7 +33,7 @@ UPDATE_EVENTS = frozenset({
     "UPDATE_EMAIL",
 })
 
-DISABLE_EVENTS = frozenset({
+DELETE_EVENTS = frozenset({
     "DELETE_ACCOUNT",
 })
 
@@ -178,6 +178,41 @@ async def accept_keycloak_webhook(
     )
 
 
+_NON_RETRYABLE_PROVISION_CODES = frozenset({
+    "provision_email_required",
+    "identity_email_conflict",
+})
+
+
+async def _provision_from_webhook_event(
+    session: AsyncSession,
+    *,
+    event_type: str,
+    sub: str,
+    payload: dict[str, Any],
+) -> None:
+    try:
+        await provision_user_from_keycloak(
+            session,
+            sub=sub,
+            email=extract_email(payload),
+            email_verified=extract_email_verified(payload, event_type=event_type),
+            display_name=extract_display_name(payload),
+        )
+    except (UnauthorizedError, ConflictError) as exc:
+        if exc.error_code in _NON_RETRYABLE_PROVISION_CODES:
+            logger.warning(
+                "keycloak_webhook_provision_skipped",
+                extra={
+                    "event_type": event_type,
+                    "error_code": exc.error_code,
+                    "sub": sub,
+                },
+            )
+            return
+        raise
+
+
 async def apply_keycloak_webhook_event(
     session: AsyncSession,
     *,
@@ -186,7 +221,7 @@ async def apply_keycloak_webhook_event(
 ) -> None:
     sub = extract_user_sub(payload)
     needs_user = (
-        event_type in PROVISION_EVENTS | UPDATE_EVENTS | DISABLE_EVENTS
+        event_type in PROVISION_EVENTS | UPDATE_EVENTS | DELETE_EVENTS
         or (event_type.startswith("ADMIN") and extract_enabled(payload) is not None)
     )
     if sub is None and needs_user:
@@ -203,16 +238,15 @@ async def apply_keycloak_webhook_event(
         return
 
     if event_type in PROVISION_EVENTS | UPDATE_EVENTS:
-        await provision_user_from_keycloak(
+        await _provision_from_webhook_event(
             session,
+            event_type=event_type,
             sub=sub,
-            email=extract_email(payload),
-            email_verified=extract_email_verified(payload, event_type=event_type),
-            display_name=extract_display_name(payload),
+            payload=payload,
         )
         return
 
-    if event_type in DISABLE_EVENTS:
+    if event_type in DELETE_EVENTS:
         await apply_keycloak_user_deleted(session, sub=sub)
         return
 

@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.core.exceptions import ServiceUnavailableError
+from app.core.exceptions import ServiceUnavailableError, UnauthorizedError
 from app.services.keycloak_webhooks import (
     apply_keycloak_webhook_event,
     delivery_id_from_payload,
@@ -124,6 +124,25 @@ async def test_apply_register_raises_when_user_id_missing():
             payload={"type": "REGISTER"},
         )
     assert exc_info.value.error_code == "keycloak_webhook_missing_user_id"
+
+
+@pytest.mark.asyncio
+async def test_apply_register_skips_non_retryable_provision_error():
+    session = AsyncMock()
+    payload = {
+        "type": "REGISTER",
+        "userId": "kc-1",
+        "details": {},
+    }
+    with patch(
+        "app.services.keycloak_webhooks.provision_user_from_keycloak",
+        new_callable=AsyncMock,
+        side_effect=UnauthorizedError(
+            "User not provisioned",
+            error_code="provision_email_required",
+        ),
+    ):
+        await apply_keycloak_webhook_event(session, event_type="REGISTER", payload=payload)
 
 
 @pytest.mark.asyncio
