@@ -117,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     resetKeycloak();
     setUser(null);
     Sentry.setUser(null);
-    keycloak?.logout({ redirectUri: `${window.location.origin}/login` });
+    keycloak?.logout({ redirectUri: `${window.location.origin}/` });
   }, [keycloak]);
 
   return (
