@@ -11,8 +11,8 @@ from app.core.database import get_db_context
 from app.core.logging import get_logger
 from app.services.github_publish import (
     PublishJobRetryableError,
-    create_publish_job_for_review_run,
     mark_publish_job_failed,
+    resolve_publish_job_id_for_review_run,
     run_publish_job,
 )
 from app.workers.celery_app import celery_app
@@ -132,19 +132,20 @@ def publish_review_run(self, publish_job_id: str) -> None:
 def publish_for_review_run(self, review_run_id: str) -> None:
     publish_job_id: str | None = None
 
-    async def _create_job() -> str | None:
+    async def _resolve_publish_job() -> str | None:
         async with get_db_context() as session:
-            job_id = await create_publish_job_for_review_run(
+            job_id, created = await resolve_publish_job_id_for_review_run(
                 session,
                 review_run_id=UUID(review_run_id),
             )
             if job_id is None:
                 return None
-            await session.commit()
+            if created:
+                await session.commit()
             return str(job_id)
 
     try:
-        publish_job_id = asyncio.run(_create_job())
+        publish_job_id = asyncio.run(_resolve_publish_job())
         if publish_job_id is None:
             return
         dispatch_publish_review_run(publish_job_id)

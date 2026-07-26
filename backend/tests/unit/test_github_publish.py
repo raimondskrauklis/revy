@@ -343,3 +343,29 @@ async def test_create_publish_job_for_review_run_skips_when_pending_exists():
 
     assert result is None
     session.add.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_resolve_publish_job_id_for_review_run_reuses_pending_job():
+    review_run_id = uuid.uuid4()
+    existing_job_id = uuid.uuid4()
+    run = GitHubReviewRunORM(
+        revision_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    run.id = review_run_id
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[run, uuid.uuid4(), existing_job_id])
+
+    job_id, created = await github_publish.resolve_publish_job_id_for_review_run(
+        session,
+        review_run_id=review_run_id,
+    )
+
+    assert job_id == existing_job_id
+    assert created is False
+    session.add.assert_not_called()
