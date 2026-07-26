@@ -69,7 +69,7 @@ From [USER_PROVISIONING_FINDINGS.md](./USER_PROVISIONING_FINDINGS.md). **No file
 
 **Goal:** Keycloak emits HTTP events to Revy API in dev and production.
 
-**Scope:** In — HTTP Event Listener (vymalo, D12); filter identity events only (D4); **prod URL** `http://backend:8000/api/v1/webhooks/keycloak` on `revy-net` (D8); dev `host.docker.internal`; update `deploy/keycloak/config/README.md`. Out — custom Java SPI; SCIM; nginx exposure of webhook path.
+**Scope:** In — HTTP Event Listener (vymalo, D12); filter identity events only (D4); **prod URL** `http://revy-api:8000/api/v1/webhooks/keycloak` on `revy-net` (D8); dev `host.docker.internal`; update `deploy/keycloak/config/README.md`. Out — custom Java SPI; SCIM; nginx exposure of webhook path.
 
 **Deliverables:** Documented KC deploy steps; events reaching P1 endpoint in dev; production checklist entry.
 

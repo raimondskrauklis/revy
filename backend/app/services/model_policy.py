@@ -124,19 +124,25 @@ def _resolve_platform_model(role: ModelRole, *, require_credentials: bool = True
 
     if role == ModelRole.judge:
         provider = settings.effective_judge_provider
+        if provider not in SUPPORTED_JUDGE_PROVIDERS:
+            if require_credentials:
+                _assert_provider_credentials(provider, role=role)
+            default = PLATFORM_MODEL_DEFAULTS[ModelRole.judge]
+            return ModelRef(
+                provider=default.provider,
+                model_id=default.model_id,
+                region=None,
+            )
         if require_credentials:
             _assert_provider_credentials(provider, role=role)
         if provider == "anthropic":
             model_id = settings.revy_anthropic_model
             region = None
-        elif provider == "bedrock":
+        else:
             model_id = (settings.revy_bedrock_judge_model_id or "").strip()
             if not model_id:
                 model_id = BEDROCK_CATALOG_EXAMPLES[0].model_id
             region = settings.aws_region
-        else:
-            model_id = PLATFORM_MODEL_DEFAULTS[ModelRole.judge].model_id
-            region = None
         return ModelRef(provider=provider, model_id=model_id, region=region)
 
     raise ValueError(f"Unsupported model role: {role}")

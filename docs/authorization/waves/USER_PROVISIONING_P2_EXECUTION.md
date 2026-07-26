@@ -9,8 +9,8 @@ Phase **P2** of [`USER_PROVISIONING_GENERAL_PLAN.md`](../USER_PROVISIONING_GENER
 ## Decisions locked for P2
 
 - **Same artifact as P1:** [vymalo/keycloak-webhook](https://github.com/vymalo/keycloak-webhook) **`0.10.0-rc.1`** — `keycloak-webhook-provider-core-*-all.jar` + `keycloak-webhook-provider-http-*-all.jar` copied to `/opt/keycloak/providers/` before `kc.sh build`.
-- **Prod webhook URL (D8):** `http://backend:8000/api/v1/webhooks/keycloak` on `revy-net` — **do not** add nginx location on public hosts.
-- **Dev URL:** `http://host.docker.internal:8000/api/v1/webhooks/keycloak` when API runs on host; or `http://backend:8000/...` when API container shares `revy-net`.
+- **Prod webhook URL (D8):** `http://revy-api:8000/api/v1/webhooks/keycloak` on `revy-net` — **do not** add nginx location on public hosts.
+- **Dev URL:** `http://host.docker.internal:8000/api/v1/webhooks/keycloak` when API runs on host; or `http://revy-api:8000/...` when API container shares `revy-net`.
 - Secret matches `KEYCLOAK_WEBHOOK_SECRET`; listener sends `X-Webhook-Secret`.
 - JAR pin (D12): document sha256 of both shaded JARs in Dockerfile comment.
 
