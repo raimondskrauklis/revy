@@ -4,7 +4,7 @@ Phase **R6** of [REVIEW_PIPELINE_R6_GITHUB_PUBLISH_GENERAL_PLAN.md](../REVIEW_PI
 
 **Goal:** Publish reconciled findings to GitHub check runs and PR comments — idempotent per `head_sha`.
 
-**Authority:** [GITHUB_APP_TARGET_CONFIG.md](../../utils/GITHUB_APP_TARGET_CONFIG.md) § R6, [REVIEW_PIPELINE_PRODUCT_PATTERNS.md](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md) § R6 execution open items.
+**Authority:** [GITHUB_APP_TARGET_CONFIG.md](../../utils/GITHUB_APP_TARGET_CONFIG.md) § R6, [REVIEW_PIPELINE_PRODUCT_PATTERNS.md](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md) § R6 execution decisions.
 
 ## Decisions locked for R6
 
