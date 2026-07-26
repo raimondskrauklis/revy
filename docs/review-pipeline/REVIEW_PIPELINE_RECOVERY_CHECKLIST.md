@@ -35,9 +35,9 @@
 
 ## Track 2a — Audit PRs (do not merge)
 
-**Audit tip:** Point base/head branches at **feature commits** (not docs-sync tags) — see PRs #15–#18.
+**Audit tip:** Point base/head branches at **feature commits** (not docs-sync tags) — see PRs #15–#18. **Closed** = GitHub PR closed after triage; fixes land in Track 2b PRs (never merge audit branches).
 
-| Phase | Branch | Base | Head commit | PR # | Greptile done | Closed |
+| Phase | Branch | Base | Head commit | PR # | Greptile done | Closed (not merged) |
 |-------|--------|------|-------------|------|---------------|--------|
 | R0 | `audit/review-r0-retro` | `saas-base-v1.1` (`48c361e`) | `d017dfc` | #15 | [x] | [x] |
 | R1 | `audit/review-r1-retro` | `d017dfc` | `fd29fd5` | #16 | [x] | [x] |
