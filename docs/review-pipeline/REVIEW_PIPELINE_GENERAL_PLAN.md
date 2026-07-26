@@ -1,109 +1,48 @@
-# Review pipeline — general plan
+# Review pipeline — general plan index
 
-From [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md). **No execution steps.**
+Per-phase goals live in **separate files** (same layout as [docs/saas-base](../saas-base/README.md)). This file is the index only — **no execution steps**.
 
-**Cross-cutting (every phase):** workspace tenancy, audit where mutating, EN+LV, unit tests, hand-written Alembic.
+**Baseline:** [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) must be current before writing or updating any general plan.
 
-**Status:** R0–R7 not started.
-
----
-
-## R0 — GitHub webhook ingestion
-
-**Goal:** Accept signed GitHub App webhooks and enqueue `github_events` work.
-
-**Scope:** In — `POST /api/v1/webhooks/github`, HMAC verify, delivery dedupe table, `github_tasks` module (installation + push handlers), env docs. Out — repo/PR entities, OAuth install UI, production App registration.
-
-**Deliverables:** Webhook returns 200; duplicate deliveries idempotent; installation status sync; Celery task enqueued; dev runbook.
-
-**Depends on:** P4 installations, SaaS base, `saas-base-v1.1` migration runner.
+**Workflow:** findings → general plan (phase) → [waves/](./waves/) execution → `phase-execution` on `feat/review-r*`.
 
 ---
 
-## R1 — Repository sync
+## Phases
 
-**Goal:** Mirror installation-linked repositories after webhook or manual trigger.
+| Phase | General plan | Focus | Status |
+|-------|--------------|-------|--------|
+| R0 | [R0 webhooks](./REVIEW_PIPELINE_R0_WEBHOOKS_GENERAL_PLAN.md) | Webhook ingest, HMAC, `github_events` | shipped (`review-r0-v1`) |
+| R1 | [R1 repo sync](./REVIEW_PIPELINE_R1_REPO_SYNC_GENERAL_PLAN.md) | `github_repositories`, `repo_sync` | shipped (`review-r1-v1`) |
+| R2 | [R2 PR ingestion](./REVIEW_PIPELINE_R2_PR_INGESTION_GENERAL_PLAN.md) | PR + revision tracking | **next** |
+| R3–R7 | [R3–R7 outline](./REVIEW_PIPELINE_R3_R7_GENERAL_PLAN.md) | Index → review → publish → UI | not started |
 
-**Scope:** In — `repositories` table, `repo_sync` tasks, link to `github_installations`. Out — full mirror fetch, branch protection sync.
+## Execution
 
-**Deliverables:** Repo rows per installation; list API stub or admin visibility.
+| Phase | Execution | Status |
+|-------|-----------|--------|
+| R0 | [waves/REVIEW_PIPELINE_R0_EXECUTION.md](./waves/REVIEW_PIPELINE_R0_EXECUTION.md) | done |
+| R1 | [waves/REVIEW_PIPELINE_R1_EXECUTION.md](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) | done |
+| R2 | — | create after R2 general plan peer-review |
 
-**Depends on:** R0.
+Full table: [waves/README.md](./waves/README.md).
 
----
+## GitHub App (external setup)
 
-## R2 — Pull request ingestion
+| Doc | Purpose |
+|-----|---------|
+| [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) | Create App; minimal config for current phase |
+| [GITHUB_APP_TARGET_CONFIG.md](../utils/GITHUB_APP_TARGET_CONFIG.md) | One-time full R0–R7 target values |
+| [GITHUB_WEBHOOK_DEV.md](./GITHUB_WEBHOOK_DEV.md) | Local webhook forwarding |
 
-**Goal:** Track PRs and revisions from GitHub events.
+## Cross-cutting (every phase)
 
-**Scope:** In — `pull_request` + revision schema, webhook handlers for `pull_request` / `pull_request_review`. Out — full diff storage.
-
-**Deliverables:** PR rows created/updated from webhooks; workspace-scoped queries.
-
-**Depends on:** R1.
-
----
-
-## R3 — Indexing
-
-**Goal:** Chunk and embed repository content for review context.
-
-**Scope:** In — pgvector index jobs, `indexing` queue. Out — symbol index, cross-repo search.
-
-**Deliverables:** Embeddings stored; retrieval API for review stage.
-
-**Depends on:** R2.
-
----
-
-## R4 — Review run
-
-**Goal:** LLM pipeline produces structured findings per PR revision.
-
-**Scope:** In — `review_tasks`, model provider config, finding schema. Out — multi-model judge (→ R5).
-
-**Deliverables:** Review run record + findings rows; gated API for workspace members.
-
-**Depends on:** R3.
-
----
-
-## R5 — Reconciliation + judge
-
-**Goal:** Deduplicate and escalate findings across revisions.
-
-**Scope:** In — `reconciliation`, `judge` queues, fingerprint logic. Out — human review workflow.
-
-**Deliverables:** Stable finding identity across pushes; judge outcomes persisted.
-
-**Depends on:** R4.
-
----
-
-## R6 — GitHub publish
-
-**Goal:** Post check runs and review comments to GitHub.
-
-**Scope:** In — `github_publish` tasks, installation token auth. Out — inline suggestion API v2 nuances.
-
-**Deliverables:** Check run status on PR; summary comment posted.
-
-**Depends on:** R5.
-
----
-
-## R7 — Reviewer UI
-
-**Goal:** In-app surfaces for PR status, findings, and review history.
-
-**Scope:** In — `features/reviewer/`, routes, dashboard widgets, i18n. Out — GitHub.com replacement UI.
-
-**Deliverables:** Member can view findings for workspace PRs; links to GitHub.
-
-**Depends on:** R4 (read-only UI can ship before R6 with caveats).
+Workspace tenancy; audit on mutating routes; EN+LV for UI; unit tests; hand-written Alembic; releases via tags on `main` ([REVIEW_PIPELINE_PROGRAM.md](./REVIEW_PIPELINE_PROGRAM.md)).
 
 ---
 
 ## Next
 
-**`create-execution-plan`** → [waves/REVIEW_PIPELINE_R0_EXECUTION.md](./waves/REVIEW_PIPELINE_R0_EXECUTION.md) first; peer-review before `phase-execution` on `feat/review-r0-webhooks`.
+1. Lock R2 open questions in [findings](./REVIEW_PIPELINE_FINDINGS.md).
+2. `create-execution-plan` → `waves/REVIEW_PIPELINE_R2_EXECUTION.md`.
+3. `execution-peer-review` → `phase-execution` on `feat/review-r2-pr-ingestion`.

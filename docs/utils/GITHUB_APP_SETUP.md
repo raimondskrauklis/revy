@@ -1,0 +1,400 @@
+# GitHub App setup (Revy)
+
+How to create and configure a **GitHub App** for Revy — webhooks (R0), repository metadata sync (R1), and workspace installations (P4).
+
+**Verified against:** [GitHub Apps docs](https://docs.github.com/en/apps/creating-github-apps), Revy R0/R1 (`docs/review-pipeline/`), `backend/app/core/config.py`.
+
+**Related:** `backend/.env.example`, `deploy/env-examples/backend.env.production.example`, [GITHUB_APP_DESCRIPTION.md](./GITHUB_APP_DESCRIPTION.md) (form copy-paste), [GITHUB_APP_TARGET_CONFIG.md](./GITHUB_APP_TARGET_CONFIG.md) (full R0–R7 target values), [REVIEW_PIPELINE_FINDINGS.md](../review-pipeline/REVIEW_PIPELINE_FINDINGS.md), [GITHUB_WEBHOOK_DEV.md](../review-pipeline/GITHUB_WEBHOOK_DEV.md) (local forwarding), [REVY_PRODUCT_SLICE.md](../starter-pack/REVY_PRODUCT_SLICE.md), [OPS.md](../saas-base/OPS.md).
+
+> **Registering once for the full product?** Use [GITHUB_APP_TARGET_CONFIG.md](./GITHUB_APP_TARGET_CONFIG.md) instead of the minimal tables below.
+
+---
+
+## What Revy uses the GitHub App for
+
+```text
+GitHub
+  → POST /api/v1/webhooks/github  (HMAC X-Hub-Signature-256)
+  → idempotent store (github_webhook_deliveries)
+  → Celery github_events queue
+  → update github_installations / github_repositories
+
+Revy API (optional, when GITHUB_APP_ID + private key set)
+  → GitHub App JWT
+  → installation access token
+  → list installation repositories (full sync)
+```
+
+| Capability | Env required | Webhook events (`X-GitHub-Event`) |
+|------------|--------------|-------------------------------------|
+| Webhook ingestion | `GITHUB_WEBHOOK_SECRET` | Any signed delivery |
+| Installation status updates | webhook secret + row in `github_installations` | `installation` (automatic) |
+| Repository metadata | webhook secret + registered installation | `installation_repositories` (automatic) |
+| Push logging (stub) | webhook secret + **Push** subscribed | `push` |
+| Full repository sync API | `GITHUB_APP_ID` + `GITHUB_APP_PRIVATE_KEY_PATH` | — (API, not webhook) |
+
+OAuth “Install Revy” button in the product UI is **not shipped yet** — installations are linked via the **manual register** form (`/installations`) until a later phase.
+
+---
+
+## Prerequisites (Revy side)
+
+1. **Migrations** through `0011_github_repositories` (includes `0010_github_webhook_deliveries`):
+
+   ```bash
+   cd backend
+   pipenv run alembic upgrade head
+   pipenv run alembic current
+   ```
+
+2. **API** running and reachable at a public HTTPS URL (staging/production) or tunneled locally (see [GITHUB_WEBHOOK_DEV.md](../review-pipeline/GITHUB_WEBHOOK_DEV.md)).
+
+3. **Celery worker** consuming `github_events` (and `repo_sync` for full sync):
+
+   ```bash
+   cd backend
+   pipenv run celery -A app.workers.celery_app worker \
+     -Q github_events,repo_sync,default --loglevel=info
+   ```
+
+---
+
+## Step 1 — Create the GitHub App
+
+1. Open **GitHub** → **Settings** → **Developer settings** → **GitHub Apps** → **New GitHub App**.
+
+   Direct link: https://github.com/settings/apps/new
+
+2. Fill in the form — field-by-field:
+
+### General
+
+| Field | Value | Notes |
+|-------|-------|-------|
+| **GitHub App name** | `revy` / `revy-staging` / `revy-dev` | Globally unique; use env suffix |
+| **Description** | Copy from [GITHUB_APP_DESCRIPTION.md](./GITHUB_APP_DESCRIPTION.md) | Shown to users during install |
+| **Homepage URL** | `https://revy.createit.digital` (prod) or `http://localhost:5173` (dev) | Same as `APP_PUBLIC_URL` — SPA, not API |
+
+### Identifying and authorizing users
+
+| Field | Value | Notes |
+|-------|-------|-------|
+| **Callback URL** | Leave empty, or homepage URL | **Ignored** until Revy uses GitHub user OAuth. Not Keycloak `/auth/callback`. |
+| **Expire user authorization tokens** | ✓ **Checked** | GitHub default; safe to leave on. Ignored until user-token flow ships. |
+| **Request user authorization (OAuth) during installation** | ☐ **Unchecked** | Revy uses **installation** tokens + manual register today — not per-user OAuth at install |
+| **Enable Device Flow** | ☐ **Unchecked** | For CLI/headless user auth only — not used by Revy |
+
+### Webhook
+
+| Field | Value | Notes |
+|-------|-------|-------|
+| **Active** | ✓ **Checked** | Required for R0+ |
+| **Webhook URL** | `https://<api-host>/api/v1/webhooks/github` | API host, not SPA — e.g. `https://revy.createit.digital/api/v1/webhooks/github` if API is on same domain |
+| **Webhook secret** | Generate (see below) | **You choose** the value — not provided by GitHub |
+
+Generate secret:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+- Paste into GitHub → **Webhook secret**
+- Paste into `GITHUB_WEBHOOK_SECRET` in backend env
+
+For local dev, `local-webhook-secret` is fine if your forwarder uses the same value.
+
+### Permissions
+
+Expand **Repository permissions** first — event checkboxes below only appear for permissions you grant.
+
+| Section | Setting |
+|---------|---------|
+| **Repository permissions → Metadata** | **Read** |
+| **Repository permissions → Contents** | **Read** |
+| **Repository permissions** (everything else) | **No access** |
+| **Organization permissions** | **No access** (all collapsed defaults) |
+| **Account permissions** | **No access** (all collapsed defaults) |
+
+### Subscribe to events
+
+GitHub shows only **optional** events here. Events tied to permissions you granted appear after you set **Metadata** and **Contents** (e.g. **Push**).
+
+**Automatic (not in this list — do not look for checkboxes):**
+
+| `X-GitHub-Event` header | GitHub docs | Revy handler |
+|-------------------------|-------------|--------------|
+| `installation` | All Apps receive by default | Updates `github_installations.status` |
+| `installation_repositories` | All Apps receive by default | Upserts `github_repositories` |
+
+Do **not** confuse **Installation target** (in the form) with **Installation** (automatic). Revy does not use `installation_target`.
+
+**Check in the form (shipped R0 + R1):**
+
+| Form label | `X-GitHub-Event` | Enable | Revy handler |
+|------------|------------------|--------|--------------|
+| **Push** | `push` | ✓ | Logged stub today |
+
+**Leave unchecked** (visible after Contents: Read, not used by Revy today):
+
+| Form label | `X-GitHub-Event` |
+|------------|------------------|
+| Installation target | `installation_target` |
+| Meta | `meta` |
+| Security advisory | `security_advisory` |
+| Create | `create` |
+| Delete | `delete` |
+| Fork | `fork` |
+| Public | `public` |
+| Release | `release` |
+| Repository | `repository` |
+| Repository dispatch | `repository_dispatch` |
+| Star | `star` |
+| Watch | `watch` |
+| Label | `label` |
+| Commit comment | `commit_comment` |
+| Gollum | `gollum` |
+| Workflow dispatch | `workflow_dispatch` |
+| Workflow job | `workflow_job` |
+| Workflow run | `workflow_run` |
+
+**Future (R2+)** — enable when permission is added:
+
+| Form label | `X-GitHub-Event` | Requires permission |
+|------------|------------------|---------------------|
+| **Pull request** | `pull_request` | **Pull requests: Read** (R2) |
+
+Source: [GitHub webhook events](https://docs.github.com/en/webhooks/webhook-events-and-payloads); Revy `SUPPORTED_EVENTS` in `backend/app/services/github_webhooks.py`.
+
+### Where can this GitHub App be installed?
+
+| Environment | Choice |
+|-------------|--------|
+| Personal dev | **Only on this account** |
+| Staging / production | **Any account** (orgs install from GitHub) |
+
+### Post-install (optional, not used yet)
+
+| Field | Value |
+|-------|-------|
+| **Setup URL** | Leave empty | Post-install redirect for setup wizards — OAuth install UI not shipped |
+| **Redirect on update** | Leave unchecked | Only relevant with Setup URL |
+
+3. Click **Create GitHub App**.
+
+**Copy-paste description text:** [GITHUB_APP_DESCRIPTION.md](./GITHUB_APP_DESCRIPTION.md)
+
+---
+
+## Step 1b — After creation (same settings page)
+
+| Section | Action |
+|---------|--------|
+| **About → App ID** | Copy → `GITHUB_APP_ID` |
+| **About → Client ID** | Note for future OAuth install — not used by backend today |
+| **Private keys** | **Generate** → save `.pem` → `GITHUB_APP_PRIVATE_KEY_PATH` |
+| **Client secrets** | Not needed until OAuth user/install flow ships |
+| **Install App** (sidebar) | Install on org/account → get installation ID for Revy register form |
+
+---
+
+## Step 2 — Generate a private key
+
+1. On the app’s settings page → **Private keys** → **Generate a private key**.
+2. GitHub downloads a `.pem` file **once** — store it securely; it cannot be re-downloaded.
+
+| Environment | Path |
+|-------------|------|
+| **Local** | Outside the repo, e.g. `~/.config/revy/github-app.pem` |
+| **Droplet** | `/mnt/revy/secrets/github-app.pem` (`chmod 600`, owned by `deploy`) |
+
+Set `GITHUB_APP_PRIVATE_KEY_PATH` to that absolute path. **Never** commit the key or put it in `.env` as inline text.
+
+---
+
+## Step 3 — Copy App ID
+
+On the same GitHub App page, under **About**:
+
+- **App ID** → `GITHUB_APP_ID` (numeric string, e.g. `123456`)
+
+Optional: note **Client ID** — not used by Revy backend today (OAuth install deferred).
+
+---
+
+## Step 4 — Environment variables
+
+### Local (`backend/.env`)
+
+```env
+GITHUB_APP_ID=123456
+GITHUB_APP_PRIVATE_KEY_PATH=/Users/you/.config/revy/github-app.pem
+GITHUB_WEBHOOK_SECRET=local-webhook-secret
+REVY_BOT_LOGIN=revy[bot]
+```
+
+### Droplet (`/mnt/revy_volume/backend/.env`)
+
+See `deploy/env-examples/backend.env.production.example`:
+
+```env
+GITHUB_APP_ID=123456
+GITHUB_APP_PRIVATE_KEY_PATH=/mnt/revy/secrets/github-app.pem
+GITHUB_WEBHOOK_SECRET=<same-as-github-app-webhook-secret>
+REVY_BOT_LOGIN=revy[bot]
+```
+
+| Variable | Required for | Purpose |
+|----------|--------------|---------|
+| `GITHUB_WEBHOOK_SECRET` | Webhooks | HMAC verify on `POST /api/v1/webhooks/github`; empty → `503 github_webhooks_disabled` |
+| `GITHUB_APP_ID` | Full repo sync API | GitHub App JWT `iss` claim |
+| `GITHUB_APP_PRIVATE_KEY_PATH` | Full repo sync API | PEM file for JWT signing |
+| `REVY_BOT_LOGIN` | Display / future publish | Bot login label (default `revy[bot]`) |
+
+`GITHUB_APP_ID` + key are **optional** for webhooks-only operation. Without them, `POST …/sync-repositories` returns `503 github_api_disabled`.
+
+Restart API and Celery after changing env.
+
+---
+
+## Step 5 — Install the app on GitHub
+
+1. GitHub App settings → **Install App** (left sidebar).
+2. Choose target **organization** or **personal account**.
+3. Select repositories (all or selected).
+4. Confirm install.
+
+### Find installation metadata for Revy
+
+After install, open the installation in GitHub. The URL contains the numeric **installation ID**:
+
+```text
+https://github.com/settings/installations/<INSTALLATION_ID>
+```
+
+You also need:
+
+- **Account login** — org or user slug (e.g. `acme-corp`)
+- **Account ID** — numeric GitHub account id (org/user settings or API)
+- **Account type** — `organization` or `user`
+
+---
+
+## Step 6 — Register installation in Revy
+
+Until OAuth install ships, link the GitHub installation to a **workspace** manually:
+
+1. Log in to Revy as a workspace **admin**.
+2. Open **Installations** (`/installations`) or **Settings → Integrations**.
+3. Submit the **Register installation** form:
+
+   | Field | Source |
+   |-------|--------|
+   | Installation ID | GitHub installation URL |
+   | Account login | Org/user slug |
+   | Account ID | GitHub numeric account id |
+   | Account type | `organization` or `user` |
+
+API equivalent: `POST /api/v1/workspaces/{workspace_id}/installations` (workspace admin).
+
+Webhook `installation` events only update rows that **already exist** in `github_installations`. Unregistered installation IDs are logged and acknowledged with **200** (no retry storm).
+
+---
+
+## Step 7 — Verify webhooks
+
+### Production / staging
+
+1. GitHub App → **Advanced** → **Recent deliveries** (or installation → webhook deliveries).
+2. Trigger an event (e.g. reinstall app, add a repo).
+3. Expect **200** from `https://<api-host>/api/v1/webhooks/github`.
+
+### Database check
+
+```sql
+SELECT delivery_id, event_type, installation_id
+FROM github_webhook_deliveries
+ORDER BY received_at DESC
+LIMIT 5;
+```
+
+### Full repository sync (optional)
+
+When `GITHUB_APP_ID` and private key are set:
+
+```http
+POST /api/v1/workspaces/{workspace_id}/installations/{installation_id}/sync-repositories
+```
+
+Workspace admin + idempotency header. Worker must consume `repo_sync`.
+
+List repos:
+
+```http
+GET /api/v1/workspaces/{workspace_id}/installations/{installation_id}/repositories
+```
+
+---
+
+## Local development
+
+Public HTTPS is required for GitHub → your machine. Use a forwarder:
+
+| Tool | Doc |
+|------|-----|
+| smee.io | [GITHUB_WEBHOOK_DEV.md](../review-pipeline/GITHUB_WEBHOOK_DEV.md) § Option A |
+| `gh webhook forward` | Same doc § Option B |
+
+Set GitHub App webhook URL to the smee channel (or forward target). Keep `GITHUB_WEBHOOK_SECRET` aligned on both sides.
+
+---
+
+## Deploy checklist
+
+1. `alembic upgrade head` on target database (through `0011`).
+2. Place `github-app.pem` on droplet volume; `chmod 600`.
+3. Set all four `GITHUB_*` env vars on API + worker containers.
+4. GitHub App webhook URL → `https://<api-host>/api/v1/webhooks/github`.
+5. Webhook secret matches `GITHUB_WEBHOOK_SECRET`.
+6. Celery worker: `-Q github_events,repo_sync,…` (see [REVY_PRODUCT_SLICE.md](../starter-pack/REVY_PRODUCT_SLICE.md)).
+7. Register each installation per workspace in Revy UI.
+8. Confirm **Recent deliveries** show 200.
+
+---
+
+## API surface (reference)
+
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| `POST` | `/api/v1/webhooks/github` | HMAC (`X-Hub-Signature-256`) | Webhook handler |
+| `GET` | `/api/v1/workspaces/{id}/installations` | JWT | List installations |
+| `POST` | `/api/v1/workspaces/{id}/installations` | JWT (admin) | Manual register |
+| `GET` | `/api/v1/workspaces/{id}/installations/{id}/repositories` | JWT | List mirrored repos |
+| `POST` | `/api/v1/workspaces/{id}/installations/{id}/sync-repositories` | JWT (admin) | Full sync via GitHub API |
+
+---
+
+## Troubleshooting
+
+| Symptom | Likely cause |
+|---------|----------------|
+| `503 github_webhooks_disabled` | Empty or missing `GITHUB_WEBHOOK_SECRET` |
+| `422` invalid signature | Secret mismatch between GitHub App and backend env |
+| Webhook `200` but installation unchanged | Installation not registered in Revy (`github_installations` row missing) |
+| `503 github_api_disabled` | Missing `GITHUB_APP_ID` or `GITHUB_APP_PRIVATE_KEY_PATH` |
+| Repos not listed | No `installation_repositories` event yet — run **Sync repositories** |
+| Task not running | Celery worker not consuming `github_events` / `repo_sync` |
+| Webhook 404 | Wrong path — must be `/api/v1/webhooks/github` (nginx must route `/api/v1`) |
+
+Check nginx routes public API at `https://<host>/api/v1` (`deploy/nginx/revy.createit.digital.conf`).
+
+---
+
+## Future phases (not required today)
+
+| Phase | Permission | Subscribe to events (form label) | `X-GitHub-Event` |
+|-------|------------|----------------------------------|------------------|
+| **R2** | **Pull requests: Read** | **Pull request** ✓ | `pull_request` |
+| **R6** | **Pull requests: Write**, **Checks: Write** | (same + check run events if needed) | `check_run`, etc. |
+| **OAuth install UI** | — | Callback URL + **Request user authorization during installation** ✓ | — |
+
+Track program status: [docs/review-pipeline/README.md](../review-pipeline/README.md).

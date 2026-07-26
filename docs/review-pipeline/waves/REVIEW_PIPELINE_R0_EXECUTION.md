@@ -2,7 +2,9 @@
 
 # R0 — GitHub webhook ingestion (execution)
 
-Phase **R0** of [REVIEW_PIPELINE_GENERAL_PLAN.md](../REVIEW_PIPELINE_GENERAL_PLAN.md). Baseline: [REVIEW_PIPELINE_FINDINGS.md](../REVIEW_PIPELINE_FINDINGS.md). **Depends on** P4 installations + SaaS base. **R0 only.**
+Phase **R0** of [REVIEW_PIPELINE_R0_WEBHOOKS_GENERAL_PLAN.md](../REVIEW_PIPELINE_R0_WEBHOOKS_GENERAL_PLAN.md). Baseline: [REVIEW_PIPELINE_FINDINGS.md](../REVIEW_PIPELINE_FINDINGS.md). **Depends on** P4 installations + SaaS base. **R0 only.**
+
+**GitHub App:** [GITHUB_APP_SETUP.md](../../utils/GITHUB_APP_SETUP.md) (webhook URL + secret), [GITHUB_WEBHOOK_DEV.md](../GITHUB_WEBHOOK_DEV.md).
 
 **Goal:** Signed GitHub App webhooks → idempotent delivery store → Celery `github_events` queue.
 

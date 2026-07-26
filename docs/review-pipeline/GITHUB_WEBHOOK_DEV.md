@@ -45,7 +45,9 @@ How to receive GitHub App webhooks against a local Revy API. Production uses the
    npx smee -u https://smee.io/<your-channel> -t http://localhost:8000/api/v1/webhooks/github
    ```
 
-4. Trigger an event from GitHub (e.g. reinstall app) and confirm API logs **200**.
+4. Trigger an event from GitHub (e.g. reinstall app or push to a repo) and confirm API logs **200**.
+
+`installation` and `installation_repositories` are sent automatically — no subscribe checkbox. For a repo event, subscribe **Push** on the GitHub App and push a commit.
 
 ---
 

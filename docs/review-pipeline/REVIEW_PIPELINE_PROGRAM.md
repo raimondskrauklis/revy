@@ -164,13 +164,15 @@ Worker droplet must consume Revy queues (see `implementation.revy.md`). Export/m
 
 ## 8. Planning workflow (agents)
 
-Same discipline as SaaS base:
+Same discipline as [docs/saas-base](../saas-base/README.md):
 
-1. **`create-findings`** → `docs/review-pipeline/REVIEW_PIPELINE_FINDINGS.md`
-2. **`create-general-plan`** → `REVIEW_PIPELINE_GENERAL_PLAN.md` (phases R0–R7)
-3. **`create-execution-plan`** → `docs/review-pipeline/waves/REVIEW_PIPELINE_R*_EXECUTION.md`
+1. **`create-findings`** → [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) (baseline-first; includes GitHub App ops pointers)
+2. **`create-general-plan`** → per-phase `REVIEW_PIPELINE_R*_GENERAL_PLAN.md` (index: [REVIEW_PIPELINE_GENERAL_PLAN.md](./REVIEW_PIPELINE_GENERAL_PLAN.md))
+3. **`create-execution-plan`** → `waves/REVIEW_PIPELINE_R*_EXECUTION.md` only
 4. **`execution-peer-review`** before LOOP
-5. **`phase-execution`** from R0 execution file; branch `feat/review-r0-…`
+5. **`phase-execution`** from execution file; branch `feat/review-r*-…`
+
+**GitHub App runbooks:** [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md), [GITHUB_APP_TARGET_CONFIG.md](../utils/GITHUB_APP_TARGET_CONFIG.md).
 
 Skills in `.cursor/skills/` named for `docs/starter-pack/` apply by analogy — point agents at `docs/review-pipeline/` paths.
 

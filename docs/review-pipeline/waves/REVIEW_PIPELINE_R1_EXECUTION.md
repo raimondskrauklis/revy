@@ -2,7 +2,9 @@
 
 # R1 — Repository sync (execution)
 
-Phase **R1** of [REVIEW_PIPELINE_GENERAL_PLAN.md](../REVIEW_PIPELINE_GENERAL_PLAN.md). Baseline: [REVIEW_PIPELINE_FINDINGS.md](../REVIEW_PIPELINE_FINDINGS.md). **Depends on** R0 (`review-r0-v1`).
+Phase **R1** of [REVIEW_PIPELINE_R1_REPO_SYNC_GENERAL_PLAN.md](../REVIEW_PIPELINE_R1_REPO_SYNC_GENERAL_PLAN.md). Baseline: [REVIEW_PIPELINE_FINDINGS.md](../REVIEW_PIPELINE_FINDINGS.md). **Depends on** R0 (`review-r0-v1`).
+
+**GitHub App:** [GITHUB_APP_SETUP.md](../../utils/GITHUB_APP_SETUP.md), [GITHUB_APP_TARGET_CONFIG.md](../../utils/GITHUB_APP_TARGET_CONFIG.md) (Metadata + `installation_repositories`).
 
 **Goal:** Mirror installation-linked repository metadata from webhooks and optional GitHub API full sync.
 
@@ -81,4 +83,4 @@ pipenv run lint && pipenv run pytest \
 
 **Deploy:** `alembic upgrade head`; optional GitHub App credentials for full sync.
 
-**Next:** [REVIEW_PIPELINE_R2_EXECUTION.md](./REVIEW_PIPELINE_R2_EXECUTION.md) (create when planning R2).
+**Next:** [REVIEW_PIPELINE_R2_PR_INGESTION_GENERAL_PLAN.md](../REVIEW_PIPELINE_R2_PR_INGESTION_GENERAL_PLAN.md) → create [REVIEW_PIPELINE_R2_EXECUTION.md](./REVIEW_PIPELINE_R2_EXECUTION.md) when planning R2.

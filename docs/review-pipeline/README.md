@@ -2,41 +2,63 @@
 
 **Active program** after SaaS base W0–W8. Builds AI-assisted code review on GitHub **inside this repo** — no fork.
 
-**Baseline tag:** `saas-base-v1` → merge commit of PR #7 (`dacfc5b`). SaaS shell, settings, billing, platform admin, lifecycle, impersonation are **frozen at that tag** for reference.
+**Baseline tag:** `saas-base-v1` → PR #7 (`dacfc5b`). SaaS shell frozen at that tag; review work is additive on `main`.
 
 **Prerequisite:** scaffold P0–P5 + SaaS base W0–W8 on `main`.
 
+**Folder layout** (same discipline as [docs/saas-base](../saas-base/README.md)):
+
+```text
+docs/review-pipeline/
+  README.md                          ← this index
+  REVIEW_PIPELINE_FINDINGS.md        ← baseline first (always)
+  REVIEW_PIPELINE_GENERAL_PLAN.md    ← index → per-phase general plans
+  REVIEW_PIPELINE_R*_…_GENERAL_PLAN.md
+  REVIEW_PIPELINE_PROGRAM.md         ← branching, tags, releases
+  GITHUB_WEBHOOK_DEV.md              ← local ops
+  waves/
+    README.md                        ← execution table
+    REVIEW_PIPELINE_R*_EXECUTION.md  ← LOOP files only
+```
+
 ---
 
-## Planning
+## Planning (order matters)
 
-| Doc | Purpose |
-|-----|---------|
-| [REVIEW_PIPELINE_PROGRAM.md](./REVIEW_PIPELINE_PROGRAM.md) | Strategy, branching, phased roadmap R0–R7 |
-| [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) | Baseline inventory, decisions, gaps |
-| [REVIEW_PIPELINE_GENERAL_PLAN.md](./REVIEW_PIPELINE_GENERAL_PLAN.md) | Phase goals (R0–R7) |
-| [REVY_PRODUCT_SLICE.md](../starter-pack/REVY_PRODUCT_SLICE.md) | Shipped P4: `github_installations` |
-| [SAAS_BASE_FINDINGS.md](../saas-base/SAAS_BASE_FINDINGS.md) | SaaS base complete — out of scope for R* |
+| Step | Doc | Purpose |
+|------|-----|---------|
+| 1 | [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) | Baseline, catalog, locked decisions, GitHub App ops pointers |
+| 2 | `REVIEW_PIPELINE_R*_GENERAL_PLAN.md` | Per-phase goals (or [R3–R7 outline](./REVIEW_PIPELINE_R3_R7_GENERAL_PLAN.md) until split) |
+| 3 | [waves/REVIEW_PIPELINE_R*_EXECUTION.md](./waves/) | Subphases + phase gate — **after** general plan peer-review |
+| — | [REVIEW_PIPELINE_PROGRAM.md](./REVIEW_PIPELINE_PROGRAM.md) | Branching, milestone tags, releases |
+| — | [REVIEW_PIPELINE_GENERAL_PLAN.md](./REVIEW_PIPELINE_GENERAL_PLAN.md) | Index of all phase general plans |
 
-**Full product authority (contributors):** `internal-docs/product/revy/docs/architecture.md`, `PLATFORM_CONTEXT.md`, `deploy/docs/implementation.revy.md`.
+**GitHub App (external):** [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) · [GITHUB_APP_TARGET_CONFIG.md](../utils/GITHUB_APP_TARGET_CONFIG.md) · [GITHUB_WEBHOOK_DEV.md](./GITHUB_WEBHOOK_DEV.md)
 
-**Execution:** per-phase `REVIEW_PIPELINE_R*_EXECUTION.md` files under `waves/` — created after findings + general plan (same pattern as SaaS base).
+**Product authority (contributors):** `internal-docs/product/revy/docs/architecture.md`, `WEBHOOKS.md`, [REVY_PRODUCT_SLICE.md](../starter-pack/REVY_PRODUCT_SLICE.md).
 
 ---
+
+## Phases (general plans)
+
+| Phase | General plan | Focus |
+|-------|--------------|-------|
+| R0 | [R0 webhooks](./REVIEW_PIPELINE_R0_WEBHOOKS_GENERAL_PLAN.md) | Webhook ingest, HMAC, `github_events` |
+| R1 | [R1 repo sync](./REVIEW_PIPELINE_R1_REPO_SYNC_GENERAL_PLAN.md) | `github_repositories`, `repo_sync` |
+| R2 | [R2 PR ingestion](./REVIEW_PIPELINE_R2_PR_INGESTION_GENERAL_PLAN.md) | PR + revisions |
+| R3–R7 | [R3–R7 outline](./REVIEW_PIPELINE_R3_R7_GENERAL_PLAN.md) | Index → review → publish → UI |
 
 ## Program status
 
-| Phase | Focus | Status |
-|-------|--------|--------|
-| **P4** | `github_installation` list + dev register | **shipped** |
-| **R0** | GitHub webhooks + event ingestion | shipped (`review-r0-v1` → `754c88c`) |
-| **R1** | Repository / branch metadata sync | shipped (`review-r1-v1` → `dddfde0`) |
-| **R2** | Pull request ingestion + revisions | not started |
-| **R3** | Indexing (chunks, embeddings, pgvector) | not started |
-| **R4** | Review run (LLM stages) | not started |
-| **R5** | Reconciliation + judge | not started |
-| **R6** | GitHub publish (checks, review comments) | not started |
-| **R7** | Findings + reviewer UI | not started |
+| Phase | Execution | Status |
+|-------|-----------|--------|
+| **P4** | [REVY_PRODUCT_SLICE.md](../starter-pack/REVY_PRODUCT_SLICE.md) | **shipped** |
+| **R0** | [waves/R0](./waves/REVIEW_PIPELINE_R0_EXECUTION.md) | shipped (`review-r0-v1`) |
+| **R1** | [waves/R1](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) | shipped (`review-r1-v1`) |
+| **R2** | — | findings + general plan ready → execution next |
+| **R3–R7** | — | outline only |
+
+Full execution table: [waves/README.md](./waves/README.md).
 
 ---
 
@@ -44,17 +66,19 @@
 
 | Topic | Decision |
 |-------|----------|
-| **Repo** | Single repo — `main` + feature branches; **no GitHub fork** for Revy product work |
-| **Base** | SaaS shell is additive foundation; tag `saas-base-v1` for snapshot; bugfixes on `main` |
-| **Tenancy** | Workspace-scoped; installations already linked to `workspaces.id` |
-| **Workers** | Celery queue map wired in `celery_app.py`; task modules stubbed until R* |
+| **Repo** | Single repo — `main` + feature branches; **no fork** |
+| **Planning** | Findings → general plan → execution (R0/R1 retro-documented) |
+| **Releases** | Tags `review-r*-v*` on `main` → GitHub Release (GitHub App code included even when env not configured) |
+| **Tenancy** | Workspace-scoped; installations → `workspaces.id` |
+| **GitHub optional** | SaaS shell runs without App; review features need webhook secret / App creds when used |
 | **Migrations** | Hand-written Alembic only |
-| **Tests** | `backend/tests/unit/` + Vitest; no new `tests/api/` |
-| **i18n** | EN + LV for all user-facing strings |
+| **Tests** | `backend/tests/unit/` + Vitest |
+| **i18n** | EN + LV for user-facing strings |
 
 ---
 
 ## Next
 
-1. Plan **R2** (PR ingestion) — `REVIEW_PIPELINE_R2_EXECUTION.md`.
-2. Branch `feat/review-r2-pr-ingestion` when R2 execution is ready.
+1. Lock R2 open questions in [findings](./REVIEW_PIPELINE_FINDINGS.md) § R2.
+2. `create-execution-plan` → [waves/REVIEW_PIPELINE_R2_EXECUTION.md](./waves/REVIEW_PIPELINE_R2_EXECUTION.md).
+3. Branch `feat/review-r2-pr-ingestion` → `phase-execution`.
