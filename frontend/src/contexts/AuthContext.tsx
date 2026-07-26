@@ -14,6 +14,7 @@ import { normalizeLanguage } from '@/lib/locale';
 import i18n from '@/i18n/config';
 import {
   getKeycloakInstance,
+  getPostLogoutRedirectUri,
   initKeycloak,
   resetKeycloak,
   setKeycloakInitialized,
@@ -21,6 +22,7 @@ import {
 import { log } from '@/lib/log';
 import { Sentry } from '@/lib/sentry';
 import { mapApiError, showDomainErrorToast } from '@/shared/errors';
+import { setStoredWorkspaceId } from '@/lib/api';
 
 const PROVISION_ERROR_CODES = new Set(['provision_email_required', 'identity_email_conflict']);
 
@@ -123,10 +125,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(() => {
-    resetKeycloak();
+    const kc = keycloak;
+    setIsAuthenticated(false);
     setUser(null);
+    setIsUserLoading(false);
     Sentry.setUser(null);
-    keycloak?.logout({ redirectUri: `${window.location.origin}/` });
+    setStoredWorkspaceId(null);
+    void kc?.logout({ redirectUri: getPostLogoutRedirectUri() });
+    resetKeycloak();
   }, [keycloak]);
 
   return (

@@ -3,7 +3,7 @@ import axios, { AxiosError } from 'axios';
 import type { InternalAxiosRequestConfig } from 'axios';
 import i18n from '@/i18n/config';
 import { requireViteEnv } from '@/lib/env';
-import { getKeycloakInstance } from '@/lib/keycloak';
+import { getKeycloakInstance, getPostLogoutRedirectUri } from '@/lib/keycloak';
 import { log } from '@/lib/log';
 import { toast } from '@/lib/toast';
 
@@ -48,7 +48,7 @@ async function refreshKeycloakToken(): Promise<string | null> {
         i18n.t('auth.sessionExpired.title'),
         i18n.t('auth.sessionExpired.body'),
       );
-      await keycloak.logout({ redirectUri: `${window.location.origin}/login` });
+      await keycloak.logout({ redirectUri: getPostLogoutRedirectUri() });
       return null;
     } finally {
       setTimeout(() => {
@@ -104,7 +104,7 @@ apiClient.interceptors.response.use(
           i18n.t('auth.sessionExpired.title'),
           i18n.t('auth.sessionExpired.body'),
         );
-        await keycloak.logout({ redirectUri: `${window.location.origin}/login` });
+        await keycloak.logout({ redirectUri: getPostLogoutRedirectUri() });
       }
     }
     return Promise.reject(error);
