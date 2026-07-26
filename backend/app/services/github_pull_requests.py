@@ -7,6 +7,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import GitHubPullRequestState, GitHubRepositoryStatus
@@ -31,8 +32,15 @@ from app.schemas.github_pull_request import GitHubPullRequestResponse
 
 logger = get_logger(__name__)
 
+_UNIQUE_VIOLATION_PG_CODE = "23505"
+
 _PULL_REQUEST_ACTIONS = frozenset({"opened", "synchronize", "closed", "reopened"})
 _REVIEW_ACTIONS = frozenset({"submitted", "edited", "dismissed"})
+
+
+def _is_unique_violation(exc: IntegrityError) -> bool:
+    orig = exc.orig
+    return orig is not None and getattr(orig, "pgcode", None) == _UNIQUE_VIOLATION_PG_CODE
 
 
 def _parse_github_datetime(value: str | None) -> datetime | None:
@@ -164,6 +172,32 @@ async def _append_revision(
     return revision
 
 
+async def _create_pull_request(
+    session: AsyncSession,
+    *,
+    repository: GitHubRepositoryORM,
+    fields: dict[str, Any],
+) -> GitHubPullRequestORM:
+    pull_request = GitHubPullRequestORM(
+        repository_id=repository.id,
+        workspace_id=repository.workspace_id,
+        installation_id=repository.installation_id,
+        revision_count=1,
+        **fields,
+    )
+    session.add(pull_request)
+    await session.flush()
+    session.add(
+        GitHubPullRequestRevisionORM(
+            pull_request_id=pull_request.id,
+            revision_number=1,
+            head_sha=fields["head_sha"],
+        )
+    )
+    await session.flush()
+    return pull_request
+
+
 async def _upsert_pull_request(
     session: AsyncSession,
     *,
@@ -177,24 +211,19 @@ async def _upsert_pull_request(
         github_pull_request_id=fields["github_pull_request_id"],
     )
     if existing is None:
-        pull_request = GitHubPullRequestORM(
-            repository_id=repository.id,
-            workspace_id=repository.workspace_id,
-            installation_id=repository.installation_id,
-            revision_count=1,
-            **fields,
-        )
-        session.add(pull_request)
-        await session.flush()
-        session.add(
-            GitHubPullRequestRevisionORM(
-                pull_request_id=pull_request.id,
-                revision_number=1,
-                head_sha=fields["head_sha"],
+        try:
+            async with session.begin_nested():
+                return await _create_pull_request(session, repository=repository, fields=fields)
+        except IntegrityError as exc:
+            if not _is_unique_violation(exc):
+                raise
+            existing = await _find_pull_request(
+                session,
+                repository_id=repository.id,
+                github_pull_request_id=fields["github_pull_request_id"],
             )
-        )
-        await session.flush()
-        return pull_request
+            if existing is None:
+                raise
 
     existing.title = fields["title"]
     existing.state = fields["state"]
