@@ -16,7 +16,8 @@ docs/review-pipeline/
   REVIEW_PIPELINE_R0_…_GENERAL_PLAN.md   ← ② one file per phase (R0–R7)
   …
   REVIEW_PIPELINE_PROGRAM.md               ← branching, tags, releases
-  REVIEW_PIPELINE_RECOVERY_CHECKLIST.md    ← agent recovery + remediation
+  REVIEW_PIPELINE_RECOVERY_CHECKLIST.md    ← agent handoff + active tracks
+  REVIEW_PIPELINE_PRODUCT_PATTERNS.md      ← Greptile-style patterns → Revy phases (defer/future map)
   GITHUB_WEBHOOK_DEV.md                    ← local ops
   waves/
     README.md                              ← execution table only
@@ -48,6 +49,7 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 | 1 | [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) | Baseline, catalog, locked decisions |
 | 2 | `REVIEW_PIPELINE_R*_GENERAL_PLAN.md` | Per-phase goals — [index](./REVIEW_PIPELINE_GENERAL_PLAN.md) |
 | 3 | [waves/REVIEW_PIPELINE_R*_EXECUTION.md](./waves/) | Subphases + phase gate |
+| — | [REVIEW_PIPELINE_PRODUCT_PATTERNS.md](./REVIEW_PIPELINE_PRODUCT_PATTERNS.md) | Industry patterns (Greptile reference) → Revy roadmap; nothing dropped |
 | — | [REVIEW_PIPELINE_PROGRAM.md](./REVIEW_PIPELINE_PROGRAM.md) | Branching, milestone tags |
 
 ---
@@ -74,7 +76,7 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 | **R1** | [waves/R1](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) | shipped (`review-r1-v1`) |
 | **R2** | [waves/R2](./waves/REVIEW_PIPELINE_R2_EXECUTION.md) | shipped (`review-r2-v1`) |
 | **R3** | [waves/R3](./waves/REVIEW_PIPELINE_R3_EXECUTION.md) | shipped (`review-r3-v1`) |
-| **R4** | [waves/R4](./waves/REVIEW_PIPELINE_R4_EXECUTION.md) | **next** — manual peer-review → `phase-execution` |
+| **R4** | [waves/R4](./waves/REVIEW_PIPELINE_R4_EXECUTION.md) | **next** — execution-peer-review → `phase-execution` ([checklist](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md)) |
 | **R5–R7** | — | general plans ready |
 
 [waves/README.md](./waves/README.md) — full execution table.
@@ -98,5 +100,6 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 
 ## Next (strict order)
 
-1. **Manual peer-review** — invoke a **separate agent** with `execution-peer-review` on [waves/REVIEW_PIPELINE_R4_EXECUTION.md](./waves/REVIEW_PIPELINE_R4_EXECUTION.md) (not the implementing agent).
-2. **`phase-execution`** on `feat/review-r4-review-run` after peer-review gaps are addressed.
+1. **[Agent checklist](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md)** — Track A: `execution-peer-review` on R4 execution (separate agent).
+2. **`phase-execution`** on `feat/review-r4-review-run` after Track A + worker queue ops planned.
+3. **Before R5** — lock R5-Q1–Q3 in findings; update R5 general plan.

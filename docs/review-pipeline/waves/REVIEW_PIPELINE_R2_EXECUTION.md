@@ -21,7 +21,7 @@ Phase **R2** of [REVIEW_PIPELINE_R2_PR_INGESTION_GENERAL_PLAN.md](../REVIEW_PIPE
 - **`pull_request_review` actions v1:** `submitted`, `edited`, `dismissed` — store review row keyed by GitHub review `id`.
 - **Orphan repository:** unknown `repository.id` for installation → log warning + return (delivery already **200**).
 - **List API:** `GET /api/v1/workspaces/{workspace_id}/repositories/{repository_id}/pull-requests` — cursor list, `items:view`.
-- **Out of scope:** diff storage, inline comments, publish (R6), `push` → re-review (R3/R4).
+- **Out of scope:** diff storage, inline comments, publish (R6), auto index/review on `push` / `synchronize` ([Q11](../REVIEW_PIPELINE_FINDINGS.md) → R8 automation).
 
 ---
 
@@ -29,7 +29,7 @@ Phase **R2** of [REVIEW_PIPELINE_R2_PR_INGESTION_GENERAL_PLAN.md](../REVIEW_PIPE
 
 **What:** Hand-written migration `0012_github_pull_requests`; ORM models; enums `GitHubPullRequestState`, `GitHubPullRequestReviewState`.
 
-**Files:** `alembic/versions/…_github_pull_requests.py`, `models/github_pull_request.py`, `models/github_pull_request_revision.py`, `models/github_pull_request_review.py`, `constants/enums.py`, `models/__init__.py`
+**Files:** `alembic/versions/…_github_pull_requests.py`, `models/github_pull_request.py` (PR + revision + review ORMs), `constants/enums.py`, `models/__init__.py`
 
 **Deliverable:** `alembic upgrade head` on fresh DB creates tables.
 
@@ -88,4 +88,4 @@ pipenv run lint && pipenv run pytest \
 
 **Human gate:** one synthetic or real `pull_request` `opened` delivery → row in `github_pull_requests` + revision `1`.
 
-**Next:** [REVIEW_PIPELINE_R3_INDEXING_GENERAL_PLAN.md](../REVIEW_PIPELINE_R3_INDEXING_GENERAL_PLAN.md) → create [REVIEW_PIPELINE_R3_EXECUTION.md](./REVIEW_PIPELINE_R3_EXECUTION.md) when planning R3.
+**Next:** [REVIEW_PIPELINE_R3_EXECUTION.md](./REVIEW_PIPELINE_R3_EXECUTION.md).
