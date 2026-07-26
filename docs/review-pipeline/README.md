@@ -6,20 +6,37 @@
 
 **Prerequisite:** scaffold P0–P5 + SaaS base W0–W8 on `main`.
 
-**Folder layout** (same discipline as [docs/saas-base](../saas-base/README.md)):
+**Folder layout** (mirrors [docs/saas-base](../saas-base/README.md)):
 
 ```text
 docs/review-pipeline/
-  README.md                          ← this index
-  REVIEW_PIPELINE_FINDINGS.md        ← baseline first (always)
-  REVIEW_PIPELINE_GENERAL_PLAN.md    ← index → per-phase general plans
-  REVIEW_PIPELINE_R*_…_GENERAL_PLAN.md
-  REVIEW_PIPELINE_PROGRAM.md         ← branching, tags, releases
-  GITHUB_WEBHOOK_DEV.md              ← local ops
+  README.md                              ← program index (this file)
+  REVIEW_PIPELINE_FINDINGS.md            ← ① baseline first — always
+  REVIEW_PIPELINE_GENERAL_PLAN.md        ← index → per-phase general plans
+  REVIEW_PIPELINE_R0_…_GENERAL_PLAN.md   ← ② one file per phase (R0–R7)
+  …
+  REVIEW_PIPELINE_PROGRAM.md               ← branching, tags, releases
+  GITHUB_WEBHOOK_DEV.md                    ← local ops
   waves/
-    README.md                        ← execution table
-    REVIEW_PIPELINE_R*_EXECUTION.md  ← LOOP files only
+    README.md                              ← execution table only
+    REVIEW_PIPELINE_R*_EXECUTION.md        ← ③ after general plan peer-review
 ```
+
+---
+
+## Getting back on track (program discipline)
+
+R0 and R1 **shipped before** the full planning ladder was enforced. Recovery steps taken / required:
+
+| Step | R0 / R1 (shipped) | R2+ (forward) |
+|------|---------------------|---------------|
+| **Findings** | Retroactive update in [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) | Must be baseline-ready **before** execution |
+| **General plan** | Retroactive — [R0](./REVIEW_PIPELINE_R0_WEBHOOKS_GENERAL_PLAN.md), [R1](./REVIEW_PIPELINE_R1_REPO_SYNC_GENERAL_PLAN.md) | One file per phase — **all R0–R7 now exist** |
+| **Execution** | [R0](./waves/REVIEW_PIPELINE_R0_EXECUTION.md), [R1](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) shipped | Create only after `execution-peer-review` |
+| **Code** | On `main` + tags `review-r0-v1`, `review-r1-v1` | `phase-execution` LOOP per phase |
+| **GitHub App** | [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) · [GITHUB_APP_TARGET_CONFIG.md](../utils/GITHUB_APP_TARGET_CONFIG.md) | Configure per phase map in target config |
+
+**No corners cut from R2 onward:** findings locked → general plan → execution plan → peer-review → implement → phase gate → tag.
 
 ---
 
@@ -27,38 +44,37 @@ docs/review-pipeline/
 
 | Step | Doc | Purpose |
 |------|-----|---------|
-| 1 | [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) | Baseline, catalog, locked decisions, GitHub App ops pointers |
-| 2 | `REVIEW_PIPELINE_R*_GENERAL_PLAN.md` | Per-phase goals (or [R3–R7 outline](./REVIEW_PIPELINE_R3_R7_GENERAL_PLAN.md) until split) |
-| 3 | [waves/REVIEW_PIPELINE_R*_EXECUTION.md](./waves/) | Subphases + phase gate — **after** general plan peer-review |
-| — | [REVIEW_PIPELINE_PROGRAM.md](./REVIEW_PIPELINE_PROGRAM.md) | Branching, milestone tags, releases |
-| — | [REVIEW_PIPELINE_GENERAL_PLAN.md](./REVIEW_PIPELINE_GENERAL_PLAN.md) | Index of all phase general plans |
-
-**GitHub App (external):** [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) · [GITHUB_APP_TARGET_CONFIG.md](../utils/GITHUB_APP_TARGET_CONFIG.md) · [GITHUB_WEBHOOK_DEV.md](./GITHUB_WEBHOOK_DEV.md)
-
-**Product authority (contributors):** `internal-docs/product/revy/docs/architecture.md`, `WEBHOOKS.md`, [REVY_PRODUCT_SLICE.md](../starter-pack/REVY_PRODUCT_SLICE.md).
+| 1 | [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) | Baseline, catalog, locked decisions |
+| 2 | `REVIEW_PIPELINE_R*_GENERAL_PLAN.md` | Per-phase goals — [index](./REVIEW_PIPELINE_GENERAL_PLAN.md) |
+| 3 | [waves/REVIEW_PIPELINE_R*_EXECUTION.md](./waves/) | Subphases + phase gate |
+| — | [REVIEW_PIPELINE_PROGRAM.md](./REVIEW_PIPELINE_PROGRAM.md) | Branching, milestone tags |
 
 ---
 
-## Phases (general plans)
+## Phases (general plans) — all R0–R7
 
 | Phase | General plan | Focus |
 |-------|--------------|-------|
 | R0 | [R0 webhooks](./REVIEW_PIPELINE_R0_WEBHOOKS_GENERAL_PLAN.md) | Webhook ingest, HMAC, `github_events` |
 | R1 | [R1 repo sync](./REVIEW_PIPELINE_R1_REPO_SYNC_GENERAL_PLAN.md) | `github_repositories`, `repo_sync` |
 | R2 | [R2 PR ingestion](./REVIEW_PIPELINE_R2_PR_INGESTION_GENERAL_PLAN.md) | PR + revisions |
-| R3–R7 | [R3–R7 outline](./REVIEW_PIPELINE_R3_R7_GENERAL_PLAN.md) | Index → review → publish → UI |
+| R3 | [R3 indexing](./REVIEW_PIPELINE_R3_INDEXING_GENERAL_PLAN.md) | Chunks, embeddings, pgvector |
+| R4 | [R4 review run](./REVIEW_PIPELINE_R4_REVIEW_RUN_GENERAL_PLAN.md) | LLM pipeline, findings |
+| R5 | [R5 reconcile + judge](./REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md) | Fingerprints, escalation |
+| R6 | [R6 GitHub publish](./REVIEW_PIPELINE_R6_GITHUB_PUBLISH_GENERAL_PLAN.md) | Checks, PR comments |
+| R7 | [R7 reviewer UI](./REVIEW_PIPELINE_R7_REVIEWER_UI_GENERAL_PLAN.md) | `features/reviewer/` |
 
 ## Program status
 
 | Phase | Execution | Status |
 |-------|-----------|--------|
-| **P4** | [REVY_PRODUCT_SLICE.md](../starter-pack/REVY_PRODUCT_SLICE.md) | **shipped** |
+| **P4** | [REVY_PRODUCT_SLICE.md](../starter-pack/REVY_PRODUCT_SLICE.md) | shipped |
 | **R0** | [waves/R0](./waves/REVIEW_PIPELINE_R0_EXECUTION.md) | shipped (`review-r0-v1`) |
 | **R1** | [waves/R1](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) | shipped (`review-r1-v1`) |
-| **R2** | — | findings + general plan ready → execution next |
-| **R3–R7** | — | outline only |
+| **R2** | — | **next** — execution file pending |
+| **R3–R7** | — | general plans ready; execution when prior phase ships |
 
-Full execution table: [waves/README.md](./waves/README.md).
+[waves/README.md](./waves/README.md) — full execution table.
 
 ---
 
@@ -66,19 +82,22 @@ Full execution table: [waves/README.md](./waves/README.md).
 
 | Topic | Decision |
 |-------|----------|
-| **Repo** | Single repo — `main` + feature branches; **no fork** |
-| **Planning** | Findings → general plan → execution (R0/R1 retro-documented) |
-| **Releases** | Tags `review-r*-v*` on `main` → GitHub Release (GitHub App code included even when env not configured) |
-| **Tenancy** | Workspace-scoped; installations → `workspaces.id` |
-| **GitHub optional** | SaaS shell runs without App; review features need webhook secret / App creds when used |
+| **Planning** | Findings → general plan → execution → code (R0/R1 retro-documented) |
+| **Repo** | Single repo — `main` + feature branches |
+| **Releases** | Tags `review-r*-v*` on `main`; GitHub App code included even when env unset |
+| **GitHub App** | External setup via `docs/utils/` runbooks |
+| **Tenancy** | Workspace-scoped on all domain rows |
 | **Migrations** | Hand-written Alembic only |
 | **Tests** | `backend/tests/unit/` + Vitest |
 | **i18n** | EN + LV for user-facing strings |
 
 ---
 
-## Next
+## Next (strict order)
 
-1. Lock R2 open questions in [findings](./REVIEW_PIPELINE_FINDINGS.md) § R2.
-2. `create-execution-plan` → [waves/REVIEW_PIPELINE_R2_EXECUTION.md](./waves/REVIEW_PIPELINE_R2_EXECUTION.md).
-3. Branch `feat/review-r2-pr-ingestion` → `phase-execution`.
+1. **`create-execution-plan`** → [waves/REVIEW_PIPELINE_R2_EXECUTION.md](./waves/REVIEW_PIPELINE_R2_EXECUTION.md)
+2. **`execution-peer-review`** on R2 execution file
+3. Branch `feat/review-r2-pr-ingestion` → **`phase-execution`**
+4. Tag `review-r2-v1` on merge; update findings catalog + waves README
+
+Do **not** start R2 code until step 2 passes.

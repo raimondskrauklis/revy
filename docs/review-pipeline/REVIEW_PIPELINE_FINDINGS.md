@@ -2,7 +2,7 @@
 
 Baseline for Revy **AI code review on GitHub** after SaaS base W0–W8 + P4 installations. **No execution steps.**
 
-**Status:** baseline-ready (2026-07-26). **Shipped:** R0 (`review-r0-v1`), R1 (`review-r1-v1`). **Next:** R2 findings lock → general plan → execution.
+**Status:** baseline-ready (2026-07-26). **Shipped:** R0 (`review-r0-v1`), R1 (`review-r1-v1`). **General plans:** R0–R7 complete (R0/R1 retroactive). **Next:** R2 execution plan + peer-review → implement.
 
 **Program:** [README.md](./README.md) · **Authority (full):** `internal-docs/product/revy/docs/architecture.md`, `WEBHOOKS.md`, `REVY_PRODUCT_SLICE.md`.
 
@@ -85,7 +85,7 @@ Revy code does not replace GitHub App registration. Use these before expecting w
 | **GitHub optional at runtime** | Empty `GITHUB_WEBHOOK_SECRET` → webhooks disabled; empty App id/key → full sync disabled |
 | **OAuth install UI** | Not shipped — manual register (P4) until later phase |
 | **`heavy_job`** | Routed in `celery_app.py` but undefined — SaaS carryover |
-| **Skipped planning on R0/R1** | Shipped without per-phase general plans; retroactive plans added; **R2+ must follow findings → general plan → execution** |
+| **Skipped planning on R0/R1** | Code shipped first; general plans + findings updated retroactively — **do not repeat for R2+** |
 
 ---
 
@@ -93,10 +93,14 @@ Revy code does not replace GitHub App registration. Use these before expecting w
 
 | Phase | Capability | General plan | Execution | Status |
 |-------|------------|--------------|-----------|--------|
-| **R0** | Webhook ingest + HMAC + dedupe + `github_events` | [R0 general](./REVIEW_PIPELINE_R0_WEBHOOKS_GENERAL_PLAN.md) | [R0 exec](./waves/REVIEW_PIPELINE_R0_EXECUTION.md) | **shipped** |
-| **R1** | Repository metadata + `repo_sync` | [R1 general](./REVIEW_PIPELINE_R1_REPO_SYNC_GENERAL_PLAN.md) | [R1 exec](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) | **shipped** |
-| **R2** | PR ingestion + revisions | [R2 general](./REVIEW_PIPELINE_R2_PR_INGESTION_GENERAL_PLAN.md) | — | not started |
-| **R3–R7** | Index → review → publish → UI | [R3–R7 outline](./REVIEW_PIPELINE_R3_R7_GENERAL_PLAN.md) | — | not started |
+| **R0** | Webhook ingest + HMAC + dedupe + `github_events` | [R0](./REVIEW_PIPELINE_R0_WEBHOOKS_GENERAL_PLAN.md) | [R0 exec](./waves/REVIEW_PIPELINE_R0_EXECUTION.md) | **shipped** |
+| **R1** | Repository metadata + `repo_sync` | [R1](./REVIEW_PIPELINE_R1_REPO_SYNC_GENERAL_PLAN.md) | [R1 exec](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) | **shipped** |
+| **R2** | PR ingestion + revisions | [R2](./REVIEW_PIPELINE_R2_PR_INGESTION_GENERAL_PLAN.md) | — | **next** |
+| **R3** | Indexing (chunks, pgvector) | [R3](./REVIEW_PIPELINE_R3_INDEXING_GENERAL_PLAN.md) | — | planned |
+| **R4** | LLM review + findings | [R4](./REVIEW_PIPELINE_R4_REVIEW_RUN_GENERAL_PLAN.md) | — | planned |
+| **R5** | Reconciliation + judge | [R5](./REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md) | — | planned |
+| **R6** | GitHub publish | [R6](./REVIEW_PIPELINE_R6_GITHUB_PUBLISH_GENERAL_PLAN.md) | — | planned |
+| **R7** | Reviewer UI | [R7](./REVIEW_PIPELINE_R7_REVIEWER_UI_GENERAL_PLAN.md) | — | planned |
 
 ---
 
@@ -114,6 +118,11 @@ Revy code does not replace GitHub App registration. Use these before expecting w
 | Q8 | Worker deploy | **locked** | Document v1 queue list; CI worker update when ops ready |
 | Q9 | Plan gates on review | **defer** | After R4 — LLM cost gating TBD |
 | Q10 | OAuth GitHub App install UI | **defer** | Manual register until post-R2 |
+| R2-Q1 | PR table naming | **locked** | `github_pull_requests` + `github_pull_request_revisions` |
+| R2-Q2 | `pull_request` actions v1 | **locked** | `opened`, `synchronize`, `closed`, `reopened` |
+| R2-Q3 | Unknown repository on PR webhook | **locked** | Log + **200** (orphan policy) |
+| R2-Q4 | PR list API | **locked** | `GET …/repositories/{repo_id}/pull-requests` cursor list |
+| R2-Q5 | `pull_request_review` v1 | **locked** | Store review activity row; no publish |
 
 ---
 
