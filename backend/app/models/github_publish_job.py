@@ -38,4 +38,5 @@ class GitHubPublishJobORM(TimestampedModel):
     )
     github_check_run_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     github_comment_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    inline_comments_posted: Mapped[bool] = mapped_column(nullable=False, default=False, server_default="false")
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)

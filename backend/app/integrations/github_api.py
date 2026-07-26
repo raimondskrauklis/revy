@@ -146,6 +146,25 @@ async def _installation_headers(
     }
 
 
+async def installation_auth_headers(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+) -> dict[str, str]:
+    return await _installation_headers(client, github_installation_id=github_installation_id)
+
+
+async def _resolve_auth_headers(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+    auth_headers: dict[str, str] | None,
+) -> dict[str, str]:
+    if auth_headers is not None:
+        return auth_headers
+    return await _installation_headers(client, github_installation_id=github_installation_id)
+
+
 async def create_check_run(
     client: httpx.AsyncClient,
     *,
@@ -157,8 +176,13 @@ async def create_check_run(
     conclusion: str,
     summary: str,
     title: str = "Revy code review",
+    auth_headers: dict[str, str] | None = None,
 ) -> int:
-    headers = await _installation_headers(client, github_installation_id=github_installation_id)
+    headers = await _resolve_auth_headers(
+        client,
+        github_installation_id=github_installation_id,
+        auth_headers=auth_headers,
+    )
     response = await client.post(
         f"{GITHUB_API_BASE}/repos/{owner}/{repo}/check-runs",
         headers=headers,
@@ -192,8 +216,13 @@ async def update_check_run(
     conclusion: str,
     summary: str,
     title: str = "Revy code review",
+    auth_headers: dict[str, str] | None = None,
 ) -> None:
-    headers = await _installation_headers(client, github_installation_id=github_installation_id)
+    headers = await _resolve_auth_headers(
+        client,
+        github_installation_id=github_installation_id,
+        auth_headers=auth_headers,
+    )
     response = await client.patch(
         f"{GITHUB_API_BASE}/repos/{owner}/{repo}/check-runs/{check_run_id}",
         headers=headers,
@@ -214,8 +243,13 @@ async def create_issue_comment(
     repo: str,
     issue_number: int,
     body: str,
+    auth_headers: dict[str, str] | None = None,
 ) -> int:
-    headers = await _installation_headers(client, github_installation_id=github_installation_id)
+    headers = await _resolve_auth_headers(
+        client,
+        github_installation_id=github_installation_id,
+        auth_headers=auth_headers,
+    )
     response = await client.post(
         f"{GITHUB_API_BASE}/repos/{owner}/{repo}/issues/{issue_number}/comments",
         headers=headers,
@@ -240,8 +274,13 @@ async def update_issue_comment(
     repo: str,
     comment_id: int,
     body: str,
+    auth_headers: dict[str, str] | None = None,
 ) -> None:
-    headers = await _installation_headers(client, github_installation_id=github_installation_id)
+    headers = await _resolve_auth_headers(
+        client,
+        github_installation_id=github_installation_id,
+        auth_headers=auth_headers,
+    )
     response = await client.patch(
         f"{GITHUB_API_BASE}/repos/{owner}/{repo}/issues/comments/{comment_id}",
         headers=headers,
@@ -261,8 +300,13 @@ async def create_pull_request_review_comment(
     path: str,
     line: int,
     body: str,
+    auth_headers: dict[str, str] | None = None,
 ) -> None:
-    headers = await _installation_headers(client, github_installation_id=github_installation_id)
+    headers = await _resolve_auth_headers(
+        client,
+        github_installation_id=github_installation_id,
+        auth_headers=auth_headers,
+    )
     response = await client.post(
         f"{GITHUB_API_BASE}/repos/{owner}/{repo}/pulls/{pull_number}/comments",
         headers=headers,
