@@ -36,7 +36,10 @@ async def validate_bootstrap_super_admin_config(session: AsyncSession) -> None:
 
     message = (
         "BOOTSTRAP_SUPER_ADMIN_EMAIL is set but no matching super_admin seed row exists. "
-        "Run: cd backend && pipenv run python scripts/seed_bootstrap_super_admin.py"
+        "Run seed before starting the API: "
+        "local: cd backend && pipenv run python -m scripts.seed_bootstrap_super_admin; "
+        "droplet: docker run --rm --network revy-net --env-file /mnt/revy_volume/backend/.env "
+        "<revy-api-image> python -m scripts.seed_bootstrap_super_admin"
     )
     if settings.environment in {"production", "staging"}:
         raise BootstrapConfigError(message)

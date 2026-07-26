@@ -21,8 +21,8 @@ REVIEW_SYSTEM_PROMPT = (
 )
 
 
-def _require_llm_enabled() -> None:
-    if not settings.llm_enabled:
+def _require_moonshot_configured() -> None:
+    if not settings.moonshot_api_key or not settings.moonshot_api_key.strip():
         raise ServiceUnavailableError(
             message="LLM API is not configured",
             error_code="llm_disabled",
@@ -34,9 +34,10 @@ async def complete_review(
     *,
     profile: str,
     user_prompt: str,
+    model_id: str | None = None,
     timeout_seconds: float | None = None,
 ) -> str:
-    _require_llm_enabled()
+    _require_moonshot_configured()
     api_key = settings.moonshot_api_key
     if not api_key:
         raise ServiceUnavailableError(
@@ -44,7 +45,7 @@ async def complete_review(
             error_code="llm_disabled",
         )
 
-    model = settings.revy_moonshot_model_for_profile(profile)
+    model = model_id or settings.revy_moonshot_model_for_profile(profile)
     response = await client.post(
         MOONSHOT_API_URL,
         headers={

@@ -87,3 +87,33 @@ export interface DeleteWorkspacePayload {
 export interface DeleteAccountPayload {
   confirm_email: string;
 }
+
+export interface ModelPolicyEntry {
+  provider: string;
+  model_id: string;
+  region?: string | null;
+}
+
+export type ModelPolicyRole =
+  | 'reviewer_standard'
+  | 'reviewer_deep'
+  | 'reviewer_critical'
+  | 'judge';
+
+export interface ModelPolicyResponse {
+  overrides: Partial<Record<ModelPolicyRole, ModelPolicyEntry | null>>;
+  effective: Record<ModelPolicyRole, ModelPolicyEntry>;
+}
+
+export interface ModelCatalogItem {
+  provider: string;
+  model_id: string;
+  display_name: string;
+  region?: string | null;
+}
+
+export interface ModelCatalogResponse {
+  roles: Partial<Record<ModelPolicyRole, ModelCatalogItem[]>>;
+}
+
+export type ModelPolicyPatch = Partial<Record<ModelPolicyRole, ModelPolicyEntry | null>>;

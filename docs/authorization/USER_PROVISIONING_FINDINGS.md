@@ -111,9 +111,13 @@ Mode A then runs `maybe_auto_provision_user` on the **same request** if both reg
 
 ```text
 1. BOOTSTRAP_SUPER_ADMIN_EMAIL in backend/.env
-2. pipenv run python -m scripts.seed_bootstrap_super_admin
+2. seed (before API start):
+      local:  pipenv run python -m scripts.seed_bootstrap_super_admin
+      droplet: docker run --rm --network revy-net --env-file /mnt/revy_volume/backend/.env \
+               registry.digitalocean.com/revy-container-registry/revy-api:latest \
+               python -m scripts.seed_bootstrap_super_admin
       → INSERT users (super_admin, pending_activation, placeholder keycloak_user_id)
-3. Login in SPA with same email (KC or Google)
+3. Login in SPA with same email (KC or Google) — / or landing → /login
 4. First GET /me → activate_bootstrap_super_admin binds sub, status=active
 5. Remove BOOTSTRAP_SUPER_ADMIN_EMAIL from .env
 ```
@@ -125,6 +129,7 @@ Bootstrap seed **not run** + bootstrap email set → normal signup still works b
 ### Frontend trigger chain
 
 ```text
+/ → LandingPage (public; authenticated → /dashboard)
 /login → keycloak.login()
 /auth/callback → refetchUser() → GET /api/v1/me
 ProtectedRoute → gates on user.status (verify-email, complete-profile, pending-approval)

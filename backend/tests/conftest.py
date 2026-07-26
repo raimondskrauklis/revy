@@ -12,7 +12,13 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from app.core.config import reset_revy_llm_provider_alias_logged
 from app.core.database import get_db
+
+
+@pytest.fixture(autouse=True)
+def _reset_config_module_flags() -> None:
+    reset_revy_llm_provider_alias_logged()
 
 
 def _test_database_url() -> str | None:

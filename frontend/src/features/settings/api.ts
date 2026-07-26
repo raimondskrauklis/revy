@@ -10,13 +10,16 @@ import type {
   ExportJobStatusResponse,
   Invitation,
   InvitationCreatePayload,
+  InvitationStatus,
   Member,
   MemberRoleUpdatePayload,
+  ModelCatalogResponse,
+  ModelPolicyPatch,
+  ModelPolicyResponse,
   PortalSessionResponse,
   Workspace,
   WorkspaceUpdatePayload,
 } from '@/features/settings/types';
-import type { InvitationStatus } from '@/features/settings/types';
 
 export async function fetchWorkspace(workspaceId: string): Promise<Workspace> {
   const response = await apiClient.get(`/workspaces/${workspaceId}`);
@@ -29,6 +32,24 @@ export async function patchWorkspace(
 ): Promise<Workspace> {
   const response = await apiClient.patch(`/workspaces/${workspaceId}`, payload);
   return await parseSuccess<Workspace>(response);
+}
+
+export async function fetchModelPolicy(workspaceId: string): Promise<ModelPolicyResponse> {
+  const response = await apiClient.get(`/workspaces/${workspaceId}/model-policy`);
+  return await parseSuccess<ModelPolicyResponse>(response);
+}
+
+export async function patchModelPolicy(
+  workspaceId: string,
+  payload: ModelPolicyPatch,
+): Promise<ModelPolicyResponse> {
+  const response = await apiClient.patch(`/workspaces/${workspaceId}/model-policy`, payload);
+  return await parseSuccess<ModelPolicyResponse>(response);
+}
+
+export async function fetchModelCatalog(workspaceId: string): Promise<ModelCatalogResponse> {
+  const response = await apiClient.get(`/workspaces/${workspaceId}/model-catalog`);
+  return await parseSuccess<ModelCatalogResponse>(response);
 }
 
 export async function fetchMembers(

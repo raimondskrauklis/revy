@@ -106,9 +106,9 @@ main  ──●──●──●──●──  deployable; SaaS base + produc
 
 | Layer | Path / surface |
 |-------|----------------|
-| **Index ORM** | `github_index_jobs`, `github_code_chunks` (vector 512); migration `0013` |
+| **Index ORM** | `github_index_jobs`, `github_code_chunks` (vector 1024); migrations `0013`, `0021` |
 | **Archive + chunking** | `integrations/github_archive.py`, `services/code_chunking.py` |
-| **Embeddings** | `integrations/voyage_embeddings.py` — Voyage API (`voyage-3-lite` v1); parallel local track documented (`architecture.md` §11.3.1) |
+| **Embeddings** | `integrations/voyage_embeddings.py` — Voyage API (`voyage-code-3` @ 1024, `output_dimension`); parallel local track documented (`architecture.md` §11.3.1) |
 | **Index worker** | `backend/app/workers/index_tasks.py` — `indexing` queue |
 | **Index API** | `POST …/revisions/{id}/index`, `GET …/index-job`, chunk list + semantic search |
 
@@ -128,7 +128,7 @@ main  ──●──●──●──●──  deployable; SaaS base + produc
 |-------|----------------|
 | **Reconcile ORM** | `github_finding_groups`, `github_finding_judge_outcomes`; migration `0015` |
 | **Reconcile service** | `services/github_finding_reconcile.py` — fingerprint per PR |
-| **Judge service** | `services/github_finding_judge.py` — Anthropic optional (R5-Q3) |
+| **Judge service** | `services/github_finding_judge.py` — Anthropic `claude-sonnet-5` optional (R5-Q3) |
 | **Workers** | `reconcile_tasks.py`, `judge_tasks.py` |
 | **API** | `GET …/findings/reconciled` (cursor) |
 

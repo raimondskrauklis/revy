@@ -113,18 +113,30 @@ docker compose ps   # redis healthy
 One-time per environment if you need a platform `super_admin` before normal registration:
 
 1. Set `BOOTSTRAP_SUPER_ADMIN_EMAIL=you@example.com` in `backend/.env`.
-2. Run:
+2. Run the seed **before** starting the API (staging/production fail fast if the row is missing while this env var is set):
+
+   **Local dev:**
 
    ```bash
    cd backend
    pipenv run python -m scripts.seed_bootstrap_super_admin
    ```
 
+   **Droplet (one-off container — does not start uvicorn):**
+
+   ```bash
+   docker run --rm \
+     --network revy-net \
+     --env-file /mnt/revy_volume/backend/.env \
+     registry.digitalocean.com/revy-container-registry/revy-api:latest \
+     python -m scripts.seed_bootstrap_super_admin
+   ```
+
 3. Remove `BOOTSTRAP_SUPER_ADMIN_EMAIL` from `.env` after first successful login.
 
 Register in Keycloak with the **same email** on first login.
 
-**Startup guard:** When `BOOTSTRAP_SUPER_ADMIN_EMAIL` is set, the API validates on boot that a matching `super_admin` seed row exists (`pending_activation`). Run the seed script **before** Google/OIDC login when using bootstrap. In `development`, a missing seed logs a warning; in `staging`/`production`, startup fails fast. `ENVIRONMENT=test` skips the guard (pytest).
+**Startup guard:** When `BOOTSTRAP_SUPER_ADMIN_EMAIL` is set, the API validates on boot that a matching `super_admin` seed row exists (`pending_activation`). Run the seed script **before** starting the API or enabling SSO login when using bootstrap — a crash-looping `revy-api` container cannot seed itself. In `development`, a missing seed logs a warning; in `staging`/`production`, startup fails fast. `ENVIRONMENT=test` skips the guard (pytest).
 
 **KC user ≠ PG user:** Keycloak holds identity only; PostgreSQL `users` is created by the KC identity webhook (primary) or JIT on first authenticated `/api/v1/me` (fallback). See [docs/authorization/README.md](../authorization/README.md).
 
@@ -154,8 +166,8 @@ cd frontend && npm run dev
 
 | Step | Pass criteria |
 |------|----------------|
-| Open `http://localhost:5173` | Login page loads |
-| Sign in via Keycloak | Redirect back without console auth errors |
+| Open `http://localhost:5173` | Public landing page loads (`/`); `/login` shows SSO |
+| Sign in via Keycloak (`/login` or landing CTA) | Redirect back without console auth errors |
 | `GET http://localhost:8000/health` | `200` |
 | Browser → API `GET /api/v1/me` (authenticated) | `200`, `"status": "active"` |
 | Dashboard | Loads after login (Mode A) |

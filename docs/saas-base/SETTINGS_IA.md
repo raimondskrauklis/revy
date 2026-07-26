@@ -11,7 +11,7 @@ Show **two groups** in settings sidebar — not 10 flat links:
 | Group | Label (i18n) | Sections |
 |-------|--------------|----------|
 | **Personal** | `settings.group.personal` | Profile, Security, Appearance |
-| **Workspace** | `settings.group.workspace` | General, Team, Integrations, Billing, Danger |
+| **Workspace** | `settings.group.workspace` | General, Team, Integrations, Review, Billing, Danger |
 
 **Rule:** Sidebar lists only routes whose wave has shipped. Unshipped routes are not linked (no “coming soon” pages).
 
@@ -35,6 +35,7 @@ Notifications, API keys: **deferred** — no nav entry until their wave lands.
 /settings/workspace            W2
 /settings/team                 W2 (includes read-only permissions matrix)
 /settings/integrations         W2 (product cards; Revy → /installations)
+/settings/review               M3 — workspace model policy (autostart + per-role model dropdowns); `admin:users`
 /settings/billing              W4 — operator setup: [STRIPE_BILLING_SETUP.md](../utils/STRIPE_BILLING_SETUP.md)
 /settings/danger               W6
 ```

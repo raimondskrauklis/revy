@@ -9,6 +9,28 @@ from app.core.exceptions import ServiceUnavailableError
 
 VOYAGE_API_URL = "https://api.voyageai.com/v1/embeddings"
 BATCH_SIZE = 128
+_FLEXIBLE_DIMENSION_MODEL_PREFIXES = (
+    "voyage-code-3",
+    "voyage-4",
+    "voyage-3-large",
+    "voyage-3.5",
+)
+
+
+def _model_supports_output_dimension(model: str) -> bool:
+    normalized = model.strip().lower()
+    return any(normalized.startswith(prefix) for prefix in _FLEXIBLE_DIMENSION_MODEL_PREFIXES)
+
+
+def _embedding_request_body(texts: list[str], *, input_type: str) -> dict[str, object]:
+    body: dict[str, object] = {
+        "input": texts,
+        "model": settings.revy_embedding_model,
+        "input_type": input_type,
+    }
+    if _model_supports_output_dimension(settings.revy_embedding_model):
+        body["output_dimension"] = settings.revy_embedding_dimensions
+    return body
 
 
 def _require_embeddings_enabled() -> None:
@@ -43,11 +65,7 @@ async def embed_texts(
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
             },
-            json={
-                "input": batch,
-                "model": settings.revy_embedding_model,
-                "input_type": "document",
-            },
+            json=_embedding_request_body(batch, input_type="document"),
             timeout=60.0,
         )
         response.raise_for_status()
@@ -84,11 +102,7 @@ async def embed_query(client: httpx.AsyncClient, query: str) -> list[float]:
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         },
-        json={
-            "input": [query],
-            "model": settings.revy_embedding_model,
-            "input_type": "query",
-        },
+        json=_embedding_request_body([query], input_type="query"),
         timeout=60.0,
     )
     response.raise_for_status()

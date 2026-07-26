@@ -30,4 +30,6 @@ class GitHubFindingJudgeOutcomeORM(TimestampedModel):
         nullable=False,
     )
     outcome: Mapped[GitHubJudgeOutcome] = mapped_column(String(length=32), nullable=False)
+    judge_provider: Mapped[str | None] = mapped_column(String(length=32), nullable=True)
+    judge_model_id: Mapped[str | None] = mapped_column(String(length=128), nullable=True)
     judge_notes: Mapped[str | None] = mapped_column(Text, nullable=True)

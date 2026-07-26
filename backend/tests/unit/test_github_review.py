@@ -14,17 +14,18 @@ from app.constants.enums import (
     GitHubReviewRunStatus,
     ReviewProfile,
 )
-from app.core.exceptions import ConflictError, ServiceUnavailableError
+from app.core.exceptions import ConflictError, ServiceUnavailableError, ValidationError
 from app.models.github_index_job import GitHubIndexJobORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.services import github_review
+from app.services.model_policy import ModelRef
 
 
 @pytest.mark.asyncio
 async def test_create_review_run_disabled_llm_raises():
     session = AsyncMock()
     with patch("app.services.github_review.settings") as mock_settings:
-        mock_settings.llm_enabled = False
+        mock_settings.reviewer_llm_enabled.return_value = False
         with pytest.raises(ServiceUnavailableError) as exc:
             await github_review.create_review_run(
                 session,
@@ -44,7 +45,7 @@ async def test_create_review_run_index_required_raises():
     session.scalar = AsyncMock(return_value=None)
 
     with patch("app.services.github_review.settings") as mock_settings:
-        mock_settings.llm_enabled = True
+        mock_settings.reviewer_llm_enabled.return_value = True
         mock_settings.embeddings_enabled = True
         mock_settings.github_api_enabled = True
         mock_settings.revy_llm_provider = "moonshot"
@@ -80,7 +81,7 @@ async def test_create_review_run_review_in_progress_raises():
     session.scalar = AsyncMock(return_value=uuid.uuid4())
 
     with patch("app.services.github_review.settings") as mock_settings:
-        mock_settings.llm_enabled = True
+        mock_settings.reviewer_llm_enabled.return_value = True
         mock_settings.embeddings_enabled = True
         mock_settings.github_api_enabled = True
         mock_settings.revy_llm_provider = "moonshot"
@@ -150,6 +151,70 @@ async def test_run_review_run_skips_non_pending_status():
 
 
 @pytest.mark.asyncio
+async def test_run_review_run_stale_model_policy_marks_failed():
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    repository_id = uuid.uuid4()
+
+    run = GitHubReviewRunORM(
+        revision_id=revision_id,
+        workspace_id=workspace_id,
+        status=GitHubReviewRunStatus.pending,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    run.id = review_run_id
+
+    from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
+
+    revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="abc",
+    )
+    revision.id = revision_id
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=repository_id,
+        workspace_id=workspace_id,
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=1,
+        title="Fix bug",
+        state=GitHubPullRequestState.open,
+        head_sha="abc",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=1,
+    )
+    pull_request.id = pull_request_id
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, revision, pull_request])
+    session.flush = AsyncMock()
+
+    with patch(
+        "app.services.github_review._collect_context_chunks",
+        AsyncMock(return_value=[]),
+    ):
+        with patch(
+            "app.services.github_review.resolve_model",
+            AsyncMock(
+                side_effect=ValidationError(
+                    message="Workspace model override is no longer valid",
+                    field="reviewer_standard",
+                )
+            ),
+        ):
+            result = await github_review.run_review_run(session, review_run_id=review_run_id)
+
+    assert result.status == GitHubReviewRunStatus.failed
+    assert "no longer valid" in (result.error_message or "")
+
+
+@pytest.mark.asyncio
 async def test_run_review_run_invalid_json_marks_failed():
     review_run_id = uuid.uuid4()
     workspace_id = uuid.uuid4()
@@ -200,10 +265,14 @@ async def test_run_review_run_invalid_json_marks_failed():
         AsyncMock(return_value=[]),
     ):
         with patch(
-            "app.services.github_review._call_llm",
-            AsyncMock(return_value="not-json"),
+            "app.services.github_review.resolve_model",
+            AsyncMock(return_value=ModelRef(provider="moonshot", model_id="kimi-k2.7-code")),
         ):
-            result = await github_review.run_review_run(session, review_run_id=review_run_id)
+            with patch(
+                "app.services.github_review._call_llm",
+                AsyncMock(return_value="not-json"),
+            ):
+                result = await github_review.run_review_run(session, review_run_id=review_run_id)
 
     assert result.status == GitHubReviewRunStatus.failed
     assert result.error_message is not None
@@ -280,10 +349,14 @@ async def test_run_review_run_happy_path_persists_findings():
         AsyncMock(return_value=[]),
     ):
         with patch(
-            "app.services.github_review._call_llm",
-            AsyncMock(return_value=llm_payload),
+            "app.services.github_review.resolve_model",
+            AsyncMock(return_value=ModelRef(provider="moonshot", model_id="kimi-k2.7-code")),
         ):
-            result = await github_review.run_review_run(session, review_run_id=review_run_id)
+            with patch(
+                "app.services.github_review._call_llm",
+                AsyncMock(return_value=llm_payload),
+            ):
+                result = await github_review.run_review_run(session, review_run_id=review_run_id)
 
     assert result.status == GitHubReviewRunStatus.completed
     assert session.add.call_count == 1

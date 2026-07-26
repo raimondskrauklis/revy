@@ -37,4 +37,5 @@ class GitHubReviewRunORM(TimestampedModel):
         server_default=ReviewProfile.standard.value,
     )
     provider: Mapped[str | None] = mapped_column(String(length=32), nullable=True)
+    model_id: Mapped[str | None] = mapped_column(String(length=128), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)

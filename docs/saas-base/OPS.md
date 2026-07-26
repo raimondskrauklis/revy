@@ -10,7 +10,17 @@ Short pointers for running the W0–W8 platform on staging/production. Full depl
 cd backend && pipenv run alembic upgrade head
 ```
 
-Required through **`0009_impersonation_sessions`** for SaaS base W6–W7.
+Required through **`0021_github_code_chunks_embedding_dim`** for review pipeline embeddings (`voyage-code-3` @ 1024). SaaS base W6–W7 needs through **`0009_impersonation_sessions`**.
+
+**Droplet:**
+
+```bash
+docker run --rm \
+  --network revy-net \
+  --env-file /mnt/revy_volume/backend/.env \
+  registry.digitalocean.com/revy-container-registry/revy-api:latest \
+  alembic upgrade head
+```
 
 ---
 
@@ -37,8 +47,18 @@ Production example: `deploy/env-examples/backend.env.production.example`.
 One-time per environment — see [DEV_BOOTSTRAP.md](../starter-pack/DEV_BOOTSTRAP.md) §5 and `internal-docs/starter-pack/docs/backend/BOOTSTRAP_SUPER_ADMIN.md`.
 
 1. Set `BOOTSTRAP_SUPER_ADMIN_EMAIL` in backend env.
-2. `pipenv run python -m scripts.seed_bootstrap_super_admin`
+2. Run seed **before** API start (local: `pipenv run python -m scripts.seed_bootstrap_super_admin`; droplet: one-off `docker run … python -m scripts.seed_bootstrap_super_admin` — see DEV_BOOTSTRAP §5).
 3. Remove env var after first successful login; register same email in Keycloak.
+
+## Review pipeline env (staging/prod)
+
+| Var | Purpose |
+|-----|---------|
+| `VOYAGE_API_KEY` | R3 embeddings — `REVY_EMBEDDING_MODEL=voyage-code-3`, `REVY_EMBEDDING_DIMENSIONS=1024` |
+| `MOONSHOT_API_KEY` | R4 primary reviewer (`kimi-k2.7-code` / `kimi-k3` by profile) |
+| `ANTHROPIC_API_KEY` | R5 judge (optional); `REVY_ANTHROPIC_MODEL=claude-sonnet-5` |
+
+Example: `deploy/env-examples/backend.env.production.example`.
 
 ---
 
@@ -51,6 +71,35 @@ Setup: [STRIPE_BILLING_SETUP.md](../utils/STRIPE_BILLING_SETUP.md).
 | Auth | Stripe signature (`STRIPE_WEBHOOK_SECRET`) |
 | Orphan subscription events | Log + **200** (no retry storm) |
 | Checkout missing workspace | **500** (Stripe retries) |
+
+---
+
+## AWS Bedrock (optional judge / reviewer)
+
+Model policy M1 — use when operators prefer IAM over `ANTHROPIC_API_KEY`.
+
+| Env | Purpose |
+|-----|---------|
+| `AWS_REGION` | Bedrock runtime region (e.g. `eu-central-1`) |
+| `REVY_JUDGE_PROVIDER=bedrock` | Route R5 judge to Bedrock |
+| `REVY_BEDROCK_JUDGE_MODEL_ID` | Bedrock model ID (e.g. `anthropic.claude-sonnet-4-20250514-v1:0`) |
+| `REVY_REVIEWER_PROVIDER=bedrock` | Optional — route R4 reviewer to Bedrock |
+| `REVY_BEDROCK_REVIEWER_MODEL_ID` | Single model ID for all reviewer profiles |
+| `REVY_BEDROCK_INFERENCE_PROFILE_ARN` | Optional — documented; v1 uses `modelId` when unset |
+
+Grant the API/worker IAM role `bedrock:InvokeModel` on the chosen model(s). After a judge run, verify `judge_provider` / `judge_model_id` on `github_finding_judge_outcomes`.
+
+### Workspace model policy (M2)
+
+Per-workspace overrides live in `workspace_model_policies`. Platform env remains the fallback when no row exists for a role.
+
+| API | Purpose |
+|-----|---------|
+| `GET /api/v1/workspaces/{id}/model-policy` | Current overrides + `review_autostart_enabled` |
+| `PATCH /api/v1/workspaces/{id}/model-policy` | Set/clear per-role model (`null` = platform default) |
+| `GET /api/v1/workspaces/{id}/model-catalog` | Dropdown options filtered by platform-enabled providers |
+
+Admins configure via `/settings/review` (M3). Run migration `0023_workspace_model_policies` before deploy.
 
 ---
 

@@ -25,6 +25,7 @@ from app.models.items import ItemORM
 from app.models.keycloak_webhook_delivery import KeycloakWebhookDeliveryORM
 from app.models.users import UserORM
 from app.models.workspace_memberships import WorkspaceMembershipORM
+from app.models.workspace_model_policy import WorkspaceModelPolicyORM
 from app.models.workspaces import WorkspaceORM
 
 __all__ = [
@@ -52,6 +53,7 @@ __all__ = [
     "UserORM",
     "WorkspaceInvitationORM",
     "WorkspaceMembershipORM",
+    "WorkspaceModelPolicyORM",
     "WorkspaceORM",
     "utc_now",
 ]

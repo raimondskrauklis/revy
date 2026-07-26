@@ -131,7 +131,7 @@ List API: `GET /api/v1/workspaces/{workspace_id}/repositories/{repository_id}/pu
 
 ## Indexing (R3)
 
-Requires `VOYAGE_API_KEY` (Voyage API — default `REVY_EMBEDDING_BACKEND=voyage`), `GITHUB_APP_ID`, private key, and worker on `indexing` queue. Local/HF embedding track: `architecture.md` §11.3.1 (`REVY_HF_CACHE_PATH` when implemented).
+Requires `VOYAGE_API_KEY` (`REVY_EMBEDDING_MODEL=voyage-code-3`, `REVY_EMBEDDING_DIMENSIONS=1024`), `GITHUB_APP_ID`, private key, and worker on `indexing` queue. Local/HF embedding track: `architecture.md` §11.3.1 (`REVY_HF_CACHE_PATH` when implemented).
 
 1. `POST …/pull-requests/{pr_id}/revisions/{revision_id}/index` (workspace admin)
 2. Poll `GET …/revisions/{revision_id}/index-job` until `status=completed`
@@ -171,7 +171,7 @@ SELECT severity, category, title FROM github_findings ORDER BY created_at DESC L
 
 ## Reconcile + judge (R5)
 
-Runs automatically after R4 review completes; requires worker on `reconciliation` and `judge` queues. Optional `ANTHROPIC_API_KEY` for judge (reconcile still completes without it).
+Runs automatically after R4 review completes; requires worker on `reconciliation` and `judge` queues. Optional `ANTHROPIC_API_KEY` for judge (`REVY_ANTHROPIC_MODEL=claude-sonnet-5`; reconcile still completes without it).
 
 1. After review `status=completed`, reconcile worker fingerprints findings into groups
 2. List reconciled set: `GET …/pull-requests/{pr_id}/findings/reconciled` (cursor)
