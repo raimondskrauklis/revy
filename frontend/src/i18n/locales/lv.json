@@ -542,7 +542,11 @@
       "body": "Jums nav tiesību skatīt šo lapu.",
       "goBack": "Atpakaļ",
       "goHome": "Uz sākumu",
-      "signedInAs": "Pierakstījies kā {{email}}"
+      "signedInAs": "Pierakstījies kā {{email}}",
+      "sessionFailed": {
+        "title": "Neizdevās ielādēt kontu",
+        "body": "Jūs esat pierakstījies SSO, bet neizdevās ielādēt jūsu Revy profilu. Izrakstieties un mēģiniet vēlreiz vai sazinieties ar atbalstu."
+      }
     },
     "actions": {
       "signOut": "Iziet"

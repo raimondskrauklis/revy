@@ -15,7 +15,9 @@ export function AuthCallbackPage() {
       navigate('/login', { replace: true });
       return;
     }
-    void refetchUser().then(() => navigate('/dashboard', { replace: true }));
+    void refetchUser().then((me) => {
+      navigate(me ? '/dashboard' : '/unauthorized', { replace: true });
+    });
   }, [isAuthenticated, isLoading, navigate, refetchUser]);
 
   return (

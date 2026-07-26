@@ -24,7 +24,11 @@ export function ProtectedRoute() {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
-  const status = user?.status;
+  if (!user) {
+    return <Navigate to="/unauthorized" replace />;
+  }
+
+  const status = user.status;
 
   if (status === 'pending_email_verification') {
     return <Navigate to="/auth/verify-email" replace />;
