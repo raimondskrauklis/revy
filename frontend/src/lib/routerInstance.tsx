@@ -20,6 +20,10 @@ import { IntegrationsSettingsPage } from '@/features/settings/pages/Integrations
 import { BillingSettingsPage } from '@/features/settings/pages/BillingSettingsPage';
 import { DangerZonePage } from '@/features/settings/pages/DangerZonePage';
 import { InstallationsPage } from '@/features/installations/pages/InstallationsPage';
+import { ReviewerLayout } from '@/features/reviewer/ReviewerLayout';
+import { ReviewerHomePage } from '@/features/reviewer/pages/ReviewerHomePage';
+import { PullRequestListPage } from '@/features/reviewer/pages/PullRequestListPage';
+import { PullRequestDetailPage } from '@/features/reviewer/pages/PullRequestDetailPage';
 import { adminRoutes } from '@/features/admin/routes';
 
 export const appRouter = createBrowserRouter([
@@ -91,6 +95,26 @@ export const appRouter = createBrowserRouter([
         path: '/installations',
         element: <AppShellLayout />,
         children: [{ index: true, element: <InstallationsPage /> }],
+      },
+      {
+        path: '/reviewer',
+        element: <AppShellLayout />,
+        children: [
+          {
+            element: <ReviewerLayout />,
+            children: [
+              { index: true, element: <ReviewerHomePage /> },
+              {
+                path: 'repositories/:repoId/pull-requests',
+                element: <PullRequestListPage />,
+              },
+              {
+                path: 'repositories/:repoId/pull-requests/:prId',
+                element: <PullRequestDetailPage />,
+              },
+            ],
+          },
+        ],
       },
       {
         path: '/settings',
