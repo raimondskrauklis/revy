@@ -27,6 +27,18 @@ describe('UnauthorizedPage', () => {
     vi.clearAllMocks();
   });
 
+  it('shows loading while profile is still fetching', () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: null,
+      logout: vi.fn(),
+      isUserLoading: true,
+    } as unknown as ReturnType<typeof useAuth>);
+
+    renderUnauthorized();
+    expect(document.body.textContent).toContain('Loading');
+    expect(document.body.textContent).not.toContain("Couldn't load your account");
+  });
+
   it('redirects active users to dashboard when not permission denied', async () => {
     vi.mocked(useAuth).mockReturnValue({
       user: {

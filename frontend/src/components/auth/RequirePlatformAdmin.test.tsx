@@ -64,6 +64,28 @@ describe('RequirePlatformAdmin', () => {
     expect(screen.queryByText('Denied')).not.toBeInTheDocument();
   });
 
+  it('redirects to unauthorized with profile reason when profile missing', () => {
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: true,
+      user: null,
+      isLoading: false,
+      isUserLoading: false,
+    } as unknown as ReturnType<typeof useAuth>);
+
+    render(
+      <MemoryRouter initialEntries={['/admin']}>
+        <Routes>
+          <Route element={<RequirePlatformAdmin />}>
+            <Route path="/admin" element={<div>Admin area</div>} />
+          </Route>
+          <Route path="/unauthorized" element={<div>Profile denied</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Profile denied')).toBeInTheDocument();
+  });
+
   it('denies workspace admin without platform role', () => {
     vi.mocked(useAuth).mockReturnValue({
       user: {

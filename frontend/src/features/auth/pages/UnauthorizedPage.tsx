@@ -10,15 +10,23 @@ export function UnauthorizedPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, isUserLoading } = useAuth();
   const reason = (location.state as { reason?: UnauthorizedReason } | null)?.reason;
-  const sessionWithoutProfile = !user;
   const permissionDenied = reason === 'permission';
+  const sessionWithoutProfile = !user && !isUserLoading;
 
   useEffect(() => {
     if (permissionDenied || !user) return;
     navigate('/dashboard', { replace: true });
   }, [navigate, permissionDenied, user]);
+
+  if (!user && isUserLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[color:var(--app-canvas)] p-6">
+        <p className="text-sm text-[color:var(--app-text-muted)]">{t('auth.loading')}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[color:var(--app-canvas)] p-6">

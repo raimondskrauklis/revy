@@ -18,6 +18,10 @@ export function RequirePlatformAdmin() {
     );
   }
 
+  if (awaitingProfile) {
+    return <Navigate to="/unauthorized" replace state={{ reason: 'profile' }} />;
+  }
+
   if (!isPlatformAdmin(user?.platform_role ?? undefined)) {
     return <Navigate to="/unauthorized" replace state={{ reason: 'permission' }} />;
   }
