@@ -6,6 +6,6 @@ Linear **phase-execution** order. General plan: [REVIEW_PIPELINE_GENERAL_PLAN.md
 
 | Phase | File | Status |
 |-------|------|--------|
-| R0 — GitHub webhooks | [REVIEW_PIPELINE_R0_EXECUTION.md](./REVIEW_PIPELINE_R0_EXECUTION.md) | done |
+| R0 — GitHub webhooks | [REVIEW_PIPELINE_R0_EXECUTION.md](./REVIEW_PIPELINE_R0_EXECUTION.md) | done (`review-r0-v1` → `d017dfc`) |
 
 **Program status:** R0 shipped; R1+ not started.

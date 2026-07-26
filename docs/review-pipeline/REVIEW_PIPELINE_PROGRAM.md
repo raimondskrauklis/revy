@@ -30,9 +30,10 @@ git show saas-base-v1   # annotated tag → dacfc5b
 | Tag | Points to | Meaning |
 |-----|-----------|---------|
 | `saas-base-v1` | `dacfc5b` | SaaS base W0–W8 complete; P4 installations slice |
-| `saas-base-v1.1` | `main` (post-merge) | Alembic AUTOCOMMIT fix; review pipeline findings + R0 execution |
+| `saas-base-v1.1` | `48c361e` | Alembic AUTOCOMMIT fix; review pipeline findings + R0 execution |
+| `review-r0-v1` | `d017dfc` | GitHub webhook ingestion (`POST /api/v1/webhooks/github`), delivery dedupe, `github_events` worker |
 
-Future product milestones: `review-r0-v1`, `v0.2.0`, etc. Pushing a tag whose commit **includes** `.github/workflows/release-tag.yml` triggers an automatic GitHub Release. Tags on older commits (e.g. `saas-base-v1`) may need a one-time `gh release create` or **Actions → Release tag → Run workflow** with the tag name.
+Future product milestones: `review-r1-v1`, `v0.2.0`, etc. Pushing a tag whose commit **includes** `.github/workflows/release-tag.yml` triggers an automatic GitHub Release. Tags on older commits (e.g. `saas-base-v1`) may need a one-time `gh release create` or **Actions → Release tag → Run workflow** with the tag name.
 
 ---
 
@@ -66,16 +67,23 @@ main  ──●──●──●──●──  deployable; SaaS base + produc
 | **Installations API** | `GET/POST /api/v1/workspaces/{id}/installations` |
 | **Plan gate** | `require_plan_feature` on create installation |
 | **Installations UI** | `frontend/src/features/installations/` |
-| **Celery routes** | `backend/app/workers/celery_app.py` — queues named, **no task modules yet** |
+| **Celery routes** | `backend/app/workers/celery_app.py` — `github_events` queue + `github_tasks` (R0) |
 | **Postgres** | `vector` extension in deploy SQL (indexing later) |
 
-### Not shipped (R0–R7)
+### Shipped (R0)
+
+| Layer | Path / surface |
+|-------|----------------|
+| **GitHub webhook** | `POST /api/v1/webhooks/github` — HMAC verify, delivery dedupe |
+| **Webhook deliveries** | `github_webhook_deliveries` table; migration `0010` |
+| **GitHub worker** | `backend/app/workers/github_tasks.py` — `installation`, `installation_repositories`, `push` |
+
+### Not shipped (R1–R7)
 
 | Gap | Notes |
 |-----|--------|
-| GitHub webhook endpoint + HMAC | `POST /api/v1/webhooks/github` (path TBD in R0 findings) |
 | `repository`, `pull_request`, review/findings tables | Per `REVY_PRODUCT_SLICE.md` § Later |
-| Worker modules | `github_tasks`, `repo_tasks`, `index_tasks`, `review_tasks`, … |
+| Worker modules | `repo_tasks`, `index_tasks`, `review_tasks`, … |
 | LLM provider runtime | Config + Celery `review` queue |
 | pgvector index jobs | `indexing` queue |
 | GitHub publish | Checks, review comments — `github_publish` queue |
