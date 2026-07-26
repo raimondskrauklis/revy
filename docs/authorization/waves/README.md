@@ -6,11 +6,11 @@ Linear **phase-execution** order. General plan: [`../USER_PROVISIONING_GENERAL_P
 
 | Phase | File | Status |
 |-------|------|--------|
-| P0 — Unified provision service | [USER_PROVISIONING_P0_EXECUTION.md](./USER_PROVISIONING_P0_EXECUTION.md) | pending |
-| P1 — Keycloak webhook API | [USER_PROVISIONING_P1_EXECUTION.md](./USER_PROVISIONING_P1_EXECUTION.md) | pending |
-| P3 — Bootstrap & email hardening | [USER_PROVISIONING_P3_EXECUTION.md](./USER_PROVISIONING_P3_EXECUTION.md) | pending |
-| P2 — Keycloak event listener (deploy) | [USER_PROVISIONING_P2_EXECUTION.md](./USER_PROVISIONING_P2_EXECUTION.md) | pending |
-| P4 — Docs & operator smoke | [USER_PROVISIONING_P4_EXECUTION.md](./USER_PROVISIONING_P4_EXECUTION.md) | pending |
+| P0 — Unified provision service | [USER_PROVISIONING_P0_EXECUTION.md](./USER_PROVISIONING_P0_EXECUTION.md) | done (`2505213`) |
+| P1 — Keycloak webhook API | [USER_PROVISIONING_P1_EXECUTION.md](./USER_PROVISIONING_P1_EXECUTION.md) | done (`8397280`) |
+| P3 — Bootstrap & email hardening | [USER_PROVISIONING_P3_EXECUTION.md](./USER_PROVISIONING_P3_EXECUTION.md) | done (`f2abf3f`) |
+| P2 — Keycloak event listener (deploy) | [USER_PROVISIONING_P2_EXECUTION.md](./USER_PROVISIONING_P2_EXECUTION.md) | done (`c41a2ea`) |
+| P4 — Docs & operator smoke | [USER_PROVISIONING_P4_EXECUTION.md](./USER_PROVISIONING_P4_EXECUTION.md) | done (`f05a81f`) |
 
 **LOOP order note:** P0 → P1 → P3 → P2 → P4. P3 before P2 so bootstrap guard ships before KC deploy; P2 human gate before P4 tier-B smoke.
 
