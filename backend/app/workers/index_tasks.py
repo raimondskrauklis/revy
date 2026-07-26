@@ -17,6 +17,7 @@ logger = get_logger(__name__)
     name="app.workers.index_tasks.index_pull_request_revision",
     bind=True,
     max_retries=3,
+    queue="indexing",
 )
 def index_pull_request_revision(self, index_job_id: str) -> None:
     async def _run() -> None:

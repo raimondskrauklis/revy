@@ -30,11 +30,15 @@ from app.models.github_pull_request import (
 from app.models.github_repository import GitHubRepositoryORM
 from app.schemas.github_indexing import (
     GitHubChunkSearchResult,
+    GitHubCodeChunkListResponse,
     GitHubCodeChunkResponse,
 )
 from app.services.code_chunking import chunk_file_content
 
 logger = get_logger(__name__)
+
+CHUNK_LIST_DEFAULT_LIMIT = 100
+CHUNK_LIST_MAX_LIMIT = 500
 
 
 async def _get_revision_context(
@@ -180,11 +184,10 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
             for chunk in chunk_file_content(file_path, content):
                 raw_chunks.append((chunk.file_path, chunk.chunk_index, chunk.content))
 
-        await session.execute(
-            delete(GitHubCodeChunkORM).where(GitHubCodeChunkORM.revision_id == job.revision_id)
-        )
-
         if not raw_chunks:
+            await session.execute(
+                delete(GitHubCodeChunkORM).where(GitHubCodeChunkORM.revision_id == job.revision_id)
+            )
             job.status = GitHubIndexJobStatus.completed
             job.chunk_count = 0
             await session.flush()
@@ -196,6 +199,10 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
 
         if len(embeddings) != len(raw_chunks):
             raise RuntimeError("embedding_count_mismatch")
+
+        await session.execute(
+            delete(GitHubCodeChunkORM).where(GitHubCodeChunkORM.revision_id == job.revision_id)
+        )
 
         for (file_path, chunk_index, content), embedding in zip(raw_chunks, embeddings, strict=True):
             session.add(
@@ -249,8 +256,9 @@ async def list_revision_chunks(
     repository_id: UUID,
     pull_request_id: UUID,
     revision_id: UUID,
-    limit: int = 50,
-) -> list[GitHubCodeChunkResponse]:
+    limit: int = CHUNK_LIST_DEFAULT_LIMIT,
+    offset: int = 0,
+) -> GitHubCodeChunkListResponse:
     await _get_revision_context(
         session,
         workspace_id=workspace_id,
@@ -258,6 +266,9 @@ async def list_revision_chunks(
         pull_request_id=pull_request_id,
         revision_id=revision_id,
     )
+
+    bounded_limit = min(max(limit, 1), CHUNK_LIST_MAX_LIMIT)
+    bounded_offset = max(offset, 0)
 
     rows = list(
         await session.scalars(
@@ -267,10 +278,20 @@ async def list_revision_chunks(
                 GitHubCodeChunkORM.revision_id == revision_id,
             )
             .order_by(GitHubCodeChunkORM.file_path, GitHubCodeChunkORM.chunk_index)
-            .limit(limit)
+            .offset(bounded_offset)
+            .limit(bounded_limit + 1)
         )
     )
-    return [GitHubCodeChunkResponse.model_validate(row) for row in rows]
+    has_more = len(rows) > bounded_limit
+    if has_more:
+        rows = rows[:bounded_limit]
+
+    return GitHubCodeChunkListResponse(
+        items=[GitHubCodeChunkResponse.model_validate(row) for row in rows],
+        offset=bounded_offset,
+        limit=bounded_limit,
+        has_more=has_more,
+    )
 
 
 async def search_revision_chunks(

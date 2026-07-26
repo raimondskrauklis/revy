@@ -61,6 +61,11 @@ async def embed_texts(
         for item in items:
             if isinstance(item, dict) and isinstance(item.get("embedding"), list):
                 vectors.append(item["embedding"])
+                continue
+            raise ServiceUnavailableError(
+                message="Voyage embeddings response invalid",
+                error_code="embeddings_error",
+            )
     return vectors
 
 

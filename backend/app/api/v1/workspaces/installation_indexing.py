@@ -3,7 +3,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
@@ -17,10 +17,13 @@ from app.schemas.common import SuccessResponse
 from app.schemas.github_indexing import (
     GitHubChunkSearchRequest,
     GitHubChunkSearchResult,
-    GitHubCodeChunkResponse,
+    GitHubCodeChunkListResponse,
     GitHubIndexJobResponse,
 )
 from app.services.github_indexing import (
+    CHUNK_LIST_DEFAULT_LIMIT,
+    CHUNK_LIST_MAX_LIMIT,
+    _get_revision_context,
     create_index_job,
     enqueue_index_job,
     get_latest_index_job,
@@ -81,7 +84,13 @@ async def get_index_job_for_revision(
     require_permission(current_user, Permission.items_view)
     require_same_workspace(current_user, workspace_id)
 
-    _ = (repository_id, pull_request_id)
+    await _get_revision_context(
+        session,
+        workspace_id=workspace_id,
+        repository_id=repository_id,
+        pull_request_id=pull_request_id,
+        revision_id=revision_id,
+    )
     job = await get_latest_index_job(
         session,
         workspace_id=workspace_id,
@@ -94,7 +103,7 @@ async def get_index_job_for_revision(
 
 @router.get(
     "/{workspace_id}/repositories/{repository_id}/pull-requests/{pull_request_id}/revisions/{revision_id}/chunks",
-    response_model=SuccessResponse[list[GitHubCodeChunkResponse]],
+    response_model=SuccessResponse[GitHubCodeChunkListResponse],
 )
 async def get_revision_chunks(
     workspace_id: UUID,
@@ -103,18 +112,22 @@ async def get_revision_chunks(
     revision_id: UUID,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> SuccessResponse[list[GitHubCodeChunkResponse]]:
+    limit: Annotated[int, Query(ge=1, le=CHUNK_LIST_MAX_LIMIT)] = CHUNK_LIST_DEFAULT_LIMIT,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> SuccessResponse[GitHubCodeChunkListResponse]:
     require_permission(current_user, Permission.items_view)
     require_same_workspace(current_user, workspace_id)
 
-    chunks = await list_revision_chunks(
+    page = await list_revision_chunks(
         session,
         workspace_id=workspace_id,
         repository_id=repository_id,
         pull_request_id=pull_request_id,
         revision_id=revision_id,
+        limit=limit,
+        offset=offset,
     )
-    return SuccessResponse(data=chunks)
+    return SuccessResponse(data=page)
 
 
 @router.post(
