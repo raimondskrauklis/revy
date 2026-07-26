@@ -5,12 +5,19 @@ from __future__ import annotations
 import asyncio
 from uuid import UUID
 
+from app.constants.enums import GitHubReviewRunStatus
 from app.core.database import get_db_context
 from app.core.logging import get_logger
 from app.services.github_review import mark_review_run_failed, run_review_run
 from app.workers.celery_app import celery_app
 
 logger = get_logger(__name__)
+
+
+def _enqueue_reconcile(review_run_id: str) -> None:
+    from app.workers.reconcile_tasks import reconcile_review_run_task
+
+    reconcile_review_run_task.delay(review_run_id)
 
 
 @celery_app.task(
@@ -31,6 +38,8 @@ def review_pull_request_revision(self, review_run_id: str) -> None:
                     "status": run.status.value,
                 },
             )
+            if run.status == GitHubReviewRunStatus.completed:
+                _enqueue_reconcile(review_run_id)
 
     try:
         asyncio.run(_run())

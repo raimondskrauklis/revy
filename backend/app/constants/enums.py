@@ -145,3 +145,19 @@ class FindingCategory(str, Enum):
     style = "style"
     maintainability = "maintainability"
     other = "other"
+
+
+class GitHubFindingGroupState(str, Enum):
+    """github_finding_groups.state — R5 reconciliation."""
+
+    active = "active"
+    superseded = "superseded"
+    resolved = "resolved"
+
+
+class GitHubJudgeOutcome(str, Enum):
+    """github_finding_judge_outcomes.outcome — R5 judge."""
+
+    upheld = "upheld"
+    dismissed = "dismissed"
+    modified = "modified"

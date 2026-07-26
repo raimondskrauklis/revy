@@ -448,7 +448,7 @@ jobs:
               -e SENTRY_RELEASE=${{ github.sha }} \
               --name revy-worker \
               "$BACKEND_IMAGE" \
-              celery -A app.workers.celery_app worker --loglevel=info --concurrency=2 -Q default,notifications,heavy,github_events,repo_sync,indexing,review,maintenance
+              celery -A app.workers.celery_app worker --loglevel=info --concurrency=2 -Q default,notifications,heavy,github_events,repo_sync,indexing,review,reconciliation,judge,maintenance
 
             docker stop revy-beat 2>/dev/null || true
             docker rm revy-beat 2>/dev/null || true
