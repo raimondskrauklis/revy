@@ -202,7 +202,15 @@ async def prepare_review_after_index(
         revision_id=job.revision_id,
     )
     if pending_review_id is not None:
-        return pending_review_id
+        logger.info(
+            "pipeline_review_already_pending",
+            extra={
+                "index_job_id": str(job.id),
+                "revision_id": str(job.revision_id),
+                "review_run_id": str(pending_review_id),
+            },
+        )
+        return None
 
     revision = await session.get(GitHubPullRequestRevisionORM, job.revision_id)
     if revision is None:

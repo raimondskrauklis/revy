@@ -193,7 +193,7 @@ async def test_maybe_enqueue_pipeline_skips_when_index_job_pending():
 
 @pytest.mark.asyncio
 @patch("app.services.review_pipeline.create_review_run", new_callable=AsyncMock)
-async def test_prepare_review_after_index_reuses_pending_review(create_review_run_mock: AsyncMock):
+async def test_prepare_review_after_index_skips_when_review_pending(create_review_run_mock: AsyncMock):
     workspace_id = uuid.uuid4()
     pending_review_id = uuid.uuid4()
     job = GitHubIndexJobORM(
@@ -208,7 +208,7 @@ async def test_prepare_review_after_index_reuses_pending_review(create_review_ru
 
     result = await prepare_review_after_index(session, job)
 
-    assert result == pending_review_id
+    assert result is None
     create_review_run_mock.assert_not_awaited()
 
 
