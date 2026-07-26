@@ -75,6 +75,7 @@ class Settings(BaseSettings):
     github_app_id: str | None = None
     github_app_private_key_path: str | None = None
     github_webhook_secret: str | None = None
+    keycloak_webhook_secret: str | None = None
     revy_bot_login: str = "revy[bot]"
 
     # Model providers
@@ -140,6 +141,10 @@ class Settings(BaseSettings):
     @property
     def github_webhooks_enabled(self) -> bool:
         return bool(self.github_webhook_secret and self.github_webhook_secret.strip())
+
+    @property
+    def keycloak_webhooks_enabled(self) -> bool:
+        return bool(self.keycloak_webhook_secret and self.keycloak_webhook_secret.strip())
 
     @property
     def github_api_enabled(self) -> bool:
