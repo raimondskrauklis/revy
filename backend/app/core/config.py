@@ -128,5 +128,9 @@ class Settings(BaseSettings):
     def celery_backend(self) -> str:
         return self.celery_result_backend or self.redis_url
 
+    @property
+    def github_webhooks_enabled(self) -> bool:
+        return bool(self.github_webhook_secret and self.github_webhook_secret.strip())
+
 
 settings = Settings()

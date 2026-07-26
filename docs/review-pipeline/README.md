@@ -29,7 +29,7 @@
 | Phase | Focus | Status |
 |-------|--------|--------|
 | **P4** | `github_installation` list + dev register | **shipped** |
-| **R0** | GitHub webhooks + event ingestion | [execution](./waves/REVIEW_PIPELINE_R0_EXECUTION.md) ready |
+| **R0** | GitHub webhooks + event ingestion | shipped |
 | **R1** | Repository / branch metadata sync | not started |
 | **R2** | Pull request ingestion + revisions | not started |
 | **R3** | Indexing (chunks, embeddings, pgvector) | not started |
@@ -56,5 +56,5 @@
 
 ## Next
 
-1. Read [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) and [waves/REVIEW_PIPELINE_R0_EXECUTION.md](./waves/REVIEW_PIPELINE_R0_EXECUTION.md).
-2. Branch `feat/review-r0-webhooks` → `phase-execution` from R0 execution file.
+1. Plan **R1** (repository sync) — findings update + `REVIEW_PIPELINE_R1_EXECUTION.md`.
+2. Branch `feat/review-r1-repo-sync` when R1 execution is ready.
