@@ -632,6 +632,8 @@
     "impersonation_restricted": "This action is not allowed while impersonating",
     "impersonation_invalid": "Impersonation session is invalid",
     "impersonation_not_active": "No active impersonation session",
+    "provision_email_required": "Add an email to your account to continue",
+    "identity_email_conflict": "This email is already linked to another account",
     "not_found_page": {
       "title": "Page not found",
       "body": "The page you requested does not exist."
