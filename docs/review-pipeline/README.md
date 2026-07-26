@@ -29,7 +29,7 @@
 | Phase | Focus | Status |
 |-------|--------|--------|
 | **P4** | `github_installation` list + dev register | **shipped** |
-| **R0** | GitHub webhooks + event ingestion | shipped |
+| **R0** | GitHub webhooks + event ingestion | shipped (`review-r0-v1` → `754c88c`) |
 | **R1** | Repository / branch metadata sync | not started |
 | **R2** | Pull request ingestion + revisions | not started |
 | **R3** | Indexing (chunks, embeddings, pgvector) | not started |
