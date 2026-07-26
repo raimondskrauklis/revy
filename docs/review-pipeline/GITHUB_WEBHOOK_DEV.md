@@ -127,4 +127,22 @@ SELECT pull_request_id, revision_number, head_sha FROM github_pull_request_revis
 
 List API: `GET /api/v1/workspaces/{workspace_id}/repositories/{repository_id}/pull-requests`
 
-**Related:** [DEV_BOOTSTRAP.md](../starter-pack/DEV_BOOTSTRAP.md), [REVIEW_PIPELINE_R0_EXECUTION.md](./waves/REVIEW_PIPELINE_R0_EXECUTION.md), [REVIEW_PIPELINE_R1_EXECUTION.md](./waves/REVIEW_PIPELINE_R1_EXECUTION.md), [REVIEW_PIPELINE_R2_EXECUTION.md](./waves/REVIEW_PIPELINE_R2_EXECUTION.md)
+---
+
+## Indexing (R3)
+
+Requires `VOYAGE_API_KEY`, `GITHUB_APP_ID`, private key, and worker on `indexing` queue.
+
+1. `POST …/pull-requests/{pr_id}/revisions/{revision_id}/index` (workspace admin)
+2. Poll `GET …/revisions/{revision_id}/index-job` until `status=completed`
+3. List chunks: `GET …/revisions/{revision_id}/chunks`
+4. Semantic search: `POST …/revisions/{revision_id}/chunks/search` with `{"query":"…","top_k":10}`
+
+Verify:
+
+```sql
+SELECT status, chunk_count FROM github_index_jobs ORDER BY created_at DESC LIMIT 3;
+SELECT file_path, chunk_index FROM github_code_chunks ORDER BY created_at DESC LIMIT 10;
+```
+
+**Related:** [DEV_BOOTSTRAP.md](../starter-pack/DEV_BOOTSTRAP.md), [REVIEW_PIPELINE_R2_EXECUTION.md](./waves/REVIEW_PIPELINE_R2_EXECUTION.md), [REVIEW_PIPELINE_R3_EXECUTION.md](./waves/REVIEW_PIPELINE_R3_EXECUTION.md)

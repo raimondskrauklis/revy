@@ -32,5 +32,6 @@ celery_app.conf.task_default_queue = "default"
 from app.workers import email_tasks as _email_tasks  # noqa: F401
 from app.workers import export_tasks as _export_tasks  # noqa: F401
 from app.workers import github_tasks as _github_tasks  # noqa: F401
+from app.workers import index_tasks as _index_tasks  # noqa: F401
 from app.workers import repo_tasks as _repo_tasks  # noqa: F401
 from app.workers import tasks as _tasks  # noqa: F401
