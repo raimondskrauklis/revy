@@ -19,6 +19,7 @@ from app.models.github_installation import GitHubInstallationORM
 from app.models.github_pull_request import GitHubPullRequestORM
 from app.models.github_repository import GitHubRepositoryORM
 from app.services.github_pull_requests import (
+    apply_issue_comment_webhook_event,
     apply_pull_request_review_webhook_event,
     apply_pull_request_webhook_event,
     list_github_pull_requests,
@@ -303,3 +304,81 @@ async def test_list_github_pull_requests_returns_cursor_page():
 
     assert len(page.items) == 1
     assert page.items[0].title == "PR"
+
+
+def _issue_comment_payload(*, body: str = "@revy review") -> dict:
+    return {
+        "action": "created",
+        "installation": {"id": _INSTALLATION_ID},
+        "repository": {"id": _REPO_GITHUB_ID},
+        "issue": {
+            "number": 7,
+            "state": "open",
+            "pull_request": {"url": "https://api.github.com/repos/acme/demo/pulls/7"},
+        },
+        "comment": {
+            "body": body,
+            "user": {"login": "human"},
+        },
+    }
+
+
+@pytest.mark.asyncio
+async def test_apply_issue_comment_skips_draft_pull_request():
+    installation = _installation()
+    repository = _repository(installation)
+    pull_request = GitHubPullRequestORM(
+        repository_id=repository.id,
+        workspace_id=repository.workspace_id,
+        installation_id=repository.installation_id,
+        github_pull_request_id=_PR_GITHUB_ID,
+        number=7,
+        title="Draft PR",
+        state=GitHubPullRequestState.open,
+        head_sha="draftsha",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=1,
+        is_draft=True,
+    )
+    pull_request.id = uuid.uuid4()
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[installation, repository, pull_request])
+
+    result = await apply_issue_comment_webhook_event(session, _issue_comment_payload())
+
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_apply_pull_request_converted_to_draft_updates_flag():
+    installation = _installation()
+    repository = _repository(installation)
+    existing = GitHubPullRequestORM(
+        repository_id=repository.id,
+        workspace_id=repository.workspace_id,
+        installation_id=repository.installation_id,
+        github_pull_request_id=_PR_GITHUB_ID,
+        number=7,
+        title="Add feature",
+        state=GitHubPullRequestState.open,
+        head_sha="abc123",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=1,
+        is_draft=False,
+    )
+    existing.id = uuid.uuid4()
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[installation, repository, existing])
+    session.flush = AsyncMock()
+
+    payload = _pull_request_payload(action="converted_to_draft")
+    payload["pull_request"]["draft"] = True
+
+    result = await apply_pull_request_webhook_event(session, payload)
+
+    assert result is None
+    assert existing.is_draft is True

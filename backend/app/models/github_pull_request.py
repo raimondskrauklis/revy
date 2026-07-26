@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.constants.enums import GitHubPullRequestState
@@ -44,6 +44,12 @@ class GitHubPullRequestORM(TimestampedModel):
     base_ref: Mapped[str] = mapped_column(Text, nullable=False)
     html_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     revision_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    is_draft: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
 
 
 class GitHubPullRequestRevisionORM(TimestampedModel):

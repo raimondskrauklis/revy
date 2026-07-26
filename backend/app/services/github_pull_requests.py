@@ -37,7 +37,14 @@ logger = get_logger(__name__)
 
 _UNIQUE_VIOLATION_PG_CODE = "23505"
 
-_PULL_REQUEST_ACTIONS = frozenset({"opened", "synchronize", "closed", "reopened"})
+_PULL_REQUEST_ACTIONS = frozenset({
+    "opened",
+    "synchronize",
+    "closed",
+    "reopened",
+    "converted_to_draft",
+    "ready_for_review",
+})
 _REVIEW_ACTIONS = frozenset({"submitted", "edited", "dismissed"})
 _REVY_REVIEW_COMMAND = re.compile(r"@revy\s+review\b", re.IGNORECASE)
 
@@ -109,6 +116,7 @@ def _extract_pr_fields(pull_request: dict[str, Any]) -> dict[str, Any] | None:
         "head_ref": head_ref,
         "base_ref": base_ref,
         "html_url": html_url if isinstance(html_url, str) else None,
+        "is_draft": pull_request.get("draft") is True,
     }
 
 
@@ -248,6 +256,7 @@ async def _upsert_pull_request(
     existing.base_ref = fields["base_ref"]
     existing.html_url = fields["html_url"]
     existing.number = fields["number"]
+    existing.is_draft = fields["is_draft"]
 
     if create_revision and fields["head_sha"] != existing.head_sha:
         revision = await _append_revision(session, pull_request=existing, head_sha=fields["head_sha"])
@@ -350,7 +359,7 @@ async def apply_pull_request_webhook_event(
             action=action,
         )
 
-    if action in {"closed", "reopened"}:
+    if action in {"closed", "reopened", "converted_to_draft", "ready_for_review"}:
         existing = await _find_pull_request(
             session,
             repository_id=repository.id,
@@ -368,6 +377,7 @@ async def apply_pull_request_webhook_event(
         existing.state = fields["state"]
         existing.title = fields["title"]
         existing.html_url = fields["html_url"]
+        existing.is_draft = fields["is_draft"]
         await session.flush()
 
     return None
@@ -477,10 +487,6 @@ async def apply_issue_comment_webhook_event(
             logger.info("github_issue_comment_bot_ignored", extra={"login": login})
             return None
 
-    if issue.get("draft") is True:
-        logger.info("github_issue_comment_draft_ignored")
-        return None
-
     if issue.get("state") != "open":
         logger.info("github_issue_comment_not_open_ignored", extra={"state": issue.get("state")})
         return None
@@ -504,6 +510,10 @@ async def apply_issue_comment_webhook_event(
             "github_issue_comment_orphan_pull_request",
             extra={"repository_id": str(repository.id), "number": raw_pr_number},
         )
+        return None
+
+    if pull_request.is_draft:
+        logger.info("github_issue_comment_draft_ignored")
         return None
 
     if pull_request.state != GitHubPullRequestState.open:
