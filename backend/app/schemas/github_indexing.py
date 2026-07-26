@@ -34,6 +34,13 @@ class GitHubCodeChunkResponse(BaseModel):
     created_at: datetime
 
 
+class GitHubCodeChunkListResponse(BaseModel):
+    items: list[GitHubCodeChunkResponse]
+    offset: int
+    limit: int
+    has_more: bool
+
+
 class GitHubChunkSearchRequest(BaseModel):
     query: str = Field(min_length=1, max_length=2000)
     top_k: int = Field(default=10, ge=1, le=50)

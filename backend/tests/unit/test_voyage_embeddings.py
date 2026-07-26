@@ -33,3 +33,21 @@ async def test_embed_texts_returns_vectors():
         vectors = await voyage_embeddings.embed_texts(client, ["hello"])
 
     assert vectors == [[0.1, 0.2]]
+
+
+@pytest.mark.asyncio
+async def test_embed_texts_raises_on_malformed_embedding_item():
+    client = AsyncMock()
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json = MagicMock(return_value={"data": [{"not_embedding": True}]})
+    client.post = AsyncMock(return_value=response)
+
+    with patch("app.integrations.voyage_embeddings.settings") as mock_settings:
+        mock_settings.embeddings_enabled = True
+        mock_settings.voyage_api_key = "key"
+        mock_settings.revy_embedding_model = "voyage-3-lite"
+        with pytest.raises(ServiceUnavailableError) as exc:
+            await voyage_embeddings.embed_texts(client, ["hello"])
+
+    assert exc.value.error_code == "embeddings_error"
