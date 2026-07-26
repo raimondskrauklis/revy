@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
@@ -49,7 +50,11 @@ async def try_record_delivery(
             payload_json=payload,
         )
     )
-    await session.flush()
+    try:
+        await session.flush()
+    except IntegrityError:
+        await session.rollback()
+        return False
     return True
 
 
@@ -81,8 +86,4 @@ async def accept_github_webhook(
         installation_id=installation_id,
         payload=payload,
     )
-    if not is_new:
-        return False
-
-    enqueue_github_event(delivery_id)
-    return True
+    return is_new
