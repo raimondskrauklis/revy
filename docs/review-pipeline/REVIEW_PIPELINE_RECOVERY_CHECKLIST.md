@@ -39,10 +39,10 @@
 
 | Phase | Branch | Base | Head commit | PR # | Greptile done | Closed |
 |-------|--------|------|-------------|------|---------------|--------|
-| R0 | `audit/review-r0-retro` | `saas-base-v1.1` (`48c361e`) | `d017dfc` | #15 | [x] | [ ] |
-| R1 | `audit/review-r1-retro` | `d017dfc` | `fd29fd5` | #16 | [x] | [ ] |
-| R2 | `audit/review-r2-retro` | `fd29fd5` | `035f304` | #17 | [x] | [ ] |
-| R3 | `audit/review-r3-retro` | `035f304` | `a299d14` | #18 | [x] | [ ] |
+| R0 | `audit/review-r0-retro` | `saas-base-v1.1` (`48c361e`) | `d017dfc` | #15 | [x] | [x] |
+| R1 | `audit/review-r1-retro` | `d017dfc` | `fd29fd5` | #16 | [x] | [x] |
+| R2 | `audit/review-r2-retro` | `fd29fd5` | `035f304` | #17 | [x] | [x] |
+| R3 | `audit/review-r3-retro` | `035f304` | `a299d14` | #18 | [x] | [x] |
 
 **Known P1 (pre-audit):**
 
