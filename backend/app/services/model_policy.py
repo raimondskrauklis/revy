@@ -154,7 +154,11 @@ async def _resolve_workspace_override(
 
     provider = row.provider.strip().lower()
     model_id = row.model_id.strip()
-    if not is_valid_catalog_entry(role=role, provider=provider, model_id=model_id):
+    if require_credentials and not is_valid_catalog_entry(
+        role=role,
+        provider=provider,
+        model_id=model_id,
+    ):
         raise ValidationError(
             message="Workspace model override is no longer valid",
             field=role.value,

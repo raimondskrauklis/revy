@@ -279,6 +279,39 @@ async def test_resolve_workspace_bedrock_override_checks_override_provider():
         model_id="qwen.qwen3-coder-next",
         region="us-east-1",
     )
+
+
+@pytest.mark.asyncio
+async def test_resolve_workspace_override_skips_catalog_when_display_only():
+    from app.models.workspace_model_policy import WorkspaceModelPolicyORM
+
+    session = AsyncMock()
+    workspace_id = uuid.uuid4()
+    row = WorkspaceModelPolicyORM(
+        workspace_id=workspace_id,
+        role=ModelRole.judge.value,
+        provider="bedrock",
+        model_id="qwen.qwen3-coder-next",
+        region="us-east-1",
+    )
+    session.scalar = AsyncMock(return_value=row)
+    with patch("app.services.model_policy.is_valid_catalog_entry", return_value=False):
+        model_ref = await resolve_model(
+            session,
+            workspace_id,
+            ModelRole.judge,
+            require_credentials=False,
+        )
+
+    assert model_ref == ModelRef(
+        provider="bedrock",
+        model_id="qwen.qwen3-coder-next",
+        region="us-east-1",
+    )
+
+
+@pytest.mark.asyncio
+async def test_resolve_workspace_override_invalid_rejected():
     from app.models.workspace_model_policy import WorkspaceModelPolicyORM
 
     session = AsyncMock()
