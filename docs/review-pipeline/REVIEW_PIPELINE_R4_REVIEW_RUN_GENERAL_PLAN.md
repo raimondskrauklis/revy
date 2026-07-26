@@ -20,6 +20,6 @@ Run the LLM review pipeline for a PR revision and persist structured findings �
 
 **Depends on:** R3 (retrieval context available).
 
-**Status:** Execution ready — [waves/REVIEW_PIPELINE_R4_EXECUTION.md](./waves/REVIEW_PIPELINE_R4_EXECUTION.md) peer-reviewed (2026-07-26); implement on `feat/review-r4-review-run`.
+**Status:** Execution plan ready — [waves/REVIEW_PIPELINE_R4_EXECUTION.md](./waves/REVIEW_PIPELINE_R4_EXECUTION.md) exists; **manual peer-review pending** (separate agent) before `phase-execution`.
 
 **Next phase:** [REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md](./REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md).

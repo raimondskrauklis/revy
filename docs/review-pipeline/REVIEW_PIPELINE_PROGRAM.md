@@ -191,7 +191,7 @@ Same discipline as [docs/saas-base](../saas-base/README.md):
 1. **`create-findings`** → [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) (baseline-first; includes GitHub App ops pointers)
 2. **`create-general-plan`** → per-phase `REVIEW_PIPELINE_R*_GENERAL_PLAN.md` (index: [REVIEW_PIPELINE_GENERAL_PLAN.md](./REVIEW_PIPELINE_GENERAL_PLAN.md))
 3. **`create-execution-plan`** → `waves/REVIEW_PIPELINE_R*_EXECUTION.md` only
-4. **`execution-peer-review`** before LOOP
+4. **Manual peer-review** — human invokes a **separate agent** with `architecture-peer-review` / `execution-peer-review` on the prepared files (skills in `.cursor/skills/`). The implementing agent does not mark this done.
 5. **`phase-execution`** from execution file; branch `feat/review-r*-…`
 
 **GitHub App runbooks:** [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md), [GITHUB_APP_TARGET_CONFIG.md](../utils/GITHUB_APP_TARGET_CONFIG.md).

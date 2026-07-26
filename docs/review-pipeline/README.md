@@ -33,7 +33,7 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 |------|---------------------|---------------|
 | **Findings** | Retroactive update in [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) | Must be baseline-ready **before** execution |
 | **General plan** | Retroactive — [R0](./REVIEW_PIPELINE_R0_WEBHOOKS_GENERAL_PLAN.md), [R1](./REVIEW_PIPELINE_R1_REPO_SYNC_GENERAL_PLAN.md) | One file per phase — **all R0–R7 now exist** |
-| **Execution** | [R0](./waves/REVIEW_PIPELINE_R0_EXECUTION.md), [R1](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) shipped | Create only after `execution-peer-review` |
+| **Execution** | [R0](./waves/REVIEW_PIPELINE_R0_EXECUTION.md), [R1](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) shipped | Create after general plan; **manual peer-review** (separate agent) before `phase-execution` |
 | **Code** | On `main` + tags `review-r0-v1` … `review-r3-v1` | `phase-execution` LOOP per phase |
 | **GitHub App** | [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) · [GITHUB_APP_TARGET_CONFIG.md](../utils/GITHUB_APP_TARGET_CONFIG.md) | Configure per phase map in target config |
 
@@ -74,7 +74,7 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 | **R1** | [waves/R1](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) | shipped (`review-r1-v1`) |
 | **R2** | [waves/R2](./waves/REVIEW_PIPELINE_R2_EXECUTION.md) | shipped (`review-r2-v1`) |
 | **R3** | [waves/R3](./waves/REVIEW_PIPELINE_R3_EXECUTION.md) | shipped (`review-r3-v1`) |
-| **R4** | [waves/R4](./waves/REVIEW_PIPELINE_R4_EXECUTION.md) | **next** — `phase-execution` |
+| **R4** | [waves/R4](./waves/REVIEW_PIPELINE_R4_EXECUTION.md) | **next** — manual peer-review → `phase-execution` |
 | **R5–R7** | — | general plans ready |
 
 [waves/README.md](./waves/README.md) — full execution table.
@@ -98,4 +98,5 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 
 ## Next (strict order)
 
-1. **`phase-execution`** on `feat/review-r4-review-run` ([waves/REVIEW_PIPELINE_R4_EXECUTION.md](./waves/REVIEW_PIPELINE_R4_EXECUTION.md))
+1. **Manual peer-review** — invoke a **separate agent** with `execution-peer-review` on [waves/REVIEW_PIPELINE_R4_EXECUTION.md](./waves/REVIEW_PIPELINE_R4_EXECUTION.md) (not the implementing agent).
+2. **`phase-execution`** on `feat/review-r4-review-run` after peer-review gaps are addressed.

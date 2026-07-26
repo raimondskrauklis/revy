@@ -29,7 +29,7 @@ Per-phase goals in **separate files** — same layout as [docs/saas-base](../saa
 | R1 | [waves/REVIEW_PIPELINE_R1_EXECUTION.md](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) | done |
 | R2 | [waves/REVIEW_PIPELINE_R2_EXECUTION.md](./waves/REVIEW_PIPELINE_R2_EXECUTION.md) | done |
 | R3 | [waves/REVIEW_PIPELINE_R3_EXECUTION.md](./waves/REVIEW_PIPELINE_R3_EXECUTION.md) | done |
-| R4 | [waves/REVIEW_PIPELINE_R4_EXECUTION.md](./waves/REVIEW_PIPELINE_R4_EXECUTION.md) | pending → **phase-execution** |
+| R4 | [waves/REVIEW_PIPELINE_R4_EXECUTION.md](./waves/REVIEW_PIPELINE_R4_EXECUTION.md) | ready — manual peer-review pending |
 | R5–R7 | — | create per phase after peer-review |
 
 Full table: [waves/README.md](./waves/README.md).
@@ -50,4 +50,5 @@ Workspace tenancy; audit on mutating routes; EN+LV for UI; unit tests; hand-writ
 
 ## Next
 
-1. `phase-execution` on `feat/review-r4-review-run` — [waves/REVIEW_PIPELINE_R4_EXECUTION.md](./waves/REVIEW_PIPELINE_R4_EXECUTION.md).
+1. **Manual peer-review** (separate agent) → [waves/REVIEW_PIPELINE_R4_EXECUTION.md](./waves/REVIEW_PIPELINE_R4_EXECUTION.md).
+2. `phase-execution` on `feat/review-r4-review-run` after gaps are fixed.

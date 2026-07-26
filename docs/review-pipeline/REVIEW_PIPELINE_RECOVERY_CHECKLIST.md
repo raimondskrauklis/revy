@@ -1,7 +1,7 @@
 # Review pipeline — recovery checklist
 
 **Purpose:** Agent handoff when context is limited. Work **top to bottom**; mark `[x]` as done.  
-**Rules:** No direct pushes to `main`. Audit PRs are **never merged**. One concern per PR.
+**Rules:** No direct pushes to `main`. Audit PRs are **never merged**. One concern per PR. **Peer review = separate agent session** (human-invoked); never self-certified by the writing agent.
 
 **Last updated:** 2026-07-26
 
@@ -68,6 +68,8 @@ Each: tests + `pipenv run lint` + `babysit-pr` until Greptile clean.
 
 ## Track 3 — General plan peer-review (R0–R7)
 
+**Manual gate:** human attaches plan files and invokes **`architecture-peer-review`** in a **new agent** session (not the author).
+
 **Skill:** `architecture-peer-review` on each `REVIEW_PIPELINE_R*_GENERAL_PLAN.md` vs `main` code.
 
 - [ ] R0 general plan
@@ -84,7 +86,7 @@ Each: tests + `pipenv run lint` + `babysit-pr` until Greptile clean.
 
 ## Track 4 — R4 phase-execution
 
-**Prerequisites:** Track 1 merged; Track 2b #1–#2 merged (required); #3–#4 merged (recommended before R4 staging e2e); ~~execution-peer-review on R4 execution doc~~ **done** (2026-07-26 architecture-peer-review + doc align in PR #12).
+**Prerequisites:** Track 1 merged; Track 2b #1–#2 merged (required); #3–#4 merged (recommended before R4 staging e2e); **manual** `execution-peer-review` on R4 execution doc (separate agent — [ ]).
 
 **Branch:** `feat/review-r4-review-run` (rebase on `main`)
 
