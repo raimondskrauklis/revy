@@ -39,7 +39,7 @@
 
 | Phase | Branch | Base | Head commit | PR # | Greptile done | Closed |
 |-------|--------|------|-------------|------|---------------|--------|
-| R0 | `audit/review-r0-retro` | `saas-base-v1.1^{commit}` | `d017dfc` | #15 | [ ] | [ ] |
+| R0 | `audit/review-r0-retro` | `saas-base-v1.1` (`48c361e`) | `d017dfc` | #15 | [ ] | [ ] |
 | R1 | `audit/review-r1-retro` | `d017dfc` | `fd29fd5` | #16 | [ ] | [ ] |
 | R2 | `audit/review-r2-retro` | `fd29fd5` | `035f304` | #17 | [ ] | [ ] |
 | R3 | `audit/review-r3-retro` | `035f304` | `a299d14` | #18 | [ ] | [ ] |
@@ -84,7 +84,7 @@ Each: tests + `pipenv run lint` + `babysit-pr` until Greptile clean.
 
 ## Track 4 — R4 phase-execution
 
-**Prerequisites:** Track 1 merged; Track 2b #1–#2 merged; execution-peer-review on R4 execution doc.
+**Prerequisites:** Track 1 merged; Track 2b #1–#2 merged (required); #3–#4 merged (recommended before R4 staging e2e); execution-peer-review on R4 execution doc.
 
 **Branch:** `feat/review-r4-review-run` (rebase on `main`)
 
