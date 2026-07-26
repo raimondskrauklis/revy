@@ -13,12 +13,14 @@ Phase **R3** of [REVIEW_PIPELINE_R3_INDEXING_GENERAL_PLAN.md](../REVIEW_PIPELINE
 ## Decisions locked for R3
 
 - **Tables:** `github_index_jobs` (per revision run), `github_code_chunks` (text + `vector(512)` embedding).
-- **Embedding:** Voyage API — model `voyage-3-lite`, dim **512**; disabled when `VOYAGE_API_KEY` empty → `503 embeddings_disabled`.
+- **Embedding (v1 shipped):** Voyage API — `VOYAGE_API_KEY` required; model `voyage-3-lite`, dim **512** (`REVY_EMBEDDING_MODEL`, `REVY_EMBEDDING_DIMENSIONS`); disabled when key empty → `503 embeddings_disabled`.
+- **Embedding (parallel track — architecture §11.3.1):** `REVY_EMBEDDING_BACKEND=voyage` (default) \| `local` when self-hosted backend ships; local candidates `jina-embeddings-v2-base-code` (CPU), `nomic-embed-code` (GPU); weights cache `REVY_HF_CACHE_PATH`. Eval upgrade for API path: `voyage-code-3` (Matryoshka dims; architecture default eval dim 1024).
+- **Reranker (future retrieval stack §11.3):** parallel API (`voyage` rerank) vs local `bge-reranker-v2-m3` via `REVY_RERANKER_BACKEND` — not in R3 v1.
 - **Source fetch:** GitHub tarball `GET /repos/{owner}/{repo}/tarball/{ref}` → extract under `REVY_WORKTREES_ROOT/{revision_id}`.
 - **Chunking:** line-aware splits, max 2000 chars, skip binary paths + `node_modules`/`.git`/vendor dirs.
 - **Trigger:** `POST …/pull-requests/{pr_id}/revisions/{revision_id}/index` (admin) → Celery `indexing` queue; **no** auto-index on `push` (R4).
 - **Retrieval:** `GET …/revisions/{revision_id}/chunks` list; service `search_revision_chunks(query, top_k)` for R4 (cosine via pgvector).
-- **Out of scope:** symbol index, cross-repo search, HF local models, auto-index on webhook.
+- **Out of scope (R3 v1 code):** symbol index, cross-repo search, auto-index on webhook, **local/HF embedding backend impl**, hybrid FTS+RRF rerank. Local/API-parallel embedding policy is **documented** in FINDINGS + `architecture.md` §11.3.1 for follow-up.
 
 ---
 

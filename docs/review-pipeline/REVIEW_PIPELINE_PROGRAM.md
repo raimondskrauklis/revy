@@ -104,7 +104,7 @@ main  ──●──●──●──●──  deployable; SaaS base + produc
 |-------|----------------|
 | **Index ORM** | `github_index_jobs`, `github_code_chunks` (vector 512); migration `0013` |
 | **Archive + chunking** | `integrations/github_archive.py`, `services/code_chunking.py` |
-| **Embeddings** | `integrations/voyage_embeddings.py` — Voyage `voyage-3-lite` |
+| **Embeddings** | `integrations/voyage_embeddings.py` — Voyage API (`voyage-3-lite` v1); parallel local track documented (`architecture.md` §11.3.1) |
 | **Index worker** | `backend/app/workers/index_tasks.py` — `indexing` queue |
 | **Index API** | `POST …/revisions/{id}/index`, `GET …/index-job`, chunk list + semantic search |
 

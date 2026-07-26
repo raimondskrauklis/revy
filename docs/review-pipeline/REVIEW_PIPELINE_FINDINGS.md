@@ -55,7 +55,7 @@ Revy code does not replace GitHub App registration. Use these before expecting w
 | **R0 Webhooks** | `POST /api/v1/webhooks/github`, HMAC, dedupe, `github_events` | `webhooks/github.py`, `0010`, `github_tasks` | `review-r0-v1` |
 | **R1 Repositories** | `github_repositories`, webhook apply, `repo_sync`, list/sync API | `github_repositories.py`, `0011`, `repo_tasks` | `review-r1-v1` |
 | **R2 Pull requests** | `github_pull_requests`, revisions, `pull_request` webhooks, list API | `github_pull_requests.py`, `0012`, `github_tasks` | `review-r2-v1` |
-| **R3 Indexing** | `github_index_jobs`, `github_code_chunks`, Voyage embeddings, semantic search | `github_indexing.py`, `0013`, `index_tasks` | `review-r3-v1` |
+| **R3 Indexing** | `github_index_jobs`, `github_code_chunks`, Voyage API embeddings (`voyage-3-lite`), semantic search | `github_indexing.py`, `voyage_embeddings.py`, `0013`, `index_tasks` | `review-r3-v1` |
 | **GitHub API client** | App JWT + installation token + list repos | `integrations/github_api.py` | `review-r1-v1` |
 | **Stripe webhook pattern** | Idempotent ingest (reference) | `webhooks/stripe.py` | SaaS W4 |
 
@@ -125,6 +125,9 @@ Revy code does not replace GitHub App registration. Use these before expecting w
 | R2-Q3 | Unknown repository on PR webhook | **locked** | Log + **200** (orphan policy) |
 | R2-Q4 | PR list API | **locked** | `GET …/repositories/{repo_id}/pull-requests` cursor list |
 | R2-Q5 | `pull_request_review` v1 | **locked** | Store review activity row; no publish |
+| R3-Q1 | Embedding backend v1 | **locked** | **API first:** Voyage (`voyage-3-lite`, dim 512 shipped). **Parallel track:** self-hosted via `EmbeddingBackend` + `REVY_HF_CACHE_PATH` (`jina-embeddings-v2-base-code`, `nomic-embed-code`) — `architecture.md` §11.3.1 |
+| R3-Q2 | Embedding env | **locked** | `VOYAGE_API_KEY` + `REVY_EMBEDDING_MODEL` / `REVY_EMBEDDING_DIMENSIONS`; future `REVY_EMBEDDING_BACKEND=voyage\|local` |
+| R3-Q3 | Reranker (retrieval) | **defer** | API vs local `bge-reranker-v2-m3` — post-R3 eval (`REVY_RERANKER_BACKEND`) |
 | R4-Q1 | Review trigger permission | **locked** | `admin_users` (same as R3 index trigger) |
 | R4-Q2 | Concurrent review runs | **locked** | `409 review_in_progress` if pending/processing run exists for revision |
 | R4-Q3 | Review prerequisites | **locked** | Latest index job `completed` + `VOYAGE_API_KEY` + `github_api_enabled` + `MOONSHOT_API_KEY` |

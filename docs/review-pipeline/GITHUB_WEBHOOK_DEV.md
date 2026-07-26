@@ -131,7 +131,7 @@ List API: `GET /api/v1/workspaces/{workspace_id}/repositories/{repository_id}/pu
 
 ## Indexing (R3)
 
-Requires `VOYAGE_API_KEY`, `GITHUB_APP_ID`, private key, and worker on `indexing` queue.
+Requires `VOYAGE_API_KEY` (Voyage API — default `REVY_EMBEDDING_BACKEND=voyage`), `GITHUB_APP_ID`, private key, and worker on `indexing` queue. Local/HF embedding track: `architecture.md` §11.3.1 (`REVY_HF_CACHE_PATH` when implemented).
 
 1. `POST …/pull-requests/{pr_id}/revisions/{revision_id}/index` (workspace admin)
 2. Poll `GET …/revisions/{revision_id}/index-job` until `status=completed`

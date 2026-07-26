@@ -113,6 +113,7 @@ Each: tests + `pipenv run lint` + `babysit-pr` until Greptile clean.
 | Concurrent runs | `409 review_in_progress` if pending/processing exists |
 | Prerequisites | Completed index job + `VOYAGE_API_KEY` + `github_api_enabled` + `MOONSHOT_API_KEY` |
 | Primary LLM | Moonshot Kimi — `kimi-k2.7-code` (Standard), `kimi-k3` (Deep/Critical) |
+| Embeddings | Voyage API first (`voyage-3-lite` shipped); local HF parallel (`architecture.md` §11.3.1) |
 | Judge LLM (R5) | Anthropic Claude — cross-family only |
 | Worker queues (min) | `github_events,repo_sync,indexing,review` (+ SaaS queues) |
 
