@@ -26,7 +26,7 @@ export function ProtectedRoute() {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
-  if (awaitingProfile) {
+  if (!user) {
     return <Navigate to="/unauthorized" replace state={{ reason: 'profile' }} />;
   }
 
