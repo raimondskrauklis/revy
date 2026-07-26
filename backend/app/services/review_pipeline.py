@@ -154,14 +154,6 @@ async def maybe_enqueue_pipeline_for_revision(
         )
         return None
 
-    pending_job_id = await resolve_pending_index_job_id(
-        session,
-        workspace_id=workspace_id,
-        revision_id=revision_id,
-    )
-    if pending_job_id is not None:
-        return pending_job_id
-
     if await index_job_in_progress(
         session,
         workspace_id=workspace_id,

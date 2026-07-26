@@ -151,6 +151,13 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
     if job is None:
         raise NotFoundError("Index job not found")
 
+    if job.status != GitHubIndexJobStatus.pending:
+        logger.info(
+            "github_index_job_skip_non_pending",
+            extra={"index_job_id": str(index_job_id), "status": job.status.value},
+        )
+        return job
+
     job.status = GitHubIndexJobStatus.processing
     job.error_message = None
     await session.flush()

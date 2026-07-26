@@ -168,23 +168,26 @@ async def test_maybe_enqueue_pipeline_command_ignores_autostart_flag():
 
 
 @pytest.mark.asyncio
-async def test_maybe_enqueue_pipeline_reuses_pending_index_job():
+async def test_maybe_enqueue_pipeline_skips_when_index_job_pending():
     workspace = _workspace()
     revision, pull_request = _revision_chain(workspace.id)
-    pending_id = uuid.uuid4()
     session = AsyncMock()
     session.get = AsyncMock(side_effect=[revision, pull_request, workspace])
-    session.scalar = AsyncMock(return_value=pending_id)
+    session.scalar = AsyncMock(return_value=uuid.uuid4())
 
     with patch("app.services.review_pipeline.pipeline_prerequisites_met", return_value=True):
-        job_id = await maybe_enqueue_pipeline_for_revision(
-            session,
-            workspace_id=workspace.id,
-            revision_id=revision.id,
-            trigger=GitHubIndexJobTriggerSource.autostart,
-        )
+        with patch(
+            "app.services.review_pipeline.index_job_in_progress",
+            AsyncMock(return_value=True),
+        ):
+            job_id = await maybe_enqueue_pipeline_for_revision(
+                session,
+                workspace_id=workspace.id,
+                revision_id=revision.id,
+                trigger=GitHubIndexJobTriggerSource.autostart,
+            )
 
-    assert job_id == pending_id
+    assert job_id is None
     session.add.assert_not_called()
 
 
