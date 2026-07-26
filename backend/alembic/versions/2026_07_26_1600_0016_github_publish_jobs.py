@@ -48,9 +48,18 @@ def upgrade() -> None:
     )
     op.create_index("ix_github_publish_jobs_review_run_id", "github_publish_jobs", ["review_run_id"])
     op.create_index("ix_github_publish_jobs_head_sha", "github_publish_jobs", ["head_sha"])
+    op.create_index(
+        "ix_github_publish_jobs_workspace_id_revision_id",
+        "github_publish_jobs",
+        ["workspace_id", "revision_id"],
+    )
 
 
 def downgrade() -> None:
+    op.drop_index(
+        "ix_github_publish_jobs_workspace_id_revision_id",
+        table_name="github_publish_jobs",
+    )
     op.drop_index("ix_github_publish_jobs_head_sha", table_name="github_publish_jobs")
     op.drop_index("ix_github_publish_jobs_review_run_id", table_name="github_publish_jobs")
     op.drop_table("github_publish_jobs")
