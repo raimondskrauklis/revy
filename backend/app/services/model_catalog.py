@@ -8,6 +8,7 @@ from app.constants.model_registry import (
     BEDROCK_CATALOG_EXAMPLES,
     PLATFORM_MODEL_DEFAULTS,
     ModelCatalogEntry,
+    normalize_provider_slug,
 )
 from app.core.config import settings
 
@@ -50,8 +51,6 @@ def _bedrock_reviewer_entries() -> list[ModelCatalogEntry]:
         model_id = BEDROCK_CATALOG_EXAMPLES[0].model_id
     if not model_id:
         return []
-    region = (settings.aws_region or "").strip() or None
-    _ = region
     return [
         ModelCatalogEntry(
             provider="bedrock",
@@ -139,7 +138,7 @@ def build_model_catalog() -> dict[str, list[ModelCatalogEntry]]:
 
 
 def is_valid_catalog_entry(*, role: ModelRole, provider: str, model_id: str) -> bool:
-    normalized_provider = provider.strip().lower()
+    normalized_provider = normalize_provider_slug(provider)
     normalized_model_id = model_id.strip()
     for entry in _entries_for_role(role):
         if entry.provider == normalized_provider and entry.model_id == normalized_model_id:
@@ -148,7 +147,7 @@ def is_valid_catalog_entry(*, role: ModelRole, provider: str, model_id: str) -> 
 
 
 def catalog_region_for_provider(provider: str) -> str | None:
-    if provider.strip().lower() == "bedrock":
+    if normalize_provider_slug(provider) == "bedrock":
         region = (settings.aws_region or "").strip()
         return region or None
     return None

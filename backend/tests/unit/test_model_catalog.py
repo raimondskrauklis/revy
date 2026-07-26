@@ -3,7 +3,11 @@
 from unittest.mock import patch
 
 from app.constants.model_policy import ModelRole
-from app.services.model_catalog import build_model_catalog, is_valid_catalog_entry
+from app.services.model_catalog import (
+    build_model_catalog,
+    catalog_region_for_provider,
+    is_valid_catalog_entry,
+)
 
 
 def test_anthropic_judge_catalog_uses_configured_model():
@@ -60,3 +64,10 @@ def test_is_valid_catalog_entry_rejects_unknown_model():
             provider="moonshot",
             model_id="unknown-model",
         )
+
+
+def test_catalog_region_for_provider_normalizes_bedrock_slug():
+    with patch("app.services.model_catalog.settings") as mock_settings:
+        mock_settings.aws_region = "eu-west-1"
+        assert catalog_region_for_provider(" Bedrock ") == "eu-west-1"
+        assert catalog_region_for_provider("moonshot") is None
