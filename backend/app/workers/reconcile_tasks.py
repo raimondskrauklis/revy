@@ -26,6 +26,7 @@ def reconcile_review_run_task(self, review_run_id: str) -> None:
             group_ids = await reconcile_review_run(session, review_run_id=UUID(review_run_id))
             judged = await run_judge_for_review_run(session, review_run_id=UUID(review_run_id))
             await session.commit()
+            # Judge runs inline here; judge_review_run task is reserved for future fan-out.
             logger.info(
                 "github_reconcile_complete",
                 extra={

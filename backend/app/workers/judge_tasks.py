@@ -1,5 +1,10 @@
 # backend/app/workers/judge_tasks.py
-"""Judge Celery tasks — judge queue (reserved for async judge fan-out)."""
+"""Judge Celery tasks — judge queue.
+
+R5 v1 runs the judge inline inside ``reconcile_review_run_task`` after reconcile
+commits. ``judge_review_run`` is registered for future async fan-out (e.g. when
+judge work is split off the reconcile worker); it is not enqueued in R5.
+"""
 from __future__ import annotations
 
 import asyncio
