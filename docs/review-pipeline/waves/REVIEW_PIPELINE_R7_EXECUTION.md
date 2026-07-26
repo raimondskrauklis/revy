@@ -1,5 +1,3 @@
-# docs/review-pipeline/waves/REVIEW_PIPELINE_R7_EXECUTION.md
-
 # R7 — Reviewer UI (execution)
 
 Phase **R7** of [REVIEW_PIPELINE_R7_REVIEWER_UI_GENERAL_PLAN.md](../REVIEW_PIPELINE_R7_REVIEWER_UI_GENERAL_PLAN.md). Baseline: [REVIEW_PIPELINE_FINDINGS.md](../REVIEW_PIPELINE_FINDINGS.md). **Depends on** R4 API (`review-r4-v1`); publish status from R6 when available.

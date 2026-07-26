@@ -1,5 +1,3 @@
-# docs/review-pipeline/waves/REVIEW_PIPELINE_R5_EXECUTION.md
-
 # R5 — Reconciliation + judge (execution)
 
 Phase **R5** of [REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md](../REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md). Baseline: [REVIEW_PIPELINE_FINDINGS.md](../REVIEW_PIPELINE_FINDINGS.md). **Depends on** R4 (`review-r4-v1`).

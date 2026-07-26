@@ -138,14 +138,12 @@ Use while building Revy; optional external review on our PRs (Greptile today) fo
 
 ---
 
-## R6 execution open items (lock when writing `REVIEW_PIPELINE_R6_EXECUTION.md`)
+## R6 execution decisions (locked in implementation)
 
-Not blocking R4. General plan + R6-Q1/Q2 are locked; execution doc should decide:
-
-| Topic | Suggested default |
-|-------|-------------------|
-| Check run name | Stable per repo, e.g. `revy/review` |
-| `external_id` | `{installation_id}:{pr_number}:{head_sha}` on first create; reuse GitHub check run id on update |
+| Topic | Resolution |
+|-------|------------|
+| Check run name | `revy/review` |
+| `external_id` | `revy:{github_installation_id}:{github_pr_number}:{head_sha}` on first create (`github_installation_id` = GitHub numeric id); reuse GitHub check run id on update |
 | Inline v1 subset | `error` + `critical` with valid line range; remainder in check `output.summary` markdown |
 | Summary PR comment | Update existing bot comment via stored `github_comment_id` on `publish_job` |
 | New revision | New check run for new `head_sha`; do not mutate prior SHA’s check |

@@ -1,5 +1,3 @@
-# docs/review-pipeline/waves/REVIEW_PIPELINE_R6_EXECUTION.md
-
 # R6 — GitHub publish (execution)
 
 Phase **R6** of [REVIEW_PIPELINE_R6_GITHUB_PUBLISH_GENERAL_PLAN.md](../REVIEW_PIPELINE_R6_GITHUB_PUBLISH_GENERAL_PLAN.md). Baseline: [REVIEW_PIPELINE_FINDINGS.md](../REVIEW_PIPELINE_FINDINGS.md). **Depends on** R5 (`review-r5-v1`).
@@ -19,7 +17,7 @@ Phase **R6** of [REVIEW_PIPELINE_R6_GITHUB_PUBLISH_GENERAL_PLAN.md](../REVIEW_PI
 - **Conclusion (R6-Q2):** `failure` if any active group has `critical` or `error`; `success` if no `error`/`critical` active groups; `neutral` if only `warning`/`info`; map to GitHub `conclusion` enum.
 - **Summary body:** markdown table of active reconciled findings (cap 50 rows); link to Revy UI.
 - **Inline v1:** post review comments only for `error` + `critical` with valid `file_path` + `start_line`; rest summary-only.
-- **PR comment:** update bot summary comment via stored `github_comment_id`; create once per `head_sha` then update.
+- **PR comment:** **per `head_sha`** — create summary comment on first publish for that SHA, then update in place on re-publish; a new commit (`head_sha`) creates a new check run and a new summary comment (prior SHA comments remain on the PR). R6-Q1 “no new top-level comment per re-review” applies **within the same `head_sha`**, not across revisions.
 - **Out of scope:** suggestion blocks (R6-Q3 defer); annotations on every line; numeric 0–5 score; `check_run` webhook subscribe (optional follow-up).
 
 ---
