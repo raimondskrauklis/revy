@@ -65,3 +65,43 @@ async def test_judge_finding_returns_payload():
             region="eu-central-1",
         )
     assert result["outcome"] == "upheld"
+
+
+@pytest.mark.asyncio
+async def test_complete_review_timeout_maps_to_service_unavailable():
+    with (
+        patch("app.integrations.bedrock_review.settings") as mock_settings,
+        patch(
+            "app.integrations.bedrock_review.asyncio.wait_for",
+            new=AsyncMock(side_effect=TimeoutError()),
+        ),
+    ):
+        mock_settings.bedrock_enabled.return_value = True
+        mock_settings.revy_revision_timeout_standard_seconds = 900
+        with pytest.raises(ServiceUnavailableError) as exc:
+            await complete_review(
+                user_prompt="review",
+                model_id="anthropic.claude-sonnet-4-20250514-v1:0",
+                region="eu-central-1",
+            )
+    assert exc.value.error_code == "llm_error"
+
+
+@pytest.mark.asyncio
+async def test_judge_finding_timeout_maps_to_service_unavailable():
+    with (
+        patch("app.integrations.bedrock_review.settings") as mock_settings,
+        patch(
+            "app.integrations.bedrock_review.asyncio.wait_for",
+            new=AsyncMock(side_effect=TimeoutError()),
+        ),
+    ):
+        mock_settings.bedrock_enabled.return_value = True
+        mock_settings.revy_revision_timeout_standard_seconds = 900
+        with pytest.raises(ServiceUnavailableError) as exc:
+            await judge_finding(
+                user_prompt="judge",
+                model_id="anthropic.claude-sonnet-4-20250514-v1:0",
+                region="eu-central-1",
+            )
+    assert exc.value.error_code == "llm_error"

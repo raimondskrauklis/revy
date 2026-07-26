@@ -103,7 +103,7 @@ async def complete_review(
             ),
             timeout=timeout_seconds or settings.revy_revision_timeout_standard_seconds,
         )
-    except (TimeoutError, ClientError, BotoCoreError) as exc:
+    except (asyncio.TimeoutError, ClientError, BotoCoreError) as exc:  # noqa: UP041
         raise ServiceUnavailableError(
             message="Bedrock review request failed",
             error_code="llm_error",
@@ -131,7 +131,7 @@ async def judge_finding(
             ),
             timeout=timeout_seconds or settings.revy_revision_timeout_standard_seconds,
         )
-    except (TimeoutError, ClientError, BotoCoreError) as exc:
+    except (asyncio.TimeoutError, ClientError, BotoCoreError) as exc:  # noqa: UP041
         raise ServiceUnavailableError(
             message="Bedrock judge request failed",
             error_code="llm_error",
