@@ -62,35 +62,64 @@ def _resolve_reviewer_model_id(provider: str, role: ModelRole) -> str:
     return PLATFORM_MODEL_DEFAULTS[role].model_id
 
 
-def _assert_provider_credentials(*, role: ModelRole) -> None:
+def _provider_credentials_configured(
+    provider: str,
+    *,
+    role: ModelRole,
+    model_id: str | None = None,
+) -> bool:
+    normalized = provider.strip().lower()
+    if normalized == "moonshot":
+        return bool(settings.moonshot_api_key and settings.moonshot_api_key.strip())
+    if normalized == "anthropic":
+        return bool(settings.anthropic_api_key and settings.anthropic_api_key.strip())
+    if normalized == "bedrock":
+        if not (settings.aws_region or "").strip():
+            return False
+        if model_id and model_id.strip():
+            return True
+        if role in _REVIEWER_ROLES:
+            return bool((settings.revy_bedrock_reviewer_model_id or "").strip())
+        if role == ModelRole.judge:
+            return bool((settings.revy_bedrock_judge_model_id or "").strip())
+        return False
+    return False
+
+
+def _assert_provider_credentials(
+    provider: str,
+    *,
+    role: ModelRole,
+    model_id: str | None = None,
+) -> None:
+    if _provider_credentials_configured(provider, role=role, model_id=model_id):
+        return
     if role in _REVIEWER_ROLES:
-        if not settings.reviewer_llm_enabled():
-            raise ServiceUnavailableError(
-                message="Reviewer LLM API is not configured",
-                error_code="llm_disabled",
-            )
-        return
+        raise ServiceUnavailableError(
+            message="Reviewer LLM API is not configured",
+            error_code="llm_disabled",
+        )
     if role == ModelRole.judge:
-        if not settings.judge_llm_enabled():
-            raise ServiceUnavailableError(
-                message="Judge LLM API is not configured",
-                error_code="llm_disabled",
-            )
-        return
+        raise ServiceUnavailableError(
+            message="Judge LLM API is not configured",
+            error_code="llm_disabled",
+        )
     raise ValueError(f"Unsupported model role: {role}")
 
 
-def _resolve_platform_model(role: ModelRole) -> ModelRef:
+def _resolve_platform_model(role: ModelRole, *, require_credentials: bool = True) -> ModelRef:
     if role in _REVIEWER_ROLES:
         provider = settings.effective_reviewer_provider
-        _assert_provider_credentials(role=role)
+        if require_credentials:
+            _assert_provider_credentials(provider, role=role)
         model_id = _resolve_reviewer_model_id(provider, role)
         region = settings.aws_region if provider == "bedrock" else None
         return ModelRef(provider=provider, model_id=model_id, region=region)
 
     if role == ModelRole.judge:
         provider = settings.effective_judge_provider
-        _assert_provider_credentials(role=role)
+        if require_credentials:
+            _assert_provider_credentials(provider, role=role)
         if provider == "anthropic":
             model_id = settings.revy_anthropic_model
             region = None
@@ -112,6 +141,7 @@ async def _resolve_workspace_override(
     *,
     workspace_id: UUID,
     role: ModelRole,
+    require_credentials: bool = True,
 ) -> ModelRef | None:
     row = await session.scalar(
         select(WorkspaceModelPolicyORM).where(
@@ -133,7 +163,8 @@ async def _resolve_workspace_override(
     region = row.region
     if provider == "bedrock" and not region:
         region = settings.aws_region
-    _assert_provider_credentials(role=role)
+    if require_credentials:
+        _assert_provider_credentials(provider, role=role, model_id=model_id)
     return ModelRef(provider=provider, model_id=model_id, region=region)
 
 
@@ -141,9 +172,16 @@ async def resolve_model(
     session: AsyncSession,
     workspace_id: UUID,
     role: ModelRole,
+    *,
+    require_credentials: bool = True,
 ) -> ModelRef:
     """Resolve provider + model for a pipeline role."""
-    override = await _resolve_workspace_override(session, workspace_id=workspace_id, role=role)
+    override = await _resolve_workspace_override(
+        session,
+        workspace_id=workspace_id,
+        role=role,
+        require_credentials=require_credentials,
+    )
     if override is not None:
         return override
-    return _resolve_platform_model(role)
+    return _resolve_platform_model(role, require_credentials=require_credentials)

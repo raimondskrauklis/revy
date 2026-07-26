@@ -66,7 +66,12 @@ async def get_workspace_model_policy(
     for field, role in _ROLE_FIELD_MAP.items():
         row = by_role.get(role.value)
         overrides[field] = _entry_from_row(row) if row is not None else None
-        model_ref = await resolve_model(session, workspace_id, role)
+        model_ref = await resolve_model(
+            session,
+            workspace_id,
+            role,
+            require_credentials=False,
+        )
         effective[field] = _ref_to_entry(model_ref)
 
     return ModelPolicyResponse(overrides=overrides, effective=effective)
