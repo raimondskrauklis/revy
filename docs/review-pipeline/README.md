@@ -85,7 +85,7 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 | **R5** | [waves/R5](./waves/REVIEW_PIPELINE_R5_EXECUTION.md) | shipped on `main` ([#29](https://github.com/raimondskrauklis/revy/pull/29)) |
 | **R6** | [waves/R6](./waves/REVIEW_PIPELINE_R6_EXECUTION.md) | shipped on `main` ([#29](https://github.com/raimondskrauklis/revy/pull/29)) |
 | **R7** | [waves/R7](./waves/REVIEW_PIPELINE_R7_EXECUTION.md) | shipped on `main` ([#29](https://github.com/raimondskrauklis/revy/pull/29)) |
-| **R8** | [waves/R8](./waves/REVIEW_PIPELINE_R8_EXECUTION.md) | shipped (`review-r8-v1` after merge) |
+| **R8** | [waves/R8](./waves/REVIEW_PIPELINE_R8_EXECUTION.md) | in PR [#31](https://github.com/raimondskrauklis/revy/pull/31) — tag `review-r8-v1` after merge |
 
 [waves/README.md](./waves/README.md) — full execution table.
 
@@ -108,6 +108,7 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 
 ## Next (strict order)
 
-1. **Ops** — Track F in [recovery checklist](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md): migrations `0014`–`0016`, env keys, worker `-Q` list, staging e2e.
-2. **Tags (optional)** — `review-r4-v1` … `review-r7-v1` on `main`.
-3. **R9** — incremental index general plan when scoped.
+1. **Ops** — Track F in [recovery checklist](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md): migrations `0014`–`0018`, env keys, worker `-Q` list, staging e2e (R8 autostart + `@revy review`).
+2. **Merge R8** — [#31](https://github.com/raimondskrauklis/revy/pull/31); tag `review-r8-v1`; GitHub App **Issue comments** subscribed.
+3. **Tags (optional)** — `review-r4-v1` … `review-r7-v1` on `main` if not already tagged.
+4. **R9** — incremental index general plan when scoped.

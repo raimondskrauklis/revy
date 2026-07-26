@@ -3,7 +3,7 @@
 **Purpose:** Single handoff for agents when context is limited. Work **top to bottom** on active tracks; mark `[x]` as done.  
 **Rules:** No direct pushes to `main`. One concern per PR. **Peer review = separate agent session** (human-invoked); never self-certified by the implementing agent.
 
-**Last updated:** 2026-07-26 — R4–R7 on `main` via [#24](https://github.com/raimondskrauklis/revy/pull/24) + [#29](https://github.com/raimondskrauklis/revy/pull/29); **active: Track F (ops) → Track G (R8)**
+**Last updated:** 2026-07-26 — R8 code on [#31](https://github.com/raimondskrauklis/revy/pull/31); **active: Track F (ops) → merge R8**
 
 ---
 
@@ -11,11 +11,12 @@
 
 | Item | Value |
 |------|--------|
-| `main` | R0–R7 shipped; `c8bf883` ([#29](https://github.com/raimondskrauklis/revy/pull/29) R5–R7 stack + docs); R4 earlier via [#24](https://github.com/raimondskrauklis/revy/pull/24) |
-| Tags | `review-r0-v1` … `review-r3-v1` on `main`; **`review-r4-v1` … `review-r7-v1` pending** (optional git tags on `main`) |
-| Migrations on `main` | `0001`–`0016` (`0014` review, `0015` reconcile, `0016` publish) |
+| `main` | R0–R7 shipped; `e413487` (docs #30 on top of #29 `c8bf883`) |
+| `feat/review-r8-automation` | R8.1–R8.6 + migration `0018` (`is_draft` guard) — PR [#31](https://github.com/raimondskrauklis/revy/pull/31) |
+| Tags | `review-r0-v1` … `review-r3-v1` on `main`; **`review-r4-v1` … `review-r8-v1` pending** after merges |
+| Migrations on branch | `0001`–`0018` (`0017` autostart, `0018` `is_draft`) |
 | Worker deploy | `deploy.yml` worker `-Q` includes `reconciliation`, `judge`, `github_publish` |
-| Next program slice | **R8** — [general plan](./REVIEW_PIPELINE_R8_AUTOMATION_GENERAL_PLAN.md) · [execution](./waves/REVIEW_PIPELINE_R8_EXECUTION.md) |
+| Next program slice | **Merge R8** → staging e2e → **R9** incremental index (when scoped) |
 
 ---
 
@@ -35,20 +36,20 @@
 
 ### Track F — Post-merge ops (before R8 dogfood)
 
-- [ ] `alembic upgrade head` on staging/prod (`0014`–`0017` if not already applied)
+- [ ] `alembic upgrade head` on staging/prod (`0014`–`0018` after R8 merge)
 - [ ] Env: `MOONSHOT_API_KEY`, `VOYAGE_API_KEY`, `REVY_BOT_LOGIN`; optional `ANTHROPIC_API_KEY`
 - [ ] Redeploy or restart worker so droplet runs latest `deploy.yml` `-Q` list:
   `github_events,repo_sync,indexing,review,reconciliation,judge,github_publish,maintenance,default,notifications,heavy`
 - [ ] Staging e2e: autostart + `@revy review` + toggle off ([GITHUB_WEBHOOK_DEV.md](./GITHUB_WEBHOOK_DEV.md) § R8)
-- [ ] Optional: `git tag review-r4-v1` … `review-r7-v1` on `main` at `c8bf883` (or per-commit if you prefer granular tags)
+- [ ] Optional: `git tag review-r4-v1` … `review-r7-v1` on `main` (and `review-r8-v1` after #31 merge)
 
 ### Track G — R8 automation — [x] code on `feat/review-r8-automation`
 
 - [x] Lock R8 findings: Q11 + R8-Q1–R8-Q7 in [findings](./REVIEW_PIPELINE_FINDINGS.md)
 - [x] `create-general-plan` + execution for automation phase
 - [x] `execution-peer-review` on R8 execution (2026-07-26)
-- [x] `phase-execution` R8.1–R8.6 (migration `0017`, orchestrator, webhooks, UI, docs)
-- [ ] Merge PR → `main`; tag `review-r8-v1`; GitHub App subscribe **Issue comments**
+- [x] `phase-execution` R8.1–R8.6 (migrations `0017`–`0018`, orchestrator, webhooks, UI, docs)
+- [ ] Merge PR [#31](https://github.com/raimondskrauklis/revy/pull/31) → `main`; tag `review-r8-v1`; GitHub App subscribe **Issue comments**
 
 ---
 
@@ -166,6 +167,6 @@ Historical babysit detail: [REVIEW_PIPELINE_MERGE_CHECKLIST.md](./REVIEW_PIPELIN
 ```text
 Read docs/review-pipeline/REVIEW_PIPELINE_RECOVERY_CHECKLIST.md (tracks F–G).
 Read docs/review-pipeline/REVIEW_PIPELINE_FINDINGS.md for locked Q# + domain states.
-Read docs/review-pipeline/waves/REVIEW_PIPELINE_R8_EXECUTION.md for active work.
-Do not push to main directly. Branch feat/review-r8-automation from main; phase-execution R8.1→R8.6.
+Merge or babysit PR #31 (R8); after merge: alembic 0017–0018, staging e2e § R8, tag review-r8-v1.
+Do not push to main directly.
 ```
