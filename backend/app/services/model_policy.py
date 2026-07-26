@@ -62,7 +62,7 @@ def _resolve_reviewer_model_id(provider: str, role: ModelRole) -> str:
     return PLATFORM_MODEL_DEFAULTS[role].model_id
 
 
-def _assert_provider_credentials(provider: str, *, role: ModelRole) -> None:
+def _assert_provider_credentials(*, role: ModelRole) -> None:
     if role in _REVIEWER_ROLES:
         if not settings.reviewer_llm_enabled():
             raise ServiceUnavailableError(
@@ -77,29 +77,20 @@ def _assert_provider_credentials(provider: str, *, role: ModelRole) -> None:
                 error_code="llm_disabled",
             )
         return
-    if provider == "moonshot" and not settings.moonshot_api_key:
-        raise ServiceUnavailableError(
-            message="Moonshot API is not configured",
-            error_code="llm_disabled",
-        )
-    if provider == "anthropic" and not settings.anthropic_api_key:
-        raise ServiceUnavailableError(
-            message="Anthropic API is not configured",
-            error_code="llm_disabled",
-        )
+    raise ValueError(f"Unsupported model role: {role}")
 
 
 def _resolve_platform_model(role: ModelRole) -> ModelRef:
     if role in _REVIEWER_ROLES:
         provider = settings.effective_reviewer_provider
-        _assert_provider_credentials(provider, role=role)
+        _assert_provider_credentials(role=role)
         model_id = _resolve_reviewer_model_id(provider, role)
         region = settings.aws_region if provider == "bedrock" else None
         return ModelRef(provider=provider, model_id=model_id, region=region)
 
     if role == ModelRole.judge:
         provider = settings.effective_judge_provider
-        _assert_provider_credentials(provider, role=role)
+        _assert_provider_credentials(role=role)
         if provider == "anthropic":
             model_id = settings.revy_anthropic_model
             region = None
@@ -142,7 +133,7 @@ async def _resolve_workspace_override(
     region = row.region
     if provider == "bedrock" and not region:
         region = settings.aws_region
-    _assert_provider_credentials(provider, role=role)
+    _assert_provider_credentials(role=role)
     return ModelRef(provider=provider, model_id=model_id, region=region)
 
 

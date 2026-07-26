@@ -91,20 +91,19 @@ async def complete_review(
     timeout_seconds: float | None = None,
 ) -> str:
     _require_bedrock_configured(model_id=model_id, region=region)
-    resolved_region = region or settings.aws_region or ""
     try:
         response = await asyncio.wait_for(
             asyncio.to_thread(
                 _converse_sync,
                 model_id=model_id,
-                region=resolved_region,
+                region=region,
                 system_prompt=REVIEW_SYSTEM_PROMPT,
                 user_prompt=user_prompt,
                 max_tokens=4096,
             ),
             timeout=timeout_seconds or settings.revy_revision_timeout_standard_seconds,
         )
-    except (ClientError, BotoCoreError, TimeoutError) as exc:
+    except (TimeoutError, ClientError, BotoCoreError) as exc:
         raise ServiceUnavailableError(
             message="Bedrock review request failed",
             error_code="llm_error",
@@ -120,20 +119,19 @@ async def judge_finding(
     timeout_seconds: float | None = None,
 ) -> dict:
     _require_bedrock_configured(model_id=model_id, region=region)
-    resolved_region = region or settings.aws_region or ""
     try:
         response = await asyncio.wait_for(
             asyncio.to_thread(
                 _converse_sync,
                 model_id=model_id,
-                region=resolved_region,
+                region=region,
                 system_prompt=JUDGE_SYSTEM_PROMPT,
                 user_prompt=user_prompt,
                 max_tokens=1024,
             ),
             timeout=timeout_seconds or settings.revy_revision_timeout_standard_seconds,
         )
-    except (ClientError, BotoCoreError, TimeoutError) as exc:
+    except (TimeoutError, ClientError, BotoCoreError) as exc:
         raise ServiceUnavailableError(
             message="Bedrock judge request failed",
             error_code="llm_error",

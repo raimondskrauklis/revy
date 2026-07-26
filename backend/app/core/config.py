@@ -9,6 +9,12 @@ logger = logging.getLogger(__name__)
 _revy_llm_provider_alias_logged = False
 
 
+def reset_revy_llm_provider_alias_logged() -> None:
+    """Test helper — avoid module-level deprecation flag bleed across tests."""
+    global _revy_llm_provider_alias_logged
+    _revy_llm_provider_alias_logged = False
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
