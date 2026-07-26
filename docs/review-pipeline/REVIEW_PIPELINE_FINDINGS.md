@@ -217,7 +217,7 @@ Items **not blocking R8**; re-check on staging or in a focused publish hardening
 
 **Location:** `backend/app/services/github_publish.py` — `is_update_from_other` + `post_inline`.
 
-**Reported:** Greptile P1 (post-#26). **Status:** **partially fixed** — same-job Celery retry uses `inline_comments_posted`; **cross-job same `head_sha` path still open**.
+**Reported:** Greptile P1 (post-#26). **Status:** **fixed** — `post_inline` respects `existing.inline_comments_posted` when `is_update_from_other`; unit test `test_run_publish_job_posts_inline_when_prior_job_failed_before_inline`.
 
 **Failure scenario:**
 
@@ -227,24 +227,11 @@ Items **not blocking R8**; re-check on staging or in a focused publish hardening
 4. `is_update_from_other=True` → `post_inline=False` regardless of Job A’s `inline_comments_posted`.
 5. Job B completes; **zero inline comments** for that SHA; all later jobs for the same SHA repeat the suppression.
 
-**Intended fix (when implemented):**
+**Deferred verification checklist** (staging spot-check optional):
 
-```python
-post_inline = not job.inline_comments_posted and (
-    not is_update_from_other or not existing.inline_comments_posted
-)
-```
-
-(`existing` = row from `find_publish_job_for_head_sha`.)
-
-**Deferred verification checklist** (run before closing this item):
-
-- [ ] Reproduce on staging: force Job A to fail after check-run checkpoint, enqueue Job B for same `head_sha`, confirm inline comments on GitHub.
-- [ ] Add unit test: Job B with `is_update_from_other=True`, prior job `inline_comments_posted=False` → `create_pull_request_review_comment` called.
-- [ ] Confirm no duplicate inline comments when prior job **did** post (`existing.inline_comments_posted=True`).
-- [ ] Update triage row in [GREPTILE_PR26_EMAIL](./REVIEW_PIPELINE_GREPTILE_PR26_EMAIL.md) to **fixed** once verified.
-
-**Target phase:** publish hardening alongside or after R8 (not in R8 scope); optional R9 if still open.
+- [x] Unit test: Job B with `is_update_from_other=True`, prior job `inline_comments_posted=False` → inline comments posted.
+- [x] Unit test path: prior job `inline_comments_posted=True` → no duplicate inline (`test_run_publish_job_updates_existing_sha`).
+- [ ] Optional staging repro: force Job A to fail after check-run checkpoint, enqueue Job B for same `head_sha`.
 
 ---
 

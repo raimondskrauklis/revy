@@ -253,6 +253,7 @@ async def test_run_publish_job_updates_existing_sha():
         status=GitHubPublishJobStatus.completed,
         github_check_run_id=50,
         github_comment_id=60,
+        inline_comments_posted=True,
     )
     existing.id = uuid.uuid4()
 
@@ -326,6 +327,122 @@ async def test_run_publish_job_updates_existing_sha():
     assert result.github_check_run_id == 50
     update_mock.assert_awaited_once()
     create_check_mock.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_run_publish_job_posts_inline_when_prior_job_failed_before_inline():
+    """R6-DEFER-01: Job B reuses Job A check run but posts inline when A never did."""
+    publish_job_id = uuid.uuid4()
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    repository_id = uuid.uuid4()
+    installation_id = uuid.uuid4()
+    head_sha = "abc123"
+
+    job = GitHubPublishJobORM(
+        review_run_id=review_run_id,
+        revision_id=revision_id,
+        workspace_id=workspace_id,
+        head_sha=head_sha,
+        status=GitHubPublishJobStatus.pending,
+    )
+    job.id = publish_job_id
+
+    existing = GitHubPublishJobORM(
+        review_run_id=uuid.uuid4(),
+        revision_id=uuid.uuid4(),
+        workspace_id=workspace_id,
+        head_sha=head_sha,
+        status=GitHubPublishJobStatus.failed,
+        github_check_run_id=50,
+        github_comment_id=60,
+        inline_comments_posted=False,
+    )
+    existing.id = uuid.uuid4()
+
+    run = GitHubReviewRunORM(
+        revision_id=revision_id,
+        workspace_id=workspace_id,
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+
+    revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha=head_sha,
+    )
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=repository_id,
+        workspace_id=workspace_id,
+        installation_id=installation_id,
+        github_pull_request_id=1,
+        number=7,
+        title="PR",
+        state=GitHubPullRequestState.open,
+        head_sha=head_sha,
+        head_ref="feature",
+        base_ref="main",
+        revision_count=1,
+    )
+
+    repository = GitHubRepositoryORM(
+        installation_id=installation_id,
+        workspace_id=workspace_id,
+        github_repository_id=10,
+        name="demo",
+        full_name="acme/demo",
+        private=False,
+        status=GitHubRepositoryStatus.active,
+    )
+
+    installation = GitHubInstallationORM(
+        workspace_id=workspace_id,
+        github_installation_id=12345,
+        account_login="acme",
+        account_type=GitHubAccountType.organization,
+        account_id=1,
+    )
+
+    finding = AsyncMock()
+    finding.file_path = "app/main.py"
+    finding.start_line = 10
+    finding.title = "Bug"
+    finding.message = "Fix me"
+    finding.severity = FindingSeverity.error
+
+    session = AsyncMock()
+    session.get = AsyncMock(
+        side_effect=[job, run, revision, pull_request, repository, installation]
+    )
+    session.scalars = AsyncMock(side_effect=[[], [revision_id], [finding]])
+    session.scalar = AsyncMock(return_value=existing)
+    session.flush = AsyncMock()
+
+    inline_mock = AsyncMock()
+    with patch(
+        "app.services.github_publish.github_api.installation_auth_headers",
+        AsyncMock(return_value={"Authorization": "Bearer t"}),
+    ):
+        with patch("app.services.github_publish.github_api.update_check_run", AsyncMock()):
+            with patch("app.services.github_publish.github_api.update_issue_comment", AsyncMock()):
+                with patch(
+                    "app.services.github_publish.github_api.create_pull_request_review_comment",
+                    inline_mock,
+                ):
+                    result = await github_publish.run_publish_job(
+                        session,
+                        publish_job_id=publish_job_id,
+                    )
+
+    assert result.status == GitHubPublishJobStatus.completed
+    assert result.github_check_run_id == 50
+    assert result.inline_comments_posted is True
+    inline_mock.assert_awaited_once()
 
 
 @pytest.mark.asyncio

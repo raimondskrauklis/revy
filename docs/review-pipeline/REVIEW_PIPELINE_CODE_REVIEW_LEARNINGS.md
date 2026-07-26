@@ -81,6 +81,7 @@ Greptile was **most valuable** on cross-step consistency and async/DB edge cases
 | #26 | P2 | Inline 422 fails whole publish | Per-comment try/except |
 | #26 | P2 | Markdown pipe in cells | `_escape_markdown_table_cell` |
 | #26 | P2 | Orphan pending job if broker fails | Inline `publish_review_run.run` fallback |
+| #26 | P1 | Cross-job inline skip when reusing prior check run | `existing.inline_comments_posted` gates `post_inline` (R6-DEFER-01) |
 | #26 | P1 | Inline comments for dismissed groups | Join `github_finding_groups` `state=active` |
 | #27 | P1 | Nav probe bypass | `false` when no PRs to probe |
 | #27 | P1 | Wrong revision from list order | `pickLatestRevisionId` by `updated_at` |
@@ -91,7 +92,7 @@ Greptile was **most valuable** on cross-step consistency and async/DB edge cases
 
 | ID | Severity | Issue | Status | Where to verify |
 |----|----------|-------|--------|----------------|
-| R6-DEFER-01 | P1 | Inline permanently skipped when Job B reuses Job A’s check run but Job A never posted inline (`is_update_from_other` ignores `existing.inline_comments_posted`) | **open** | [FINDINGS § R6-DEFER-01](./REVIEW_PIPELINE_FINDINGS.md#r6-defer-01--inline-comments-skipped-when-reusing-another-jobs-check-run-p1) |
+| R6-DEFER-01 | P1 | Inline permanently skipped when Job B reuses Job A’s check run but Job A never posted inline | **fixed** | `test_run_publish_job_posts_inline_when_prior_job_failed_before_inline` |
 
 ---
 

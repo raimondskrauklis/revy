@@ -30,7 +30,7 @@
 | Edge case | Impact | Status | R8+ option |
 |-----------|--------|--------|------------|
 | **Inline comment drop on same-job retry** | Mid-inline failure after checkpoint | **fixed** | `inline_comments_posted` on `github_publish_jobs` + retry posts when flag false |
-| **Inline skipped when reusing prior job’s check run** | Job A checkpoints check run but never posts inline; Job B same `head_sha` sets `is_update_from_other` → `post_inline=False` permanently | **open — deferred** | See [FINDINGS § R6-DEFER-01](./REVIEW_PIPELINE_FINDINGS.md#r6-defer-01--inline-comments-skipped-when-reusing-another-jobs-check-run-p1) |
+| **Inline skipped when reusing prior job’s check run** | Job A checkpoints check run but never posts inline; Job B same `head_sha` | **fixed** | `existing.inline_comments_posted` gates `post_inline` — [R6-DEFER-01](./REVIEW_PIPELINE_FINDINGS.md#r6-defer-01--inline-comments-skipped-when-reusing-another-jobs-check-run-p1) |
 | **Stranded `processing` job** | Worker killed after `status=processing`, before complete/fail | **open** | Stale-job sweep / admin reset |
 
 Greptile: these are **intrinsic to checkpoint-before-inline** — merge OK with awareness; not blockers for R6 v1.

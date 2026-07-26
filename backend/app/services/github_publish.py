@@ -421,7 +421,11 @@ async def run_publish_job(
         and existing.id != job.id
         and existing.github_check_run_id is not None
     )
-    post_inline = not job.inline_comments_posted and not is_update_from_other
+    post_inline = not job.inline_comments_posted and (
+        not is_update_from_other
+        or existing is None
+        or not existing.inline_comments_posted
+    )
 
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:

@@ -27,7 +27,6 @@ Phase **R8** of [REVIEW_PIPELINE_R8_AUTOMATION_GENERAL_PLAN.md](../REVIEW_PIPELI
 - Evidence snippet on findings → **R9**
 - Email on review complete → **R9**
 - `push` event autostart → parking lot
-- **R6-DEFER-01** — cross-job inline skip when reusing prior check run ([FINDINGS § R6-DEFER-01](../REVIEW_PIPELINE_FINDINGS.md#r6-defer-01--inline-comments-skipped-when-reusing-another-jobs-check-run-p1)); verify in deferred publish-hardening pass (not R8.1–R8.6)
 
 ---
 
