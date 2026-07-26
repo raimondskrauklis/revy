@@ -2,8 +2,8 @@
 """GitHub App API client — R1 repository list."""
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 import httpx
+import pytest
 
 from app.core.exceptions import ServiceUnavailableError
 from app.integrations import github_api
@@ -69,6 +69,33 @@ async def test_list_installation_repositories_raises_on_http_error():
         response=MagicMock(status_code=503),
     )
     client.request = AsyncMock(return_value=error_response)
+
+    with patch(
+        "app.integrations.github_api.create_installation_access_token",
+        AsyncMock(return_value="install-token"),
+    ):
+        with pytest.raises(httpx.HTTPStatusError):
+            await github_api.list_installation_repositories(
+                client,
+                github_installation_id=99,
+            )
+
+
+@pytest.mark.asyncio
+async def test_list_installation_repositories_raises_on_mid_pagination_error():
+    client = AsyncMock()
+    first = MagicMock()
+    first.json.return_value = {
+        "repositories": [{"id": i, "name": f"r{i}", "full_name": f"org/r{i}"} for i in range(100)],
+    }
+    first.raise_for_status = MagicMock()
+    error_response = MagicMock()
+    error_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+        "error",
+        request=MagicMock(),
+        response=MagicMock(status_code=503),
+    )
+    client.request = AsyncMock(side_effect=[first, error_response])
 
     with patch(
         "app.integrations.github_api.create_installation_access_token",
