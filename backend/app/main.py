@@ -10,8 +10,9 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.api.v1 import api_v1_router
 from app.api.v1.health import router as health_router
+from app.core.bootstrap import validate_bootstrap_super_admin_config
 from app.core.config import settings
-from app.core.database import close_db, init_db
+from app.core.database import AsyncSessionLocal, close_db, init_db
 from app.core.exception_handlers import register_exception_handlers
 from app.core.idempotency import IdempotencyStoreMiddleware
 from app.core.jwks import jwks_client
@@ -28,6 +29,8 @@ init_sentry()
 async def lifespan(app: FastAPI):
     configure_logging()
     await init_db()
+    async with AsyncSessionLocal() as session:
+        await validate_bootstrap_super_admin_config(session)
     logger.info("application_started", extra={"environment": settings.environment})
     yield
     await close_db()

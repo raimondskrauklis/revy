@@ -17,9 +17,9 @@ No admin approval, no profile form. User reaches dashboard after Keycloak login 
 | `REGISTRATION_REQUIRE_ADMIN_APPROVAL` | `VITE_REGISTRATION_REQUIRE_ADMIN_APPROVAL` | `false` |
 | `REGISTRATION_REQUIRE_PROFILE_FORM` | `VITE_REGISTRATION_REQUIRE_PROFILE_FORM` | `false` |
 
-**Backend behaviour:** auto-provision on first JWT; `maybe_auto_provision_user` may activate `pending_profile` users when both flags are false.
+**Backend behaviour:** `provision_user_from_keycloak` on first JWT (JIT fallback); KC identity webhook creates/updates the PG row before first SPA `/me` when P2 listener is deployed. Mode A verified email → `active` + personal workspace in one transaction.
 
-**Frontend behaviour:** `ProtectedRoute` does not block on profile/admin gates when both `VITE_*` are `false`.
+**Frontend behaviour:** `ProtectedRoute` does not block on profile/admin gates when both `VITE_*` are `false`. `/me` provision errors (`provision_email_required`, `identity_email_conflict`) show domain toasts via `AuthContext`.
 
 ---
 

@@ -102,7 +102,7 @@ Revy changes flowed back to `internal-docs/starter-pack/templates/backend/` for:
 |----------|-------------------|-----------------|
 | Keycloak JWT auth | `AUTH.md` | **Verified** — decode + allowlist |
 | User bootstrap / super_admin | `BOOTSTRAP_SUPER_ADMIN.md` | **Verified** — seed script + activation |
-| Open registration (Mode A) | `USER_REGISTRATION.md` | **Partial** — auto-provision in `get_current_user`; no `complete-profile` API; FE gates are `StatusGatePage` placeholders only |
+| Open registration (Mode A) | `USER_REGISTRATION.md` | **Verified** — `provision_user_from_keycloak` on JWT + optional KC webhook pre-provision |
 | Admin approval (Mode B) | `USER_REGISTRATION.md` | **Missing** — `/admin/users` placeholder (`admin.users.placeholder`); no admin APIs |
 | Invitations | `INVITATIONS.md` | **Stub** — no `workspace_invitations` migration |
 | Idempotency | `IDEMPOTENCY.md` | **Module only** — not wired to routers |

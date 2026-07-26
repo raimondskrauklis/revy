@@ -10,14 +10,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import AppRole, PlatformRole, UserStatus, WorkspaceStatus
 from app.core.config import settings
-from app.core.exceptions import ForbiddenError, NotFoundError, ValidationError
+from app.core.exceptions import ForbiddenError, NotFoundError, UnauthorizedError, ValidationError
 from app.core.logging import get_logger
 from app.models.users import UserORM
 from app.models.workspace_memberships import WorkspaceMembershipORM
 from app.models.workspaces import WorkspaceORM
 from app.schemas.me import MeImpersonationInfo, MeMembership, MeResponse, MeUpdate
 from app.services.billing import effective_plan
-from app.services.onboarding import activate_user_with_workspace, resolve_initial_user_status
+from app.services.onboarding import activate_user_with_workspace
 
 logger = get_logger(__name__)
 
@@ -51,35 +51,20 @@ async def ensure_user_from_token(
     email: str | None,
     email_verified: bool,
 ) -> UserORM | None:
-    user = await get_user_by_keycloak_id(session, sub)
-    if user is not None:
-        if email and user.email.lower() != email.lower():
-            user.email = email
-        if email_verified and user.status == UserStatus.pending_email_verification:
-            user.status = resolve_initial_user_status(email_verified=True)
-        return user
+    """Deprecated — use ``provision_user_from_keycloak``."""
+    from app.services.keycloak_provisioning import provision_user_from_keycloak
 
-    bootstrap_email = (settings.bootstrap_super_admin_email or "").strip().lower()
-    if email and bootstrap_email and email.lower() == bootstrap_email:
-        seeded = await get_user_by_email(session, bootstrap_email)
-        if seeded is not None:
-            return seeded
-
-    if not email:
-        return None
-
-    user = UserORM(
-        keycloak_user_id=sub,
-        email=email,
-        status=resolve_initial_user_status(email_verified=email_verified),
-    )
-    session.add(user)
-    await session.flush()
-    logger.info(
-        "user_created_from_token",
-        extra={"user_id": str(user.id), "operation": "ensure_user_from_token"},
-    )
-    return user
+    try:
+        return await provision_user_from_keycloak(
+            session,
+            sub=sub,
+            email=email,
+            email_verified=email_verified,
+        )
+    except UnauthorizedError as exc:
+        if exc.error_code == "provision_email_required":
+            return None
+        raise
 
 
 async def activate_bootstrap_super_admin(

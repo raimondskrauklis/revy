@@ -111,16 +111,12 @@ async def test_get_current_user_loads_impersonation_session():
 
     with (
         patch("app.core.auth.decode_access_token", new_callable=AsyncMock) as decode,
-        patch("app.core.auth.ensure_user_from_token", new_callable=AsyncMock) as ensure,
-        patch("app.core.auth.maybe_auto_provision_user", new_callable=AsyncMock) as provision,
-        patch("app.core.auth.activate_bootstrap_super_admin", new_callable=AsyncMock) as activate,
+        patch("app.core.auth.provision_user_from_keycloak", new_callable=AsyncMock) as provision,
         patch("app.core.auth.get_active_session", new_callable=AsyncMock) as get_session,
         patch("app.core.auth._resolve_active_workspace", new_callable=AsyncMock) as resolve_ws,
     ):
         decode.return_value = {"sub": "kc-actor", "email": actor.email}
-        ensure.return_value = actor
         provision.return_value = actor
-        activate.return_value = actor
         get_session.return_value = active_session
         resolve_ws.return_value = (workspace_id, AppRole.viewer)
 

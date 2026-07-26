@@ -1,5 +1,9 @@
 # backend/app/services/invitations.py
-"""Workspace member invitations — INVITATIONS.md."""
+"""Workspace member invitations — INVITATIONS.md.
+
+Invitees must be provisioned in PostgreSQL (JIT login or KC webhook) before
+``accept_invitation`` — the invite only reserves email + workspace role.
+"""
 from __future__ import annotations
 
 import secrets

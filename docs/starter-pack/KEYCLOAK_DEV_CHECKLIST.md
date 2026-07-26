@@ -105,8 +105,29 @@ If using `BOOTSTRAP_SUPER_ADMIN_EMAIL`, register that exact email in Keycloak be
 
 ---
 
-## Smoke (ties to DEV_BOOTSTRAP)
+## Google IdP (optional)
 
-1. Login at `http://localhost:5173`
-2. Authenticated `GET /api/v1/me` → `status: active` (Mode A)
-3. No repeated 401 on API calls
+| Setting | Value |
+|---------|--------|
+| Trust email | On |
+| Case-sensitive username | Off |
+| Default scopes | `openid email profile` |
+| Realm: Login with email | On |
+| Realm: Email as username | On (recommended) |
+
+Backend webhook + JIT require `email` on the KC user. Federated first-login events provision with `email_verified=true` when Trust email is on.
+
+Set `KEYCLOAK_WEBHOOK_SECRET` in backend `.env` and match `WEBHOOK_HTTP_AUTH_PASSWORD` in KC `.env` (see `deploy/keycloak/config/.env.example`).
+
+---
+
+## Smoke (tiered)
+
+| Tier | Steps | Pass criteria |
+|------|-------|---------------|
+| **A — webhook only** | `curl -X POST http://localhost:8000/api/v1/webhooks/keycloak -H 'X-Webhook-Secret: $SECRET' -H 'Content-Type: application/json' -d '{"id":"smoke-1","type":"REGISTER","userId":"kc-smoke","details":{"email":"smoke@example.com","email_verified":"true"}}'` | `200`; row in `keycloak_webhook_deliveries`; row in `users` |
+| **B — Google + KC listener** | P2 KC rebuild → Google signup → SPA login | Tier A rows **before** SPA `/me`; `GET /api/v1/me` → `status: active` (Mode A) |
+
+**Baseline (no webhook):** Login at `http://localhost:5173` → JIT `/me` still provisions (fallback). No repeated 401 on API calls.
+
+See also [DEV_BOOTSTRAP.md](./DEV_BOOTSTRAP.md) and [docs/authorization/README.md](../authorization/README.md).

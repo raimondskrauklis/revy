@@ -632,6 +632,8 @@
     "impersonation_restricted": "Šī darbība nav atļauta uzņemšanās laikā",
     "impersonation_invalid": "Uzņemšanās sesija nav derīga",
     "impersonation_not_active": "Nav aktīvas uzņemšanās sesijas",
+    "provision_email_required": "Pievienojiet e-pastu savam kontam, lai turpinātu",
+    "identity_email_conflict": "Šis e-pasts jau ir saistīts ar citu kontu",
     "not_found_page": {
       "title": "Lapa nav atrasta",
       "body": "Pieprasītā lapa neeksistē."

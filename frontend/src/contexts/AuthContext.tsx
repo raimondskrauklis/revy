@@ -15,6 +15,9 @@ import i18n from '@/i18n/config';
 import { initKeycloak, resetKeycloak, setKeycloakInitialized } from '@/lib/keycloak';
 import { log } from '@/lib/log';
 import { Sentry } from '@/lib/sentry';
+import { mapApiError, showDomainErrorToast } from '@/shared/errors';
+
+const PROVISION_ERROR_CODES = new Set(['provision_email_required', 'identity_email_conflict']);
 
 interface AuthContextValue {
   keycloak: Keycloak | null;
@@ -51,6 +54,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return me;
     } catch (error) {
       log.warn('me_fetch_failed', { reason: String(error) });
+      const domainError = mapApiError(error);
+      if (PROVISION_ERROR_CODES.has(domainError.code)) {
+        showDomainErrorToast(domainError);
+      }
       setUser(null);
       return null;
     } finally {
