@@ -7,6 +7,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from app.services.github_webhooks import (
+    SUPPORTED_EVENTS,
     accept_github_webhook,
     enqueue_github_event,
     try_record_delivery,
@@ -145,3 +146,7 @@ def test_enqueue_github_event_dispatches_celery_task():
         enqueue_github_event("delivery-1")
 
     task_mock.delay.assert_called_once_with("delivery-1")
+
+
+def test_supported_events_includes_issue_comment():
+    assert "issue_comment" in SUPPORTED_EVENTS

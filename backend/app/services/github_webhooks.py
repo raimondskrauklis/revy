@@ -20,6 +20,7 @@ SUPPORTED_EVENTS = frozenset({
     "push",
     "pull_request",
     "pull_request_review",
+    "issue_comment",
 })
 
 

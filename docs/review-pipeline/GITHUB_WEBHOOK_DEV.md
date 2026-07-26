@@ -217,3 +217,34 @@ Requires R4+ API reachable from frontend; merge badge uses latest publish job + 
 3. Confirm merge readiness badge matches check conclusion
 
 Verify: browser EN+LV strings; `npm run build` passes with `features/reviewer/` routes registered.
+
+---
+
+## Automation (R8)
+
+Requires migration `0017`, worker queues unchanged from R4–R6, GitHub App **Issue comments** subscribed.
+
+### Autostart
+
+On `pull_request` `opened` or `synchronize` (only when a **new revision** row is created), Revy enqueues index → review → reconcile → publish when `workspaces.review_autostart_enabled` is `true` (default).
+
+Toggle: workspace admin PATCH `/api/v1/workspaces/{workspace_id}` with `review_autostart_enabled`, or Settings → Workspace in the app.
+
+### `@revy review`
+
+On `issue_comment` `created` with body matching `@revy review` on an **open** PR (not draft), Revy runs the full pipeline for the PR `head_sha` revision regardless of autostart toggle.
+
+- Ignores comments from `REVY_BOT_LOGIN`
+- Admin `POST …/index` sets `trigger_source=manual` and does **not** chain to review
+
+Verify:
+
+1. Open PR → autostart chain (check index/review/publish jobs + GitHub check)
+2. Comment `@revy review` on same PR → pipeline re-runs
+3. Disable autostart → new push does not autostart; `@revy review` still works
+4. Manual index API does not auto-review
+
+```sql
+SELECT trigger_source, status FROM github_index_jobs ORDER BY created_at DESC LIMIT 5;
+SELECT review_autostart_enabled FROM workspaces LIMIT 5;
+```

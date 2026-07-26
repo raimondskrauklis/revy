@@ -10,9 +10,9 @@ import httpx
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.constants.enums import GitHubIndexJobStatus
+from app.constants.enums import GitHubIndexJobStatus, GitHubIndexJobTriggerSource
 from app.core.config import settings
-from app.core.exceptions import NotFoundError, ServiceUnavailableError
+from app.core.exceptions import ConflictError, NotFoundError, ServiceUnavailableError
 from app.core.logging import get_logger
 from app.integrations.github_archive import (
     download_repository_tarball,
@@ -39,6 +39,26 @@ logger = get_logger(__name__)
 
 CHUNK_LIST_DEFAULT_LIMIT = 100
 CHUNK_LIST_MAX_LIMIT = 500
+
+
+async def index_job_in_progress(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    revision_id: UUID,
+) -> bool:
+    existing = await session.scalar(
+        select(GitHubIndexJobORM.id)
+        .where(
+            GitHubIndexJobORM.workspace_id == workspace_id,
+            GitHubIndexJobORM.revision_id == revision_id,
+            GitHubIndexJobORM.status.in_(
+                (GitHubIndexJobStatus.pending, GitHubIndexJobStatus.processing),
+            ),
+        )
+        .limit(1)
+    )
+    return existing is not None
 
 
 async def ensure_revision_access(
@@ -99,10 +119,21 @@ async def create_index_job(
         revision_id=revision_id,
     )
 
+    if await index_job_in_progress(
+        session,
+        workspace_id=workspace_id,
+        revision_id=revision_id,
+    ):
+        raise ConflictError(
+            message="An index job is already in progress for this revision",
+            error_code="index_in_progress",
+        )
+
     job = GitHubIndexJobORM(
         revision_id=revision_id,
         workspace_id=workspace_id,
         status=GitHubIndexJobStatus.pending,
+        trigger_source=GitHubIndexJobTriggerSource.manual,
     )
     session.add(job)
     await session.flush()

@@ -11,11 +11,12 @@ vi.mock('@/contexts/AuthContext', () => ({
 }));
 
 vi.mock('@/features/settings/api', () => ({
+  fetchWorkspace: vi.fn(),
   patchWorkspace: vi.fn(),
 }));
 
 import { useAuth } from '@/contexts/AuthContext';
-import { patchWorkspace } from '@/features/settings/api';
+import { fetchWorkspace, patchWorkspace } from '@/features/settings/api';
 
 function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -55,11 +56,19 @@ describe('WorkspaceSettingsPage', () => {
       },
       refetchUser,
     } as unknown as ReturnType<typeof useAuth>);
+    vi.mocked(fetchWorkspace).mockResolvedValue({
+      id: 'ws-1',
+      name: 'Acme',
+      slug: 'acme',
+      status: 'active',
+      review_autostart_enabled: true,
+    });
     vi.mocked(patchWorkspace).mockResolvedValue({
       id: 'ws-1',
       name: 'Acme Labs',
       slug: 'acme',
       status: 'active',
+      review_autostart_enabled: true,
     });
 
     const user = userEvent.setup();

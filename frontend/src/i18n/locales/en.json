@@ -190,7 +190,11 @@
       "nameLabel": "Workspace name",
       "slugLabel": "URL slug",
       "slugImmutable": "The slug is set when the workspace is created and cannot be changed.",
-      "saveSuccess": "Workspace saved"
+      "saveSuccess": "Workspace saved",
+      "reviewAutostartTitle": "Automated reviews",
+      "reviewAutostartBody": "When enabled, Revy indexes and reviews pull requests automatically when they are opened or updated. Disable to run reviews manually or via @revy review on GitHub.",
+      "reviewAutostartLabel": "Autostart review on pull request open and update",
+      "autostartSaveSuccess": "Review autostart setting saved"
     },
     "team": {
       "noWorkspace": "Select a workspace to manage team members.",

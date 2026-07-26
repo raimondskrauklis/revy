@@ -24,6 +24,6 @@ Linear **phase-execution** order.
 | R5 — Reconcile + judge | [R5](../REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R5_EXECUTION.md](./REVIEW_PIPELINE_R5_EXECUTION.md) | done — `main` ([#29](https://github.com/raimondskrauklis/revy/pull/29)) |
 | R6 — GitHub publish | [R6](../REVIEW_PIPELINE_R6_GITHUB_PUBLISH_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R6_EXECUTION.md](./REVIEW_PIPELINE_R6_EXECUTION.md) | done — `main` ([#29](https://github.com/raimondskrauklis/revy/pull/29)) |
 | R7 — Reviewer UI | [R7](../REVIEW_PIPELINE_R7_REVIEWER_UI_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R7_EXECUTION.md](./REVIEW_PIPELINE_R7_EXECUTION.md) | done — `main` ([#29](https://github.com/raimondskrauklis/revy/pull/29)) |
-| R8 — Automation | [R8](../REVIEW_PIPELINE_R8_AUTOMATION_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R8_EXECUTION.md](./REVIEW_PIPELINE_R8_EXECUTION.md) | **active** — `phase-execution` on `feat/review-r8-automation` |
+| R8 — Automation | [R8](../REVIEW_PIPELINE_R8_AUTOMATION_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R8_EXECUTION.md](./REVIEW_PIPELINE_R8_EXECUTION.md) | shipped — `feat/review-r8-automation` (tag `review-r8-v1` after merge) |
 
-**Program status:** R0–R7 on `main`; **R8** is the active implementation track.
+**Program status:** R0–R8 implemented; merge R8 PR → `main`; tag `review-r8-v1`.

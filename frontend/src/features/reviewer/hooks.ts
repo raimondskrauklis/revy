@@ -5,6 +5,7 @@ import { fetchInstallations } from '@/features/installations/api';
 import {
   fetchInstallationRepositories,
   fetchPublishJob,
+  fetchPullRequest,
   fetchPullRequests,
   fetchReconciledFindings,
   fetchReviewRun,
@@ -99,7 +100,7 @@ export function usePullRequest(
       repositoryId ?? '',
       pullRequestId ?? '',
     ),
-    queryFn: () => findPullRequestInList(workspaceId!, repositoryId!, pullRequestId!),
+    queryFn: () => fetchPullRequest(workspaceId!, repositoryId!, pullRequestId!),
     enabled: Boolean(workspaceId && repositoryId && pullRequestId),
   });
 }

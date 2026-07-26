@@ -13,9 +13,32 @@ from app.core.permissions import Permission, require_permission
 from app.core.tenancy import require_same_workspace
 from app.schemas.common import SuccessResponse
 from app.schemas.github_pull_request import GitHubPullRequestResponse
-from app.services.github_pull_requests import list_github_pull_requests
+from app.services.github_pull_requests import get_github_pull_request, list_github_pull_requests
 
 router = APIRouter(tags=["github-pull-requests"])
+
+
+@router.get(
+    "/{workspace_id}/repositories/{repository_id}/pull-requests/{pull_request_id}",
+    response_model=SuccessResponse[GitHubPullRequestResponse],
+)
+async def get_repository_pull_request(
+    workspace_id: UUID,
+    repository_id: UUID,
+    pull_request_id: UUID,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> SuccessResponse[GitHubPullRequestResponse]:
+    require_permission(current_user, Permission.items_view)
+    require_same_workspace(current_user, workspace_id)
+
+    pull_request = await get_github_pull_request(
+        session,
+        workspace_id=workspace_id,
+        repository_id=repository_id,
+        pull_request_id=pull_request_id,
+    )
+    return SuccessResponse(data=GitHubPullRequestResponse.model_validate(pull_request))
 
 
 @router.get(

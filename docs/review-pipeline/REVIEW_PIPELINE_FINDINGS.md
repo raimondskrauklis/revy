@@ -161,7 +161,7 @@ Source of truth: `backend/app/constants/enums.py`. String values are stored in P
 | R4-Q4 | Primary LLM / model tiers | **locked** | Moonshot Kimi — `kimi-k2.7-code` (Standard), `kimi-k3` (Deep/Critical). Anthropic Claude = judge / cross-check in **R5** only (`architecture.md` §13–14) |
 | R4-Q5 | Finding scope (R4 v1) | **locked** | Actionable logic/security/behavior only — not style/lint (CI owns style) |
 | R4-Q6 | Token / cost ceiling | **defer** | Max chunks × max tokens in R4.3 — lock after first staging runs |
-| Q11 | Auto index/review on webhook | **locked** | **Manual admin trigger** through R7; **R8** ships autostart + `@revy review` — [R8 plan](./REVIEW_PIPELINE_R8_AUTOMATION_GENERAL_PLAN.md) |
+| Q11 | Auto index/review on webhook | **shipped** | R8 autostart + `@revy review` — [R8 plan](./REVIEW_PIPELINE_R8_AUTOMATION_GENERAL_PLAN.md) |
 | R8-Q1 | Workspace autostart default | **locked** | `workspaces.review_autostart_enabled` default `true`; admin PATCH |
 | R8-Q2 | Autostart webhook actions | **locked** | `pull_request` `opened` + `synchronize` only; enqueue on `synchronize` only when new revision row created |
 | R8-Q3 | On-demand command | **locked** | `issue_comment` `created` with `@revy review` on open PR → full pipeline; ignore bot self-comments; skip closed/draft |

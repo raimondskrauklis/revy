@@ -16,6 +16,7 @@ def test_index_pull_request_revision_runs_job():
         chunk_count=3,
     )
     job.id = uuid.uuid4()
+    review_run_id = uuid.uuid4()
 
     session = AsyncMock()
 
@@ -28,6 +29,12 @@ def test_index_pull_request_revision_runs_job():
             "app.workers.index_tasks.run_index_job",
             AsyncMock(return_value=job),
         ) as run_mock:
-            index_tasks.index_pull_request_revision.run(str(job.id))
+            with patch(
+                "app.workers.index_tasks.prepare_review_after_index",
+                AsyncMock(return_value=review_run_id),
+            ):
+                with patch("app.workers.index_tasks.enqueue_review_run") as enqueue_mock:
+                    index_tasks.index_pull_request_revision.run(str(job.id))
 
     run_mock.assert_awaited_once()
+    enqueue_mock.assert_called_once()

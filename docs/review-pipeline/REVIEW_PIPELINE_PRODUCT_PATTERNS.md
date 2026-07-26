@@ -72,10 +72,10 @@
 
 | Pattern | Greptile-style reference | Revy approach | Status |
 |---------|-------------------------|---------------|--------|
-| **Autostart on PR open** | Default auto-review (no `@` needed) | R8: `pull_request.opened` → full pipeline | **defer** R8 (`Q11`) |
-| Review on every commit | `triggerOnUpdates: true` | R8: `pull_request.synchronize` → index → review → reconcile → publish | **defer** (`Q11` → R8) |
-| **On-demand `@` commands** | `@greptile` / `@cursor` comment | R8: **`@revy review`** on PR comment → re-run pipeline; namespace for `@revy index`, `@revy publish`, … | **defer** R8 |
-| Manual-only reviews | `skipReview: "AUTOMATIC"` | Admin API trigger only (R0–R7); workspace `autostart=false` in R8 | **shipped** policy (`Q11`) |
+| **Autostart on PR open** | Default auto-review (no `@` needed) | R8: `pull_request.opened` → full pipeline | **shipped** R8 |
+| Review on every commit | `triggerOnUpdates: true` | R8: `pull_request.synchronize` → index → review → reconcile → publish | **shipped** R8 |
+| **On-demand `@` commands** | `@greptile` / `@cursor` comment | R8: **`@revy review`** on PR comment → re-run pipeline; `@revy index`, `@revy publish` → **future** | **shipped** (`@revy review` only) |
+| Manual-only reviews | `skipReview: "AUTOMATIC"` | Workspace `review_autostart_enabled=false`; admin index `trigger_source=manual` | **shipped** R8 |
 | Admin re-trigger | N/A | `POST …/index`, `…/review`, `…/publish` (existing) | **shipped** |
 | Draft PR reviews | `triggerOnDrafts` | Workspace setting | **future** |
 | Label / path filters | Ignore patterns, directory rules | Repo path filters in workspace policy | **future** (R8+) |

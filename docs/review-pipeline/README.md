@@ -85,7 +85,7 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 | **R5** | [waves/R5](./waves/REVIEW_PIPELINE_R5_EXECUTION.md) | shipped on `main` ([#29](https://github.com/raimondskrauklis/revy/pull/29)) |
 | **R6** | [waves/R6](./waves/REVIEW_PIPELINE_R6_EXECUTION.md) | shipped on `main` ([#29](https://github.com/raimondskrauklis/revy/pull/29)) |
 | **R7** | [waves/R7](./waves/REVIEW_PIPELINE_R7_EXECUTION.md) | shipped on `main` ([#29](https://github.com/raimondskrauklis/revy/pull/29)) |
-| **R8** | [waves/R8](./waves/REVIEW_PIPELINE_R8_EXECUTION.md) | **active** — execution peer-reviewed; `phase-execution` next |
+| **R8** | [waves/R8](./waves/REVIEW_PIPELINE_R8_EXECUTION.md) | shipped (`review-r8-v1` after merge) |
 
 [waves/README.md](./waves/README.md) — full execution table.
 
@@ -110,4 +110,4 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 
 1. **Ops** — Track F in [recovery checklist](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md): migrations `0014`–`0016`, env keys, worker `-Q` list, staging e2e.
 2. **Tags (optional)** — `review-r4-v1` … `review-r7-v1` on `main`.
-3. **R8** — `git checkout -b feat/review-r8-automation`; `phase-execution` on [R8 execution](./waves/REVIEW_PIPELINE_R8_EXECUTION.md) (R8.1 → R8.6).
+3. **R9** — incremental index general plan when scoped.

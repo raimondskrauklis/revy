@@ -35,24 +35,20 @@
 
 ### Track F — Post-merge ops (before R8 dogfood)
 
-- [ ] `alembic upgrade head` on staging/prod (`0014`–`0016` if not already applied)
+- [ ] `alembic upgrade head` on staging/prod (`0014`–`0017` if not already applied)
 - [ ] Env: `MOONSHOT_API_KEY`, `VOYAGE_API_KEY`, `REVY_BOT_LOGIN`; optional `ANTHROPIC_API_KEY`
 - [ ] Redeploy or restart worker so droplet runs latest `deploy.yml` `-Q` list:
   `github_events,repo_sync,indexing,review,reconciliation,judge,github_publish,maintenance,default,notifications,heavy`
-- [ ] Staging e2e: index → review → reconcile → publish → `/reviewer` UI ([GITHUB_WEBHOOK_DEV.md](./GITHUB_WEBHOOK_DEV.md))
+- [ ] Staging e2e: autostart + `@revy review` + toggle off ([GITHUB_WEBHOOK_DEV.md](./GITHUB_WEBHOOK_DEV.md) § R8)
 - [ ] Optional: `git tag review-r4-v1` … `review-r7-v1` on `main` at `c8bf883` (or per-commit if you prefer granular tags)
 
-### Track G — R8 automation (current implementation track)
-
-**Prerequisites:** R4–R7 on `main` ✅ — complete Track F on staging before relying on autostart in prod.
-
-**Product goal:** Greptile/Bugbot parity — **autostart** on PR open + `synchronize`; **`@revy review`** on-demand; workspace toggle for manual-only.
+### Track G — R8 automation — [x] code on `feat/review-r8-automation`
 
 - [x] Lock R8 findings: Q11 + R8-Q1–R8-Q7 in [findings](./REVIEW_PIPELINE_FINDINGS.md)
 - [x] `create-general-plan` + execution for automation phase
-- [x] `execution-peer-review` on R8 execution (2026-07-26 — gaps applied in execution doc)
-- [ ] Branch `feat/review-r8-automation` from `main`
-- [ ] `phase-execution` on [waves/REVIEW_PIPELINE_R8_EXECUTION.md](./waves/REVIEW_PIPELINE_R8_EXECUTION.md) (R8.1 → R8.6)
+- [x] `execution-peer-review` on R8 execution (2026-07-26)
+- [x] `phase-execution` R8.1–R8.6 (migration `0017`, orchestrator, webhooks, UI, docs)
+- [ ] Merge PR → `main`; tag `review-r8-v1`; GitHub App subscribe **Issue comments**
 
 ---
 

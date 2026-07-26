@@ -1,4 +1,4 @@
-# GitHub App — target configuration (R0–R7)
+# GitHub App — target configuration (R0–R8)
 
 **End-state** values for one Revy GitHub App when the review pipeline is complete. Use this to register production/staging once — avoid revisiting permissions each phase.
 
@@ -91,14 +91,15 @@ Do **not** enable **Installation target** (`installation_target`) — different 
 | Form label | `X-GitHub-Event` | Phase | Revy use |
 |------------|------------------|-------|----------|
 | **Push** | `push` | R0+ | Re-index / re-review trigger |
-| **Pull request** | `pull_request` | R2 | PR + revision ingestion |
+| **Pull request** | `pull_request` | R2, R8 | PR + revision ingestion; autostart pipeline |
 | **Pull request review** | `pull_request_review` | R2 | Review activity sync |
+| **Issue comment** | `issue_comment` | R8 | `@revy review` on-demand pipeline |
 | **Check run** | `check_run` | R6 (optional) | External CI check context |
 | **Check suite** | `check_suite` | R6 (optional) | External CI suite context |
 
 ### Leave unchecked
 
-`Installation target`, `Meta`, `Security advisory`, `Create`, `Delete`, `Fork`, `Public`, `Release`, `Repository`, `Repository dispatch`, `Star`, `Watch`, `Label`, `Commit comment`, `Gollum`, `Workflow dispatch`, `Workflow job`, `Workflow run`, `Issues`, `Issue comment`, `Deployment`, `Deployment status`, etc.
+`Installation target`, `Meta`, `Security advisory`, `Create`, `Delete`, `Fork`, `Public`, `Release`, `Repository`, `Repository dispatch`, `Star`, `Watch`, `Label`, `Commit comment`, `Gollum`, `Workflow dispatch`, `Workflow job`, `Workflow run`, `Issues`, `Deployment`, `Deployment status`, etc.
 
 ---
 
