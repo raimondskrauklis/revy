@@ -30,7 +30,9 @@ def test_review_pull_request_revision_runs_job():
             "app.workers.review_tasks.run_review_run",
             AsyncMock(return_value=run),
         ) as run_mock:
-            review_tasks.review_pull_request_revision.run(str(run.id))
+            with patch("app.workers.review_tasks._enqueue_reconcile") as enqueue_mock:
+                review_tasks.review_pull_request_revision.run(str(run.id))
 
     run_mock.assert_awaited_once()
     session.commit.assert_awaited_once()
+    enqueue_mock.assert_called_once_with(str(run.id))

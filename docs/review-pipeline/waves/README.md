@@ -20,10 +20,10 @@ Linear **phase-execution** order.
 | R1 — Repository sync | [R1](../REVIEW_PIPELINE_R1_REPO_SYNC_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R1_EXECUTION.md](./REVIEW_PIPELINE_R1_EXECUTION.md) | done (`review-r1-v1`) |
 | R2 — PR ingestion | [R2](../REVIEW_PIPELINE_R2_PR_INGESTION_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R2_EXECUTION.md](./REVIEW_PIPELINE_R2_EXECUTION.md) | done (`review-r2-v1`) |
 | R3 — Indexing | [R3](../REVIEW_PIPELINE_R3_INDEXING_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R3_EXECUTION.md](./REVIEW_PIPELINE_R3_EXECUTION.md) | done (`review-r3-v1`) |
-| R4 — Review run | [R4](../REVIEW_PIPELINE_R4_REVIEW_RUN_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R4_EXECUTION.md](./REVIEW_PIPELINE_R4_EXECUTION.md) | done — PR [#24](https://github.com/raimondskrauklis/revy/pull/24); tag `review-r4-v1` pending |
-| R5 — Reconcile + judge | [R5](../REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R5_EXECUTION.md](./REVIEW_PIPELINE_R5_EXECUTION.md) | done — PR [#25](https://github.com/raimondskrauklis/revy/pull/25) |
-| R6 — GitHub publish | [R6](../REVIEW_PIPELINE_R6_GITHUB_PUBLISH_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R6_EXECUTION.md](./REVIEW_PIPELINE_R6_EXECUTION.md) | done — PR [#26](https://github.com/raimondskrauklis/revy/pull/26) |
-| R7 — Reviewer UI | [R7](../REVIEW_PIPELINE_R7_REVIEWER_UI_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R7_EXECUTION.md](./REVIEW_PIPELINE_R7_EXECUTION.md) | done — PR [#27](https://github.com/raimondskrauklis/revy/pull/27) |
-| R8 — Automation | [R8](../REVIEW_PIPELINE_R8_AUTOMATION_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R8_EXECUTION.md](./REVIEW_PIPELINE_R8_EXECUTION.md) | execution peer-reviewed — pending R7 on `main` |
+| R4 — Review run | [R4](../REVIEW_PIPELINE_R4_REVIEW_RUN_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R4_EXECUTION.md](./REVIEW_PIPELINE_R4_EXECUTION.md) | done — `main` ([#24](https://github.com/raimondskrauklis/revy/pull/24)) |
+| R5 — Reconcile + judge | [R5](../REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R5_EXECUTION.md](./REVIEW_PIPELINE_R5_EXECUTION.md) | done — `main` ([#29](https://github.com/raimondskrauklis/revy/pull/29)) |
+| R6 — GitHub publish | [R6](../REVIEW_PIPELINE_R6_GITHUB_PUBLISH_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R6_EXECUTION.md](./REVIEW_PIPELINE_R6_EXECUTION.md) | done — `main` ([#29](https://github.com/raimondskrauklis/revy/pull/29)) |
+| R7 — Reviewer UI | [R7](../REVIEW_PIPELINE_R7_REVIEWER_UI_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R7_EXECUTION.md](./REVIEW_PIPELINE_R7_EXECUTION.md) | done — `main` ([#29](https://github.com/raimondskrauklis/revy/pull/29)) |
+| R8 — Automation | [R8](../REVIEW_PIPELINE_R8_AUTOMATION_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R8_EXECUTION.md](./REVIEW_PIPELINE_R8_EXECUTION.md) | **active** — `phase-execution` on `feat/review-r8-automation` |
 
-**Program status:** R0–R4 on `main`; R5–R7 on stack / r7→main PR pending; R8 planned.
+**Program status:** R0–R7 on `main`; **R8** is the active implementation track.

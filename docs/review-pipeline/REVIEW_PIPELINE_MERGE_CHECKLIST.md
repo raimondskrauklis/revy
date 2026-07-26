@@ -1,12 +1,14 @@
 # Review pipeline — merge checklist (R4–R7 stack)
 
-**Purpose:** No corners cut between Greptile/CI green and production merge. Work **top to bottom**; do not merge the next PR until the current row is fully `[x]`.
+**Status:** **Archived** — stack landed on `main` via [#24](https://github.com/raimondskrauklis/revy/pull/24) (R4) and [#29](https://github.com/raimondskrauklis/revy/pull/29) (R5–R7). For current work see [REVIEW_PIPELINE_RECOVERY_CHECKLIST.md](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md) (Track F ops → Track G R8).
 
-**Stack (strict order):** [#23](https://github.com/raimondskrauklis/revy/pull/23) docs → [#24](https://github.com/raimondskrauklis/revy/pull/24) R4 → [#25](https://github.com/raimondskrauklis/revy/pull/25) R5 → [#26](https://github.com/raimondskrauklis/revy/pull/26) R6 → [#27](https://github.com/raimondskrauklis/revy/pull/27) R7.
+**Purpose:** Historical record of Greptile babysit + merge gates for the R4–R7 stacked PRs. Do not use for new work.
 
-**Learnings:** [REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md](./REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md) — Greptile signal quality, fixed-issue catalog, product backlog.
+**Stack (historical):** [#23](https://github.com/raimondskrauklis/revy/pull/23) docs → [#24](https://github.com/raimondskrauklis/revy/pull/24) R4 → stacked #25–#27 → consolidated [#29](https://github.com/raimondskrauklis/revy/pull/29).
 
-**Last updated:** 2026-07-26 — babysit pass complete on code; awaiting Greptile re-review + human merge.
+**Learnings:** [REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md](./REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md)
+
+**Last updated:** 2026-07-26 — merged via #29; checklist archived.
 
 ---
 

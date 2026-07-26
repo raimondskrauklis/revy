@@ -2,7 +2,7 @@
 
 Baseline for Revy **AI code review on GitHub** after SaaS base W0–W8 + P4 installations. **No execution steps.**
 
-**Status:** baseline-ready (2026-07-26). **Shipped on `main`:** R0–R3 (`review-r0-v1` … `review-r3-v1`); remediation PRs #13–#21 merged. **Implemented (PR stack, pending merge):** R4–R7 — [#24](https://github.com/raimondskrauklis/revy/pull/24) … [#27](https://github.com/raimondskrauklis/revy/pull/27). **General plans:** R0–R7 complete; execution peer-review done for R4. **Next:** merge stack → migrations `0014`–`0016` → tags `review-r4-v1` … `review-r7-v1` ([checklist](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md)).
+**Status:** baseline-ready (2026-07-26). **Shipped on `main`:** R0–R7 (`review-r0-v1` … `review-r3-v1`; R4 [#24](https://github.com/raimondskrauklis/revy/pull/24); R5–R7 [#29](https://github.com/raimondskrauklis/revy/pull/29)). **Active:** R8 — [execution](./waves/REVIEW_PIPELINE_R8_EXECUTION.md). **Ops:** migrations `0014`–`0016`, staging e2e ([recovery checklist](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md) Track F).
 
 **Program:** [README.md](./README.md) · **Authority (full):** `internal-docs/product/revy/docs/architecture.md`, `WEBHOOKS.md`, `REVY_PRODUCT_SLICE.md`.
 
@@ -65,17 +65,17 @@ Revy code does not replace GitHub App registration. Use these before expecting w
 |------|--------|
 | Celery routes | `github_events`, `repo_sync`, `indexing`, `review`, `reconciliation`, `judge`, `github_publish`, … in `celery_app.py` |
 | Worker deploy (CI) | `deploy.yml` worker `-Q` includes full Revy list (PR #24+) — see [PROGRAM](./REVIEW_PIPELINE_PROGRAM.md) §5 |
-| Migrations | `0001`–`0013` on `main`; `0014`–`0016` on PR stack (#24–#26) |
+| Migrations | `0001`–`0016` on `main` (`0014` review, `0015` reconcile, `0016` publish) |
 | pgvector | Extension in deploy SQL; `github_code_chunks.embedding` vector(512) — **R3 shipped** |
 
-### Verified — implemented (PR stack #24–#27, pending merge)
+### Verified — shipped on `main` (R4–R7)
 
 | Layer | Capability | Evidence | PR |
 |-------|------------|----------|-----|
 | **R4 Review run** | `github_review_runs`, `github_findings`, Moonshot LLM, `review_tasks` | `services/github_review.py`, `integrations/moonshot_review.py`, `0014` | [#24](https://github.com/raimondskrauklis/revy/pull/24) |
-| **R5 Reconcile + judge** | `github_finding_groups`, judge outcomes, fingerprint reconcile | `services/github_finding_reconcile.py`, `github_finding_judge.py`, `0015` | [#25](https://github.com/raimondskrauklis/revy/pull/25) |
-| **R6 GitHub publish** | Check run `revy/review`, PR comments, `publish_tasks` | `services/github_publish.py`, `0016` | [#26](https://github.com/raimondskrauklis/revy/pull/26) |
-| **R7 Reviewer UI** | `features/reviewer/`, `/reviewer` routes, merge badge | `frontend/src/features/reviewer/` | [#27](https://github.com/raimondskrauklis/revy/pull/27) |
+| **R5 Reconcile + judge** | `github_finding_groups`, judge outcomes, fingerprint reconcile | `services/github_finding_reconcile.py`, `github_finding_judge.py`, `0015` | [#29](https://github.com/raimondskrauklis/revy/pull/29) |
+| **R6 GitHub publish** | Check run `revy/review`, PR comments, `publish_tasks` | `services/github_publish.py`, `0016` | [#29](https://github.com/raimondskrauklis/revy/pull/29) |
+| **R7 Reviewer UI** | `features/reviewer/`, `/reviewer` routes, merge badge | `frontend/src/features/reviewer/` | [#29](https://github.com/raimondskrauklis/revy/pull/29) |
 
 ### Reuse caveats / traps
 
@@ -99,10 +99,11 @@ Revy code does not replace GitHub App registration. Use these before expecting w
 | **R1** | Repository metadata + `repo_sync` | [R1](./REVIEW_PIPELINE_R1_REPO_SYNC_GENERAL_PLAN.md) | [R1 exec](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) | **shipped** |
 | **R2** | PR ingestion + revisions | [R2](./REVIEW_PIPELINE_R2_PR_INGESTION_GENERAL_PLAN.md) | [R2 exec](./waves/REVIEW_PIPELINE_R2_EXECUTION.md) | **shipped** |
 | **R3** | Indexing (chunks, pgvector) | [R3](./REVIEW_PIPELINE_R3_INDEXING_GENERAL_PLAN.md) | [R3 exec](./waves/REVIEW_PIPELINE_R3_EXECUTION.md) | **shipped** |
-| **R4** | LLM review + findings | [R4](./REVIEW_PIPELINE_R4_REVIEW_RUN_GENERAL_PLAN.md) | [R4 exec](./waves/REVIEW_PIPELINE_R4_EXECUTION.md) | **implemented** — PR [#24](https://github.com/raimondskrauklis/revy/pull/24) |
-| **R5** | Reconciliation + judge | [R5](./REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md) | [R5 exec](./waves/REVIEW_PIPELINE_R5_EXECUTION.md) | **implemented** — PR [#25](https://github.com/raimondskrauklis/revy/pull/25) |
-| **R6** | GitHub publish | [R6](./REVIEW_PIPELINE_R6_GITHUB_PUBLISH_GENERAL_PLAN.md) | [R6 exec](./waves/REVIEW_PIPELINE_R6_EXECUTION.md) | **implemented** — PR [#26](https://github.com/raimondskrauklis/revy/pull/26) |
-| **R7** | Reviewer UI | [R7](./REVIEW_PIPELINE_R7_REVIEWER_UI_GENERAL_PLAN.md) | [R7 exec](./waves/REVIEW_PIPELINE_R7_EXECUTION.md) | **implemented** — PR [#27](https://github.com/raimondskrauklis/revy/pull/27) |
+| **R4** | LLM review + findings | [R4](./REVIEW_PIPELINE_R4_REVIEW_RUN_GENERAL_PLAN.md) | [R4 exec](./waves/REVIEW_PIPELINE_R4_EXECUTION.md) | **shipped** — [#24](https://github.com/raimondskrauklis/revy/pull/24) |
+| **R5** | Reconciliation + judge | [R5](./REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md) | [R5 exec](./waves/REVIEW_PIPELINE_R5_EXECUTION.md) | **shipped** — [#29](https://github.com/raimondskrauklis/revy/pull/29) |
+| **R6** | GitHub publish | [R6](./REVIEW_PIPELINE_R6_GITHUB_PUBLISH_GENERAL_PLAN.md) | [R6 exec](./waves/REVIEW_PIPELINE_R6_EXECUTION.md) | **shipped** — [#29](https://github.com/raimondskrauklis/revy/pull/29) |
+| **R7** | Reviewer UI | [R7](./REVIEW_PIPELINE_R7_REVIEWER_UI_GENERAL_PLAN.md) | [R7 exec](./waves/REVIEW_PIPELINE_R7_EXECUTION.md) | **shipped** — [#29](https://github.com/raimondskrauklis/revy/pull/29) |
+| **R8** | Autostart + `@revy review` | [R8](./REVIEW_PIPELINE_R8_AUTOMATION_GENERAL_PLAN.md) | [R8 exec](./waves/REVIEW_PIPELINE_R8_EXECUTION.md) | **active** |
 
 ---
 
@@ -195,7 +196,7 @@ Source of truth: `backend/app/constants/enums.py`. String values are stored in P
 
 | Check | Pass |
 |-------|------|
-| `alembic upgrade head` | Tables through `0016` on PR stack (`0014` review, `0015` reconcile, `0016` publish) |
+| `alembic upgrade head` | Tables through `0016` on `main` (`0014` review, `0015` reconcile, `0016` publish) |
 | [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) Step 1–3 | App created, webhook URL + secret set |
 | Manual installation register | Row in `github_installations` |
 | R0: smee.io / staging → API | **200**, delivery row, Celery `github_events` |
