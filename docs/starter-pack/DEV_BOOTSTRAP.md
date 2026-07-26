@@ -124,6 +124,10 @@ One-time per environment if you need a platform `super_admin` before normal regi
 
 Register in Keycloak with the **same email** on first login.
 
+**Startup guard:** When `BOOTSTRAP_SUPER_ADMIN_EMAIL` is set, the API validates on boot that a matching `super_admin` seed row exists (`pending_activation`). Run the seed script **before** Google/OIDC login when using bootstrap. In `development`, a missing seed logs a warning; in `staging`/`production`, startup fails fast. `ENVIRONMENT=test` skips the guard (pytest).
+
+**KC user ≠ PG user:** Keycloak holds identity only; PostgreSQL `users` is created by the KC identity webhook (primary) or JIT on first authenticated `/api/v1/me` (fallback). See [docs/authorization/README.md](../authorization/README.md).
+
 ---
 
 ## 6. Keycloak
