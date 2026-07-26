@@ -5,8 +5,10 @@ Linear **phase-execution** order.
 **Prerequisites (no shortcuts):**
 
 1. [REVIEW_PIPELINE_FINDINGS.md](../REVIEW_PIPELINE_FINDINGS.md) — baseline-ready
-2. Per-phase [general plan](../REVIEW_PIPELINE_GENERAL_PLAN.md) — peer-reviewed
-3. This execution file — `execution-peer-review` before `phase-execution`
+2. Per-phase [general plan](../REVIEW_PIPELINE_GENERAL_PLAN.md) — **manual peer-review** (separate agent; `architecture-peer-review` skill)
+3. This execution file — **manual peer-review** (separate agent; `execution-peer-review` skill) before `phase-execution`
+
+**Peer review is not automated:** the agent that writes the plan does not self-certify. When files are ready, the **human** runs another LLM session with the peer-review skill. Recovery doc work (e.g. PR #12) does not replace this gate.
 
 **Authority:** [REVIEW_PIPELINE_FINDINGS.md](../REVIEW_PIPELINE_FINDINGS.md), [GITHUB_APP_SETUP.md](../../utils/GITHUB_APP_SETUP.md), [GITHUB_APP_TARGET_CONFIG.md](../../utils/GITHUB_APP_TARGET_CONFIG.md).
 
@@ -21,4 +23,4 @@ Linear **phase-execution** order.
 | R6 — GitHub publish | [R6](../REVIEW_PIPELINE_R6_GITHUB_PUBLISH_GENERAL_PLAN.md) | — | after R5 |
 | R7 — Reviewer UI | [R7](../REVIEW_PIPELINE_R7_REVIEWER_UI_GENERAL_PLAN.md) | — | after R4 API |
 
-**Program status:** R0–R3 shipped; R4 execution ready — peer-review then `phase-execution`.
+**Program status:** R0–R3 shipped; R4 execution plan ready — **manual peer-review** then `phase-execution`.

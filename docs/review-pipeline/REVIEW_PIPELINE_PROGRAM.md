@@ -1,6 +1,6 @@
 # Review pipeline — program guide
 
-How to continue Revy **after SaaS base W0–W8** without forking. **No execution steps** — see per-phase execution files (to be created).
+How to continue Revy **after SaaS base W0–W8** without forking. **No execution steps** — see per-phase execution files under [waves/](./waves/). **Recovery:** [REVIEW_PIPELINE_RECOVERY_CHECKLIST.md](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md).
 
 ---
 
@@ -104,7 +104,7 @@ main  ──●──●──●──●──  deployable; SaaS base + produc
 |-------|----------------|
 | **Index ORM** | `github_index_jobs`, `github_code_chunks` (vector 512); migration `0013` |
 | **Archive + chunking** | `integrations/github_archive.py`, `services/code_chunking.py` |
-| **Embeddings** | `integrations/voyage_embeddings.py` — Voyage `voyage-3-lite` |
+| **Embeddings** | `integrations/voyage_embeddings.py` — Voyage API (`voyage-3-lite` v1); parallel local track documented (`architecture.md` §11.3.1) |
 | **Index worker** | `backend/app/workers/index_tasks.py` — `indexing` queue |
 | **Index API** | `POST …/revisions/{id}/index`, `GET …/index-job`, chunk list + semantic search |
 
@@ -147,11 +147,12 @@ Additive under existing structure — no SaaS shell rewrites.
 ```text
 backend/app/
   api/v1/webhooks/github.py          # R0
-  models/repository.py               # R1+
-  models/pull_request.py             # R2+
-  models/review_*.py                 # R4+
+  models/github_repository.py        # R1
+  models/github_pull_request.py      # R2
+  models/github_review_run.py        # R4
+  models/github_finding.py           # R4
   services/github_webhooks.py        # R0
-  services/review/                   # R4+
+  services/github_review.py          # R4
   workers/github_tasks.py            # R0
   workers/repo_tasks.py              # R1
   workers/index_tasks.py             # R3
@@ -173,8 +174,10 @@ New secrets (document in R0 findings + `backend/.env.example`):
 
 | Variable | Phase |
 |----------|-------|
-| `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET` | R0 |
-| LLM provider keys | R4 |
+| `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY_PATH`, `GITHUB_WEBHOOK_SECRET` | R0–R1 |
+| `MOONSHOT_API_KEY`, `REVY_LLM_PROVIDER`, Kimi model tier env | R4 (primary) |
+| `ANTHROPIC_API_KEY` | R5 (judge / cross-family) |
+| `VOYAGE_API_KEY` | R3 |
 | Webhook public URL | R0 — same pattern as [STRIPE_BILLING_SETUP.md](../utils/STRIPE_BILLING_SETUP.md) |
 
 Worker droplet must consume Revy queues (see `implementation.revy.md`). Export/maintenance queue unchanged from SaaS W6.
@@ -188,7 +191,7 @@ Same discipline as [docs/saas-base](../saas-base/README.md):
 1. **`create-findings`** → [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) (baseline-first; includes GitHub App ops pointers)
 2. **`create-general-plan`** → per-phase `REVIEW_PIPELINE_R*_GENERAL_PLAN.md` (index: [REVIEW_PIPELINE_GENERAL_PLAN.md](./REVIEW_PIPELINE_GENERAL_PLAN.md))
 3. **`create-execution-plan`** → `waves/REVIEW_PIPELINE_R*_EXECUTION.md` only
-4. **`execution-peer-review`** before LOOP
+4. **Manual peer-review** — human invokes a **separate agent** with `architecture-peer-review` / `execution-peer-review` on the prepared files (skills in `.cursor/skills/`). The implementing agent does not mark this done.
 5. **`phase-execution`** from execution file; branch `feat/review-r*-…`
 
 **GitHub App runbooks:** [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md), [GITHUB_APP_TARGET_CONFIG.md](../utils/GITHUB_APP_TARGET_CONFIG.md).

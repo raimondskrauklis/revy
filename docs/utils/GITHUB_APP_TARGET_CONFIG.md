@@ -123,14 +123,47 @@ REVY_WORKTREES_ROOT=/data/worktrees
 REVY_HF_CACHE_PATH=/data/hf-cache
 ```
 
-### Model providers (R4+)
+### Embeddings (R3 indexing)
+
+**Start with API** (shipped R3 v1). **Parallel track:** self-hosted models behind `EmbeddingBackend` — same chunk tables, switch via `REVY_EMBEDDING_BACKEND` when implemented. Authority: `internal-docs/product/revy/docs/architecture.md` §11.3–11.3.1.
+
+| Backend | When | Model (examples) | Required env |
+|---------|------|------------------|--------------|
+| **Voyage API** (default) | Production / first deploy | `voyage-3-lite` (shipped), eval → `voyage-code-3` | `VOYAGE_API_KEY`, `REVY_EMBEDDING_MODEL`, `REVY_EMBEDDING_DIMENSIONS` |
+| **Local / HF** (parallel) | Experiments, air-gapped | `jina-embeddings-v2-base-code` (CPU), `nomic-embed-code` (GPU) | `REVY_EMBEDDING_BACKEND=local`, `REVY_HF_CACHE_PATH`, `REVY_LOCAL_EMBEDDING_MODEL` |
+
+**Reranker (future §11.3 stage 3):** `REVY_RERANKER_BACKEND=bge-reranker-v2-m3` (self-hosted) or Voyage rerank API — not required for R3 v1 dense search.
 
 ```env
-MOONSHOT_API_KEY=
-ANTHROPIC_API_KEY=
+REVY_EMBEDDING_BACKEND=voyage
 VOYAGE_API_KEY=
-# REVY_EMBEDDING_BACKEND=voyage
+REVY_EMBEDDING_MODEL=voyage-3-lite
+REVY_EMBEDDING_DIMENSIONS=512
+# REVY_HF_CACHE_PATH=/data/hf-cache
+# REVY_LOCAL_EMBEDDING_MODEL=jina-embeddings-v2-base-code
 # REVY_RERANKER_BACKEND=bge-reranker-v2-m3
+```
+
+### Model providers (LLM)
+
+**Primary (R4 review):** Moonshot Kimi via OpenAI-compatible API (`https://api.moonshot.ai/v1`).
+
+| Profile | Default model | Env override |
+|---------|---------------|--------------|
+| Standard | `kimi-k2.7-code` | `REVY_MOONSHOT_MODEL_STANDARD` |
+| Deep | `kimi-k3` | `REVY_MOONSHOT_MODEL_DEEP` |
+| Critical | `kimi-k3` | `REVY_MOONSHOT_MODEL_CRITICAL` |
+
+**Secondary (R5 judge):** Anthropic Claude — independent-family cross-check / escalation only (not the R4 default reviewer). See `internal-docs/product/revy/docs/architecture.md` §13–14.
+
+```env
+REVY_LLM_PROVIDER=moonshot
+MOONSHOT_API_KEY=
+REVY_MOONSHOT_MODEL_STANDARD=kimi-k2.7-code
+REVY_MOONSHOT_MODEL_DEEP=kimi-k3
+REVY_MOONSHOT_MODEL_CRITICAL=kimi-k3
+ANTHROPIC_API_KEY=
+# REVY_ANTHROPIC_MODEL=claude-sonnet-4-20250514
 ```
 
 ### Review SLAs
@@ -174,9 +207,9 @@ pipenv run celery -A app.workers.celery_app worker \
 | **R0** | Webhook active + secret; `installation` (auto) | `GITHUB_WEBHOOK_SECRET`, Celery `github_events` |
 | **R1** | Metadata + Contents Read; `installation_repositories` (auto) | `GITHUB_APP_ID`, private key, `repo_sync` |
 | **R2** | Pull requests Read and write (covers ingest); subscribe **Pull request**, **Pull request review** | PR migrations |
-| **R3** | (no new GitHub settings) | `REVY_REPOS_ROOT`, embeddings keys, `indexing` queue |
-| **R4** | (no new GitHub settings) | LLM API keys, `review` queue |
-| **R5** | (no new GitHub settings) | `reconciliation`, `judge` queues |
+| **R3** | (no new GitHub settings) | `VOYAGE_API_KEY`, `REVY_EMBEDDING_*`, `REVY_HF_CACHE_PATH` (local track), `indexing` queue |
+| **R4** | (no new GitHub settings) | `MOONSHOT_API_KEY`, Kimi model tiers, `review` queue |
+| **R5** | (no new GitHub settings) | `ANTHROPIC_API_KEY` (judge), `reconciliation`, `judge` queues |
 | **R6** | + Pull requests Write, Checks Write; optional **Check run** / **Check suite** | `github_publish` queue |
 | **R7** | (no new GitHub settings) | Reviewer UI only |
 
