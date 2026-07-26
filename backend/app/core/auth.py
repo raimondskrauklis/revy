@@ -23,8 +23,7 @@ from app.models.users import UserORM
 from app.models.workspace_memberships import WorkspaceMembershipORM
 from app.models.workspaces import WorkspaceORM
 from app.services.impersonation import get_active_session
-from app.services.onboarding import maybe_auto_provision_user
-from app.services.users import activate_bootstrap_super_admin, ensure_user_from_token
+from app.services.keycloak_provisioning import provision_user_from_keycloak
 
 logger = get_logger(__name__)
 
@@ -204,26 +203,16 @@ async def get_current_user(
     if not sub:
         raise UnauthorizedError("Invalid token: missing sub")
 
-    actor = await ensure_user_from_token(
+    given_name = payload.get("given_name")
+    family_name = payload.get("family_name")
+    display_name = " ".join(part for part in (given_name, family_name) if part) or None
+    actor = await provision_user_from_keycloak(
         session,
         sub=sub,
         email=str(email) if email else None,
         email_verified=bool(payload.get("email_verified")),
-    )
-    if actor is None:
-        raise UnauthorizedError("User not provisioned")
-
-    given_name = payload.get("given_name")
-    family_name = payload.get("family_name")
-    display_name = " ".join(part for part in (given_name, family_name) if part) or None
-    actor = await maybe_auto_provision_user(
-        session,
-        actor,
         display_name=str(display_name) if display_name else None,
-        email_verified=bool(payload.get("email_verified")),
     )
-
-    actor = await activate_bootstrap_super_admin(session, actor, sub=sub)
     await session.commit()
     await session.refresh(actor)
 
