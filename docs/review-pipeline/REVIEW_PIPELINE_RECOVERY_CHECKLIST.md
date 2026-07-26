@@ -35,14 +35,14 @@
 
 ## Track 2a — Audit PRs (do not merge)
 
-Open retrospective PRs for Greptile only. Close after findings triaged.
+**Audit tip:** Point base/head branches at **feature commits** (not docs-sync tags) — see PRs #15–#18.
 
 | Phase | Branch | Base | Head commit | PR # | Greptile done | Closed |
 |-------|--------|------|-------------|------|---------------|--------|
-| R0 | `audit/review-r0-retro` | `saas-base-v1.1^{commit}` | `d017dfc` | | [ ] | [ ] |
-| R1 | `audit/review-r1-retro` | `review-r0-v1^{commit}` | `fd29fd5` | | [ ] | [ ] |
-| R2 | `audit/review-r2-retro` | `review-r1-v1^{commit}` | `035f304` | | [ ] | [ ] |
-| R3 | `audit/review-r3-retro` | `review-r2-v1^{commit}` | `a299d14` | | [ ] | [ ] |
+| R0 | `audit/review-r0-retro` | `saas-base-v1.1^{commit}` | `d017dfc` | #15 | [ ] | [ ] |
+| R1 | `audit/review-r1-retro` | `d017dfc` | `fd29fd5` | #16 | [ ] | [ ] |
+| R2 | `audit/review-r2-retro` | `fd29fd5` | `035f304` | #17 | [ ] | [ ] |
+| R3 | `audit/review-r3-retro` | `035f304` | `a299d14` | #18 | [ ] | [ ] |
 
 **Known P1 (pre-audit):**
 
