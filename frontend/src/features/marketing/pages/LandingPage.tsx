@@ -6,8 +6,11 @@ import { Link } from 'react-router-dom';
 import { RevyLogo } from '@/components/auth/RevyLogo';
 import { useAuth } from '@/contexts/AuthContext';
 
-const featureIcons = [GitBranch, ShieldCheck, Users] as const;
-const featureKeys = ['github', 'review', 'workspace'] as const;
+const features = [
+  { key: 'github', Icon: GitBranch },
+  { key: 'review', Icon: ShieldCheck },
+  { key: 'workspace', Icon: Users },
+] as const;
 
 export function LandingPage() {
   const { t } = useTranslation();
@@ -30,7 +33,7 @@ export function LandingPage() {
           <RevyLogo to="/" />
           <Link
             to="/login"
-            className="min-h-11 rounded-lg px-4 py-2 text-sm font-medium text-[color:var(--app-text-strong)] ring-1 ring-[color:var(--app-ring)] hover:bg-[color:var(--app-surface)] focus-visible:outline-none focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
+            className="min-h-11 rounded-lg px-4 py-2 text-sm font-medium text-[color:var(--app-text-strong)] ring-1 ring-[color:var(--app-ring)] hover:bg-[color:var(--app-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--app-ring-strong)]"
           >
             {t('landing.nav.signIn')}
           </Link>
@@ -64,9 +67,7 @@ export function LandingPage() {
           </section>
 
           <section className="mx-auto mt-16 grid w-full max-w-5xl gap-4 sm:grid-cols-3">
-            {featureKeys.map((key, index) => {
-              const Icon = featureIcons[index];
-              return (
+            {features.map(({ key, Icon }) => (
                 <article
                   key={key}
                   className="rounded-xl bg-[color:var(--app-surface)] p-5 text-left ring-1 ring-[color:var(--app-ring)]"
@@ -81,8 +82,7 @@ export function LandingPage() {
                     {t(`landing.features.${key}.body`)}
                   </p>
                 </article>
-              );
-            })}
+            ))}
           </section>
         </main>
 
