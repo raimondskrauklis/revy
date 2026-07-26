@@ -84,7 +84,7 @@ Each: tests + `pipenv run lint` + `babysit-pr` until Greptile clean.
 
 ## Track 4 — R4 phase-execution
 
-**Prerequisites:** Track 1 merged; Track 2b #1–#2 merged (required); #3–#4 merged (recommended before R4 staging e2e); execution-peer-review on R4 execution doc.
+**Prerequisites:** Track 1 merged; Track 2b #1–#2 merged (required); #3–#4 merged (recommended before R4 staging e2e); ~~execution-peer-review on R4 execution doc~~ **done** (2026-07-26 architecture-peer-review + doc align in PR #12).
 
 **Branch:** `feat/review-r4-review-run` (rebase on `main`)
 

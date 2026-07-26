@@ -74,7 +74,7 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 | **R1** | [waves/R1](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) | shipped (`review-r1-v1`) |
 | **R2** | [waves/R2](./waves/REVIEW_PIPELINE_R2_EXECUTION.md) | shipped (`review-r2-v1`) |
 | **R3** | [waves/R3](./waves/REVIEW_PIPELINE_R3_EXECUTION.md) | shipped (`review-r3-v1`) |
-| **R4** | [waves/R4](./waves/REVIEW_PIPELINE_R4_EXECUTION.md) | **next** — peer-review → implement |
+| **R4** | [waves/R4](./waves/REVIEW_PIPELINE_R4_EXECUTION.md) | **next** — `phase-execution` |
 | **R5–R7** | — | general plans ready |
 
 [waves/README.md](./waves/README.md) — full execution table.
@@ -98,5 +98,4 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 
 ## Next (strict order)
 
-1. **`execution-peer-review`** → [waves/REVIEW_PIPELINE_R4_EXECUTION.md](./waves/REVIEW_PIPELINE_R4_EXECUTION.md)
-2. **`phase-execution`** on `feat/review-r4-review-run`
+1. **`phase-execution`** on `feat/review-r4-review-run` ([waves/REVIEW_PIPELINE_R4_EXECUTION.md](./waves/REVIEW_PIPELINE_R4_EXECUTION.md))

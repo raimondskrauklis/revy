@@ -21,4 +21,4 @@ Linear **phase-execution** order.
 | R6 — GitHub publish | [R6](../REVIEW_PIPELINE_R6_GITHUB_PUBLISH_GENERAL_PLAN.md) | — | after R5 |
 | R7 — Reviewer UI | [R7](../REVIEW_PIPELINE_R7_REVIEWER_UI_GENERAL_PLAN.md) | — | after R4 API |
 
-**Program status:** R0–R3 shipped; R4 execution ready — peer-review then `phase-execution`.
+**Program status:** R0–R3 shipped; R4 execution peer-reviewed — **`phase-execution`** next.

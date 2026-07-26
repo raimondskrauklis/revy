@@ -2,7 +2,7 @@
 
 Baseline for Revy **AI code review on GitHub** after SaaS base W0–W8 + P4 installations. **No execution steps.**
 
-**Status:** baseline-ready (2026-07-26). **Shipped:** R0–R3 (`review-r0-v1` … `review-r3-v1`). **General plans:** R0–R7 complete. **Next:** R4 — `execution-peer-review` → `phase-execution` on `feat/review-r4-review-run`. **Recovery:** [REVIEW_PIPELINE_RECOVERY_CHECKLIST.md](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md).
+**Status:** baseline-ready (2026-07-26). **Shipped:** R0–R3 (`review-r0-v1` … `review-r3-v1`). **General plans:** R0–R7 complete. **Next:** `phase-execution` on `feat/review-r4-review-run` (R4 execution peer-reviewed 2026-07-26). **Recovery:** [REVIEW_PIPELINE_RECOVERY_CHECKLIST.md](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md).
 
 **Program:** [README.md](./README.md) · **Authority (full):** `internal-docs/product/revy/docs/architecture.md`, `WEBHOOKS.md`, `REVY_PRODUCT_SLICE.md`.
 
