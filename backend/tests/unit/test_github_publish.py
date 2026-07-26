@@ -115,6 +115,14 @@ def test_build_summary_markdown_escapes_pipe_in_cells():
     assert "| Bad | title |" not in markdown
 
 
+def test_inline_publish_findings_statement_filters_active_groups():
+    review_run_id = uuid.uuid4()
+    stmt = github_publish.inline_publish_findings_statement(review_run_id=review_run_id)
+    sql = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+    assert "github_finding_groups" in sql
+    assert GitHubFindingGroupState.active.value in sql
+
+
 def test_compute_check_conclusion_success_when_no_active():
     group = GitHubFindingGroupORM(
         workspace_id=uuid.uuid4(),

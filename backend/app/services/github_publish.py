@@ -145,6 +145,26 @@ def build_summary_markdown(
     return "\n".join(lines)
 
 
+def inline_publish_findings_statement(*, review_run_id: UUID):
+    """Findings eligible for inline GitHub comments — active groups only (R5 judge may resolve)."""
+    return (
+        select(GitHubFindingORM)
+        .join(
+            GitHubFindingGroupORM,
+            GitHubFindingORM.group_id == GitHubFindingGroupORM.id,
+        )
+        .where(
+            GitHubFindingORM.review_run_id == review_run_id,
+            GitHubFindingGroupORM.state == GitHubFindingGroupState.active,
+            GitHubFindingORM.severity.in_(
+                (FindingSeverity.error, FindingSeverity.critical),
+            ),
+            GitHubFindingORM.file_path.is_not(None),
+            GitHubFindingORM.start_line.is_not(None),
+        )
+    )
+
+
 async def get_latest_publish_job_for_revision(
     session: AsyncSession,
     *,
@@ -441,14 +461,7 @@ async def run_publish_job(
             if post_inline:
                 inline_findings = list(
                     await session.scalars(
-                        select(GitHubFindingORM).where(
-                            GitHubFindingORM.review_run_id == job.review_run_id,
-                            GitHubFindingORM.severity.in_(
-                                (FindingSeverity.error, FindingSeverity.critical),
-                            ),
-                            GitHubFindingORM.file_path.is_not(None),
-                            GitHubFindingORM.start_line.is_not(None),
-                        )
+                        inline_publish_findings_statement(review_run_id=job.review_run_id)
                     )
                 )
                 for finding in inline_findings:
