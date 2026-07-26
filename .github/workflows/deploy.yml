@@ -352,12 +352,25 @@ jobs:
               ${{ env.REVY_VOLUME_ROOT }}/data/hf-cache \
               ${{ env.REVY_VOLUME_ROOT }}/secrets
 
+            echo "🔐 Ensuring volume ownership for appuser (uid 1000) via Docker (no host sudo)..."
+            docker run --rm --user root \
+              -v ${{ env.REVY_VOLUME_ROOT }}/data:/data \
+              -v ${{ env.REVY_VOLUME_ROOT }}/secrets:/secrets \
+              alpine:3.20 \
+              sh -ec '
+                for d in repos worktrees exports hf-cache; do
+                  mkdir -p "/data/$d"
+                  chown -R 1000:1000 "/data/$d"
+                  chmod -R 2770 "/data/$d"
+                done
+                if [ -f /secrets/github-app.pem ]; then
+                  chown 1000:1000 /secrets/github-app.pem
+                  chmod 640 /secrets/github-app.pem
+                fi
+              '
+
             if [ ! -f "${{ env.REVY_VOLUME_ROOT }}/secrets/github-app.pem" ]; then
               echo "⚠️  Missing ${{ env.REVY_VOLUME_ROOT }}/secrets/github-app.pem — GitHub App API will fail until added"
-            else
-              echo "🔐 Ensuring github-app.pem readable by revy-api/revy-worker (appuser uid 1000)..."
-              sudo chown 1000:deploy "${{ env.REVY_VOLUME_ROOT }}/secrets/github-app.pem"
-              sudo chmod 640 "${{ env.REVY_VOLUME_ROOT }}/secrets/github-app.pem"
             fi
 
             echo "✅ Data directories ready"

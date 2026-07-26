@@ -259,19 +259,31 @@ Source: [GitHub webhook events](https://docs.github.com/en/webhooks/webhook-even
 
 Set `GITHUB_APP_PRIVATE_KEY_PATH` to that **in-container** absolute path (same as host path when mounted by `deploy.yml`). **Never** commit the key or put it in `.env` as inline text.
 
-### Droplet PEM permissions (Docker)
+### Droplet volume permissions (Docker)
 
-`revy-api` and `revy-worker` run as **`appuser`** (`backend/Dockerfile`). A PEM owned `deploy:deploy` with mode `600` causes `PermissionError` inside the container.
+`revy-api` and `revy-worker` run as **`appuser`** (uid **1000** in `backend/Dockerfile`). Data dirs and PEM owned `deploy:deploy` cause `PermissionError` inside the container.
 
-After placing the key on the volume:
+`deploy` has **no passwordless sudo** — CI fixes ownership via a root `alpine` container (see `deploy.yml`). Re-run manually after adding PEM or if dirs were created outside deploy:
 
 ```bash
-# appuser is uid 1000 in backend/Dockerfile
-sudo chown 1000:deploy /mnt/revy_volume/secrets/github-app.pem
-sudo chmod 640 /mnt/revy_volume/secrets/github-app.pem
-```
+docker run --rm --user root \
+  -v /mnt/revy_volume/data:/data \
+  -v /mnt/revy_volume/secrets:/secrets \
+  alpine:3.20 \
+  sh -ec '
+    for d in repos worktrees exports hf-cache; do
+      mkdir -p "/data/$d"
+      chown -R 1000:1000 "/data/$d"
+      chmod -R 2770 "/data/$d"
+    done
+    if [ -f /secrets/github-app.pem ]; then
+      chown 1000:1000 /secrets/github-app.pem
+      chmod 640 /secrets/github-app.pem
+    fi
+  '
 
-`deploy.yml` applies this on deploy when the file exists. Re-run manually if you add the PEM outside CI.
+docker restart revy-api revy-worker
+```
 
 ---
 
@@ -419,7 +431,7 @@ Set GitHub App webhook URL to the smee channel (or forward target). Keep `GITHUB
 ## Deploy checklist
 
 1. `alembic upgrade head` on target database (through `0011`).
-2. Place `github-app.pem` at `/mnt/revy_volume/secrets/github-app.pem`; `chown 1000:deploy`, `chmod 640` (see **Droplet PEM permissions** above).
+2. Place `github-app.pem` at `/mnt/revy_volume/secrets/github-app.pem`; run the **Droplet volume permissions** docker one-liner above → `GITHUB_APP_PRIVATE_KEY_PATH`
 3. Set `GITHUB_APP_ID` (**App ID**, not installation ID), `GITHUB_APP_PRIVATE_KEY_PATH`, `GITHUB_WEBHOOK_SECRET`, `REVY_BOT_LOGIN` in `/mnt/revy_volume/backend/.env`.
 4. **Install App** on GitHub for each target account/org; note each **installation ID**.
 5. GitHub App webhook URL → `https://<api-host>/api/v1/webhooks/github`.
