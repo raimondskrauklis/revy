@@ -13,7 +13,7 @@
 |------|--------|
 | `main` head | R0–R3 shipped; tags `review-r0-v1` … `review-r3-v1` |
 | R4 execution plan | On `main` (`waves/REVIEW_PIPELINE_R4_EXECUTION.md`) |
-| R4 code WIP | Stash or branch `feat/review-r4-review-run` — **do not merge until Track 4** |
+| R4 code WIP | Git stash `r4-wip-pre-recovery` on branch `feat/review-r4-review-run` — **do not merge until Track 4** |
 | Greptile backlog | Unresolved on merged PRs #8–#11 (see Track 2) |
 | Worker deploy | `deploy.yml` still `-Q default,notifications,heavy` |
 
@@ -21,15 +21,15 @@
 
 ## Track 1 — Doc baseline reset
 
-**Branch:** `chore/review-pipeline-baseline-sync` → PR → merge
+**Branch:** `chore/review-pipeline-baseline-sync` → PR #12 → merge
 
-- [ ] `REVIEW_PIPELINE_FINDINGS.md` — header R0–R3 shipped; next R4; R2/R3 in shipped table; genuinely new R4–R7; catalog R4 execution link; verification through `0013`
-- [ ] `REVIEW_PIPELINE_PROGRAM.md` — fix model paths (`github_*`); `GITHUB_APP_PRIVATE_KEY_PATH`; remove “to be created”; add recovery checklist link
-- [ ] `README.md` — recovery table tags include R2/R3
-- [ ] `REVIEW_PIPELINE_R4_REVIEW_RUN_GENERAL_PLAN.md` — status “execution ready”
-- [ ] `waves/REVIEW_PIPELINE_R4_EXECUTION.md` — prerequisites (embeddings + GitHub API); concurrency (`409 review_in_progress`); idempotency_guard; env vars
-- [ ] `backend/.env.example` — `REVY_LLM_PROVIDER`, model override vars
-- [ ] Commit + push + open PR + Greptile
+- [x] `REVIEW_PIPELINE_FINDINGS.md` — header R0–R3 shipped; next R4; R2/R3 in shipped table; genuinely new R4–R7; catalog R4 execution link; verification through `0013`
+- [x] `REVIEW_PIPELINE_PROGRAM.md` — fix model paths (`github_*`); `GITHUB_APP_PRIVATE_KEY_PATH`; remove “to be created”; add recovery checklist link
+- [x] `README.md` — recovery table tags include R2/R3
+- [x] `REVIEW_PIPELINE_R4_REVIEW_RUN_GENERAL_PLAN.md` — status “execution ready”
+- [x] `waves/REVIEW_PIPELINE_R4_EXECUTION.md` — prerequisites (embeddings + GitHub API); concurrency (`409 review_in_progress`); idempotency_guard; env vars
+- [x] `backend/.env.example` — `REVY_LLM_PROVIDER`, model override vars
+- [x] Commit + push + open PR #12 + Greptile
 
 ---
 
@@ -57,8 +57,8 @@ Open retrospective PRs for Greptile only. Close after findings triaged.
 
 | # | Branch | Fix | PR # | Merged |
 |---|--------|-----|------|--------|
-| 1 | `fix/review-r1-github-api-errors` | Use `_request()` in repo list pagination | | [ ] |
-| 2 | `fix/review-r2-synchronize-dedup` | Skip `_append_revision` when SHA unchanged | | [ ] |
+| 1 | `fix/review-r1-github-api-errors` | Use `_request()` in repo list pagination | #13 | [ ] |
+| 2 | `fix/review-r2-synchronize-dedup` | Skip `_append_revision` when SHA unchanged | #14 | [ ] |
 | 3 | `fix/review-r0-webhook-commit-order` | Commit before enqueue; dedupe hardening | | [ ] |
 | 4 | `fix/review-r3-index-job-safety` | Delete chunks after embed; fail job on exception | | [ ] |
 
