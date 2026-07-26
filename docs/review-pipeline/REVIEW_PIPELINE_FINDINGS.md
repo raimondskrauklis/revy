@@ -63,8 +63,8 @@ Revy code does not replace GitHub App registration. Use these before expecting w
 |------|--------|
 | Celery routes | `github_events`, `repo_sync`, `indexing`, `review`, … in `celery_app.py` |
 | Worker deploy (CI) | Still `-Q default,notifications,heavy` — document v1 Revy queues in deploy supplement |
-| Migrations | `0001`–`0011` on `main` |
-| pgvector | Extension in deploy SQL — indexing **R3** |
+| Migrations | `0001`–`0013` on `main` |
+| pgvector | Extension in deploy SQL; `github_code_chunks.embedding` vector(512) — **R3 shipped** |
 
 ### Genuinely new (R2–R7)
 
@@ -96,7 +96,7 @@ Revy code does not replace GitHub App registration. Use these before expecting w
 | **R0** | Webhook ingest + HMAC + dedupe + `github_events` | [R0](./REVIEW_PIPELINE_R0_WEBHOOKS_GENERAL_PLAN.md) | [R0 exec](./waves/REVIEW_PIPELINE_R0_EXECUTION.md) | **shipped** |
 | **R1** | Repository metadata + `repo_sync` | [R1](./REVIEW_PIPELINE_R1_REPO_SYNC_GENERAL_PLAN.md) | [R1 exec](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) | **shipped** |
 | **R2** | PR ingestion + revisions | [R2](./REVIEW_PIPELINE_R2_PR_INGESTION_GENERAL_PLAN.md) | [R2 exec](./waves/REVIEW_PIPELINE_R2_EXECUTION.md) | **shipped** |
-| **R3** | Indexing (chunks, pgvector) | [R3](./REVIEW_PIPELINE_R3_INDEXING_GENERAL_PLAN.md) | — | planned |
+| **R3** | Indexing (chunks, pgvector) | [R3](./REVIEW_PIPELINE_R3_INDEXING_GENERAL_PLAN.md) | [R3 exec](./waves/REVIEW_PIPELINE_R3_EXECUTION.md) | **shipped** |
 | **R4** | LLM review + findings | [R4](./REVIEW_PIPELINE_R4_REVIEW_RUN_GENERAL_PLAN.md) | — | planned |
 | **R5** | Reconciliation + judge | [R5](./REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md) | — | planned |
 | **R6** | GitHub publish | [R6](./REVIEW_PIPELINE_R6_GITHUB_PUBLISH_GENERAL_PLAN.md) | — | planned |

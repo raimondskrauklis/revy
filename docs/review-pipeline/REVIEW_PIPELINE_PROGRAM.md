@@ -34,8 +34,9 @@ git show saas-base-v1   # annotated tag → dacfc5b
 | `review-r0-v1` | `754c88c` | GitHub webhook ingestion (`POST /api/v1/webhooks/github`), delivery dedupe, `github_events` worker |
 | `review-r1-v1` | `dddfde0` | Repository metadata sync (`github_repositories`), `repo_sync` worker, list/sync API |
 | `review-r2-v1` | `09317b2` | PR ingestion (`github_pull_requests`), revisions, `pull_request` webhooks |
+| `review-r3-v1` | `a299d14` | PR revision indexing (`github_index_jobs`, `github_code_chunks`), Voyage embeddings, `indexing` queue |
 
-Future product milestones: `review-r3-v1`, `v0.2.0`, etc. Pushing a tag whose commit **includes** `.github/workflows/release-tag.yml` triggers an automatic GitHub Release. Tags on older commits (e.g. `saas-base-v1`) may need a one-time `gh release create` or **Actions → Release tag → Run workflow** with the tag name.
+Future product milestones: `review-r4-v1`, `v0.2.0`, etc. Pushing a tag whose commit **includes** `.github/workflows/release-tag.yml` triggers an automatic GitHub Release. Tags on older commits (e.g. `saas-base-v1`) may need a one-time `gh release create` or **Actions → Release tag → Run workflow** with the tag name.
 
 ---
 
@@ -69,7 +70,7 @@ main  ──●──●──●──●──  deployable; SaaS base + produc
 | **Installations API** | `GET/POST /api/v1/workspaces/{id}/installations` |
 | **Plan gate** | `require_plan_feature` on create installation |
 | **Installations UI** | `frontend/src/features/installations/` |
-| **Celery routes** | `backend/app/workers/celery_app.py` — `github_events` + `repo_sync` queues |
+| **Celery routes** | `backend/app/workers/celery_app.py` — `github_events`, `repo_sync`, `indexing`, … |
 | **Postgres** | `vector` extension in deploy SQL (indexing later) |
 
 ### Shipped (R0)
@@ -97,14 +98,23 @@ main  ──●──●──●──●──  deployable; SaaS base + produc
 | **Webhook apply** | `pull_request`, `pull_request_review` → PR rows + revisions + review activity |
 | **PR list API** | `GET …/repositories/{repo_id}/pull-requests` |
 
-### Not shipped (R3–R7)
+### Shipped (R3)
+
+| Layer | Path / surface |
+|-------|----------------|
+| **Index ORM** | `github_index_jobs`, `github_code_chunks` (vector 512); migration `0013` |
+| **Archive + chunking** | `integrations/github_archive.py`, `services/code_chunking.py` |
+| **Embeddings** | `integrations/voyage_embeddings.py` — Voyage `voyage-3-lite` |
+| **Index worker** | `backend/app/workers/index_tasks.py` — `indexing` queue |
+| **Index API** | `POST …/revisions/{id}/index`, `GET …/index-job`, chunk list + semantic search |
+
+### Not shipped (R4–R7)
 
 | Gap | Notes |
 |-----|--------|
 | Review/findings tables | R4+ |
-| Worker modules | `index_tasks`, `review_tasks`, … |
+| Worker modules | `review_tasks`, … |
 | LLM provider runtime | Config + Celery `review` queue |
-| pgvector index jobs | `indexing` queue |
 | GitHub publish | Checks, review comments — `github_publish` queue |
 | Reviewer UI | `frontend/src/features/reviewer/` (placeholder / absent) |
 
