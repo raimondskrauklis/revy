@@ -82,6 +82,28 @@ async def test_maybe_enqueue_pipeline_skips_draft_pull_request():
 
 
 @pytest.mark.asyncio
+async def test_maybe_enqueue_pipeline_skips_closed_pull_request():
+    workspace = _workspace()
+    revision, pull_request = _revision_chain(
+        workspace.id,
+        state=GitHubPullRequestState.closed,
+    )
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[revision, pull_request])
+
+    with patch("app.services.review_pipeline.pipeline_prerequisites_met", return_value=True):
+        job_id = await maybe_enqueue_pipeline_for_revision(
+            session,
+            workspace_id=workspace.id,
+            revision_id=revision.id,
+            trigger=GitHubIndexJobTriggerSource.autostart,
+        )
+
+    assert job_id is None
+    session.add.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_maybe_enqueue_pipeline_creates_index_job():
     workspace = _workspace()
     revision, pull_request = _revision_chain(workspace.id)

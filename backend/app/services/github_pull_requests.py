@@ -323,35 +323,14 @@ async def apply_pull_request_webhook_event(
         )
 
     if action == "synchronize":
-        existing = await _find_pull_request(
+        _pull_request, new_revision = await _upsert_pull_request(
             session,
-            repository_id=repository.id,
-            github_pull_request_id=fields["github_pull_request_id"],
+            repository=repository,
+            fields=fields,
+            create_revision=True,
         )
-        if existing is None:
-            _pull_request, new_revision = await _upsert_pull_request(
-                session,
-                repository=repository,
-                fields=fields,
-                create_revision=False,
-            )
-            if new_revision is None:
-                return None
-            return PullRequestWebhookResult(
-                workspace_id=repository.workspace_id,
-                revision_id=new_revision.id,
-                new_revision=True,
-                action=action,
-            )
-        existing.title = fields["title"]
-        existing.state = fields["state"]
-        existing.head_ref = fields["head_ref"]
-        existing.base_ref = fields["base_ref"]
-        existing.html_url = fields["html_url"]
-        if fields["head_sha"] == existing.head_sha:
-            await session.flush()
+        if new_revision is None:
             return None
-        new_revision = await _append_revision(session, pull_request=existing, head_sha=fields["head_sha"])
         return PullRequestWebhookResult(
             workspace_id=repository.workspace_id,
             revision_id=new_revision.id,

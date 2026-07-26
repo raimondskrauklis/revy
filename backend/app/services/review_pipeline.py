@@ -119,13 +119,15 @@ async def maybe_enqueue_pipeline_for_revision(
         )
         return None
 
-    if pull_request.is_draft:
+    if pull_request.is_draft or pull_request.state != GitHubPullRequestState.open:
         logger.info(
-            "pipeline_draft_pr_skipped",
+            "pipeline_pr_not_reviewable_skipped",
             extra={
                 "workspace_id": str(workspace_id),
                 "revision_id": str(revision_id),
                 "trigger": trigger.value,
+                "is_draft": pull_request.is_draft,
+                "state": pull_request.state.value,
             },
         )
         return None

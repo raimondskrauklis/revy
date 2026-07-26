@@ -72,7 +72,7 @@ def _repository(installation: GitHubInstallationORM) -> GitHubRepositoryORM:
     return row
 
 
-def _pull_request_payload(*, action: str, head_sha: str = "abc123") -> dict:
+def _pull_request_payload(*, action: str, head_sha: str = "abc123", draft: bool = False) -> dict:
     return {
         "action": action,
         "installation": {"id": _INSTALLATION_ID},
@@ -82,6 +82,7 @@ def _pull_request_payload(*, action: str, head_sha: str = "abc123") -> dict:
             "number": 7,
             "title": "Add feature",
             "state": "open",
+            "draft": draft,
             "html_url": "https://github.com/acme/demo/pull/7",
             "head": {"sha": head_sha, "ref": "feature"},
             "base": {"ref": "main"},
@@ -169,6 +170,40 @@ async def test_apply_pull_request_synchronize_appends_revision():
     assert existing.revision_count == 2
     assert existing.head_sha == "newsha"
     session.add.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_apply_pull_request_synchronize_updates_is_draft():
+    installation = _installation()
+    repository = _repository(installation)
+    existing = GitHubPullRequestORM(
+        repository_id=repository.id,
+        workspace_id=repository.workspace_id,
+        installation_id=repository.installation_id,
+        github_pull_request_id=_PR_GITHUB_ID,
+        number=7,
+        title="Add feature",
+        state=GitHubPullRequestState.open,
+        head_sha="oldsha",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=1,
+        is_draft=False,
+    )
+    existing.id = uuid.uuid4()
+
+    session = _session_with_nested()
+    session.scalar = AsyncMock(side_effect=[installation, repository, existing])
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    await apply_pull_request_webhook_event(
+        session,
+        _pull_request_payload(action="synchronize", head_sha="newsha", draft=True),
+    )
+
+    assert existing.is_draft is True
+    assert existing.revision_count == 2
 
 
 @pytest.mark.asyncio
