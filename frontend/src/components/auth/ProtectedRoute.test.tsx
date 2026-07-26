@@ -54,6 +54,19 @@ describe('ProtectedRoute', () => {
     expect(screen.getByText('Unauthorized')).toBeInTheDocument();
   });
 
+  it('shows loading while profile is still fetching', () => {
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      isUserLoading: true,
+      user: null,
+    } as unknown as ReturnType<typeof useAuth>);
+
+    renderProtectedRoute();
+    expect(screen.getByText(/loading/i)).toBeInTheDocument();
+    expect(screen.queryByText('Unauthorized')).not.toBeInTheDocument();
+  });
+
   it('renders child route when authenticated with active user', () => {
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: true,

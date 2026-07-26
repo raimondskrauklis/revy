@@ -1,22 +1,49 @@
 // frontend/src/features/auth/pages/UnauthorizedPage.tsx
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+
+type UnauthorizedReason = 'profile' | 'permission';
 
 export function UnauthorizedPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
-  const sessionWithoutProfile = !user;
+  const location = useLocation();
+  const { user, logout, isUserLoading } = useAuth();
+  const reason = (location.state as { reason?: UnauthorizedReason } | null)?.reason;
+  const permissionDenied = reason === 'permission';
+  const sessionWithoutProfile = !user && !isUserLoading;
+
+  useEffect(() => {
+    if (permissionDenied || !user) return;
+    navigate('/dashboard', { replace: true });
+  }, [navigate, permissionDenied, user]);
+
+  if (!user && isUserLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[color:var(--app-canvas)] p-6">
+        <p className="text-sm text-[color:var(--app-text-muted)]">{t('auth.loading')}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[color:var(--app-canvas)] p-6">
       <div className="max-w-md space-y-4 text-center">
         <h1 className="text-xl font-semibold text-[color:var(--app-text-strong)]">
-          {t(sessionWithoutProfile ? 'auth.unauthorized.sessionFailed.title' : 'auth.unauthorized.title')}
+          {t(
+            sessionWithoutProfile
+              ? 'auth.unauthorized.sessionFailed.title'
+              : 'auth.unauthorized.title',
+          )}
         </h1>
         <p className="text-sm text-[color:var(--app-text-muted)]">
-          {t(sessionWithoutProfile ? 'auth.unauthorized.sessionFailed.body' : 'auth.unauthorized.body')}
+          {t(
+            sessionWithoutProfile
+              ? 'auth.unauthorized.sessionFailed.body'
+              : 'auth.unauthorized.body',
+          )}
         </p>
         {user?.email && (
           <p className="text-xs text-[color:var(--app-text-subtle)]">

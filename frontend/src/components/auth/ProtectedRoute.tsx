@@ -12,7 +12,9 @@ export function ProtectedRoute() {
   const { isAuthenticated, isLoading, isUserLoading, user } = useAuth();
   const location = useLocation();
 
-  if (isLoading || (isAuthenticated && isUserLoading && user == null)) {
+  const awaitingProfile = isAuthenticated && user == null;
+
+  if (isLoading || (awaitingProfile && isUserLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[color:var(--app-canvas)]">
         <p className="text-[color:var(--app-text-muted)]">{t('auth.loading')}</p>
@@ -24,8 +26,8 @@ export function ProtectedRoute() {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
-  if (!user) {
-    return <Navigate to="/unauthorized" replace />;
+  if (awaitingProfile) {
+    return <Navigate to="/unauthorized" replace state={{ reason: 'profile' }} />;
   }
 
   const status = user.status;

@@ -7,18 +7,16 @@ import { useAuth } from '@/contexts/AuthContext';
 export function AuthCallbackPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading, refetchUser } = useAuth();
+  const { isAuthenticated, isLoading, isUserLoading } = useAuth();
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || isUserLoading) return;
     if (!isAuthenticated) {
       navigate('/login', { replace: true });
       return;
     }
-    void refetchUser().then((me) => {
-      navigate(me ? '/dashboard' : '/unauthorized', { replace: true });
-    });
-  }, [isAuthenticated, isLoading, navigate, refetchUser]);
+    navigate('/dashboard', { replace: true });
+  }, [isAuthenticated, isLoading, isUserLoading, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[color:var(--app-canvas)]">
