@@ -119,3 +119,39 @@ async def test_dispatch_publish_review_run_schedules_inline_when_loop_running():
 
     run_mock.assert_not_called()
     inline_mock.assert_awaited_once_with("job-id")
+
+
+@pytest.mark.asyncio
+async def test_run_publish_review_run_inline_marks_failed_on_cancelled():
+    with patch(
+        "app.workers.publish_tasks._execute_publish_review_run",
+        AsyncMock(side_effect=asyncio.CancelledError()),
+    ):
+        with patch(
+            "app.workers.publish_tasks._finalize_inline_publish_failure",
+            new_callable=AsyncMock,
+        ) as finalize_mock:
+            with pytest.raises(asyncio.CancelledError):
+                await publish_tasks._run_publish_review_run_inline("job-id")
+
+    finalize_mock.assert_awaited_once_with("job-id", "inline publish cancelled")
+
+
+@pytest.mark.asyncio
+async def test_inline_publish_task_done_finalizes_uncaught_exception():
+    with patch(
+        "app.workers.publish_tasks._finalize_inline_publish_failure",
+        new_callable=AsyncMock,
+    ) as finalize_mock:
+
+        async def failing() -> None:
+            raise RuntimeError("boom")
+
+        task = asyncio.create_task(failing())
+        with pytest.raises(RuntimeError):
+            await task
+
+        publish_tasks._inline_publish_task_done("job-id", task)
+        await asyncio.sleep(0)
+
+    finalize_mock.assert_awaited_once_with("job-id", "inline publish failed: boom")
