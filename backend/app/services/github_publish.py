@@ -104,6 +104,31 @@ async def create_publish_job_for_review_run(
     return job.id
 
 
+async def resolve_publish_job_id_for_review_run(
+    session: AsyncSession,
+    *,
+    review_run_id: UUID,
+) -> tuple[UUID | None, bool]:
+    """Return a publish job id to dispatch, creating one or reusing pending/processing."""
+    job_id = await create_publish_job_for_review_run(session, review_run_id=review_run_id)
+    if job_id is not None:
+        return job_id, True
+
+    existing = await session.scalar(
+        select(GitHubPublishJobORM.id)
+        .where(
+            GitHubPublishJobORM.review_run_id == review_run_id,
+            GitHubPublishJobORM.status.in_(
+                (GitHubPublishJobStatus.pending, GitHubPublishJobStatus.processing),
+            ),
+        )
+        .limit(1)
+    )
+    if existing is None:
+        return None, False
+    return existing, False
+
+
 def compute_check_conclusion(groups: list[GitHubFindingGroupORM]) -> str:
     active = [g for g in groups if g.state == GitHubFindingGroupState.active]
     if any(g.severity in (FindingSeverity.error, FindingSeverity.critical) for g in active):

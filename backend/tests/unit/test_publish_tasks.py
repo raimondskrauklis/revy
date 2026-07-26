@@ -56,8 +56,8 @@ def test_publish_for_review_run_enqueues_publish_review_run():
 
     with patch("app.workers.publish_tasks.get_db_context", return_value=db_context):
         with patch(
-            "app.workers.publish_tasks.create_publish_job_for_review_run",
-            AsyncMock(return_value=job_id),
+            "app.workers.publish_tasks.resolve_publish_job_id_for_review_run",
+            AsyncMock(return_value=(job_id, True)),
         ):
             with patch(
                 "app.workers.publish_tasks.dispatch_publish_review_run",
@@ -66,6 +66,30 @@ def test_publish_for_review_run_enqueues_publish_review_run():
 
     dispatch_mock.assert_called_once_with(str(job_id))
     session.commit.assert_awaited_once()
+
+
+def test_publish_for_review_run_redispatches_existing_pending_job():
+    existing_job_id = uuid.uuid4()
+
+    session = AsyncMock()
+    session.commit = AsyncMock()
+
+    db_context = MagicMock()
+    db_context.__aenter__ = AsyncMock(return_value=session)
+    db_context.__aexit__ = AsyncMock(return_value=None)
+
+    with patch("app.workers.publish_tasks.get_db_context", return_value=db_context):
+        with patch(
+            "app.workers.publish_tasks.resolve_publish_job_id_for_review_run",
+            AsyncMock(return_value=(existing_job_id, False)),
+        ):
+            with patch(
+                "app.workers.publish_tasks.dispatch_publish_review_run",
+            ) as dispatch_mock:
+                publish_tasks.publish_for_review_run.run(str(uuid.uuid4()))
+
+    dispatch_mock.assert_called_once_with(str(existing_job_id))
+    session.commit.assert_not_awaited()
 
 
 def test_dispatch_publish_review_run_falls_back_to_inline_run():
