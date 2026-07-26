@@ -12,16 +12,16 @@ Phase **R4** of [REVIEW_PIPELINE_R4_REVIEW_RUN_GENERAL_PLAN.md](../REVIEW_PIPELI
 
 - **Tables:** `github_review_runs` (per revision attempt), `github_findings` (structured rows per run).
 - **Run status:** `pending` → `processing` → `completed` \| `failed` (`GitHubReviewRunStatus`).
-- **Finding shape:** `severity` (`info` \| `warning` \| `error` \| `critical`), `category` (`security` \| `bug` \| `performance` \| `style` \| `maintainability` \| `other`), `title`, `message`, optional `file_path` + `start_line` + `end_line`.
+- **Finding shape:** `severity` (`info` \| `warning` \| `error` \| `critical`), `category` (`security` \| `bug` \| `performance` \| `style` \| `maintainability` \| `other`), `title`, `message`, optional `file_path` + `start_line` + `end_line`. Schema includes `style` for forward compatibility; **R4-Q5** — prompt/parsing must drop style/lint findings (CI owns style); do not persist `category=style` rows in R4 v1.
 - **Primary LLM (Moonshot Kimi):** `REVY_LLM_PROVIDER` = `moonshot` (default). OpenAI-compatible client at `https://api.moonshot.ai/v1`. `503 llm_disabled` when `MOONSHOT_API_KEY` missing.
 - **Model tier by profile:** `standard` → `kimi-k2.7-code`; `deep` / `critical` → `kimi-k3` (override via `REVY_MOONSHOT_MODEL_STANDARD`, `REVY_MOONSHOT_MODEL_DEEP` — see `backend/.env.example`). Authority: `internal-docs/product/revy/docs/architecture.md` §13–14.
 - **Anthropic:** **not** the R4 primary — reserved for R5 judge / cross-family escalation (`ANTHROPIC_API_KEY`, `judge` queue). Optional `anthropic_review.py` scaffold in R4.2 for adapter reuse only.
 - **Profile → timeout:** `standard` / `deep` / `critical` map to existing `revy_revision_timeout_*_seconds` settings; Celery `soft_time_limit` = profile timeout, `time_limit` = timeout + 60s.
-- **Prerequisite:** latest `github_index_jobs` for revision must be `completed` (else `409 index_required`); `embeddings_enabled` (`VOYAGE_API_KEY`) and `github_api_enabled` required for context retrieval.
+- **Prerequisite:** latest `github_index_jobs` for revision must be `completed` (else `409` + `error_code=index_required` via `ConflictError`); `embeddings_enabled` (`VOYAGE_API_KEY`) and `github_api_enabled` required for context retrieval.
 - **Context:** R3 `search_revision_chunks` — queries from PR title + fixed lenses (`security vulnerabilities`, `logic bugs`, `performance issues`); merge top chunks (dedupe by `file_path`+`chunk_index`, cap 30).
 - **Prompt output:** single JSON object `{"findings":[…]}`; invalid JSON → run `failed` with stored error.
 - **Trigger:** `POST …/pull-requests/{pr_id}/revisions/{revision_id}/review` (`admin_users`, same as R3 index) → Celery `review` queue; `idempotency_guard` on trigger; **no** auto-review on `push`.
-- **Concurrency:** reject new trigger with `409 review_in_progress` when a run for the revision is `pending` or `processing`.
+- **Concurrency:** reject new trigger with `409` + `error_code=review_in_progress` when a run for the revision is `pending` or `processing`.
 - **Audit:** `record_audit` on review trigger (`review.run_requested`).
 - **Out of scope:** judge/reconcile (R5), GitHub publish (R6), plan-gated volume (Q9), auto-review on webhook, multi-model ensemble.
 
@@ -41,7 +41,7 @@ Phase **R4** of [REVIEW_PIPELINE_R4_REVIEW_RUN_GENERAL_PLAN.md](../REVIEW_PIPELI
 
 ## R4.2 — LLM provider clients
 
-**What:** `integrations/anthropic_review.py` (messages API, structured JSON); `integrations/moonshot_review.py` (OpenAI client); `settings.llm_enabled` + `settings.review_timeout_seconds(profile)`.
+**What:** `integrations/anthropic_review.py` (messages API, structured JSON); `integrations/moonshot_review.py` (OpenAI client); add `settings.llm_enabled` + `settings.revy_revision_timeout_seconds(profile)` mapping `revy_revision_timeout_*_seconds` env vars.
 
 **Files:** `core/config.py`, `integrations/anthropic_review.py`, `integrations/moonshot_review.py`, `tests/unit/test_anthropic_review.py`, `tests/unit/test_moonshot_review.py`
 
@@ -55,13 +55,13 @@ Phase **R4** of [REVIEW_PIPELINE_R4_REVIEW_RUN_GENERAL_PLAN.md](../REVIEW_PIPELI
 
 **Files:** `services/github_review.py`, `schemas/github_review.py`, `tests/unit/test_github_review.py`
 
-**Deliverable:** unit tests cover happy path, missing index (`409`), invalid LLM JSON (`failed` run).
+**Deliverable:** unit tests cover happy path, missing index (`409` / `index_required`), invalid LLM JSON (`failed` run).
 
 ---
 
 ## R4.4 — Review worker
 
-**What:** `workers/review_tasks.py` — `review_pull_request_revision(review_run_id)`; register import in `celery_app.py` (route already `review` queue).
+**What:** `workers/review_tasks.py` — `review_pull_request_revision(review_run_id)`; register import in `celery_app.py` (route already `review` queue). **Do not** enqueue R5 reconcile here — R5.3 adds hook after `review-r4-v1`.
 
 **Files:** `workers/review_tasks.py`, `tests/unit/test_review_tasks.py`
 
@@ -91,8 +91,10 @@ pipenv run lint && pipenv run pytest \
   -q
 ```
 
-**Deploy:** `alembic upgrade head`; set `VOYAGE_API_KEY`, `MOONSHOT_API_KEY` (required for R4); `ANTHROPIC_API_KEY` optional until R5 judge ships; worker consumes at least `github_events,repo_sync,indexing,review` (see [REVIEW_PIPELINE_PROGRAM.md](../REVIEW_PIPELINE_PROGRAM.md) §5).
+**Deploy:** `alembic upgrade head` (through `0014`); set `VOYAGE_API_KEY`, `MOONSHOT_API_KEY`; worker consumes full Revy queue list per [PROGRAM](../REVIEW_PIPELINE_PROGRAM.md) §5.
 
 **Human gate:** index one revision (R3), trigger review, confirm `github_findings` rows and API list returns them.
 
-**Next:** [REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md](../REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md) → create [REVIEW_PIPELINE_R5_EXECUTION.md](./REVIEW_PIPELINE_R5_EXECUTION.md).
+**Status:** Implemented — PR [#24](https://github.com/raimondskrauklis/revy/pull/24).
+
+**Next:** [REVIEW_PIPELINE_R5_EXECUTION.md](./REVIEW_PIPELINE_R5_EXECUTION.md) (PR [#25](https://github.com/raimondskrauklis/revy/pull/25)).

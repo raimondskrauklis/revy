@@ -18,7 +18,7 @@ Phase **R3** of [REVIEW_PIPELINE_R3_INDEXING_GENERAL_PLAN.md](../REVIEW_PIPELINE
 - **Reranker (future retrieval stack §11.3):** parallel API (`voyage` rerank) vs local `bge-reranker-v2-m3` via `REVY_RERANKER_BACKEND` — not in R3 v1.
 - **Source fetch:** GitHub tarball `GET /repos/{owner}/{repo}/tarball/{ref}` → extract under `REVY_WORKTREES_ROOT/{revision_id}`.
 - **Chunking:** line-aware splits, max 2000 chars, skip binary paths + `node_modules`/`.git`/vendor dirs.
-- **Trigger:** `POST …/pull-requests/{pr_id}/revisions/{revision_id}/index` (admin) → Celery `indexing` queue; **no** auto-index on `push` (R4).
+- **Trigger:** `POST …/pull-requests/{pr_id}/revisions/{revision_id}/index` (admin) → Celery `indexing` queue; **no** auto-index on `push` / `synchronize` ([Q11](../REVIEW_PIPELINE_FINDINGS.md) → R8 automation).
 - **Retrieval:** `GET …/revisions/{revision_id}/chunks` list; service `search_revision_chunks(query, top_k)` for R4 (cosine via pgvector).
 - **Out of scope (R3 v1 code):** symbol index, cross-repo search, auto-index on webhook, **local/HF embedding backend impl**, hybrid FTS+RRF rerank. Local/API-parallel embedding policy is **documented** in FINDINGS + `architecture.md` §11.3.1 for follow-up.
 
@@ -91,4 +91,4 @@ pipenv run lint && pipenv run pytest \
 
 **Human gate:** index one revision on staging; `github_code_chunks` rows with non-null embeddings.
 
-**Next:** [REVIEW_PIPELINE_R4_REVIEW_RUN_GENERAL_PLAN.md](../REVIEW_PIPELINE_R4_REVIEW_RUN_GENERAL_PLAN.md) → create [REVIEW_PIPELINE_R4_EXECUTION.md](./REVIEW_PIPELINE_R4_EXECUTION.md).
+**Next:** [REVIEW_PIPELINE_R4_EXECUTION.md](./REVIEW_PIPELINE_R4_EXECUTION.md).

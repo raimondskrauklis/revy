@@ -13,6 +13,7 @@ import { StackShell } from '@/components/layout/StackShell';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher';
 import { UserMenu } from '@/components/layout/UserMenu';
+import { useExtensions } from '@/platform/extensions/hooks';
 
 type NavItem = {
   href: string;
@@ -33,6 +34,7 @@ function isNavActive(pathname: string, href: string): boolean {
 export function AppShellLayout() {
   const { t } = useTranslation();
   const location = useLocation();
+  const navExtensions = useExtensions('nav_item');
 
   return (
     <div className="flex h-screen min-h-0 overflow-hidden bg-[color:var(--app-canvas)]">
@@ -62,6 +64,10 @@ export function AppShellLayout() {
                   </Link>
                 </li>
               );
+            })}
+            {navExtensions.map((extension) => {
+              const Component = extension.component;
+              return <Component key={extension.id} />;
             })}
           </ul>
         </nav>

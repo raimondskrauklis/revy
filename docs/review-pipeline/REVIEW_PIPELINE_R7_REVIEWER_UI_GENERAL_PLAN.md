@@ -12,12 +12,12 @@ General plan from [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md). 
 
 In-app surfaces for PR status, findings, and review history — member-facing product UI without replacing GitHub.com.
 
-**Scope:** In — `frontend/src/features/reviewer/`; routes under authenticated shell; PR list per repo/installation; finding list + detail; links out to GitHub PR; dashboard widget slot (extension registry); i18n keys EN+LV. Out — full PR diff viewer; inline reply on GitHub; OAuth install button (separate program item Q10).
+**Scope:** In — `frontend/src/features/reviewer/`; flat routes under authenticated shell (`/reviewer/…`, workspace via `X-Workspace-Id`); PR list per repo/installation; finding list + detail; **merge readiness badge** derived from latest check run conclusion (R6-Q2); links out to GitHub PR; dashboard widget slot (extension registry in `registerRevy.ts`); i18n keys EN+LV. Out — full PR diff viewer; inline reply on GitHub; OAuth install button (separate program item Q10).
 
 **Deliverables:** Workspace member can browse PRs and findings; empty states; error toasts via `mapApiError()`; nav entry only when R4 API exists (nav honesty — same rule as SaaS W0).
 
 **Depends on:** R4 (read-only UI can ship before R6; publish status shown when R6 ships).
 
-**Status:** Not started.
+**Status:** Implemented — PR [#27](https://github.com/raimondskrauklis/revy/pull/27); tag `review-r7-v1` after merge.
 
-**Next:** `create-execution-plan` when R4 API stable — [waves/REVIEW_PIPELINE_R7_EXECUTION.md](./waves/REVIEW_PIPELINE_R7_EXECUTION.md) (to be created). May overlap R6 publish UX in a follow-up subphase.
+**Next:** R8 automation — [general plan](./REVIEW_PIPELINE_R8_AUTOMATION_GENERAL_PLAN.md); workspace review policy (R9+).
