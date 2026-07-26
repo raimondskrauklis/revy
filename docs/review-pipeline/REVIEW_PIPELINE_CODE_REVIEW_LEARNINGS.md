@@ -87,6 +87,12 @@ Greptile was **most valuable** on cross-step consistency and async/DB edge cases
 | #27 | P2 | Merge conclusion dead `success` path | `failure` for unknown severity |
 | #27 | P2 | GitHub link missing past page 1 | `usePullRequest` scans cursors |
 
+### Open / deferred (verify before closing)
+
+| ID | Severity | Issue | Status | Where to verify |
+|----|----------|-------|--------|----------------|
+| R6-DEFER-01 | P1 | Inline permanently skipped when Job B reuses Job A’s check run but Job A never posted inline (`is_update_from_other` ignores `existing.inline_comments_posted`) | **open** | [FINDINGS § R6-DEFER-01](./REVIEW_PIPELINE_FINDINGS.md#r6-defer-01--inline-comments-skipped-when-reusing-another-jobs-check-run-p1) |
+
 ---
 
 ## What Revy should do better (product backlog)
