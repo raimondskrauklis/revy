@@ -32,7 +32,11 @@ def _workspace(*, autostart: bool = True) -> WorkspaceORM:
     return workspace
 
 
-def _revision_chain(workspace_id: uuid.UUID) -> tuple[GitHubPullRequestRevisionORM, GitHubPullRequestORM]:
+def _revision_chain(
+    workspace_id: uuid.UUID,
+    *,
+    is_draft: bool = False,
+) -> tuple[GitHubPullRequestRevisionORM, GitHubPullRequestORM]:
     pull_request = GitHubPullRequestORM(
         repository_id=uuid.uuid4(),
         workspace_id=workspace_id,
@@ -45,6 +49,7 @@ def _revision_chain(workspace_id: uuid.UUID) -> tuple[GitHubPullRequestRevisionO
         head_ref="feature",
         base_ref="main",
         revision_count=1,
+        is_draft=is_draft,
     )
     pull_request.id = uuid.uuid4()
     revision = GitHubPullRequestRevisionORM(
@@ -54,6 +59,25 @@ def _revision_chain(workspace_id: uuid.UUID) -> tuple[GitHubPullRequestRevisionO
     )
     revision.id = uuid.uuid4()
     return revision, pull_request
+
+
+@pytest.mark.asyncio
+async def test_maybe_enqueue_pipeline_skips_draft_pull_request():
+    workspace = _workspace()
+    revision, pull_request = _revision_chain(workspace.id, is_draft=True)
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[revision, pull_request, workspace])
+
+    with patch("app.services.review_pipeline.pipeline_prerequisites_met", return_value=True):
+        job_id = await maybe_enqueue_pipeline_for_revision(
+            session,
+            workspace_id=workspace.id,
+            revision_id=revision.id,
+            trigger=GitHubIndexJobTriggerSource.autostart,
+        )
+
+    assert job_id is None
+    session.add.assert_not_called()
 
 
 @pytest.mark.asyncio

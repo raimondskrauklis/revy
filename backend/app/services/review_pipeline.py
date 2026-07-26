@@ -118,6 +118,17 @@ async def maybe_enqueue_pipeline_for_revision(
         )
         return None
 
+    if pull_request.is_draft:
+        logger.info(
+            "pipeline_draft_pr_skipped",
+            extra={
+                "workspace_id": str(workspace_id),
+                "revision_id": str(revision_id),
+                "trigger": trigger.value,
+            },
+        )
+        return None
+
     workspace = await session.get(WorkspaceORM, workspace_id)
     if workspace is None:
         logger.warning(
