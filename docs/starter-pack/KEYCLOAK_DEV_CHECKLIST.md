@@ -50,19 +50,8 @@ Service account / mapper: ensure access tokens intended for the API include audi
 | Client authentication | Off (public) |
 | Standard flow | On |
 | Valid redirect URIs | `http://localhost:5173/*`, `http://127.0.0.1:5173/*`, `https://revy.createit.digital/*` |
-| Valid post logout redirect URIs | **`+`** (inherit redirect URIs) — required for OIDC logout |
+| Valid post logout redirect URIs | `+` (inherit redirect URIs) — see **Logout** below |
 | Web origins | `http://localhost:5173`, `http://127.0.0.1:5173`, `https://revy.createit.digital` |
-
-**Apply on droplet (idempotent):**
-
-```bash
-cd /mnt/revy_volume/keycloak/config
-./configure-revy-web-client.sh
-```
-
-Script: `deploy/keycloak/config/configure-revy-web-client.sh` — sets `attributes.post.logout.redirect.uris=+` via `kcadm`.
-
-**Admin UI (manual):** Clients → `revy-web` → Settings → **Valid post logout redirect URIs** → `+` (inherit) or the same `*` patterns as redirect URIs.
 
 **Frontend env:**
 
@@ -83,7 +72,21 @@ Keycloak is on a **dedicated subdomain** (`auth.revy.createit.digital`), not a p
 
 Adjust URLs if Keycloak runs behind a different host or path prefix (local dev only).
 
-**Logout (OIDC):** the SPA calls Keycloak's end-session endpoint with `post_logout_redirect_uri=https://<app-host>/login` and `id_token_hint`. Keycloak rejects logout with *Invalid redirect uri* when **Valid post logout redirect URIs** is unset — the SSO cookie on `auth.<domain>` survives and `check-sso` silently re-authenticates. Fix: run `configure-revy-web-client.sh` (sets inherit `+`) or configure the client in Admin UI.
+### Logout (`revy-web`)
+
+OIDC sign-out sends `post_logout_redirect_uri` (app uses `https://<app-host>/login`) and `id_token_hint` to Keycloak. If **Valid post logout redirect URIs** is empty, Keycloak returns *Invalid redirect uri*, the SSO session cookie survives, and the next visit auto-signs in via `check-sso`.
+
+**Admin Console** (`https://auth.revy.createit.digital/admin`):
+
+1. Realm **revy** (top-left realm picker).
+2. **Clients** → **revy-web**.
+3. **Settings** tab (Access settings).
+4. Confirm **Valid redirect URIs** includes `https://revy.createit.digital/*` (and local dev URIs if needed).
+5. **Valid post logout redirect URIs** — set to `+` (inherit all valid redirect URIs).  
+   Alternative: list the same patterns explicitly, e.g. `https://revy.createit.digital/*`.
+6. **Save**.
+
+**Verify:** Sign in to the app → Sign out → Keycloak must redirect to `/login` with no error page → Sign in again must show the login screen (not silent SSO).
 
 ---
 
