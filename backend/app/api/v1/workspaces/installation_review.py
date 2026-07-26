@@ -11,15 +11,18 @@ from app.core.auth import CurrentUser, get_current_user
 from app.core.database import get_db
 from app.core.exceptions import ForbiddenError
 from app.core.idempotency import idempotency_guard
+from app.core.pagination import CursorParams, CursorResponse, get_cursor_params
 from app.core.permissions import Permission, require_permission
 from app.core.tenancy import require_same_workspace
 from app.schemas.common import SuccessResponse
 from app.schemas.github_review import (
     GitHubFindingListResponse,
     GitHubReviewRunResponse,
+    ReconciledFindingResponse,
     ReviewTriggerRequest,
 )
 from app.services.audit_service import record_audit
+from app.services.github_finding_reconcile import list_reconciled_finding_groups
 from app.services.github_indexing import ensure_revision_access
 from app.services.github_review import (
     FINDING_LIST_DEFAULT_LIMIT,
@@ -141,5 +144,30 @@ async def get_review_findings(
         revision_id=revision_id,
         limit=limit,
         offset=offset,
+    )
+    return SuccessResponse(data=page)
+
+
+@router.get(
+    "/{workspace_id}/repositories/{repository_id}/pull-requests/{pull_request_id}/findings/reconciled",
+    response_model=SuccessResponse[CursorResponse[ReconciledFindingResponse]],
+)
+async def get_reconciled_findings(
+    workspace_id: UUID,
+    repository_id: UUID,
+    pull_request_id: UUID,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    params: Annotated[CursorParams, Depends(get_cursor_params)],
+) -> SuccessResponse[CursorResponse[ReconciledFindingResponse]]:
+    require_permission(current_user, Permission.items_view)
+    require_same_workspace(current_user, workspace_id)
+
+    page = await list_reconciled_finding_groups(
+        session,
+        workspace_id=workspace_id,
+        repository_id=repository_id,
+        pull_request_id=pull_request_id,
+        params=params,
     )
     return SuccessResponse(data=page)

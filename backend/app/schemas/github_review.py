@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from app.constants.enums import (
     FindingCategory,
     FindingSeverity,
+    GitHubFindingGroupState,
     GitHubReviewRunStatus,
     ReviewProfile,
 )
@@ -53,3 +54,19 @@ class GitHubFindingListResponse(BaseModel):
     offset: int
     limit: int
     has_more: bool
+
+
+class ReconciledFindingResponse(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: UUID
+    pull_request_id: UUID
+    state: GitHubFindingGroupState
+    severity: FindingSeverity
+    category: FindingCategory
+    title: str
+    message: str
+    file_path: str | None
+    last_seen_revision_id: UUID
+    created_at: datetime
+    updated_at: datetime
