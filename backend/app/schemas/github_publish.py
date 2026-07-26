@@ -21,6 +21,7 @@ class GitHubPublishJobResponse(BaseModel):
     status: GitHubPublishJobStatus
     github_check_run_id: int | None
     github_comment_id: int | None
+    inline_comments_posted: bool
     error_message: str | None
     created_at: datetime
     updated_at: datetime

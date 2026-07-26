@@ -304,6 +304,9 @@ async def create_publish_job(
         .limit(1)
     )
     if in_progress is not None:
+        existing_job = await session.get(GitHubPublishJobORM, in_progress)
+        if existing_job is not None:
+            return existing_job
         raise ConflictError(
             message="Publish is already in progress for this review run",
             error_code="publish_in_progress",
@@ -337,6 +340,16 @@ def enqueue_publish_for_review_run(review_run_id: UUID) -> None:
     from app.workers.publish_tasks import publish_for_review_run
 
     publish_for_review_run.delay(str(review_run_id))
+
+
+async def _checkpoint_publish_surface(
+    session: AsyncSession,
+    *,
+    persist: bool,
+) -> None:
+    await session.flush()
+    if persist:
+        await session.commit()
 
 
 async def run_publish_job(
@@ -402,15 +415,20 @@ async def run_publish_job(
         pull_request_id=pull_request.id,
         head_sha=job.head_sha,
     )
-    if job.github_check_run_id is not None:
-        is_update = True
-        post_inline = False
-    else:
-        is_update = existing is not None and existing.id != job.id
-        post_inline = not is_update
+    is_update_from_other = (
+        job.github_check_run_id is None
+        and existing is not None
+        and existing.id != job.id
+        and existing.github_check_run_id is not None
+    )
+    post_inline = not job.inline_comments_posted and not is_update_from_other
 
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
+            auth_headers = await github_api.installation_auth_headers(
+                client,
+                github_installation_id=installation.github_installation_id,
+            )
             if job.github_check_run_id is not None:
                 await github_api.update_check_run(
                     client,
@@ -420,6 +438,7 @@ async def run_publish_job(
                     check_run_id=job.github_check_run_id,
                     conclusion=conclusion,
                     summary=summary,
+                    auth_headers=auth_headers,
                 )
                 if job.github_comment_id is not None:
                     await github_api.update_issue_comment(
@@ -429,6 +448,7 @@ async def run_publish_job(
                         repo=repo_name,
                         comment_id=job.github_comment_id,
                         body=summary,
+                        auth_headers=auth_headers,
                     )
                 else:
                     comment_id = await github_api.create_issue_comment(
@@ -438,9 +458,11 @@ async def run_publish_job(
                         repo=repo_name,
                         issue_number=pull_request.number,
                         body=summary,
+                        auth_headers=auth_headers,
                     )
                     job.github_comment_id = comment_id
-            elif is_update and existing is not None and existing.github_check_run_id is not None:
+                    await _checkpoint_publish_surface(session, persist=persist_github_surface)
+            elif is_update_from_other and existing is not None:
                 job.github_check_run_id = existing.github_check_run_id
                 await github_api.update_check_run(
                     client,
@@ -450,6 +472,7 @@ async def run_publish_job(
                     check_run_id=existing.github_check_run_id,
                     conclusion=conclusion,
                     summary=summary,
+                    auth_headers=auth_headers,
                 )
                 if existing.github_comment_id is not None:
                     job.github_comment_id = existing.github_comment_id
@@ -460,6 +483,7 @@ async def run_publish_job(
                         repo=repo_name,
                         comment_id=existing.github_comment_id,
                         body=summary,
+                        auth_headers=auth_headers,
                     )
                 else:
                     comment_id = await github_api.create_issue_comment(
@@ -469,8 +493,10 @@ async def run_publish_job(
                         repo=repo_name,
                         issue_number=pull_request.number,
                         body=summary,
+                        auth_headers=auth_headers,
                     )
                     job.github_comment_id = comment_id
+                    await _checkpoint_publish_surface(session, persist=persist_github_surface)
             else:
                 check_run_id = await github_api.create_check_run(
                     client,
@@ -481,8 +507,11 @@ async def run_publish_job(
                     external_id=external_id,
                     conclusion=conclusion,
                     summary=summary,
+                    auth_headers=auth_headers,
                 )
                 job.github_check_run_id = check_run_id
+                await _checkpoint_publish_surface(session, persist=persist_github_surface)
+
                 comment_id = await github_api.create_issue_comment(
                     client,
                     github_installation_id=installation.github_installation_id,
@@ -490,12 +519,10 @@ async def run_publish_job(
                     repo=repo_name,
                     issue_number=pull_request.number,
                     body=summary,
+                    auth_headers=auth_headers,
                 )
                 job.github_comment_id = comment_id
-
-            await session.flush()
-            if persist_github_surface:
-                await session.commit()
+                await _checkpoint_publish_surface(session, persist=persist_github_surface)
 
             if post_inline:
                 inline_findings = list(
@@ -525,6 +552,7 @@ async def run_publish_job(
                                 message=finding.message,
                                 severity=finding.severity.value,
                             ),
+                            auth_headers=auth_headers,
                         )
                     except httpx.HTTPStatusError as exc:
                         if exc.response.status_code in (404, 422):
@@ -539,6 +567,8 @@ async def run_publish_job(
                             )
                             continue
                         raise
+                job.inline_comments_posted = True
+                await _checkpoint_publish_surface(session, persist=persist_github_surface)
 
         job.status = GitHubPublishJobStatus.completed
         await session.flush()

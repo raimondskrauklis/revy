@@ -31,6 +31,7 @@ async def test_post_publish_pull_request_revision_queues_job():
         status=GitHubPublishJobStatus.pending,
     )
     job.id = uuid.uuid4()
+    job.inline_comments_posted = False
     job.created_at = datetime.now(UTC)
     job.updated_at = datetime.now(UTC)
 

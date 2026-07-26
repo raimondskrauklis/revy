@@ -29,6 +29,7 @@ def upgrade() -> None:
         sa.Column("status", sa.String(length=32), nullable=False, server_default="pending"),
         sa.Column("github_check_run_id", sa.BigInteger(), nullable=True),
         sa.Column("github_comment_id", sa.BigInteger(), nullable=True),
+        sa.Column("inline_comments_posted", sa.Boolean(), nullable=False, server_default="false"),
         sa.Column("error_message", sa.Text(), nullable=True),
         sa.Column(
             "created_at",

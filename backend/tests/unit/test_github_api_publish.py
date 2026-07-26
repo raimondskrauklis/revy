@@ -116,6 +116,32 @@ async def test_create_pull_request_review_comment_posts():
     client.post.assert_awaited_once()
 
 
+@pytest.mark.asyncio
+async def test_create_check_run_reuses_provided_auth_headers():
+    client = AsyncMock()
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = {"id": 999}
+    client.post = AsyncMock(return_value=response)
+    headers_mock = AsyncMock()
+
+    with patch("app.integrations.github_api._installation_headers", headers_mock):
+        check_run_id = await github_api.create_check_run(
+            client,
+            github_installation_id=1,
+            owner="acme",
+            repo="demo",
+            head_sha="sha",
+            external_id="revy:1:2:sha",
+            conclusion="success",
+            summary="All good",
+            auth_headers={"Authorization": "Bearer cached"},
+        )
+
+    assert check_run_id == 999
+    headers_mock.assert_not_awaited()
+
+
 def test_format_inline_comment_body():
     body = github_api.format_inline_comment_body(
         title="SQLi",
