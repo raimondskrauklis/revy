@@ -252,6 +252,9 @@ async def apply_pull_request_webhook_event(
         existing.head_ref = fields["head_ref"]
         existing.base_ref = fields["base_ref"]
         existing.html_url = fields["html_url"]
+        if fields["head_sha"] == existing.head_sha:
+            await session.flush()
+            return
         await _append_revision(session, pull_request=existing, head_sha=fields["head_sha"])
         return
 
