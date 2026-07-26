@@ -30,7 +30,7 @@
 |-------|--------|--------|
 | **P4** | `github_installation` list + dev register | **shipped** |
 | **R0** | GitHub webhooks + event ingestion | shipped (`review-r0-v1` → `754c88c`) |
-| **R1** | Repository / branch metadata sync | not started |
+| **R1** | Repository / branch metadata sync | in progress |
 | **R2** | Pull request ingestion + revisions | not started |
 | **R3** | Indexing (chunks, embeddings, pgvector) | not started |
 | **R4** | Review run (LLM stages) | not started |
@@ -56,5 +56,5 @@
 
 ## Next
 
-1. Plan **R1** (repository sync) — findings update + `REVIEW_PIPELINE_R1_EXECUTION.md`.
-2. Branch `feat/review-r1-repo-sync` when R1 execution is ready.
+1. Merge **R1** (`feat/review-r1-repo-sync`) → tag `review-r1-v1`.
+2. Plan **R2** (PR ingestion) — `REVIEW_PIPELINE_R2_EXECUTION.md`.

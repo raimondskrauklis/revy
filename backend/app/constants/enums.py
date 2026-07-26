@@ -75,3 +75,10 @@ class GitHubInstallationStatus(str, Enum):
     active = "active"
     suspended = "suspended"
     removed = "removed"
+
+
+class GitHubRepositoryStatus(str, Enum):
+    """github_repositories.status — R1 repository sync."""
+
+    active = "active"
+    removed = "removed"

@@ -132,5 +132,14 @@ class Settings(BaseSettings):
     def github_webhooks_enabled(self) -> bool:
         return bool(self.github_webhook_secret and self.github_webhook_secret.strip())
 
+    @property
+    def github_api_enabled(self) -> bool:
+        return bool(
+            self.github_app_id
+            and self.github_app_id.strip()
+            and self.github_app_private_key_path
+            and self.github_app_private_key_path.strip()
+        )
+
 
 settings = Settings()
