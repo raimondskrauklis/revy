@@ -61,6 +61,7 @@ async def test_post_keycloak_webhook_requires_secret():
 async def test_post_keycloak_webhook_processes_new_delivery():
     session = AsyncMock()
     session.commit = AsyncMock()
+    session.rollback = AsyncMock()
     secret = "local-kc-webhook-secret"
     payload = {
         "id": "evt-1",
@@ -99,6 +100,7 @@ async def test_post_keycloak_webhook_processes_new_delivery():
 async def test_post_keycloak_webhook_skips_duplicate():
     session = AsyncMock()
     session.commit = AsyncMock()
+    session.rollback = AsyncMock()
     secret = "local-kc-webhook-secret"
     payload = {"id": "evt-dup", "type": "REGISTER", "userId": "kc-1"}
     request = _request_with_body(json.dumps(payload).encode())
@@ -123,3 +125,44 @@ async def test_post_keycloak_webhook_skips_duplicate():
 
     assert response.status_code == 200
     apply_event.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_post_keycloak_webhook_rolls_back_when_apply_raises():
+    session = AsyncMock()
+    session.commit = AsyncMock()
+    session.rollback = AsyncMock()
+    secret = "local-kc-webhook-secret"
+    payload = {
+        "id": "evt-fail",
+        "type": "REGISTER",
+        "userId": "kc-1",
+        "details": {"email": "user@example.com"},
+    }
+    request = _request_with_body(json.dumps(payload).encode())
+
+    with patch("app.api.v1.webhooks.keycloak.settings") as mock_settings:
+        mock_settings.keycloak_webhooks_enabled = True
+        mock_settings.keycloak_webhook_secret = secret
+        with patch(
+            "app.api.v1.webhooks.keycloak.accept_keycloak_webhook",
+            new_callable=AsyncMock,
+            return_value=True,
+        ):
+            with patch(
+                "app.api.v1.webhooks.keycloak.apply_keycloak_webhook_event",
+                new_callable=AsyncMock,
+                side_effect=ServiceUnavailableError(
+                    message="Keycloak webhook payload missing user id",
+                    error_code="keycloak_webhook_missing_user_id",
+                ),
+            ):
+                with pytest.raises(ServiceUnavailableError):
+                    await post_keycloak_webhook(
+                        request=request,
+                        session=session,
+                        webhook_secret=secret,
+                    )
+
+    session.rollback.assert_awaited_once()
+    session.commit.assert_not_awaited()

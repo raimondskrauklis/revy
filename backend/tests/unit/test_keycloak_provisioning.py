@@ -26,16 +26,53 @@ def _session_with_flush() -> AsyncMock:
 
 
 @pytest.mark.asyncio
-async def test_provision_requires_email():
+async def test_provision_requires_email_for_new_user():
     session = _session_with_flush()
-    with pytest.raises(UnauthorizedError) as exc_info:
-        await provision_user_from_keycloak(
+    with patch(
+        "app.services.keycloak_provisioning.get_user_by_keycloak_id",
+        new_callable=AsyncMock,
+        return_value=None,
+    ):
+        with pytest.raises(UnauthorizedError) as exc_info:
+            await provision_user_from_keycloak(
+                session,
+                sub="kc-1",
+                email=None,
+                email_verified=True,
+            )
+    assert exc_info.value.error_code == "provision_email_required"
+
+
+@pytest.mark.asyncio
+async def test_provision_update_profile_without_email_updates_name():
+    session = _session_with_flush()
+    existing = UserORM(
+        keycloak_user_id="kc-1",
+        email="user@example.com",
+        full_name="Old Name",
+        status=UserStatus.active,
+    )
+    existing.id = uuid.uuid4()
+    with (
+        patch(
+            "app.services.keycloak_provisioning.get_user_by_keycloak_id",
+            new_callable=AsyncMock,
+            return_value=existing,
+        ),
+        patch(
+            "app.services.keycloak_provisioning.activate_bootstrap_super_admin",
+            new_callable=AsyncMock,
+            return_value=existing,
+        ),
+    ):
+        user = await provision_user_from_keycloak(
             session,
             sub="kc-1",
             email=None,
             email_verified=True,
+            display_name="New Name",
         )
-    assert exc_info.value.error_code == "provision_email_required"
+    assert user.full_name == "New Name"
 
 
 @pytest.mark.asyncio

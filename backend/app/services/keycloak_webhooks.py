@@ -9,6 +9,7 @@ from typing import Any
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import ServiceUnavailableError
 from app.core.logging import get_logger
 from app.models.keycloak_webhook_delivery import KeycloakWebhookDeliveryORM
 from app.services.keycloak_provisioning import (
@@ -90,9 +91,10 @@ def extract_user_sub(payload: dict[str, Any]) -> str | None:
 def extract_email(payload: dict[str, Any]) -> str | None:
     details = payload.get("details")
     if isinstance(details, dict):
-        email = details.get("email")
-        if email:
-            return str(email)
+        for key in ("email", "updated_email", "new_email"):
+            value = details.get(key)
+            if value:
+                return str(value)
     email = payload.get("email")
     return str(email) if email else None
 
@@ -181,40 +183,48 @@ async def apply_keycloak_webhook_event(
     *,
     event_type: str,
     payload: dict[str, Any],
-) -> bool:
+) -> None:
     sub = extract_user_sub(payload)
+    needs_user = (
+        event_type in PROVISION_EVENTS | UPDATE_EVENTS | DISABLE_EVENTS
+        or (event_type.startswith("ADMIN") and extract_enabled(payload) is not None)
+    )
+    if sub is None and needs_user:
+        raise ServiceUnavailableError(
+            message="Keycloak webhook payload missing user id",
+            error_code="keycloak_webhook_missing_user_id",
+        )
+
     if sub is None:
         logger.warning(
             "keycloak_webhook_missing_user_id",
             extra={"event_type": event_type},
         )
-        return False
+        return
 
     if event_type in PROVISION_EVENTS | UPDATE_EVENTS:
-        email = extract_email(payload)
         await provision_user_from_keycloak(
             session,
             sub=sub,
-            email=email,
+            email=extract_email(payload),
             email_verified=extract_email_verified(payload, event_type=event_type),
             display_name=extract_display_name(payload),
         )
-        return True
+        return
 
     if event_type in DISABLE_EVENTS:
         await apply_keycloak_user_deleted(session, sub=sub)
-        return True
+        return
 
     enabled = extract_enabled(payload)
     if enabled is not None and event_type.startswith("ADMIN"):
         await apply_keycloak_user_disabled(session, sub=sub, enabled=enabled)
-        return True
+        return
 
     logger.info(
         "keycloak_webhook_unhandled_event",
         extra={"event_type": event_type},
     )
-    return False
 
 
 def parse_json_payload(body: bytes) -> dict[str, Any]:

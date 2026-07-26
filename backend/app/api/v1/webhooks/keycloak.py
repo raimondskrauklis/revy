@@ -68,7 +68,11 @@ async def post_keycloak_webhook(
         event_type=event_type,
         payload=payload,
     )
-    if accepted:
-        await apply_keycloak_webhook_event(session, event_type=event_type, payload=payload)
-    await session.commit()
+    try:
+        if accepted:
+            await apply_keycloak_webhook_event(session, event_type=event_type, payload=payload)
+        await session.commit()
+    except Exception:
+        await session.rollback()
+        raise
     return Response(status_code=status.HTTP_200_OK)

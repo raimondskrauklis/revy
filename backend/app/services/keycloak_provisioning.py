@@ -93,16 +93,18 @@ async def provision_user_from_keycloak(
     display_name: str | None = None,
 ) -> UserORM:
     """Create or update app user from Keycloak identity claims."""
-    if not email or not email.strip():
-        raise UnauthorizedError(
-            "User not provisioned",
-            error_code="provision_email_required",
-        )
-
-    normalized = normalize_email(email)
     user = await get_user_by_keycloak_id(session, sub)
+    has_email = bool(email and email.strip())
+
     if user is not None:
-        await _sync_user_email(session, user, normalized, email_verified=email_verified)
+        if has_email:
+            normalized = normalize_email(email)
+            await _sync_user_email(session, user, normalized, email_verified=email_verified)
+        if display_name:
+            name = display_name.strip()
+            if name and user.full_name != name:
+                user.full_name = name
+                await session.flush()
         user = await maybe_auto_provision_user(
             session,
             user,
@@ -111,6 +113,13 @@ async def provision_user_from_keycloak(
         )
         return await activate_bootstrap_super_admin(session, user, sub=sub)
 
+    if not has_email:
+        raise UnauthorizedError(
+            "User not provisioned",
+            error_code="provision_email_required",
+        )
+
+    normalized = normalize_email(email)
     seeded = await _find_bootstrap_seed(session, normalized)
     if seeded is not None:
         return await activate_bootstrap_super_admin(session, seeded, sub=sub)

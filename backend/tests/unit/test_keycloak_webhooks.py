@@ -4,9 +4,11 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from app.core.exceptions import ServiceUnavailableError
 from app.services.keycloak_webhooks import (
     apply_keycloak_webhook_event,
     delivery_id_from_payload,
+    extract_email,
     normalize_event_type,
     try_record_delivery,
 )
@@ -65,6 +67,15 @@ def test_normalize_event_type_from_payload():
     assert normalize_event_type({"type": "register"}, None) == "REGISTER"
 
 
+def test_extract_email_reads_updated_email():
+    payload = {
+        "type": "UPDATE_EMAIL",
+        "userId": "kc-1",
+        "details": {"updated_email": "new@example.com"},
+    }
+    assert extract_email(payload) == "new@example.com"
+
+
 @pytest.mark.asyncio
 async def test_apply_register_provisions_user():
     session = AsyncMock()
@@ -77,9 +88,42 @@ async def test_apply_register_provisions_user():
         "app.services.keycloak_webhooks.provision_user_from_keycloak",
         new_callable=AsyncMock,
     ) as provision:
-        handled = await apply_keycloak_webhook_event(session, event_type="REGISTER", payload=payload)
-    assert handled is True
+        await apply_keycloak_webhook_event(session, event_type="REGISTER", payload=payload)
     provision.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_apply_update_email_uses_updated_email_field():
+    session = AsyncMock()
+    payload = {
+        "type": "UPDATE_EMAIL",
+        "userId": "kc-1",
+        "details": {"updated_email": "new@example.com"},
+    }
+    with patch(
+        "app.services.keycloak_webhooks.provision_user_from_keycloak",
+        new_callable=AsyncMock,
+    ) as provision:
+        await apply_keycloak_webhook_event(session, event_type="UPDATE_EMAIL", payload=payload)
+    provision.assert_awaited_once_with(
+        session,
+        sub="kc-1",
+        email="new@example.com",
+        email_verified=False,
+        display_name=None,
+    )
+
+
+@pytest.mark.asyncio
+async def test_apply_register_raises_when_user_id_missing():
+    session = AsyncMock()
+    with pytest.raises(ServiceUnavailableError) as exc_info:
+        await apply_keycloak_webhook_event(
+            session,
+            event_type="REGISTER",
+            payload={"type": "REGISTER"},
+        )
+    assert exc_info.value.error_code == "keycloak_webhook_missing_user_id"
 
 
 @pytest.mark.asyncio
@@ -89,10 +133,9 @@ async def test_apply_delete_marks_user_deleted():
         "app.services.keycloak_webhooks.apply_keycloak_user_deleted",
         new_callable=AsyncMock,
     ) as delete_user:
-        handled = await apply_keycloak_webhook_event(
+        await apply_keycloak_webhook_event(
             session,
             event_type="DELETE_ACCOUNT",
             payload={"userId": "kc-1"},
         )
-    assert handled is True
     delete_user.assert_awaited_once_with(session, sub="kc-1")
