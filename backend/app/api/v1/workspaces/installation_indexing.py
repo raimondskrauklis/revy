@@ -23,9 +23,9 @@ from app.schemas.github_indexing import (
 from app.services.github_indexing import (
     CHUNK_LIST_DEFAULT_LIMIT,
     CHUNK_LIST_MAX_LIMIT,
-    _get_revision_context,
     create_index_job,
     enqueue_index_job,
+    ensure_revision_access,
     get_latest_index_job,
     list_revision_chunks,
     search_revision_chunks,
@@ -84,7 +84,7 @@ async def get_index_job_for_revision(
     require_permission(current_user, Permission.items_view)
     require_same_workspace(current_user, workspace_id)
 
-    await _get_revision_context(
+    await ensure_revision_access(
         session,
         workspace_id=workspace_id,
         repository_id=repository_id,

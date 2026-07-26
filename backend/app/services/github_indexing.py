@@ -41,52 +41,35 @@ CHUNK_LIST_DEFAULT_LIMIT = 100
 CHUNK_LIST_MAX_LIMIT = 500
 
 
-async def _get_revision_context(
+async def ensure_revision_access(
     session: AsyncSession,
     *,
     workspace_id: UUID,
     repository_id: UUID,
     pull_request_id: UUID,
     revision_id: UUID,
-) -> tuple[GitHubPullRequestRevisionORM, GitHubPullRequestORM, GitHubRepositoryORM, GitHubInstallationORM]:
-    revision = await session.scalar(
-        select(GitHubPullRequestRevisionORM).where(
+) -> None:
+    revision_key = await session.scalar(
+        select(GitHubPullRequestRevisionORM.id)
+        .join(
+            GitHubPullRequestORM,
+            GitHubPullRequestRevisionORM.pull_request_id == GitHubPullRequestORM.id,
+        )
+        .join(
+            GitHubRepositoryORM,
+            GitHubPullRequestORM.repository_id == GitHubRepositoryORM.id,
+        )
+        .where(
             GitHubPullRequestRevisionORM.id == revision_id,
             GitHubPullRequestRevisionORM.pull_request_id == pull_request_id,
-        )
-    )
-    if revision is None:
-        raise NotFoundError("Pull request revision not found")
-
-    pull_request = await session.scalar(
-        select(GitHubPullRequestORM).where(
-            GitHubPullRequestORM.id == pull_request_id,
             GitHubPullRequestORM.repository_id == repository_id,
             GitHubPullRequestORM.workspace_id == workspace_id,
-        )
-    )
-    if pull_request is None:
-        raise NotFoundError("Pull request not found")
-
-    repository = await session.scalar(
-        select(GitHubRepositoryORM).where(
             GitHubRepositoryORM.id == repository_id,
             GitHubRepositoryORM.workspace_id == workspace_id,
         )
     )
-    if repository is None:
-        raise NotFoundError("GitHub repository not found")
-
-    installation = await session.scalar(
-        select(GitHubInstallationORM).where(
-            GitHubInstallationORM.id == pull_request.installation_id,
-            GitHubInstallationORM.workspace_id == workspace_id,
-        )
-    )
-    if installation is None:
-        raise NotFoundError("GitHub installation not found")
-
-    return revision, pull_request, repository, installation
+    if revision_key is None:
+        raise NotFoundError("Pull request revision not found")
 
 
 async def create_index_job(
@@ -108,7 +91,7 @@ async def create_index_job(
             error_code="github_api_disabled",
         )
 
-    _revision, _pr, _repo, _installation = await _get_revision_context(
+    await ensure_revision_access(
         session,
         workspace_id=workspace_id,
         repository_id=repository_id,
@@ -259,16 +242,13 @@ async def list_revision_chunks(
     limit: int = CHUNK_LIST_DEFAULT_LIMIT,
     offset: int = 0,
 ) -> GitHubCodeChunkListResponse:
-    await _get_revision_context(
+    await ensure_revision_access(
         session,
         workspace_id=workspace_id,
         repository_id=repository_id,
         pull_request_id=pull_request_id,
         revision_id=revision_id,
     )
-
-    bounded_limit = min(max(limit, 1), CHUNK_LIST_MAX_LIMIT)
-    bounded_offset = max(offset, 0)
 
     rows = list(
         await session.scalars(
@@ -278,18 +258,18 @@ async def list_revision_chunks(
                 GitHubCodeChunkORM.revision_id == revision_id,
             )
             .order_by(GitHubCodeChunkORM.file_path, GitHubCodeChunkORM.chunk_index)
-            .offset(bounded_offset)
-            .limit(bounded_limit + 1)
+            .offset(offset)
+            .limit(limit + 1)
         )
     )
-    has_more = len(rows) > bounded_limit
+    has_more = len(rows) > limit
     if has_more:
-        rows = rows[:bounded_limit]
+        rows = rows[:limit]
 
     return GitHubCodeChunkListResponse(
         items=[GitHubCodeChunkResponse.model_validate(row) for row in rows],
-        offset=bounded_offset,
-        limit=bounded_limit,
+        offset=offset,
+        limit=limit,
         has_more=has_more,
     )
 
@@ -310,7 +290,7 @@ async def search_revision_chunks(
             error_code="embeddings_disabled",
         )
 
-    await _get_revision_context(
+    await ensure_revision_access(
         session,
         workspace_id=workspace_id,
         repository_id=repository_id,

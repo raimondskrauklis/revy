@@ -91,7 +91,7 @@ async def test_list_revision_chunks_returns_rows():
     revision.id = revision_id
 
     session = AsyncMock()
-    session.scalar = AsyncMock(side_effect=[revision, pull_request, repository, installation])
+    session.scalar = AsyncMock(return_value=revision_id)
     session.scalars = AsyncMock(return_value=[])
 
     page = await list_revision_chunks(
@@ -181,7 +181,7 @@ async def test_list_revision_chunks_sets_has_more_when_paginated():
     chunk_two.created_at = datetime.now(UTC)
 
     session = AsyncMock()
-    session.scalar = AsyncMock(side_effect=[revision, pull_request, repository, installation])
+    session.scalar = AsyncMock(return_value=revision_id)
     session.scalars = AsyncMock(return_value=[chunk_one, chunk_two])
 
     page = await list_revision_chunks(
