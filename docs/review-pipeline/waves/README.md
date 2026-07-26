@@ -14,7 +14,7 @@ Linear **phase-execution** order.
 |-------|--------------|-----------|--------|
 | R0 — GitHub webhooks | [R0](../REVIEW_PIPELINE_R0_WEBHOOKS_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R0_EXECUTION.md](./REVIEW_PIPELINE_R0_EXECUTION.md) | done (`review-r0-v1`) |
 | R1 — Repository sync | [R1](../REVIEW_PIPELINE_R1_REPO_SYNC_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R1_EXECUTION.md](./REVIEW_PIPELINE_R1_EXECUTION.md) | done (`review-r1-v1`) |
-| R2 — PR ingestion | [R2](../REVIEW_PIPELINE_R2_PR_INGESTION_GENERAL_PLAN.md) | — | **create next** |
+| R2 — PR ingestion | [R2](../REVIEW_PIPELINE_R2_PR_INGESTION_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R2_EXECUTION.md](./REVIEW_PIPELINE_R2_EXECUTION.md) | in progress |
 | R3 — Indexing | [R3](../REVIEW_PIPELINE_R3_INDEXING_GENERAL_PLAN.md) | — | after R2 |
 | R4 — Review run | [R4](../REVIEW_PIPELINE_R4_REVIEW_RUN_GENERAL_PLAN.md) | — | after R3 |
 | R5 — Reconcile + judge | [R5](../REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md) | — | after R4 |

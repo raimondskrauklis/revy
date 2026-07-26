@@ -82,3 +82,20 @@ class GitHubRepositoryStatus(str, Enum):
 
     active = "active"
     removed = "removed"
+
+
+class GitHubPullRequestState(str, Enum):
+    """github_pull_requests.state — R2 PR ingestion."""
+
+    open = "open"
+    closed = "closed"
+
+
+class GitHubPullRequestReviewState(str, Enum):
+    """github_pull_request_reviews.state — R2 review activity."""
+
+    approved = "approved"
+    changes_requested = "changes_requested"
+    commented = "commented"
+    dismissed = "dismissed"
+    pending = "pending"

@@ -112,4 +112,19 @@ Webhook `installation_repositories` upserts rows in `github_repositories`. For a
 
 List: `GET …/installations/{installation_id}/repositories`
 
-**Related:** [DEV_BOOTSTRAP.md](../starter-pack/DEV_BOOTSTRAP.md), [REVIEW_PIPELINE_R0_EXECUTION.md](./waves/REVIEW_PIPELINE_R0_EXECUTION.md), [REVIEW_PIPELINE_R1_EXECUTION.md](./waves/REVIEW_PIPELINE_R1_EXECUTION.md)
+---
+
+## Pull request ingestion (R2)
+
+Subscribe **Pull request** and **Pull request review** on the GitHub App ([GITHUB_APP_TARGET_CONFIG.md](../utils/GITHUB_APP_TARGET_CONFIG.md)).
+
+Verify after an `opened` delivery:
+
+```sql
+SELECT id, number, title, revision_count FROM github_pull_requests ORDER BY created_at DESC LIMIT 5;
+SELECT pull_request_id, revision_number, head_sha FROM github_pull_request_revisions ORDER BY created_at DESC LIMIT 5;
+```
+
+List API: `GET /api/v1/workspaces/{workspace_id}/repositories/{repository_id}/pull-requests`
+
+**Related:** [DEV_BOOTSTRAP.md](../starter-pack/DEV_BOOTSTRAP.md), [REVIEW_PIPELINE_R0_EXECUTION.md](./waves/REVIEW_PIPELINE_R0_EXECUTION.md), [REVIEW_PIPELINE_R1_EXECUTION.md](./waves/REVIEW_PIPELINE_R1_EXECUTION.md), [REVIEW_PIPELINE_R2_EXECUTION.md](./waves/REVIEW_PIPELINE_R2_EXECUTION.md)
