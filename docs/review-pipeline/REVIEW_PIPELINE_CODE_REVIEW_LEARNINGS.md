@@ -105,7 +105,7 @@ Lessons from **building** a review product while **using** Greptile on our PRs.
 | **One source of truth for “what to show”** | Publish, check conclusion, and UI must all filter the same group set (`active` only) | **shipped** R6 fix; add regression test in staging |
 | **Persist before retry** | Any step that calls an external API with an idempotent key must commit IDs before retryable work | **shipped** R6 checkpoint; pattern for R8 automation |
 | **Auto path = admin path** | Reconcile → publish uses same locking/enqueue as `POST …/publish` | **shipped** R6 |
-| **Judge is optional but reconcile is not** | Document + monitor when `ANTHROPIC_API_KEY` unset (R5-Q3) | **shipped**; UI could show “judge skipped” |
+| **Judge is optional but reconcile is not** | Document + monitor when `ANTHROPIC_API_KEY` unset (R5-Q3) | **shipped** — judge skipped badge on `/reviewer` PR detail (polish P2) |
 | **Evidence for claims** | Findings have `file_path` + line; add explicit **evidence snippet** on row for judge grounding | **defer** R9 — see Perplexity Layer 2 |
 | **Resolution metric** | Track dismiss / addressed / still-open at next revision — not raw finding count | **defer** R9 analytics |
 | **Incremental index** | Hash chunks; re-embed only changed chunks on `synchronize` | **defer** R9 — Perplexity Layer 1 |

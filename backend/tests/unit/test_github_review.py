@@ -2,6 +2,7 @@
 """GitHub review service — R4."""
 import json
 import uuid
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -11,12 +12,15 @@ from app.constants.enums import (
     FindingSeverity,
     GitHubIndexJobStatus,
     GitHubPullRequestState,
+    GitHubReviewJudgeStatus,
     GitHubReviewRunStatus,
     ReviewProfile,
 )
 from app.core.exceptions import ConflictError, ServiceUnavailableError, ValidationError
+from app.models.github_finding import GitHubFindingORM
 from app.models.github_index_job import GitHubIndexJobORM
 from app.models.github_review_run import GitHubReviewRunORM
+from app.schemas.github_review import GitHubReviewRunResponse
 from app.services import github_review
 from app.services.model_policy import ModelRef
 
@@ -126,6 +130,56 @@ def test_parse_finding_row_accepts_valid():
     assert parsed is not None
     assert parsed["severity"] == FindingSeverity.error
     assert parsed["category"] == FindingCategory.security
+
+
+def test_parse_finding_row_accepts_suggestion():
+    parsed = github_review._parse_finding_row(
+        {
+            "severity": "error",
+            "category": "bug",
+            "title": "Typo",
+            "message": "Wrong variable",
+            "file_path": "app/main.py",
+            "start_line": 4,
+            "suggestion": "return True",
+        }
+    )
+    assert parsed is not None
+    assert parsed["suggestion"] == "return True"
+
+
+def test_parse_finding_row_drops_multiline_suggestion():
+    parsed = github_review._parse_finding_row(
+        {
+            "severity": "error",
+            "category": "bug",
+            "title": "Typo",
+            "message": "Wrong variable",
+            "file_path": "app/main.py",
+            "start_line": 4,
+            "suggestion": "line one\nline two",
+        }
+    )
+    assert parsed is not None
+    assert "suggestion" not in parsed
+
+
+def test_parse_finding_row_normalizes_end_line_zero():
+    parsed = github_review._parse_finding_row(
+        {
+            "severity": "error",
+            "category": "bug",
+            "title": "Typo",
+            "message": "Wrong variable",
+            "file_path": "app/main.py",
+            "start_line": 4,
+            "end_line": 0,
+            "suggestion": "return True",
+        }
+    )
+    assert parsed is not None
+    assert parsed["end_line"] is None
+    assert parsed["suggestion"] == "return True"
 
 
 @pytest.mark.asyncio
@@ -360,3 +414,32 @@ async def test_run_review_run_happy_path_persists_findings():
 
     assert result.status == GitHubReviewRunStatus.completed
     assert session.add.call_count == 1
+
+
+def test_review_run_polish_defaults():
+    run = GitHubReviewRunORM(
+        revision_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        status=GitHubReviewRunStatus.pending,
+        profile=ReviewProfile.standard,
+    )
+    run.id = uuid.uuid4()
+    run.created_at = datetime.now(UTC)
+    run.updated_at = datetime.now(UTC)
+    run.judge_status = GitHubReviewJudgeStatus.not_applicable
+    run.judge_escalation_candidate_count = 0
+    response = GitHubReviewRunResponse.model_validate(run)
+    assert response.judge_status == GitHubReviewJudgeStatus.not_applicable
+    assert response.judge_escalation_candidate_count == 0
+
+
+def test_finding_polish_defaults():
+    finding = GitHubFindingORM(
+        review_run_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Bug",
+        message="Details",
+    )
+    assert finding.suggestion is None

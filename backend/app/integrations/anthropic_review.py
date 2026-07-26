@@ -16,7 +16,10 @@ REVIEW_SYSTEM_PROMPT = (
     "You are a senior code reviewer. Return a single JSON object with shape "
     '{"findings":[{"severity":"info|warning|error|critical","category":'
     '"security|bug|performance|maintainability|other","title":"…","message":"…",'
-    '"file_path":"optional/path","start_line":0,"end_line":0}]}. '
+    '"file_path":"optional/path","start_line":0,"end_line":0,'
+    '"suggestion":"optional single-line replacement or omit"}]}. '
+    "Include suggestion only for a concrete single-line fix on an anchored line; "
+    "one physical line only — omit for architectural or multi-hunk fixes. "
     "Do not include style or lint findings. Return only valid JSON."
 )
 

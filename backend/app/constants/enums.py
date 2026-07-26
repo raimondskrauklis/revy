@@ -171,6 +171,15 @@ class GitHubJudgeOutcome(str, Enum):
     modified = "modified"
 
 
+class GitHubReviewJudgeStatus(str, Enum):
+    """github_review_runs.judge_status — polish wave judge escalation."""
+
+    not_applicable = "not_applicable"
+    completed = "completed"
+    skipped_disabled = "skipped_disabled"
+    skipped_unavailable = "skipped_unavailable"
+
+
 class GitHubPublishJobStatus(str, Enum):
     """github_publish_jobs.status — R6 GitHub publish."""
 

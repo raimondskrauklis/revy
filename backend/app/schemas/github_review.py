@@ -11,6 +11,7 @@ from app.constants.enums import (
     FindingCategory,
     FindingSeverity,
     GitHubFindingGroupState,
+    GitHubReviewJudgeStatus,
     GitHubReviewRunStatus,
     ReviewProfile,
 )
@@ -30,6 +31,8 @@ class GitHubReviewRunResponse(BaseModel):
     profile: ReviewProfile
     provider: str | None
     error_message: str | None
+    judge_status: GitHubReviewJudgeStatus
+    judge_escalation_candidate_count: int
     created_at: datetime
     updated_at: datetime
 
@@ -46,6 +49,7 @@ class GitHubFindingResponse(BaseModel):
     file_path: str | None
     start_line: int | None
     end_line: int | None
+    suggestion: str | None
     created_at: datetime
 
 

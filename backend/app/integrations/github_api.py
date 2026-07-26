@@ -321,6 +321,15 @@ async def create_pull_request_review_comment(
     response.raise_for_status()
 
 
-def format_inline_comment_body(*, title: str, message: str, severity: str) -> str:
-    return f"**[{severity.upper()}] {title}**\n\n{message}"
+def format_inline_comment_body(
+    *,
+    title: str,
+    message: str,
+    severity: str,
+    suggestion: str | None = None,
+) -> str:
+    body = f"**[{severity.upper()}] {title}**\n\n{message}"
+    if suggestion:
+        body = f"{body}\n\n```suggestion\n{suggestion}\n```"
+    return body
 

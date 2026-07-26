@@ -3,6 +3,12 @@ export type PullRequestState = 'open' | 'closed';
 
 export type ReviewRunStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
+export type GitHubReviewJudgeStatus =
+  | 'not_applicable'
+  | 'completed'
+  | 'skipped_disabled'
+  | 'skipped_unavailable';
+
 export type PublishJobStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 export type FindingSeverity = 'info' | 'warning' | 'error' | 'critical';
@@ -60,6 +66,8 @@ export interface ReviewRun {
   profile: string;
   provider: string | null;
   error_message: string | null;
+  judge_status: GitHubReviewJudgeStatus;
+  judge_escalation_candidate_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -74,6 +82,7 @@ export interface ReviewFinding {
   file_path: string | null;
   start_line: number | null;
   end_line: number | null;
+  suggestion?: string | null;
   created_at: string;
 }
 

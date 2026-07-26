@@ -176,7 +176,7 @@ Source of truth: `backend/app/constants/enums.py`. String values are stored in P
 | R5-Q3 | Judge trigger policy | **locked** | Judge when `severity ∈ {error, critical}` OR (`category = security` AND `severity ≥ warning`); max 10 calls/run; skip judge when `ANTHROPIC_API_KEY` unset (reconcile still completes) |
 | R6-Q1 | Idempotent publish | **locked** | Update **check run** in place per `head_sha`; update stored PR summary comment in place when `publish_job` has `github_comment_id` — no new top-level comment per re-review (comment strategy detail in R6 execution) |
 | R6-Q2 | Merge readiness v1 | **locked** | Check run `conclusion`: `failure` if any active `error` or `critical`; `success` if none; `neutral` if only `warning`/`info`; optional R7 badge — **no** numeric 0–5 score v1 |
-| R6-Q3 | Suggested fix text | **defer** | Optional `suggestion` on finding row; GitHub suggestion block in R6 only when line-accurate |
+| R6-Q3 | Suggested fix text | **shipped** | `suggestion` on finding row; GitHub `` ```suggestion `` block when line-accurate (polish wave) |
 
 ---
 

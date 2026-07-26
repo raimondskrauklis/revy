@@ -150,3 +150,14 @@ def test_format_inline_comment_body():
     )
     assert "SQLi" in body
     assert "ERROR" in body
+
+
+def test_format_inline_comment_body_with_suggestion():
+    body = github_api.format_inline_comment_body(
+        title="SQLi",
+        message="Unsanitized",
+        severity="error",
+        suggestion="safe_query()",
+    )
+    assert "```suggestion" in body
+    assert "safe_query()" in body

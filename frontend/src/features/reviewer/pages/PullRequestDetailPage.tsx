@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { FindingRow } from '@/features/reviewer/components/FindingRow';
+import { JudgeSkippedBadge } from '@/features/reviewer/components/JudgeSkippedBadge';
 import { MergeReadinessBadge } from '@/features/reviewer/components/MergeReadinessBadge';
 import {
   usePublishJob,
@@ -83,6 +84,11 @@ export function PullRequestDetailPage() {
           </a>
         ) : null}
         <MergeReadinessBadge conclusion={mergeConclusion} published={published} />
+        {reviewRun?.status === 'completed' &&
+        (reviewRun.judge_status === 'skipped_disabled' ||
+          reviewRun.judge_status === 'skipped_unavailable') ? (
+          <JudgeSkippedBadge judgeStatus={reviewRun.judge_status} />
+        ) : null}
         {reviewRun ? (
           <span className="text-sm text-[color:var(--app-text-muted)]">
             {t('reviewer.reviewRun.status', {
