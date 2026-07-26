@@ -8,6 +8,7 @@ from app.core.database import get_db_context
 from app.core.logging import get_logger
 from app.models.github_webhook_delivery import GitHubWebhookDeliveryORM
 from app.services.github_installations import apply_installation_webhook_event
+from app.services.github_repositories import apply_installation_repositories_webhook_event
 from app.workers.celery_app import celery_app
 
 logger = get_logger(__name__)
@@ -40,6 +41,10 @@ def process_github_event(self, delivery_id: str) -> None:
                 return
 
             if event_type in {"push", "installation_repositories"}:
+                if event_type == "installation_repositories":
+                    await apply_installation_repositories_webhook_event(session, payload)
+                    return
+
                 logger.info(
                     "github_webhook_event_stub",
                     extra={

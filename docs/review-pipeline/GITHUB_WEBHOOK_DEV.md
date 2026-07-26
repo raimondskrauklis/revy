@@ -96,5 +96,18 @@ SELECT delivery_id, event_type, installation_id FROM github_webhook_deliveries O
 | `422` invalid signature | Secret mismatch between GitHub/smee and `.env` |
 | `200` but no status change | Installation id not registered in `github_installations` (orphan — expected until dev register) |
 | Task not running | Celery worker not consuming `github_events` |
+| Repos not listed | `installation_repositories` webhook or manual sync — see § Repository sync (R1) |
 
-**Related:** [DEV_BOOTSTRAP.md](../starter-pack/DEV_BOOTSTRAP.md), [REVIEW_PIPELINE_R0_EXECUTION.md](./waves/REVIEW_PIPELINE_R0_EXECUTION.md)
+---
+
+## Repository sync (R1)
+
+Webhook `installation_repositories` upserts rows in `github_repositories`. For a full reconcile from GitHub API:
+
+1. Set `GITHUB_APP_ID` and `GITHUB_APP_PRIVATE_KEY_PATH` in `backend/.env`
+2. Run Celery worker with `repo_sync` queue: `-Q github_events,repo_sync,…`
+3. `POST /api/v1/workspaces/{workspace_id}/installations/{installation_id}/sync-repositories` (workspace admin)
+
+List: `GET …/installations/{installation_id}/repositories`
+
+**Related:** [DEV_BOOTSTRAP.md](../starter-pack/DEV_BOOTSTRAP.md), [REVIEW_PIPELINE_R0_EXECUTION.md](./waves/REVIEW_PIPELINE_R0_EXECUTION.md), [REVIEW_PIPELINE_R1_EXECUTION.md](./waves/REVIEW_PIPELINE_R1_EXECUTION.md)
