@@ -20,4 +20,4 @@ In-app surfaces for PR status, findings, and review history — member-facing pr
 
 **Status:** Implemented — PR [#27](https://github.com/raimondskrauklis/revy/pull/27); tag `review-r7-v1` after merge.
 
-**Next:** R8 automation (`Q11`); workspace review policy (R8+).
+**Next:** R8 automation — [general plan](./REVIEW_PIPELINE_R8_AUTOMATION_GENERAL_PLAN.md); workspace review policy (R9+).

@@ -24,5 +24,6 @@ Linear **phase-execution** order.
 | R5 — Reconcile + judge | [R5](../REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R5_EXECUTION.md](./REVIEW_PIPELINE_R5_EXECUTION.md) | done — PR [#25](https://github.com/raimondskrauklis/revy/pull/25) |
 | R6 — GitHub publish | [R6](../REVIEW_PIPELINE_R6_GITHUB_PUBLISH_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R6_EXECUTION.md](./REVIEW_PIPELINE_R6_EXECUTION.md) | done — PR [#26](https://github.com/raimondskrauklis/revy/pull/26) |
 | R7 — Reviewer UI | [R7](../REVIEW_PIPELINE_R7_REVIEWER_UI_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R7_EXECUTION.md](./REVIEW_PIPELINE_R7_EXECUTION.md) | done — PR [#27](https://github.com/raimondskrauklis/revy/pull/27) |
+| R8 — Automation | [R8](../REVIEW_PIPELINE_R8_AUTOMATION_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R8_EXECUTION.md](./REVIEW_PIPELINE_R8_EXECUTION.md) | pending peer-review |
 
-**Program status:** R0–R3 on `main`; R4–R7 implemented on PR stack — merge → tag → staging e2e.
+**Program status:** R0–R4 on `main`; R5–R7 on stack / r7→main PR pending; R8 planned.

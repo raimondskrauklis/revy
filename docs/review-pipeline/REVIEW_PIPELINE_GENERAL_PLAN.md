@@ -20,6 +20,7 @@ Per-phase goals in **separate files** — same layout as [docs/saas-base](../saa
 | R5 | [R5 reconcile + judge](./REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md) | Fingerprints, escalation | implemented — PR [#25](https://github.com/raimondskrauklis/revy/pull/25) |
 | R6 | [R6 GitHub publish](./REVIEW_PIPELINE_R6_GITHUB_PUBLISH_GENERAL_PLAN.md) | Checks, PR comments | implemented — PR [#26](https://github.com/raimondskrauklis/revy/pull/26) |
 | R7 | [R7 reviewer UI](./REVIEW_PIPELINE_R7_REVIEWER_UI_GENERAL_PLAN.md) | `features/reviewer/` | implemented — PR [#27](https://github.com/raimondskrauklis/revy/pull/27) |
+| R8 | [R8 automation](./REVIEW_PIPELINE_R8_AUTOMATION_GENERAL_PLAN.md) | Autostart, `@revy review`, settings | **planned** — execution ready for peer-review |
 
 ## Execution
 
@@ -33,6 +34,7 @@ Per-phase goals in **separate files** — same layout as [docs/saas-base](../saa
 | R5 | [waves/REVIEW_PIPELINE_R5_EXECUTION.md](./waves/REVIEW_PIPELINE_R5_EXECUTION.md) | done — PR [#25](https://github.com/raimondskrauklis/revy/pull/25) |
 | R6 | [waves/REVIEW_PIPELINE_R6_EXECUTION.md](./waves/REVIEW_PIPELINE_R6_EXECUTION.md) | done — PR [#26](https://github.com/raimondskrauklis/revy/pull/26) |
 | R7 | [waves/REVIEW_PIPELINE_R7_EXECUTION.md](./waves/REVIEW_PIPELINE_R7_EXECUTION.md) | done — PR [#27](https://github.com/raimondskrauklis/revy/pull/27) |
+| R8 | [waves/REVIEW_PIPELINE_R8_EXECUTION.md](./waves/REVIEW_PIPELINE_R8_EXECUTION.md) | pending peer-review |
 
 Full table: [waves/README.md](./waves/README.md).
 
@@ -52,6 +54,6 @@ Workspace tenancy; audit on mutating routes; EN+LV for UI; unit tests; hand-writ
 
 ## Next
 
-1. **Merge PR stack** — docs [#23](https://github.com/raimondskrauklis/revy/pull/23) → [#24](https://github.com/raimondskrauklis/revy/pull/24) … [#27](https://github.com/raimondskrauklis/revy/pull/27); tag `review-r4-v1` … `review-r7-v1` on `main`.
-2. **Post-merge ops** — `alembic upgrade head`; env secrets; staging e2e per [GITHUB_WEBHOOK_DEV.md](./GITHUB_WEBHOOK_DEV.md).
-3. **R8** — automation (`Q11`); see [agent checklist](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md).
+1. **Merge PR stack** — [#26](https://github.com/raimondskrauklis/revy/pull/26) → [#27](https://github.com/raimondskrauklis/revy/pull/27); then **r7 → main**; tag `review-r5-v1` … `review-r7-v1`.
+2. **Post-merge ops** — staging e2e per [GITHUB_WEBHOOK_DEV.md](./GITHUB_WEBHOOK_DEV.md).
+3. **R8** — [general plan](./REVIEW_PIPELINE_R8_AUTOMATION_GENERAL_PLAN.md) + [execution](./waves/REVIEW_PIPELINE_R8_EXECUTION.md); peer-review → `phase-execution` on `feat/review-r8-automation`.

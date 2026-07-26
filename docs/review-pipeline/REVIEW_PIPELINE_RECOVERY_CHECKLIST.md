@@ -59,12 +59,10 @@
 
 **Product goal:** Greptile/Bugbot parity — **autostart** on PR open + push by default; optional **`@revy review`** on-demand re-run; workspace toggle for manual-only (today’s behavior).
 
-- [ ] Lock R8 findings: autostart triggers + pipeline chain (`Q11`)
-  - `pull_request.opened` → index → review → reconcile → publish
-  - `pull_request.synchronize` → same chain (reuse R5→R6 auto-enqueue pattern)
-  - `issue_comment` with **`@revy review`** → on-demand full pipeline (skip if run in progress); reserve `@revy <command>` namespace for later (`index`, `publish`, …)
-  - Workspace/repo setting: `autostart` on \| off (off = admin API only, current R0–R7)
-- [ ] `create-general-plan` + execution for automation phase
+- [ ] Lock R8 findings: autostart triggers + pipeline chain (`Q11`) — **done** in [R8 execution](./waves/REVIEW_PIPELINE_R8_EXECUTION.md)
+- [x] `create-general-plan` + execution for automation phase
+- [ ] `execution-peer-review` on R8 execution (separate agent)
+- [ ] `phase-execution` on `feat/review-r8-automation` after R7 on `main`
 
 ---
 
