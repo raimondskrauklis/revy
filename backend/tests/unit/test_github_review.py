@@ -14,7 +14,7 @@ from app.constants.enums import (
     GitHubReviewRunStatus,
     ReviewProfile,
 )
-from app.core.exceptions import ConflictError, ServiceUnavailableError
+from app.core.exceptions import ConflictError, ServiceUnavailableError, ValidationError
 from app.models.github_index_job import GitHubIndexJobORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.services import github_review
@@ -148,6 +148,70 @@ async def test_run_review_run_skips_non_pending_status():
 
     assert result.status == GitHubReviewRunStatus.processing
     collect_mock.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_run_review_run_stale_model_policy_marks_failed():
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    repository_id = uuid.uuid4()
+
+    run = GitHubReviewRunORM(
+        revision_id=revision_id,
+        workspace_id=workspace_id,
+        status=GitHubReviewRunStatus.pending,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    run.id = review_run_id
+
+    from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
+
+    revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="abc",
+    )
+    revision.id = revision_id
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=repository_id,
+        workspace_id=workspace_id,
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=1,
+        title="Fix bug",
+        state=GitHubPullRequestState.open,
+        head_sha="abc",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=1,
+    )
+    pull_request.id = pull_request_id
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, revision, pull_request])
+    session.flush = AsyncMock()
+
+    with patch(
+        "app.services.github_review._collect_context_chunks",
+        AsyncMock(return_value=[]),
+    ):
+        with patch(
+            "app.services.github_review.resolve_model",
+            AsyncMock(
+                side_effect=ValidationError(
+                    message="Workspace model override is no longer valid",
+                    field="reviewer_standard",
+                )
+            ),
+        ):
+            result = await github_review.run_review_run(session, review_run_id=review_run_id)
+
+    assert result.status == GitHubReviewRunStatus.failed
+    assert "no longer valid" in (result.error_message or "")
 
 
 @pytest.mark.asyncio

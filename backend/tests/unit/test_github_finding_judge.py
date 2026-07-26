@@ -12,7 +12,7 @@ from app.constants.enums import (
     GitHubReviewRunStatus,
     ReviewProfile,
 )
-from app.core.exceptions import ServiceUnavailableError
+from app.core.exceptions import ServiceUnavailableError, ValidationError
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_review_run import GitHubReviewRunORM
@@ -44,6 +44,38 @@ async def test_run_judge_skipped_without_api_key():
     with patch("app.services.github_finding_judge.settings") as mock_settings:
         mock_settings.judge_llm_enabled.return_value = False
         count = await run_judge_for_review_run(session, review_run_id=uuid.uuid4())
+    assert count == 0
+
+
+@pytest.mark.asyncio
+async def test_run_judge_stale_model_policy_returns_zero():
+    review_run_id = uuid.uuid4()
+    run = GitHubReviewRunORM(
+        revision_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    run.id = review_run_id
+
+    session = AsyncMock()
+    session.get = AsyncMock(return_value=run)
+    session.scalars = AsyncMock(return_value=[])
+
+    with patch("app.services.github_finding_judge.settings") as mock_settings:
+        mock_settings.judge_llm_enabled.return_value = True
+        with patch(
+            "app.services.github_finding_judge.resolve_model",
+            AsyncMock(
+                side_effect=ValidationError(
+                    message="Workspace model override is no longer valid",
+                    field="judge",
+                )
+            ),
+        ):
+            count = await run_judge_for_review_run(session, review_run_id=review_run_id)
+
     assert count == 0
 
 

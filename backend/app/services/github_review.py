@@ -17,7 +17,12 @@ from app.constants.enums import (
     ReviewProfile,
 )
 from app.core.config import settings
-from app.core.exceptions import ConflictError, NotFoundError, ServiceUnavailableError
+from app.core.exceptions import (
+    ConflictError,
+    NotFoundError,
+    ServiceUnavailableError,
+    ValidationError,
+)
 from app.core.logging import get_logger
 from app.integrations import llm_dispatch, moonshot_review
 from app.models.github_finding import GitHubFindingORM
@@ -297,7 +302,7 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> GitHu
         run.status = GitHubReviewRunStatus.completed
         await session.flush()
         return run
-    except (httpx.HTTPError, ServiceUnavailableError) as exc:
+    except (httpx.HTTPError, ServiceUnavailableError, ValidationError) as exc:
         logger.error(
             "github_review_run_failed",
             extra={"review_run_id": str(review_run_id), "error": str(exc)},

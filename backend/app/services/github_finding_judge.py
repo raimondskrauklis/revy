@@ -16,7 +16,7 @@ from app.constants.enums import (
     GitHubReviewRunStatus,
 )
 from app.core.config import settings
-from app.core.exceptions import ServiceUnavailableError
+from app.core.exceptions import ServiceUnavailableError, ValidationError
 from app.core.logging import get_logger
 from app.integrations import anthropic_review, llm_dispatch
 from app.models.github_finding import GitHubFindingORM
@@ -80,7 +80,14 @@ async def run_judge_for_review_run(session: AsyncSession, *, review_run_id: UUID
         candidates.append((finding, group))
 
     judged = 0
-    model_ref = await resolve_model(session, run.workspace_id, ModelRole.judge)
+    try:
+        model_ref = await resolve_model(session, run.workspace_id, ModelRole.judge)
+    except (ServiceUnavailableError, ValidationError) as exc:
+        logger.error(
+            "github_finding_judge_model_resolve_failed",
+            extra={"review_run_id": str(review_run_id), "error": str(exc)},
+        )
+        return 0
     async with httpx.AsyncClient(timeout=float(settings.revy_revision_timeout_standard_seconds)) as client:
         for _finding, group in candidates[:JUDGE_MAX_PER_RUN]:
             existing = await session.scalar(
