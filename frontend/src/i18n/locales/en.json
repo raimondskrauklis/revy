@@ -449,12 +449,49 @@
     "expandHint": "Expand sidebar",
     "close": "Close menu"
   },
+  "landing": {
+    "nav": {
+      "signIn": "Sign in"
+    },
+    "hero": {
+      "eyebrow": "AI code review for GitHub",
+      "title": "Ship with confidence",
+      "subtitle": "Connect your repositories, run automated reviews on pull requests, and keep your team aligned in one workspace.",
+      "cta": "Get started",
+      "secondary": "Already have an account?"
+    },
+    "features": {
+      "github": {
+        "title": "GitHub-native",
+        "body": "Install the Revy GitHub App on your organization. Webhooks keep repositories and pull requests in sync."
+      },
+      "review": {
+        "title": "AI-assisted review",
+        "body": "Indexing, findings, and publish back to GitHub — with human oversight in the reviewer UI."
+      },
+      "workspace": {
+        "title": "Team workspaces",
+        "body": "Invite collaborators, manage installations, and control access per workspace."
+      }
+    },
+    "footer": "Built for engineering teams shipping on GitHub."
+  },
   "auth": {
     "loading": "Loading…",
     "login": {
-      "title": "Sign in",
-      "body": "Use your organization account to continue.",
-      "action": "Continue with SSO"
+      "title": "Welcome back",
+      "body": "Sign in with your organization account. We use secure SSO via Keycloak.",
+      "action": "Continue with SSO",
+      "hint": "You will be redirected to your identity provider to sign in.",
+      "backHome": "Back to home",
+      "panel": {
+        "eyebrow": "Revy",
+        "title": "AI-assisted code review on GitHub",
+        "subtitle": "From webhook ingestion to published findings — one workspace for your team.",
+        "bullet1": "Connect repositories via the GitHub App",
+        "bullet2": "Review AI findings before you merge",
+        "bullet3": "Collaborate in secure team workspaces"
+      }
     },
     "sessionExpired": {
       "title": "Session expired",

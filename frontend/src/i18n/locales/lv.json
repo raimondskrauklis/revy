@@ -449,12 +449,49 @@
     "expandHint": "Izvērst sānjoslu",
     "close": "Aizvērt izvēlni"
   },
+  "landing": {
+    "nav": {
+      "signIn": "Pierakstīties"
+    },
+    "hero": {
+      "eyebrow": "MI koda pārskats GitHub",
+      "title": "Publicējiet ar pārliecību",
+      "subtitle": "Pievienojiet repozitorijus, palaidiet automatizētus pārskatus pull requestiem un turiet komandu saskaņotu vienā darba vidē.",
+      "cta": "Sākt",
+      "secondary": "Jau ir konts?"
+    },
+    "features": {
+      "github": {
+        "title": "GitHub integrācija",
+        "body": "Instalējiet Revy GitHub lietotni organizācijai. Webhooki sinhronizē repozitorijus un pull requestus."
+      },
+      "review": {
+        "title": "MI atbalstīts pārskats",
+        "body": "Indeksēšana, atradumi un publicēšana atpakaļ GitHub — ar cilvēka uzraudzību pārskatītāja saskarnē."
+      },
+      "workspace": {
+        "title": "Komandas darba vides",
+        "body": "Uzaiciniet kolēģus, pārvaldiet instalācijas un piekļuvi katrā darba vidē."
+      }
+    },
+    "footer": "Radīts inženieru komandām, kas strādā ar GitHub."
+  },
   "auth": {
     "loading": "Ielādē…",
     "login": {
-      "title": "Pierakstīties",
-      "body": "Lai turpinātu, izmantojiet savu organizācijas kontu.",
-      "action": "Turpināt ar SSO"
+      "title": "Laipni lūdzam atpakaļ",
+      "body": "Pierakstieties ar organizācijas kontu. Izmantojam drošu SSO caur Keycloak.",
+      "action": "Turpināt ar SSO",
+      "hint": "Jūs tiksit novirzīts uz identitātes nodrošinātāju, lai pierakstītos.",
+      "backHome": "Atpakaļ uz sākumu",
+      "panel": {
+        "eyebrow": "Revy",
+        "title": "MI atbalstīts koda pārskats GitHub",
+        "subtitle": "No webhook uzņemšanas līdz publicētiem atradumiem — viena darba vide komandai.",
+        "bullet1": "Pievienojiet repozitorijus ar GitHub lietotni",
+        "bullet2": "Pārskatiet MI atradumus pirms apvienošanas",
+        "bullet3": "Sadarbojieties drošās komandas darba vidēs"
+      }
     },
     "sessionExpired": {
       "title": "Sesija beigusies",
