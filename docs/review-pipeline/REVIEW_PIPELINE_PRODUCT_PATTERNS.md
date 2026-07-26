@@ -111,9 +111,9 @@ Source: [code-review-arch_perplexity_searcj_advice_only.md](./code-review-arch_p
 | Pattern | Industry reference | Revy approach | Status |
 |---------|-------------------|---------------|--------|
 | Async queue-first (accuracy > latency) | Hookdeck + workflow queue | Celery per stage; webhook never blocks on GitHub API | **shipped** |
-| Incremental chunk hash index | SHA chunk IDs; embed diff only | Full re-index per revision (R3) | **defer** R8 |
-| Evidence attached at generation | Snippet link per finding | `file_path` + line; no stored evidence blob | **defer** R8 |
-| Grounding / citation judge | Claim vs evidence entailment | R5 Anthropic judge on severity rules | **partial** — extend grounding R8 |
+| Incremental chunk hash index | SHA chunk IDs; embed diff only | Full re-index per revision (R3) | **defer** R9 |
+| Evidence attached at generation | Snippet link per finding | `file_path` + line; no stored evidence blob | **defer** R9 |
+| Grounding / citation judge | Claim vs evidence entailment | R5 Anthropic judge on severity rules | **partial** — extend grounding R9 |
 | Static pre-filter before LLM | 50+ analyzers (CodeRabbit) | CI owns style; R4-Q5 actionable-only | **shipped** policy |
 | Cross-model jury | Different families for gen vs judge | Moonshot R4 + Anthropic R5 | **shipped** |
 | Shuffled-diff majority voting | Bugbot multi-pass same model | Not planned | **future** eval only |

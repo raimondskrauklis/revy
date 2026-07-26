@@ -59,9 +59,9 @@
 
 **Product goal:** Greptile/Bugbot parity — **autostart** on PR open + push by default; optional **`@revy review`** on-demand re-run; workspace toggle for manual-only (today’s behavior).
 
-- [ ] Lock R8 findings: autostart triggers + pipeline chain (`Q11`) — **done** in [R8 execution](./waves/REVIEW_PIPELINE_R8_EXECUTION.md)
+- [x] Lock R8 findings: Q11 + R8-Q1–R8-Q7 in [findings](./REVIEW_PIPELINE_FINDINGS.md)
 - [x] `create-general-plan` + execution for automation phase
-- [ ] `execution-peer-review` on R8 execution (separate agent)
+- [x] `execution-peer-review` on R8 execution (2026-07-26 — gaps applied in execution doc)
 - [ ] `phase-execution` on `feat/review-r8-automation` after R7 on `main`
 
 ---
@@ -132,11 +132,11 @@
 
 | Item | Owner / when |
 |------|----------------|
-| Auto index + review on `pull_request.synchronize` / `push` | **Defer R8** — Q11 autostart |
-| `@revy review` comment command (+ future `@revy <cmd>`) | **Defer R8** |
-| `push` handler stub | Same as above |
+| Auto index + review on `pull_request.synchronize` / `push` | **R8** — Q11 autostart ([execution](./waves/REVIEW_PIPELINE_R8_EXECUTION.md)) |
+| `@revy review` comment command (+ future `@revy <cmd>`) | **R8** |
+| `index_in_progress` guard | **R8-Q5** |
+| Incremental chunk hash index | **R9** (not R8) |
 | Orphan delivery (crash after commit, before enqueue) | Manual replay or future sweep job |
-| Concurrent index jobs per revision | No `index_in_progress` guard yet |
 | `REVY_REPOS_ROOT` documented but unused | Indexing uses tarball → `REVY_WORKTREES_ROOT` only |
 | Workspace review rules UI | Post-R7; empty state “using workspace default profile” |
 | Symbol / call-graph index | Defer — parking lot |

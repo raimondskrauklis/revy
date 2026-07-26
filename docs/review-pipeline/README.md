@@ -109,4 +109,4 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 1. **Merge PR stack** — [#23](https://github.com/raimondskrauklis/revy/pull/23) (docs) → [#24](https://github.com/raimondskrauklis/revy/pull/24) → [#25](https://github.com/raimondskrauklis/revy/pull/25) → [#26](https://github.com/raimondskrauklis/revy/pull/26) → [#27](https://github.com/raimondskrauklis/revy/pull/27); rebase stack onto `main` after each merge.
 2. **Ops** — `alembic upgrade head` (migrations `0014`–`0016`); set `MOONSHOT_API_KEY`, `VOYAGE_API_KEY`, optional `ANTHROPIC_API_KEY`, `REVY_BOT_LOGIN`; worker consumes full queue list (see [PROGRAM](./REVIEW_PIPELINE_PROGRAM.md) §5).
 3. **Tags** — `review-r4-v1` … `review-r7-v1` on `main` after each phase merge.
-4. **Post-R7** — R8 **autostart** (`Q11`: PR open + `synchronize` chain; `@revy review` on-demand; workspace toggle); `/babysit-pr` on open PRs as needed.
+4. **Post-R7** — R8 [automation](./REVIEW_PIPELINE_R8_AUTOMATION_GENERAL_PLAN.md) (`Q11` + R8-Q1–R8-Q7); execution peer-reviewed; `phase-execution` on `feat/review-r8-automation` after dogfood.

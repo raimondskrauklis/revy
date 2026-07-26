@@ -34,7 +34,7 @@ Per-phase goals in **separate files** — same layout as [docs/saas-base](../saa
 | R5 | [waves/REVIEW_PIPELINE_R5_EXECUTION.md](./waves/REVIEW_PIPELINE_R5_EXECUTION.md) | done — PR [#25](https://github.com/raimondskrauklis/revy/pull/25) |
 | R6 | [waves/REVIEW_PIPELINE_R6_EXECUTION.md](./waves/REVIEW_PIPELINE_R6_EXECUTION.md) | done — PR [#26](https://github.com/raimondskrauklis/revy/pull/26) |
 | R7 | [waves/REVIEW_PIPELINE_R7_EXECUTION.md](./waves/REVIEW_PIPELINE_R7_EXECUTION.md) | done — PR [#27](https://github.com/raimondskrauklis/revy/pull/27) |
-| R8 | [waves/REVIEW_PIPELINE_R8_EXECUTION.md](./waves/REVIEW_PIPELINE_R8_EXECUTION.md) | pending peer-review |
+| R8 | [waves/REVIEW_PIPELINE_R8_EXECUTION.md](./waves/REVIEW_PIPELINE_R8_EXECUTION.md) | execution peer-reviewed (2026-07-26) — pending R7 on `main` |
 
 Full table: [waves/README.md](./waves/README.md).
 

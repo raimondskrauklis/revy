@@ -162,11 +162,12 @@ Source of truth: `backend/app/constants/enums.py`. String values are stored in P
 | R4-Q6 | Token / cost ceiling | **defer** | Max chunks × max tokens in R4.3 — lock after first staging runs |
 | Q11 | Auto index/review on webhook | **locked** | **Manual admin trigger** through R7; **R8** ships autostart + `@revy review` — [R8 plan](./REVIEW_PIPELINE_R8_AUTOMATION_GENERAL_PLAN.md) |
 | R8-Q1 | Workspace autostart default | **locked** | `workspaces.review_autostart_enabled` default `true`; admin PATCH |
-| R8-Q2 | Autostart webhook actions | **locked** | `pull_request` `opened` + `synchronize` only (not `push` v1) |
-| R8-Q3 | On-demand command | **locked** | `issue_comment` with `@revy review` → full pipeline; `@revy <cmd>` namespace reserved |
-| R8-Q4 | Chain prerequisites | **locked** | Skip with log when API/LLM keys disabled; no failed-job spam |
-| R8-Q5 | Index concurrency | **locked** | `409 index_in_progress` guard (mirror R4 review guard) |
+| R8-Q2 | Autostart webhook actions | **locked** | `pull_request` `opened` + `synchronize` only; enqueue on `synchronize` only when new revision row created |
+| R8-Q3 | On-demand command | **locked** | `issue_comment` `created` with `@revy review` on open PR → full pipeline; ignore bot self-comments; skip closed/draft |
+| R8-Q4 | Chain prerequisites | **locked** | Orchestrator skips with log when API/LLM keys disabled; no failed-job spam; webhook HTTP stays 200 |
+| R8-Q5 | Index concurrency | **locked** | `409 index_in_progress` guard (mirror R4 `review_in_progress`) |
 | R8-Q6 | Single PR read API | **locked** | `GET …/pull-requests/{pull_request_id}` for reviewer detail |
+| R8-Q7 | Manual index isolation | **locked** | Admin `POST …/index` sets `trigger_source=manual`; index-complete does **not** auto-enqueue review |
 | R5-Q1 | Fingerprint algorithm | **locked** | `sha256(workspace_id ‖ pull_request_id ‖ file_path ‖ category ‖ normalize(message)[:500])` — scoped per PR |
 | R5-Q2 | Reconciliation schema + API | **locked** | `github_finding_groups` (`pull_request_id` FK, fingerprint unique per PR); `github_findings.group_id`; states `active` \| `superseded` \| `resolved`; API `GET …/findings/reconciled` |
 | R5-Q3 | Judge trigger policy | **locked** | Judge when `severity ∈ {error, critical}` OR (`category = security` AND `severity ≥ warning`); max 10 calls/run; skip judge when `ANTHROPIC_API_KEY` unset (reconcile still completes) |
@@ -212,7 +213,7 @@ Source of truth: `backend/app/constants/enums.py`. String values are stored in P
 
 - **R8 execution** — [waves/REVIEW_PIPELINE_R8_EXECUTION.md](./waves/REVIEW_PIPELINE_R8_EXECUTION.md) (autostart + `@revy review` — items below folded into R8-Q#)
 - Auto index/review on `push` to default branch (secondary to PR `synchronize`; post-R8)
-- **Incremental chunk hash index** on `synchronize` — embed only changed chunks (Perplexity Layer 1; see [learnings](./REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md))
+- **Incremental chunk hash index** on `synchronize` — **R9** (not R8)
 - **Evidence snippet on findings** — store retrieved chunk used in R4 prompt; R5 judge grounds claim vs evidence (Perplexity Layer 2–3)
 - **Publish–UI parity regression** — contract test: `resolved` groups never in inline publish set (caught by Greptile babysit R6)
 - **`GET …/pull-requests/{id}`** — reviewer detail should not scan cursor list pages → **R8-Q6**

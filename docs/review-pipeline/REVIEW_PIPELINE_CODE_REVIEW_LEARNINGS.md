@@ -99,9 +99,9 @@ Lessons from **building** a review product while **using** Greptile on our PRs.
 | **Persist before retry** | Any step that calls an external API with an idempotent key must commit IDs before retryable work | **shipped** R6 checkpoint; pattern for R8 automation |
 | **Auto path = admin path** | Reconcile → publish uses same locking/enqueue as `POST …/publish` | **shipped** R6 |
 | **Judge is optional but reconcile is not** | Document + monitor when `ANTHROPIC_API_KEY` unset (R5-Q3) | **shipped**; UI could show “judge skipped” |
-| **Evidence for claims** | Findings have `file_path` + line; add explicit **evidence snippet** on row for judge grounding | **defer** R8 — see Perplexity Layer 2 |
+| **Evidence for claims** | Findings have `file_path` + line; add explicit **evidence snippet** on row for judge grounding | **defer** R9 — see Perplexity Layer 2 |
 | **Resolution metric** | Track dismiss / addressed / still-open at next revision — not raw finding count | **defer** R9 analytics |
-| **Incremental index** | Hash chunks; re-embed only changed chunks on `synchronize` | **defer** R8 — Perplexity Layer 1 |
+| **Incremental index** | Hash chunks; re-embed only changed chunks on `synchronize` | **defer** R9 — Perplexity Layer 1 |
 | **Deduplication before publish** | R5 fingerprints groups; consider generator-level dedupe before judge | **partial** R5 |
 | **Deterministic pre-filter** | CI owns style; Revy owns logic/security — never duplicate linter noise | **locked** R4-Q5 |
 | **Cross-model judge** | Moonshot generate + Anthropic judge (different families) | **shipped** R5 |
@@ -117,10 +117,10 @@ Source: [code-review-arch_perplexity_searcj_advice_only.md](./code-review-arch_p
 | Industry pattern | Revy today (R0–R7) | Recommendation |
 |------------------|-------------------|----------------|
 | **Async queue, accuracy > latency** | Celery per stage; manual admin trigger | **Keep**; R8 **autostart** on `opened` / `synchronize` |
-| **Incremental chunk hash index** | Full re-index per revision (R3) | **R8** — embed diff for `synchronize` only |
+| **Incremental chunk hash index** | Full re-index per revision (R3) | **R9** — embed diff for `synchronize` only |
 | **LSP / symbol lookup** | Embedding retrieval only | **Defer** until staging recall gaps |
 | **Parallel specialized generators** | Single Moonshot pass (R4) | **R8+** optional multi-generator by category |
-| **Evidence attached to findings** | file + line + message | **R8** store retrieved snippet used in prompt |
+| **Evidence attached to findings** | file + line + message | **R9** store retrieved snippet used in prompt |
 | **Dedup filter** | R5 fingerprint per PR | **Keep**; add near-duplicate merge in judge input |
 | **Grounding / hallucination judge** | R5 Anthropic judge on severity rules | **Extend** — judge checks claim vs evidence snippet |
 | **Static pre-filter** | CI + R4-Q5 actionable-only | **Keep** — highest leverage per Perplexity |
@@ -156,7 +156,7 @@ Source: [code-review-arch_perplexity_searcj_advice_only.md](./code-review-arch_p
 | Staging e2e matrix ([merge checklist](./REVIEW_PIPELINE_MERGE_CHECKLIST.md) Phase 4) | Ops | After merge |
 | `GET …/pull-requests/{id}` for reviewer detail | R7.1 / R8 | Product |
 | Regression: dismissed group never inline-published | Test | Small follow-up on R6 branch or R8 |
-| Incremental index on `synchronize` | R8 | [Q11](./REVIEW_PIPELINE_FINDINGS.md) |
+| Incremental index on `synchronize` | R9 | [Q11](./REVIEW_PIPELINE_FINDINGS.md) deferred scope |
 | **Autostart** (PR open + push) + **`@revy review`** on-demand | R8 | [Q11](./REVIEW_PIPELINE_FINDINGS.md); Greptile/Bugbot parity |
 | Resolution / dismiss analytics | R9 | After R7 dismiss flows |
 
