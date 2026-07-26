@@ -115,6 +115,8 @@ GITHUB_WEBHOOK_SECRET=<same as GitHub App webhook secret>
 REVY_BOT_LOGIN=revy[bot]
 ```
 
+**Installation tokens:** GitHub may return longer `ghs_…` tokens (~520 chars) during its 2026 rollout. Revy uses them as opaque strings and does not persist them — no env change. See [GITHUB_APP_SETUP.md](./GITHUB_APP_SETUP.md) § Installation access tokens.
+
 ### Review pipeline data paths (R3+ worker)
 
 ```env

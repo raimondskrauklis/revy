@@ -373,6 +373,18 @@ Set GitHub App webhook URL to the smee channel (or forward target). Keep `GITHUB
 
 ---
 
+## Installation access tokens (GitHub rollout)
+
+GitHub is rolling out a new **stateless** installation token format (`ghs_…`, ~520 chars, JWT-shaped). Classic tokens were short opaque strings.
+
+**Revy:** tokens are minted per request in `backend/app/integrations/github_api.py`, passed to httpx as `Bearer` strings, and **not stored** in the database. No length or format assumptions — **no change required** for this rollout.
+
+**Optional staging check:** add `X-GitHub-Stateless-S2S-Token: enabled` on `POST /app/installations/{id}/access_tokens` and run repo sync / indexing once. Header is temporary for validation — see [GitHub changelog](https://github.blog/changelog/2026-05-15-github-app-installation-tokens-per-request-override-header/).
+
+If you later **cache** installation tokens, store as `TEXT` (≥520 chars) and treat as opaque strings.
+
+---
+
 ## Troubleshooting
 
 | Symptom | Likely cause |
