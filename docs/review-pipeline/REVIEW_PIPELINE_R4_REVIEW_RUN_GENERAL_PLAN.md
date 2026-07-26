@@ -12,7 +12,7 @@ General plan from [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md). 
 
 Run the LLM review pipeline for a PR revision and persist structured findings — core product value.
 
-**Scope:** In — `review_tasks` on `review` queue; `review_runs` + `findings` (or equivalent) schema; **Moonshot Kimi** primary (`MOONSHOT_API_KEY`, K2.7 Code for Standard, K3 for Deep/Critical per profile); staged pipeline (context retrieval from R3 → generate findings); workspace-member gated API to list/read findings per PR; `REVY_DEFAULT_REVIEW_PROFILE` + revision timeouts. Out — Anthropic judge / cross-family escalation (R5); GitHub publish (R6); plan-gated review volume (defer Q9).
+**Scope:** In — `review_tasks` on `review` queue; `review_runs` + `findings` (or equivalent) schema; **Moonshot Kimi** primary (`MOONSHOT_API_KEY`, K2.7 Code for Standard, K3 for Deep/Critical per profile); staged pipeline (context retrieval from R3 → generate findings); workspace-member gated API to list/read findings per PR; `REVY_DEFAULT_REVIEW_PROFILE` + revision timeouts; **actionable findings only** (logic, security, behavior — not style/lint; defer style to CI). Out — Anthropic judge / cross-family escalation (R5); GitHub publish (R6); plan-gated review volume (defer Q9).
 
 **Model policy:** Primary reviewer = Moonshot Kimi (`kimi-k2.7-code` default, `kimi-k3` for deep/critical). Anthropic Claude = secondary judge only (R5) — `internal-docs/product/revy/docs/architecture.md` §13–14.
 
@@ -20,6 +20,6 @@ Run the LLM review pipeline for a PR revision and persist structured findings �
 
 **Depends on:** R3 (retrieval context available).
 
-**Status:** Execution plan ready — [waves/REVIEW_PIPELINE_R4_EXECUTION.md](./waves/REVIEW_PIPELINE_R4_EXECUTION.md) exists; **manual peer-review pending** (separate agent) before `phase-execution`.
+**Status:** Implemented — PR [#24](https://github.com/raimondskrauklis/revy/pull/24); tag `review-r4-v1` after merge to `main`.
 
 **Next phase:** [REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md](./REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md).

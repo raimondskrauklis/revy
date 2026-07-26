@@ -13,12 +13,18 @@ export function deriveMergeConclusion(findings: ReconciledFinding[]): MergeConcl
   if (active.every((item) => item.severity === 'warning' || item.severity === 'info')) {
     return 'neutral';
   }
-  return 'success';
+  return 'failure';
 }
 
 export function pickLatestRevisionId(findings: ReconciledFinding[]): string | null {
   if (findings.length === 0) {
     return null;
   }
-  return findings[0]?.last_seen_revision_id ?? null;
+  let latest = findings[0]!;
+  for (const item of findings.slice(1)) {
+    if (item.updated_at > latest.updated_at) {
+      latest = item;
+    }
+  }
+  return latest.last_seen_revision_id;
 }

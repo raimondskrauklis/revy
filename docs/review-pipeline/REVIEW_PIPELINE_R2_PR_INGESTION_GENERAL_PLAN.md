@@ -12,7 +12,9 @@ General plan from [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md). 
 
 Track pull requests and per-push revisions from GitHub webhook events; enable workspace-scoped PR queries for R3 indexing and R4 review runs.
 
-**Scope:** In — `github_pull_requests` + `github_pull_request_revisions` tables; extend `SUPPORTED_EVENTS` for `pull_request` and `pull_request_review`; `github_tasks` handlers for actions `opened`, `synchronize`, `closed`, `reopened`; revision row on each `synchronize`; cursor list API `GET …/repositories/{repo_id}/pull-requests`. Out — full diff/blob storage; inline review comment threads; GitHub publish (R6); re-review trigger on `push` (wire in R3/R4).
+**Scope:** In — `github_pull_requests` + `github_pull_request_revisions` tables; extend `SUPPORTED_EVENTS` for `pull_request` and `pull_request_review`; `github_tasks` handlers for actions `opened`, `synchronize`, `closed`, `reopened`; revision row on each `synchronize`; cursor list API `GET …/repositories/{repo_id}/pull-requests`. Out — full diff/blob storage; inline review comment threads; GitHub publish (R6); **auto** index/review on `push` or `synchronize` (deferred — [FINDINGS Q11](./REVIEW_PIPELINE_FINDINGS.md)).
+
+**Note (shipped `review-r2-v1`):** v1 did not auto-trigger index/review on webhook; Q11 locks manual trigger through R4. Automation is R8 — not a retro change to R2 code.
 
 **Deliverables:** PR rows created/updated from webhooks; monotonic revision counter; `pull_request_review` stored for activity audit; member list API; migration `0012+`.
 

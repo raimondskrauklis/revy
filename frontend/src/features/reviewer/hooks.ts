@@ -17,6 +17,8 @@ export const reviewerQueryKeys = {
     ['reviewer', 'repositories', workspaceId, installationId] as const,
   pullRequests: (workspaceId: string, repositoryId: string) =>
     ['reviewer', 'pullRequests', workspaceId, repositoryId] as const,
+  pullRequest: (workspaceId: string, repositoryId: string, pullRequestId: string) =>
+    ['reviewer', 'pullRequest', workspaceId, repositoryId, pullRequestId] as const,
   reconciled: (workspaceId: string, repositoryId: string, pullRequestId: string) =>
     ['reviewer', 'reconciled', workspaceId, repositoryId, pullRequestId] as const,
   reviewRun: (
@@ -59,6 +61,35 @@ export function usePullRequests(
     queryKey: [...reviewerQueryKeys.pullRequests(workspaceId ?? '', repositoryId ?? '')],
     queryFn: (cursor) => fetchPullRequests(workspaceId!, repositoryId!, cursor),
     enabled: Boolean(workspaceId && repositoryId),
+  });
+}
+
+export function usePullRequest(
+  workspaceId: string | null | undefined,
+  repositoryId: string | null | undefined,
+  pullRequestId: string | null | undefined,
+) {
+  return useQuery({
+    queryKey: reviewerQueryKeys.pullRequest(
+      workspaceId ?? '',
+      repositoryId ?? '',
+      pullRequestId ?? '',
+    ),
+    queryFn: async () => {
+      let cursor: string | null = null;
+      for (;;) {
+        const page = await fetchPullRequests(workspaceId!, repositoryId!, cursor);
+        const found = page.items.find((item) => item.id === pullRequestId);
+        if (found) {
+          return found;
+        }
+        if (!page.cursor.has_next || !page.cursor.next_cursor) {
+          return null;
+        }
+        cursor = page.cursor.next_cursor;
+      }
+    },
+    enabled: Boolean(workspaceId && repositoryId && pullRequestId),
   });
 }
 
@@ -148,7 +179,7 @@ export function useReviewerAvailability(workspaceId: string | null | undefined) 
       }
       const prs = await fetchPullRequests(workspaceId, repos.items[0]!.id, null);
       if (prs.items.length === 0) {
-        return true;
+        return false;
       }
       return probeReviewerApi(workspaceId, repos.items[0]!.id, prs.items[0]!.id);
     },

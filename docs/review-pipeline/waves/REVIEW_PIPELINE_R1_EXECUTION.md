@@ -55,7 +55,7 @@ Phase **R1** of [REVIEW_PIPELINE_R1_REPO_SYNC_GENERAL_PLAN.md](../REVIEW_PIPELIN
 
 **What:** Nested routes under installations — list repositories, trigger sync (admin).
 
-**Files:** `api/v1/workspaces/repositories.py`, `api/v1/workspaces/__init__.py`, route tests
+**Files:** `api/v1/workspaces/installation_repositories.py`, `api/v1/workspaces/__init__.py`, route tests
 
 **Deliverable:** `pytest tests/unit/test_github_repository_routes.py -q` — green.
 
@@ -83,4 +83,4 @@ pipenv run lint && pipenv run pytest \
 
 **Deploy:** `alembic upgrade head`; optional GitHub App credentials for full sync.
 
-**Next:** [REVIEW_PIPELINE_R2_PR_INGESTION_GENERAL_PLAN.md](../REVIEW_PIPELINE_R2_PR_INGESTION_GENERAL_PLAN.md) → create [REVIEW_PIPELINE_R2_EXECUTION.md](./REVIEW_PIPELINE_R2_EXECUTION.md) when planning R2.
+**Next:** [REVIEW_PIPELINE_R2_EXECUTION.md](./REVIEW_PIPELINE_R2_EXECUTION.md).

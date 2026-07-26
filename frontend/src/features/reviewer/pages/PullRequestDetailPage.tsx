@@ -7,7 +7,7 @@ import { FindingRow } from '@/features/reviewer/components/FindingRow';
 import { MergeReadinessBadge } from '@/features/reviewer/components/MergeReadinessBadge';
 import {
   usePublishJob,
-  usePullRequests,
+  usePullRequest,
   useReconciledFindings,
   useReviewRun,
 } from '@/features/reviewer/hooks';
@@ -28,11 +28,7 @@ export function PullRequestDetailPage() {
     ref,
   } = useReconciledFindings(workspaceId, repoId, prId);
 
-  const { items: pullRequests } = usePullRequests(workspaceId, repoId);
-  const pullRequest = useMemo(
-    () => pullRequests.find((item) => item.id === prId),
-    [pullRequests, prId],
-  );
+  const { data: pullRequest } = usePullRequest(workspaceId, repoId, prId);
 
   const revisionId = useMemo(
     () => pickLatestRevisionId(reconciledFindings),

@@ -53,7 +53,7 @@ Phase **R0** of [REVIEW_PIPELINE_R0_WEBHOOKS_GENERAL_PLAN.md](../REVIEW_PIPELINE
 
 ## R0.3 — Webhook route + idempotent handler
 
-**What:** `api/v1/webhooks/github.py` — thin handler: read body, verify signature, `try_record_delivery`, dispatch by `X-GitHub-Event`, commit, **200**. Mount on `webhooks` router without auth dependency.
+**What:** `api/v1/webhooks/github.py` — thin handler: read body, verify signature, `try_record_delivery`, **commit**, then enqueue Celery (commit-before-enqueue — #19), **200**. Mount on `webhooks` router without auth dependency.
 
 **Files:** `backend/app/api/v1/webhooks/github.py`, `backend/app/services/github_webhooks.py`, `backend/app/api/v1/webhooks/__init__.py`, `backend/tests/unit/test_github_webhook.py`
 
@@ -96,4 +96,4 @@ pipenv run lint && pipenv run pytest \
 
 **Deploy:** `alembic upgrade head`; set `GITHUB_WEBHOOK_SECRET`; GitHub App webhook URL → `https://<host>/api/v1/webhooks/github`.
 
-**Next:** [REVIEW_PIPELINE_R1_EXECUTION.md](./REVIEW_PIPELINE_R1_EXECUTION.md) (create when planning R1).
+**Next:** [REVIEW_PIPELINE_R1_EXECUTION.md](./REVIEW_PIPELINE_R1_EXECUTION.md).

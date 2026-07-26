@@ -12,7 +12,9 @@ General plan from [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md). 
 
 Deduplicate findings across PR revisions and run judge/escalation when models disagree — stable finding identity for UI and publish.
 
-**Scope:** In — `reconcile_tasks` + `judge_tasks` queues; fingerprint logic (file + rule + message hash or product-defined key); link findings across revisions; **Anthropic Claude** judge for cross-family escalation (high-severity dismissals, Tier-3 fingerprints, disagreement); judge outcome persisted; supersede/resolve states. Out — human-in-the-loop approval workflow; GitHub comment posting (R6).
+**Scope:** In — `reconcile_tasks` + `judge_tasks` queues; fingerprint per [R5-Q1](./REVIEW_PIPELINE_FINDINGS.md); link findings across revisions per [R5-Q2](./REVIEW_PIPELINE_FINDINGS.md); **Anthropic Claude** judge per [R5-Q3](./REVIEW_PIPELINE_FINDINGS.md); judge outcome persisted; supersede/resolve states; reconciled finding API. Out — human-in-the-loop approval workflow; GitHub comment posting (R6).
+
+**Before execution:** R5-Q1–Q3 locked in findings; execution shipped in PR [#25](https://github.com/raimondskrauklis/revy/pull/25).
 
 **Model policy:** Primary review remains Moonshot Kimi (R4). Judge stage uses **Anthropic** as the secondary model family — `internal-docs/product/revy/docs/architecture.md` §14.
 
@@ -20,8 +22,6 @@ Deduplicate findings across PR revisions and run judge/escalation when models di
 
 **Depends on:** R4.
 
-**Status:** Not started.
-
-**Next:** `create-execution-plan` when R4 ships — [waves/REVIEW_PIPELINE_R5_EXECUTION.md](./waves/REVIEW_PIPELINE_R5_EXECUTION.md) (to be created).
+**Status:** Implemented — PR [#25](https://github.com/raimondskrauklis/revy/pull/25); tag `review-r5-v1` after merge.
 
 **Next phase:** [REVIEW_PIPELINE_R6_GITHUB_PUBLISH_GENERAL_PLAN.md](./REVIEW_PIPELINE_R6_GITHUB_PUBLISH_GENERAL_PLAN.md).
