@@ -91,8 +91,10 @@ pipenv run lint && pipenv run pytest \
   -q
 ```
 
-**Deploy:** `alembic upgrade head`; set `VOYAGE_API_KEY`, `MOONSHOT_API_KEY` (required for R4); `ANTHROPIC_API_KEY` optional until R5 judge ships; worker consumes at least `github_events,repo_sync,indexing,review,maintenance` (+ SaaS `default,notifications,heavy` — see [REVIEW_PIPELINE_PROGRAM.md](../REVIEW_PIPELINE_PROGRAM.md) §5).
+**Deploy:** `alembic upgrade head` (through `0014`); set `VOYAGE_API_KEY`, `MOONSHOT_API_KEY`; worker consumes full Revy queue list per [PROGRAM](../REVIEW_PIPELINE_PROGRAM.md) §5.
 
 **Human gate:** index one revision (R3), trigger review, confirm `github_findings` rows and API list returns them.
 
-**Next:** [REVIEW_PIPELINE_R5_EXECUTION.md](./REVIEW_PIPELINE_R5_EXECUTION.md) — lock R5-Q1–Q3 in findings before R5 `phase-execution`.
+**Status:** Implemented — PR [#24](https://github.com/raimondskrauklis/revy/pull/24).
+
+**Next:** [REVIEW_PIPELINE_R5_EXECUTION.md](./REVIEW_PIPELINE_R5_EXECUTION.md) (PR [#25](https://github.com/raimondskrauklis/revy/pull/25)).

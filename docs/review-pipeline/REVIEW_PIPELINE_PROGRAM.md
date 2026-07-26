@@ -35,8 +35,12 @@ git show saas-base-v1   # annotated tag → dacfc5b
 | `review-r1-v1` | `dddfde0` | Repository metadata sync (`github_repositories`), `repo_sync` worker, list/sync API |
 | `review-r2-v1` | `09317b2` | PR ingestion (`github_pull_requests`), revisions, `pull_request` webhooks |
 | `review-r3-v1` | `a299d14` | PR revision indexing (`github_index_jobs`, `github_code_chunks`), Voyage embeddings, `indexing` queue |
+| `review-r4-v1` | *(pending merge #24)* | LLM review run (`github_review_runs`, `github_findings`), Moonshot Kimi, `review` queue |
+| `review-r5-v1` | *(pending merge #25)* | Finding reconciliation + judge (`github_finding_groups`), `reconciliation` + `judge` queues |
+| `review-r6-v1` | *(pending merge #26)* | GitHub publish (`github_publish_jobs`, check run `revy/review`), `github_publish` queue |
+| `review-r7-v1` | *(pending merge #27)* | Reviewer UI (`frontend/src/features/reviewer/`) |
 
-Future product milestones: `review-r4-v1`, `v0.2.0`, etc. Pushing a tag whose commit **includes** `.github/workflows/release-tag.yml` triggers an automatic GitHub Release. Tags on older commits (e.g. `saas-base-v1`) may need a one-time `gh release create` or **Actions → Release tag → Run workflow** with the tag name.
+Future product milestones: `v0.2.0`, R8 automation, etc. Pushing a tag whose commit **includes** `.github/workflows/release-tag.yml` triggers an automatic GitHub Release. Tags on older commits (e.g. `saas-base-v1`) may need a one-time `gh release create` or **Actions → Release tag → Run workflow** with the tag name.
 
 ---
 
@@ -108,15 +112,47 @@ main  ──●──●──●──●──  deployable; SaaS base + produc
 | **Index worker** | `backend/app/workers/index_tasks.py` — `indexing` queue |
 | **Index API** | `POST …/revisions/{id}/index`, `GET …/index-job`, chunk list + semantic search |
 
-### Not shipped (R4–R7)
+### Shipped (R4) — PR [#24](https://github.com/raimondskrauklis/revy/pull/24), tag pending
 
-| Gap | Notes |
-|-----|--------|
-| Review/findings tables | R4+ |
-| Worker modules | `review_tasks`, … |
-| LLM provider runtime | Config + Celery `review` queue |
-| GitHub publish | Checks, review comments — `github_publish` queue |
-| Reviewer UI | `frontend/src/features/reviewer/` (placeholder / absent) |
+| Layer | Path / surface |
+|-------|----------------|
+| **Review ORM** | `github_review_runs`, `github_findings`; migration `0014` |
+| **LLM integration** | `integrations/moonshot_review.py` — Moonshot Kimi primary |
+| **Review service** | `services/github_review.py` — R3 retrieval → JSON findings |
+| **Review worker** | `workers/review_tasks.py` — `review` queue |
+| **Review API** | `POST …/revisions/{id}/review`, `GET …/review-run`, `GET …/findings` |
+
+### Shipped (R5) — PR [#25](https://github.com/raimondskrauklis/revy/pull/25), tag pending
+
+| Layer | Path / surface |
+|-------|----------------|
+| **Reconcile ORM** | `github_finding_groups`, `github_finding_judge_outcomes`; migration `0015` |
+| **Reconcile service** | `services/github_finding_reconcile.py` — fingerprint per PR |
+| **Judge service** | `services/github_finding_judge.py` — Anthropic optional (R5-Q3) |
+| **Workers** | `reconcile_tasks.py`, `judge_tasks.py` |
+| **API** | `GET …/findings/reconciled` (cursor) |
+
+### Shipped (R6) — PR [#26](https://github.com/raimondskrauklis/revy/pull/26), tag pending
+
+| Layer | Path / surface |
+|-------|----------------|
+| **Publish ORM** | `github_publish_jobs`; migration `0016` |
+| **Publish service** | `services/github_publish.py` — idempotent per `head_sha` (R6-Q1) |
+| **GitHub API** | Check runs (`revy/review`), PR summary + inline comments |
+| **Publish worker** | `workers/publish_tasks.py` — auto-enqueue after reconcile |
+| **Publish API** | `POST …/publish`, `GET …/publish-job` |
+
+### Shipped (R7) — PR [#27](https://github.com/raimondskrauklis/revy/pull/27), tag pending
+
+| Layer | Path / surface |
+|-------|----------------|
+| **Reviewer UI** | `frontend/src/features/reviewer/` — PR list, findings, merge badge |
+| **Routes** | `/reviewer`, `/reviewer/repositories/:repoId/pull-requests`, `…/:prId` |
+| **Nav** | `ReviewerNavItem` (API probe); `ReviewerSummaryWidget` dashboard slot |
+
+### Not on `main` yet
+
+R4–R7 code lives on the stacked PR branch chain above. After merge: run migrations `0014`–`0016`, set LLM/embedding env, verify worker consumes full queue list (§5).
 
 ---
 

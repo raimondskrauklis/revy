@@ -17,7 +17,11 @@ docs/review-pipeline/
   …
   REVIEW_PIPELINE_PROGRAM.md               ← branching, tags, releases
   REVIEW_PIPELINE_RECOVERY_CHECKLIST.md    ← agent handoff + active tracks
+  REVIEW_PIPELINE_MERGE_CHECKLIST.md       ← babysit + merge gates (R4–R7 stack)
+  REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md ← Greptile babysit + industry patterns → product backlog
+  REVIEW_PIPELINE_GREPTILE_PR26_EMAIL.md   ← archived Greptile PR #26 email (triage reference)
   REVIEW_PIPELINE_PRODUCT_PATTERNS.md      ← Greptile-style patterns → Revy phases (defer/future map)
+  code-review-arch_perplexity_searcj_advice_only.md  ← external architecture notes (advice only)
   GITHUB_WEBHOOK_DEV.md                    ← local ops
   waves/
     README.md                              ← execution table only
@@ -35,7 +39,7 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 | **Findings** | Retroactive update in [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) | Must be baseline-ready **before** execution |
 | **General plan** | Retroactive — [R0](./REVIEW_PIPELINE_R0_WEBHOOKS_GENERAL_PLAN.md), [R1](./REVIEW_PIPELINE_R1_REPO_SYNC_GENERAL_PLAN.md) | One file per phase — **all R0–R7 now exist** |
 | **Execution** | [R0](./waves/REVIEW_PIPELINE_R0_EXECUTION.md), [R1](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) shipped | Create after general plan; **manual peer-review** (separate agent) before `phase-execution` |
-| **Code** | On `main` + tags `review-r0-v1` … `review-r3-v1` | `phase-execution` LOOP per phase |
+| **Code** | R0–R3 on `main` (`review-r0-v1` … `review-r3-v1`); R4–R7 on PR stack [#24](https://github.com/raimondskrauklis/revy/pull/24)–[#27](https://github.com/raimondskrauklis/revy/pull/27) | tag `review-r4-v1` … `review-r7-v1` after merge |
 | **GitHub App** | [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) · [GITHUB_APP_TARGET_CONFIG.md](../utils/GITHUB_APP_TARGET_CONFIG.md) | Configure per phase map in target config |
 
 **No corners cut from R2 onward:** findings locked → general plan → execution plan → peer-review → implement → phase gate → tag.
@@ -76,10 +80,12 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 | **R1** | [waves/R1](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) | shipped (`review-r1-v1`) |
 | **R2** | [waves/R2](./waves/REVIEW_PIPELINE_R2_EXECUTION.md) | shipped (`review-r2-v1`) |
 | **R3** | [waves/R3](./waves/REVIEW_PIPELINE_R3_EXECUTION.md) | shipped (`review-r3-v1`) |
-| **R4** | [waves/R4](./waves/REVIEW_PIPELINE_R4_EXECUTION.md) | **next** — execution-peer-review → `phase-execution` ([checklist](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md)) |
-| **R5–R7** | — | general plans ready |
+| **R4** | [waves/R4](./waves/REVIEW_PIPELINE_R4_EXECUTION.md) | implemented — PR [#24](https://github.com/raimondskrauklis/revy/pull/24); tag `review-r4-v1` after merge |
+| **R5** | [waves/R5](./waves/REVIEW_PIPELINE_R5_EXECUTION.md) | implemented — PR [#25](https://github.com/raimondskrauklis/revy/pull/25) (base #24) |
+| **R6** | [waves/R6](./waves/REVIEW_PIPELINE_R6_EXECUTION.md) | implemented — PR [#26](https://github.com/raimondskrauklis/revy/pull/26) (base #25) |
+| **R7** | [waves/R7](./waves/REVIEW_PIPELINE_R7_EXECUTION.md) | implemented — PR [#27](https://github.com/raimondskrauklis/revy/pull/27) (base #26) |
 
-[waves/README.md](./waves/README.md) — full execution table.
+[waves/README.md](./waves/README.md) — full execution table. **Docs sync:** PR [#23](https://github.com/raimondskrauklis/revy/pull/23) (`chore/review-pipeline-docs-sync`).
 
 ---
 
@@ -100,6 +106,7 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 
 ## Next (strict order)
 
-1. **[Agent checklist](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md)** — Track A: `execution-peer-review` on R4 execution (separate agent).
-2. **`phase-execution`** on `feat/review-r4-review-run` after Track A + worker queue ops planned.
-3. **Before R5** — lock R5-Q1–Q3 in findings; update R5 general plan.
+1. **Merge PR stack** — [#23](https://github.com/raimondskrauklis/revy/pull/23) (docs) → [#24](https://github.com/raimondskrauklis/revy/pull/24) → [#25](https://github.com/raimondskrauklis/revy/pull/25) → [#26](https://github.com/raimondskrauklis/revy/pull/26) → [#27](https://github.com/raimondskrauklis/revy/pull/27); rebase stack onto `main` after each merge.
+2. **Ops** — `alembic upgrade head` (migrations `0014`–`0016`); set `MOONSHOT_API_KEY`, `VOYAGE_API_KEY`, optional `ANTHROPIC_API_KEY`, `REVY_BOT_LOGIN`; worker consumes full queue list (see [PROGRAM](./REVIEW_PIPELINE_PROGRAM.md) §5).
+3. **Tags** — `review-r4-v1` … `review-r7-v1` on `main` after each phase merge.
+4. **Post-R7** — R8 [automation](./REVIEW_PIPELINE_R8_AUTOMATION_GENERAL_PLAN.md) (`Q11` + R8-Q1–R8-Q7); execution peer-reviewed; `phase-execution` on `feat/review-r8-automation` after dogfood.

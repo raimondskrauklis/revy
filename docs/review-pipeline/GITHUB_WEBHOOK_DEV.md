@@ -164,3 +164,56 @@ Verify:
 SELECT status, profile, provider FROM github_review_runs ORDER BY created_at DESC LIMIT 3;
 SELECT severity, category, title FROM github_findings ORDER BY created_at DESC LIMIT 10;
 ```
+
+---
+
+---
+
+## Reconcile + judge (R5)
+
+Runs automatically after R4 review completes; requires worker on `reconciliation` and `judge` queues. Optional `ANTHROPIC_API_KEY` for judge (reconcile still completes without it).
+
+1. After review `status=completed`, reconcile worker fingerprints findings into groups
+2. List reconciled set: `GET …/pull-requests/{pr_id}/findings/reconciled` (cursor)
+3. Judge runs for high-severity / security findings per R5-Q3 (max 10/run)
+
+Verify:
+
+```sql
+SELECT state, fingerprint, severity FROM github_finding_groups ORDER BY updated_at DESC LIMIT 10;
+SELECT outcome FROM github_finding_judge_outcomes ORDER BY created_at DESC LIMIT 5;
+```
+
+Group states: `active` · `superseded` · `resolved` — see [findings § domain states](./REVIEW_PIPELINE_FINDINGS.md#domain-states-enums).
+
+---
+
+## GitHub publish (R6)
+
+Requires completed R4 review + R5 reconcile, GitHub App **Checks** + **Pull requests** write, worker on `github_publish` queue, `REVY_BOT_LOGIN` set.
+
+1. Publish runs automatically after reconcile; admin retry: `POST …/revisions/{revision_id}/publish`
+2. Poll `GET …/revisions/{revision_id}/publish-job` until `status=completed`
+3. On GitHub: check run `revy/review` + PR summary comment; inline comments for `error`/`critical` with line anchors
+
+Verify:
+
+```sql
+SELECT status, head_sha, github_check_run_id, github_comment_id FROM github_publish_jobs ORDER BY created_at DESC LIMIT 3;
+```
+
+Re-run publish on same `head_sha` updates the existing check run and comment in place.
+
+Check `conclusion`: `failure` if any active `error`/`critical`; `success` if none; `neutral` if only `warning`/`info`.
+
+---
+
+## Reviewer UI (R7)
+
+Requires R4+ API reachable from frontend; merge badge uses latest publish job + R6-Q2 logic.
+
+1. Open `/reviewer` (nav appears when reviewer API probe succeeds)
+2. Browse repositories → pull requests → findings for a revision
+3. Confirm merge readiness badge matches check conclusion
+
+Verify: browser EN+LV strings; `npm run build` passes with `features/reviewer/` routes registered.

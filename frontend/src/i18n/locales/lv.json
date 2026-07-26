@@ -21,6 +21,7 @@
     "home": "Sākums",
     "dashboard": "Panelis",
     "installations": "Instalācijas",
+    "reviewer": "Recenzents",
     "settings": "Iestatījumi"
   },
   "theme": {
@@ -526,6 +527,82 @@
       "accountId": "GitHub konta ID",
       "accountType": "Konta tips",
       "submit": "Reģistrēt instalāciju"
+    }
+  },
+  "reviewer": {
+    "title": "Koda recenzija",
+    "subtitle": "Pārlūkojiet pull request un saskaņotos atradumus pieslēgtajiem repozitorijiem.",
+    "noWorkspace": "Izvēlieties darbvietu, lai izmantotu recenzentu.",
+    "backToRepositories": "Visi repozitoriji",
+    "viewOnGitHub": "Skatīt GitHub",
+    "installation": "GitHub instalācija",
+    "repositories": {
+      "empty": "Šai instalācijai nav sinhronizētu repozitoriju.",
+      "name": "Repozitorijs",
+      "fullName": "Pilnais nosaukums",
+      "actions": "Darbības",
+      "viewPullRequests": "Skatīt pull request"
+    },
+    "pullRequests": {
+      "empty": "Šim repozitorijam vēl nav importētu pull request.",
+      "number": "#",
+      "title": "Nosaukums",
+      "headSha": "Head SHA",
+      "revisions": "Revīzijas"
+    },
+    "findings": {
+      "empty": "Šim pull request nav saskaņotu atradumu.",
+      "severity": "Smagums",
+      "category": "Kategorija",
+      "state": "Stāvoklis",
+      "title": "Nosaukums",
+      "file": "Fails",
+      "message": "Ziņojums"
+    },
+    "severity": {
+      "info": "Info",
+      "warning": "Brīdinājums",
+      "error": "Kļūda",
+      "critical": "Kritisks"
+    },
+    "category": {
+      "security": "Drošība",
+      "bug": "Kļūda",
+      "performance": "Veiktspēja",
+      "style": "Stils",
+      "maintainability": "Uzturēšana",
+      "other": "Cits"
+    },
+    "groupState": {
+      "active": "Aktīvs",
+      "superseded": "Aizstāts",
+      "resolved": "Atrisināts"
+    },
+    "reviewRun": {
+      "none": "Vēl nav recenzijas izpildes.",
+      "status": "Recenzija: {{status}}",
+      "pending": "Gaida",
+      "processing": "Apstrādē",
+      "completed": "Pabeigts",
+      "failed": "Neizdevās"
+    },
+    "publish": {
+      "status": "Publicēšana: {{status}}",
+      "pending": "Gaida",
+      "processing": "Apstrādē",
+      "completed": "Pabeigts",
+      "failed": "Neizdevās"
+    },
+    "mergeReadiness": {
+      "notPublished": "Nav publicēts GitHub",
+      "success": "Gatavs sapludināšanai",
+      "neutral": "Recenzijas piezīmes",
+      "failure": "Bloķējoši atradumi"
+    },
+    "widget": {
+      "title": "Koda recenzija",
+      "body": "Pārlūkojiet PR atradumus un sapludināšanas gatavību Revy.",
+      "open": "Atvērt recenzentu"
     }
   },
   "errors": {

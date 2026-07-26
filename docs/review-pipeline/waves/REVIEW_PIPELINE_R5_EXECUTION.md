@@ -95,4 +95,6 @@ pipenv run lint && pipenv run pytest \
 
 **Human gate:** complete R4 review run → reconcile groups stable across second run on new revision.
 
-**Next:** [REVIEW_PIPELINE_R6_EXECUTION.md](./REVIEW_PIPELINE_R6_EXECUTION.md).
+**Status:** Implemented — PR [#25](https://github.com/raimondskrauklis/revy/pull/25).
+
+**Next:** [REVIEW_PIPELINE_R6_EXECUTION.md](./REVIEW_PIPELINE_R6_EXECUTION.md) (PR [#26](https://github.com/raimondskrauklis/revy/pull/26)).

@@ -79,4 +79,6 @@ npm run lint && npm test && npm run build
 
 **Human gate:** EN+LV switch; browse PR → findings; badge matches GitHub check after R6.
 
+**Status:** Implemented — PR [#27](https://github.com/raimondskrauklis/revy/pull/27).
+
 **Next:** R8 automation / workspace review policy — see [REVIEW_PIPELINE_PRODUCT_PATTERNS.md](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md).

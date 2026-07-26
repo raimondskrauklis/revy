@@ -3,7 +3,7 @@
 **Purpose:** Single handoff for agents when context is limited. Work **top to bottom** on active tracks; mark `[x]` as done.  
 **Rules:** No direct pushes to `main`. One concern per PR. **Peer review = separate agent session** (human-invoked); never self-certified by the implementing agent.
 
-**Last updated:** 2026-07-26 (post-recovery; Track 1–2 + architecture peer-review complete)
+**Last updated:** 2026-07-26 (R4–R7 `phase-execution` complete; merge stack open)
 
 ---
 
@@ -11,77 +11,87 @@
 
 | Item | Value |
 |------|--------|
-| `main` | R0–R3 shipped; Greptile remediation #13–#21 merged; tags `review-r0-v1` … `review-r3-v1` |
-| Planning ladder | Recovered — findings → general plans R0–R7 → R0–R3 execution shipped |
-| R4 | Execution plan ready; code WIP on `feat/review-r4-review-run` (stash `r4-wip-pre-recovery`) |
-| External PR review | Optional (Greptile on our PRs today) — patterns catalogued in [product patterns](./REVIEW_PIPELINE_PRODUCT_PATTERNS.md) |
-| Worker deploy | **P0 ops gap:** `deploy.yml` still `-Q default,notifications,heavy` — Revy queues not consumed in staging/prod |
+| `main` | R0–R3 shipped; tags `review-r0-v1` … `review-r3-v1`; Greptile remediation #13–#21 merged |
+| R4–R7 code | Implemented on stacked PRs [#24](https://github.com/raimondskrauklis/revy/pull/24) → [#27](https://github.com/raimondskrauklis/revy/pull/27) |
+| Docs | [#23](https://github.com/raimondskrauklis/revy/pull/23) (`chore/review-pipeline-docs-sync`) + status sync on feature branches |
+| Migrations | `0014` (review), `0015` (reconcile), `0016` (publish) — on PR stack, not on `main` yet |
+| Worker deploy | `deploy.yml` includes full `-Q` list on PR #24+ |
+| Tags pending | `review-r4-v1` … `review-r7-v1` after merge |
 
 ---
 
 ## Architecture peer-review verdict (R0–R7) — [x] done
 
-| Phase | Plan vs `main` | Notes |
-|-------|----------------|-------|
-| **R0** | ✅ aligned | Commit-before-enqueue + nested dedupe on main (#19) |
-| **R1** | ✅ aligned | Pagination errors fixed (#13) |
-| **R2** | ✅ aligned | SHA dedup (#14), concurrent insert (#21); auto-trigger deferred per Q11 (R2 plan out-scope) |
-| **R3** | ✅ aligned | Tarball not shallow clone; chunk list offset/limit intentional; embed-after-delete (#20) |
-| **R4** | execution-ready | General plan thin — detail in execution file; config/LLM wiring in R4.1–R4.2 |
-| **R5** | needs decisions | R5-Q1–Q3 locked in findings; execution peer-review before R5 `phase-execution` |
-| **R6** | partially locked | R6-Q1/Q2 locked; execution draft has check run + publish details |
-| **R7** | adequate skeleton | Execution draft exists; can start after R4 API (read-only); badge needs R6 |
-
-**Cross-cutting risks (not architecture mistakes):** worker queue deploy; doc drift (this file + findings); `push` webhook stub unowned; R5 vagueness blocks R6.
+| Phase | Plan vs code | Notes |
+|-------|--------------|-------|
+| **R0–R3** | ✅ on `main` | See recovery archive |
+| **R4** | ✅ implemented (#24) | Moonshot primary; `409 review_in_progress`; actionable findings only |
+| **R5** | ✅ implemented (#25) | R5-Q1–Q3 locked; judge optional without `ANTHROPIC_API_KEY` |
+| **R6** | ✅ implemented (#26) | R6-Q1/Q2; check `revy/review`; idempotent per `head_sha` |
+| **R7** | ✅ implemented (#27) | Flat `/reviewer` routes; merge badge from publish + R6-Q2 |
 
 ---
 
 ## Active tracks (strict order)
 
-### Track A — R4 execution peer-review
+### Track E — Merge PR stack
 
-**Manual gate:** separate agent + `execution-peer-review` on [waves/REVIEW_PIPELINE_R4_EXECUTION.md](./waves/REVIEW_PIPELINE_R4_EXECUTION.md).
+**Prerequisites:** [merge checklist](./REVIEW_PIPELINE_MERGE_CHECKLIST.md) Phase 1 complete (babysit #23–#27). Babysit **code fixes** done — see [learnings](./REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md).
 
-- [x] `execution-peer-review` complete (2026-07-26) — gaps applied in execution docs
-- [ ] Docs PR for execution peer-review fixes (this batch)
+- [x] Babysit code fixes on #23–#27 (Greptile P1 catalog in learnings doc)
+- [ ] Greptile threads resolved + CI green on each PR in stack order
+- [ ] Merge [#23](https://github.com/raimondskrauklis/revy/pull/23) docs (or fold into #24; close duplicate)
+- [ ] Merge [#24](https://github.com/raimondskrauklis/revy/pull/24) R4 → tag `review-r4-v1`
+- [ ] Rebase #25 onto `main`; merge → tag `review-r5-v1`
+- [ ] Rebase #26 onto `main`; merge → tag `review-r6-v1`
+- [ ] Rebase #27 onto `main`; merge → tag `review-r7-v1`
 
-### Track B — R4 phase-execution
+### Track F — Post-merge ops
 
-**Prerequisites:** Track A done; `main` includes all Track 2b fixes (#19–#21).
+- [ ] `alembic upgrade head` on staging/prod (`0014`–`0016`)
+- [ ] Env: `MOONSHOT_API_KEY`, `VOYAGE_API_KEY`, `REVY_BOT_LOGIN`; optional `ANTHROPIC_API_KEY`
+- [ ] Worker droplet consumes: `github_events,repo_sync,indexing,review,reconciliation,judge,github_publish,maintenance,default,notifications,heavy`
+- [ ] Staging e2e: index → review → reconcile → publish → `/reviewer` UI ([GITHUB_WEBHOOK_DEV.md](./GITHUB_WEBHOOK_DEV.md))
 
-**Branch:** `feat/review-r4-review-run` — rebase on `main`, pop stash `r4-wip-pre-recovery`, align Moonshot env (`revy_llm_provider=moonshot`, Kimi tier vars; drop `moonshot-v1-8k` placeholder).
+### Track G — R8 automation (next program slice)
 
-| Subphase | Scope | Done |
-|----------|--------|------|
-| R4.1 | Migration `0014`, models, enums, `models/__init__.py` | [ ] |
-| R4.2 | `moonshot_review.py`, judge adapter stub only (`anthropic_review.py` — no R5 logic), `config.py` LLM wiring, unit tests | [ ] |
-| R4.3 | `services/github_review.py`, schemas, unit tests; **actionable findings only** (logic/security/behavior — not style/lint) | [ ] |
-| R4.4 | `workers/review_tasks.py`, celery import | [ ] |
-| R4.5 | API routes, audit on review trigger, route tests | [ ] |
-| Ops | `deploy.yml` worker `-Q github_events,repo_sync,indexing,review,maintenance,default,notifications,heavy` + secrets | [ ] |
+**Defer until R4–R7 on `main` and dogfooded.**
 
-**R4 implementation guards:**
+**Product goal:** Greptile/Bugbot parity — **autostart** on PR open + push by default; optional **`@revy review`** on-demand re-run; workspace toggle for manual-only (today’s behavior).
 
-- [ ] `409 review_in_progress` for concurrent runs on same revision
-- [ ] Prerequisites: completed index job + `VOYAGE_API_KEY` + `github_api_enabled` + `MOONSHOT_API_KEY`
-- [ ] Consider token/cost ceiling in R4.3 (max chunks × max tokens) — document in findings if deferred
-- [ ] Phase gate green → PR → external review clean → merge → tag `review-r4-v1`
+- [x] Lock R8 findings: Q11 + R8-Q1–R8-Q7 in [findings](./REVIEW_PIPELINE_FINDINGS.md)
+- [x] `create-general-plan` + execution for automation phase
+- [x] `execution-peer-review` on R8 execution (2026-07-26 — gaps applied in execution doc)
+- [ ] `phase-execution` on `feat/review-r8-automation` after R7 on `main`
 
-### Track C — Before R5 phase-execution
+---
 
-**Prerequisites:** R4 shipped (`review-r4-v1`); R5-Q1–Q3 **locked** in [findings](./REVIEW_PIPELINE_FINDINGS.md); [R5 execution](./waves/REVIEW_PIPELINE_R5_EXECUTION.md) peer-reviewed.
+## Completed tracks (archive)
 
-- [x] Lock R5-Q1 fingerprint algorithm in findings
-- [x] Lock R5-Q2 reconciliation schema + API in findings
-- [x] Lock R5-Q3 judge trigger policy in findings
-- [ ] `execution-peer-review` on R5 execution (separate agent) — after R4 ships
+<details>
+<summary>Track A — R4 execution peer-review · Track B — R4 phase-execution · Track C — R5 locks · Track D — worker queues</summary>
 
-### Track D — Worker queues (ops)
+### Track A — R4 execution peer-review — [x]
 
-Can ship with R4 Ops subphase or as immediate follow-up PR — **required before staging e2e**.
+- [x] `execution-peer-review` on R4 execution (2026-07-26)
+- [x] Gaps applied in execution docs
 
-- [ ] `.github/workflows/deploy.yml` Celery worker `-Q` includes `github_events,repo_sync,indexing,review,maintenance` (SaaS export jobs use `maintenance`)
-- [ ] Documented in deploy supplement / env examples
+### Track B — R4 phase-execution — [x] PR #24
+
+- [x] R4.1–R4.5 subphases (migration `0014`, Moonshot, service, worker, API)
+- [x] `409 review_in_progress`; index + API key prerequisites
+- [x] Phase gate green
+
+### Track C — Before R5 — [x]
+
+- [x] R5-Q1–Q3 locked in findings
+- [x] R5 `phase-execution` — PR #25
+
+### Track D — Worker queues — [x] (in PR #24)
+
+- [x] `deploy.yml` Celery worker `-Q` includes full Revy list
+
+</details>
 
 ---
 
@@ -89,7 +99,7 @@ Can ship with R4 Ops subphase or as immediate follow-up PR — **required before
 
 **Process:** Borrow proven PR-review practices while building Revy (audit PRs, severity, small PRs, babysit). Optional Greptile on **this repo’s** PRs for extra signal — not required forever.
 
-**Product:** Every useful pattern is mapped in [REVIEW_PIPELINE_PRODUCT_PATTERNS.md](./REVIEW_PIPELINE_PRODUCT_PATTERNS.md) — **shipped**, **R4–R7**, **defer**, or **future**. No vendor rules files in repo; Revy implements behavior in app + findings registry.
+**Product:** Every useful pattern is mapped in [REVIEW_PIPELINE_PRODUCT_PATTERNS.md](./REVIEW_PIPELINE_PRODUCT_PATTERNS.md) — **shipped**, **defer**, or **future**. No vendor rules files in repo; Revy implements behavior in app + findings registry.
 
 | Practice | Apply while shipping R0–R7 |
 |----------|----------------------------|
@@ -102,18 +112,19 @@ Can ship with R4 Ops subphase or as immediate follow-up PR — **required before
 
 **Quick product map (detail in product patterns doc):**
 
-| Capability | Revy home |
-|------------|-----------|
-| Custom standards / lenses | Workspace review policy (**future** R8+) |
-| Strictness profiles | R4 `ReviewProfile` |
-| Stable findings across pushes | R5 fingerprints + reconcile |
-| Human override | R7 dismiss/acknowledge; R5 supersede/resolve |
-| Merge readiness | R6 check conclusion; R7 badge |
-| Idempotent GitHub publish | R6 update in place (R6-Q1) |
-| Repo-wide context | R3 embeddings + R4 lenses |
-| Auto-trigger on push/synchronize | **defer** R8 (`Q11`) |
+| Capability | Revy home | Status |
+|------------|-----------|--------|
+| Custom standards / lenses | Workspace review policy | **future** R8+ |
+| Strictness profiles | R4 `ReviewProfile` | **shipped** (#24) |
+| Stable findings across pushes | R5 fingerprints + reconcile | **shipped** (#25) |
+| Human override | R7 UI; R5 supersede/resolve | **shipped** (#25/#27) |
+| Merge readiness | R6 check conclusion; R7 badge | **shipped** (#26/#27) |
+| Idempotent GitHub publish | R6 update in place (R6-Q1) | **shipped** (#26) |
+| Repo-wide context | R3 embeddings + R4 retrieval | **shipped** |
+| Auto-trigger on push/synchronize | **defer** R8 (`Q11`) — **autostart** default |
+| `@revy review` on-demand command | **defer** R8 |
 
-**Where “rules” live:** `.cursor/rules/` (agent dev); `REVIEW_PIPELINE_FINDINGS.md` (locks); `REVIEW_PIPELINE_PRODUCT_PATTERNS.md` (roadmap); future `workspace_review_policy` in DB.
+**Where “rules” live:** `.cursor/rules/` (agent dev); `REVIEW_PIPELINE_FINDINGS.md` (locks + [domain states](./REVIEW_PIPELINE_FINDINGS.md#domain-states-enums)); `REVIEW_PIPELINE_PRODUCT_PATTERNS.md` (roadmap); future `workspace_review_policy` in DB.
 
 ---
 
@@ -121,21 +132,21 @@ Can ship with R4 Ops subphase or as immediate follow-up PR — **required before
 
 | Item | Owner / when |
 |------|----------------|
-| Auto index + review on `pull_request.synchronize` / `push` | **Defer R8 / automation** — R3/R4 manual admin trigger until pipeline stable (Q11) |
-| `push` handler stub | Same as above; target config lists push for future re-index |
-| Orphan delivery (crash after commit, before enqueue) | Edge case — manual replay or future delivery sweep job |
-| Concurrent index jobs per revision | No `index_in_progress` guard yet; mirror R4 pattern if needed before staging |
+| Auto index + review on `pull_request.synchronize` / `push` | **R8** — Q11 autostart ([execution](./waves/REVIEW_PIPELINE_R8_EXECUTION.md)) |
+| `@revy review` comment command (+ future `@revy <cmd>`) | **R8** |
+| `index_in_progress` guard | **R8-Q5** |
+| Incremental chunk hash index | **R9** (not R8) |
+| Orphan delivery (crash after commit, before enqueue) | Manual replay or future sweep job |
 | `REVY_REPOS_ROOT` documented but unused | Indexing uses tarball → `REVY_WORKTREES_ROOT` only |
-| `record_audit` on index trigger | R4 audits review trigger only for now |
 | Workspace review rules UI | Post-R7; empty state “using workspace default profile” |
-| Symbol / call-graph index | Defer — ship retrieval + R5 judge first; add only if staging misses cross-file bugs |
+| Symbol / call-graph index | Defer — parking lot |
 | Precision metrics (dismiss / addressed rate) | Post-R7 when dismiss flows exist |
-| Plan-gated review volume | Q9 — after R4 cost data |
+| Plan-gated review volume | Q9 — after staging cost data |
 | nginx GitHub IP allowlist, OAuth install UI, `heavy_job` cleanup | Existing parking lot |
 
 ---
 
-## Locked R4 decisions (quick ref)
+## Locked R4–R6 decisions (quick ref)
 
 | Decision | Value |
 |----------|--------|
@@ -143,9 +154,9 @@ Can ship with R4 Ops subphase or as immediate follow-up PR — **required before
 | Concurrent runs | `409 review_in_progress` |
 | Prerequisites | Completed index job + `VOYAGE_API_KEY` + `github_api_enabled` + `MOONSHOT_API_KEY` |
 | Primary LLM | Moonshot Kimi — `kimi-k2.7-code` (Standard), `kimi-k3` (Deep/Critical) |
-| Embeddings | Voyage API first (`voyage-3-lite`); local HF parallel per `architecture.md` §11.3.1 |
-| Judge LLM (R5) | Anthropic Claude — cross-family only |
-| Finding scope (R4) | Actionable logic/security/behavior — not style/lint (CI handles style) |
+| Finding scope (R4) | Actionable logic/security/behavior — not style/lint |
+| Group states (R5) | `active` · `superseded` · `resolved` |
+| Check conclusion (R6) | `failure` if active `error`/`critical`; `success` if none; `neutral` for warning/info only |
 
 ---
 
@@ -165,8 +176,8 @@ Can ship with R4 Ops subphase or as immediate follow-up PR — **required before
 ## Agent resume command
 
 ```text
-Read docs/review-pipeline/REVIEW_PIPELINE_RECOVERY_CHECKLIST.md (tracks A–D).
-Read docs/review-pipeline/REVIEW_PIPELINE_FINDINGS.md for locked Q# decisions.
+Read docs/review-pipeline/REVIEW_PIPELINE_RECOVERY_CHECKLIST.md (tracks E–G).
+Read docs/review-pipeline/REVIEW_PIPELINE_FINDINGS.md for locked Q# + domain states.
 Read docs/review-pipeline/REVIEW_PIPELINE_PRODUCT_PATTERNS.md for defer/future rationale.
-Do not push to main directly. One PR per branch.
+Do not push to main directly. Merge stack #23→#24→#25→#26→#27; tag after each merge.
 ```

@@ -21,6 +21,7 @@
     "home": "Home",
     "dashboard": "Dashboard",
     "installations": "Installations",
+    "reviewer": "Reviewer",
     "settings": "Settings"
   },
   "theme": {
@@ -526,6 +527,82 @@
       "accountId": "GitHub account ID",
       "accountType": "Account type",
       "submit": "Register installation"
+    }
+  },
+  "reviewer": {
+    "title": "Code review",
+    "subtitle": "Browse pull requests and reconciled findings for connected repositories.",
+    "noWorkspace": "Select a workspace to use the reviewer.",
+    "backToRepositories": "All repositories",
+    "viewOnGitHub": "View on GitHub",
+    "installation": "GitHub installation",
+    "repositories": {
+      "empty": "No repositories synced for this installation.",
+      "name": "Repository",
+      "fullName": "Full name",
+      "actions": "Actions",
+      "viewPullRequests": "View pull requests"
+    },
+    "pullRequests": {
+      "empty": "No pull requests ingested for this repository yet.",
+      "number": "#",
+      "title": "Title",
+      "headSha": "Head SHA",
+      "revisions": "Revisions"
+    },
+    "findings": {
+      "empty": "No reconciled findings for this pull request.",
+      "severity": "Severity",
+      "category": "Category",
+      "state": "State",
+      "title": "Title",
+      "file": "File",
+      "message": "Message"
+    },
+    "severity": {
+      "info": "Info",
+      "warning": "Warning",
+      "error": "Error",
+      "critical": "Critical"
+    },
+    "category": {
+      "security": "Security",
+      "bug": "Bug",
+      "performance": "Performance",
+      "style": "Style",
+      "maintainability": "Maintainability",
+      "other": "Other"
+    },
+    "groupState": {
+      "active": "Active",
+      "superseded": "Superseded",
+      "resolved": "Resolved"
+    },
+    "reviewRun": {
+      "none": "No review run yet.",
+      "status": "Review: {{status}}",
+      "pending": "Pending",
+      "processing": "Processing",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "publish": {
+      "status": "Publish: {{status}}",
+      "pending": "Pending",
+      "processing": "Processing",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "mergeReadiness": {
+      "notPublished": "Not published to GitHub",
+      "success": "Ready to merge",
+      "neutral": "Review notes",
+      "failure": "Blocking findings"
+    },
+    "widget": {
+      "title": "Code review",
+      "body": "Browse PR findings and merge readiness in Revy.",
+      "open": "Open reviewer"
     }
   },
   "errors": {

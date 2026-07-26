@@ -4,7 +4,7 @@ Phase **R6** of [REVIEW_PIPELINE_R6_GITHUB_PUBLISH_GENERAL_PLAN.md](../REVIEW_PI
 
 **Goal:** Publish reconciled findings to GitHub check runs and PR comments — idempotent per `head_sha`.
 
-**Authority:** [GITHUB_APP_TARGET_CONFIG.md](../../utils/GITHUB_APP_TARGET_CONFIG.md) § R6, [REVIEW_PIPELINE_PRODUCT_PATTERNS.md](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md) § R6 execution decisions.
+**Authority:** [GITHUB_APP_TARGET_CONFIG.md](../../utils/GITHUB_APP_TARGET_CONFIG.md) § R6, [REVIEW_PIPELINE_PRODUCT_PATTERNS.md](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md) § R6 execution open items.
 
 ## Decisions locked for R6
 
@@ -89,4 +89,6 @@ pipenv run lint && pipenv run pytest \
 
 **Human gate:** publish to test PR; re-run on same SHA updates check in place; new commit creates new check.
 
-**Next:** [REVIEW_PIPELINE_R7_EXECUTION.md](./REVIEW_PIPELINE_R7_EXECUTION.md).
+**Status:** Implemented — PR [#26](https://github.com/raimondskrauklis/revy/pull/26).
+
+**Next:** [REVIEW_PIPELINE_R7_EXECUTION.md](./REVIEW_PIPELINE_R7_EXECUTION.md) (PR [#27](https://github.com/raimondskrauklis/revy/pull/27)).

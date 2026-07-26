@@ -92,3 +92,73 @@ def parse_review_json(raw: str) -> list[dict]:
     if not isinstance(findings, list):
         raise ValueError("review_json_findings_not_list")
     return [item for item in findings if isinstance(item, dict)]
+
+
+JUDGE_SYSTEM_PROMPT = (
+    "You are an expert code review judge. Given a finding, decide whether it should be "
+    "upheld, dismissed as a false positive, or modified. Return JSON only: "
+    '{"outcome":"upheld|dismissed|modified","notes":"brief rationale"}'
+)
+
+
+async def judge_finding(
+    client: httpx.AsyncClient,
+    *,
+    user_prompt: str,
+    timeout_seconds: float | None = None,
+) -> dict:
+    _require_anthropic_enabled()
+    api_key = settings.anthropic_api_key
+    if not api_key:
+        raise ServiceUnavailableError(
+            message="Anthropic API is not configured",
+            error_code="llm_disabled",
+        )
+
+    response = await client.post(
+        ANTHROPIC_API_URL,
+        headers={
+            "x-api-key": api_key,
+            "anthropic-version": ANTHROPIC_VERSION,
+            "Content-Type": "application/json",
+        },
+        json={
+            "model": settings.revy_anthropic_model,
+            "max_tokens": 1024,
+            "system": JUDGE_SYSTEM_PROMPT,
+            "messages": [{"role": "user", "content": user_prompt}],
+        },
+        timeout=timeout_seconds or settings.revy_revision_timeout_standard_seconds,
+    )
+    response.raise_for_status()
+    data = response.json()
+    content_blocks = data.get("content")
+    if not isinstance(content_blocks, list) or not content_blocks:
+        raise ServiceUnavailableError(
+            message="Anthropic judge response invalid",
+            error_code="llm_error",
+        )
+    first = content_blocks[0]
+    if not isinstance(first, dict):
+        raise ServiceUnavailableError(
+            message="Anthropic judge response invalid",
+            error_code="llm_error",
+        )
+    text = first.get("text")
+    if not isinstance(text, str) or not text.strip():
+        raise ServiceUnavailableError(
+            message="Anthropic judge response invalid",
+            error_code="llm_error",
+        )
+    payload = json.loads(text)
+    if not isinstance(payload, dict):
+        raise ValueError("judge_json_not_object")
+    return payload
+
+
+def parse_judge_outcome(raw: dict) -> tuple[str, str | None]:
+    outcome = str(raw.get("outcome", "")).strip().lower()
+    if outcome not in ("upheld", "dismissed", "modified"):
+        raise ValueError("judge_outcome_invalid")
+    notes = raw.get("notes")
+    return outcome, notes.strip() if isinstance(notes, str) and notes.strip() else None

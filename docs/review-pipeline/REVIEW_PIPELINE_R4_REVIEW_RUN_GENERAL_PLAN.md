@@ -20,6 +20,6 @@ Run the LLM review pipeline for a PR revision and persist structured findings �
 
 **Depends on:** R3 (retrieval context available).
 
-**Status:** Execution plan ready — [waves/REVIEW_PIPELINE_R4_EXECUTION.md](./waves/REVIEW_PIPELINE_R4_EXECUTION.md); **execution-peer-review** then `phase-execution` (see [agent checklist](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md)).
+**Status:** Implemented — PR [#24](https://github.com/raimondskrauklis/revy/pull/24); tag `review-r4-v1` after merge to `main`.
 
 **Next phase:** [REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md](./REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md).

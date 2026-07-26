@@ -18,6 +18,6 @@ In-app surfaces for PR status, findings, and review history — member-facing pr
 
 **Depends on:** R4 (read-only UI can ship before R6; publish status shown when R6 ships).
 
-**Status:** Not started.
+**Status:** Implemented — PR [#27](https://github.com/raimondskrauklis/revy/pull/27); tag `review-r7-v1` after merge.
 
-**Next:** `execution-peer-review` when R4 API stable — [waves/REVIEW_PIPELINE_R7_EXECUTION.md](./waves/REVIEW_PIPELINE_R7_EXECUTION.md). R7.4 publish badge may follow R6.
+**Next:** R8 automation — [general plan](./REVIEW_PIPELINE_R8_AUTOMATION_GENERAL_PLAN.md); workspace review policy (R9+).

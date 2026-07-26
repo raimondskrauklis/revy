@@ -31,3 +31,8 @@ class GitHubFindingORM(TimestampedModel):
     file_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     start_line: Mapped[int | None] = mapped_column(Integer, nullable=True)
     end_line: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    group_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("github_finding_groups.id"),
+        nullable=True,
+    )

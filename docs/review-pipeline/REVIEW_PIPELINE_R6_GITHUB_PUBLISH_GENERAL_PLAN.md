@@ -12,14 +12,12 @@ General plan from [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md). 
 
 Post check runs and PR review comments to GitHub so developers see Revy results in the PR — outbound only via `github_publish` queue.
 
-**Scope:** In — `publish_tasks` on `github_publish` queue; create/update check run on PR head SHA (**update in place** per `head_sha` — [R6-Q1](./REVIEW_PIPELINE_FINDINGS.md)); update stored PR summary comment in place when applicable; optional inline comments v1 subset; check run **conclusion** from worst finding severity ([R6-Q2](./REVIEW_PIPELINE_FINDINGS.md)); map reconciled findings to GitHub API payloads; optional subscribe `check_run` / `check_suite` for CI context. Execution details (check name, `external_id`, inline subset) → [product patterns § R6 execution decisions](./REVIEW_PIPELINE_PRODUCT_PATTERNS.md). Out — full inline suggestion API v2; check run annotations for every line; numeric confidence score 0–5 (defer).
+**Scope:** In — `publish_tasks` on `github_publish` queue; create/update check run on PR head SHA (**update in place** per `head_sha` — [R6-Q1](./REVIEW_PIPELINE_FINDINGS.md)); update stored PR summary comment in place when applicable; optional inline comments v1 subset; check run **conclusion** from worst finding severity ([R6-Q2](./REVIEW_PIPELINE_FINDINGS.md)); map reconciled findings to GitHub API payloads; optional subscribe `check_run` / `check_suite` for CI context. Execution details (check name, `external_id`, inline subset) → [product patterns § R6 execution open items](./REVIEW_PIPELINE_PRODUCT_PATTERNS.md). Out — full inline suggestion API v2; check run annotations for every line; numeric confidence score 0–5 (defer).
 
 **Deliverables:** Check run status `completed` with conclusion; summary comment on PR; publish job linked to review run; failures retried with backoff.
 
 **Depends on:** R5 (reconciled findings ready to publish).
 
-**Status:** Not started.
-
-**Next:** `execution-peer-review` when R5 ships — [waves/REVIEW_PIPELINE_R6_EXECUTION.md](./waves/REVIEW_PIPELINE_R6_EXECUTION.md).
+**Status:** Implemented — PR [#26](https://github.com/raimondskrauklis/revy/pull/26); tag `review-r6-v1` after merge. Execution locked: check name `revy/review`; inline subset `error`/`critical` with line anchors.
 
 **Next phase:** [REVIEW_PIPELINE_R7_REVIEWER_UI_GENERAL_PLAN.md](./REVIEW_PIPELINE_R7_REVIEWER_UI_GENERAL_PLAN.md).

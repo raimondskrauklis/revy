@@ -11,16 +11,25 @@ from app.core.auth import CurrentUser, get_current_user
 from app.core.database import get_db
 from app.core.exceptions import ForbiddenError
 from app.core.idempotency import idempotency_guard
+from app.core.pagination import CursorParams, CursorResponse, get_cursor_params
 from app.core.permissions import Permission, require_permission
 from app.core.tenancy import require_same_workspace
 from app.schemas.common import SuccessResponse
+from app.schemas.github_publish import GitHubPublishJobResponse
 from app.schemas.github_review import (
     GitHubFindingListResponse,
     GitHubReviewRunResponse,
+    ReconciledFindingResponse,
     ReviewTriggerRequest,
 )
 from app.services.audit_service import record_audit
+from app.services.github_finding_reconcile import list_reconciled_finding_groups
 from app.services.github_indexing import ensure_revision_access
+from app.services.github_publish import (
+    create_publish_job,
+    enqueue_publish_job,
+    get_latest_publish_job_for_revision,
+)
 from app.services.github_review import (
     FINDING_LIST_DEFAULT_LIMIT,
     FINDING_LIST_MAX_LIMIT,
@@ -143,3 +152,95 @@ async def get_review_findings(
         offset=offset,
     )
     return SuccessResponse(data=page)
+
+
+@router.get(
+    "/{workspace_id}/repositories/{repository_id}/pull-requests/{pull_request_id}/findings/reconciled",
+    response_model=SuccessResponse[CursorResponse[ReconciledFindingResponse]],
+)
+async def get_reconciled_findings(
+    workspace_id: UUID,
+    repository_id: UUID,
+    pull_request_id: UUID,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    params: Annotated[CursorParams, Depends(get_cursor_params)],
+) -> SuccessResponse[CursorResponse[ReconciledFindingResponse]]:
+    require_permission(current_user, Permission.items_view)
+    require_same_workspace(current_user, workspace_id)
+
+    page = await list_reconciled_finding_groups(
+        session,
+        workspace_id=workspace_id,
+        repository_id=repository_id,
+        pull_request_id=pull_request_id,
+        params=params,
+    )
+    return SuccessResponse(data=page)
+
+
+@router.post(
+    "/{workspace_id}/repositories/{repository_id}/pull-requests/{pull_request_id}/revisions/{revision_id}/publish",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=SuccessResponse[GitHubPublishJobResponse],
+)
+async def post_publish_pull_request_revision(
+    workspace_id: UUID,
+    repository_id: UUID,
+    pull_request_id: UUID,
+    revision_id: UUID,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    idempotent: Annotated[JSONResponse | None, Depends(idempotency_guard)] = None,
+) -> SuccessResponse[GitHubPublishJobResponse] | JSONResponse:
+    if idempotent is not None:
+        return idempotent
+
+    require_permission(current_user, Permission.admin_users)
+    require_same_workspace(current_user, workspace_id)
+    if current_user.user_id is None:
+        raise ForbiddenError(message="User not provisioned")
+
+    job = await create_publish_job(
+        session,
+        workspace_id=workspace_id,
+        repository_id=repository_id,
+        pull_request_id=pull_request_id,
+        revision_id=revision_id,
+    )
+    await session.commit()
+
+    enqueue_publish_job(job.id)
+    return SuccessResponse(data=GitHubPublishJobResponse.model_validate(job))
+
+
+@router.get(
+    "/{workspace_id}/repositories/{repository_id}/pull-requests/{pull_request_id}/revisions/{revision_id}/publish-job",
+    response_model=SuccessResponse[GitHubPublishJobResponse | None],
+)
+async def get_publish_job_for_revision(
+    workspace_id: UUID,
+    repository_id: UUID,
+    pull_request_id: UUID,
+    revision_id: UUID,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> SuccessResponse[GitHubPublishJobResponse | None]:
+    require_permission(current_user, Permission.items_view)
+    require_same_workspace(current_user, workspace_id)
+
+    await ensure_revision_access(
+        session,
+        workspace_id=workspace_id,
+        repository_id=repository_id,
+        pull_request_id=pull_request_id,
+        revision_id=revision_id,
+    )
+    job = await get_latest_publish_job_for_revision(
+        session,
+        workspace_id=workspace_id,
+        revision_id=revision_id,
+    )
+    if job is None:
+        return SuccessResponse(data=None)
+    return SuccessResponse(data=GitHubPublishJobResponse.model_validate(job))

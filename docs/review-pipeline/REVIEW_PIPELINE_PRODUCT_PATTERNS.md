@@ -4,9 +4,9 @@
 
 **Not in scope:** Greptile vendor config (`.greptile/`, `greptile.json`) in this repo. Revy owns product behavior via DB + workspace policy + findings registry.
 
-**Priority:** Ship R4→R7 core on `main` first; iterate on deferred rows as the product matures.
+**Priority:** R4–R7 implemented on PR stack [#24](https://github.com/raimondskrauklis/revy/pull/24)–[#27](https://github.com/raimondskrauklis/revy/pull/27); merge to `main` then iterate on deferred rows.
 
-**Locks:** [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) Q-registry · **Handoff:** [REVIEW_PIPELINE_RECOVERY_CHECKLIST.md](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md)
+**Locks:** [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) Q-registry · **Babysit learnings:** [REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md](./REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md) · **Handoff:** [REVIEW_PIPELINE_RECOVERY_CHECKLIST.md](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md)
 
 **Greptile public docs (reference only):** [greptile.com/docs](https://www.greptile.com/docs/code-review/greptile-config) — strictness, comment types, triggers, output sections.
 
@@ -17,7 +17,7 @@
 | Status | Meaning |
 |--------|---------|
 | **shipped** | On `main` today |
-| **R4–R7** | Tied to a general plan phase — implement when that phase executes |
+| **in flight** | Implemented on PR stack; tag `review-r*-v*` after merge to `main` |
 | **defer** | Valuable; after adjacent phases or needs product data |
 | **future** | Post-R7 / R8+ or separate program |
 
@@ -27,7 +27,7 @@
 
 | Pattern | Greptile-style reference | Revy approach | Status |
 |---------|-------------------------|---------------|--------|
-| Repo-wide context beyond diff | Graph / symbol index + agent swarm | R3 pgvector chunks + R4 lens retrieval | **shipped** (R3) · **R4** (lenses) |
+| Repo-wide context beyond diff | Graph / symbol index + agent swarm | R3 pgvector chunks + R4 lens retrieval | **shipped** (R3–R4) |
 | Full call graph | Deterministic cross-file callers | Embeddings first; optional symbol index if staging misses bugs | **defer** — parking lot |
 | Reranker on retrieval | N/A (graph-heavy) | API/local reranker (`R3-Q3`) | **defer** |
 | Auto-ingest rule files | Reads `CLAUDE.md`, `.cursor/rules` | Workspace/repo context attachments in policy | **future** (R8+ policy) |
@@ -41,16 +41,17 @@
 
 | Pattern | Greptile-style reference | Revy approach | Status |
 |---------|-------------------------|---------------|--------|
-| High-signal findings | `commentTypes`: logic default; style optional | R4-Q5: logic/security/behavior only; CI owns lint | **R4** |
-| Severity / strictness | `strictness` 1–3 | `ReviewProfile` standard / deep / critical + Kimi tier | **R4** |
-| P0–P2 on PRs (dev process) | Inline severity badges | Map to `FindingSeverity`; use in our PR workflow | **R4** schema · process now |
-| PR summary narrative | Top-level review comment | R6 check run `output.summary` + optional summary comment | **R6** |
-| Inline file+line comments | Review comments on diff | R6 v1 subset from finding `file_path` + line range | **R6** |
+| High-signal findings | `commentTypes`: logic default; style optional | R4-Q5: logic/security/behavior only; CI owns lint | **shipped** |
+| Severity / strictness | `strictness` 1–3 | `ReviewProfile` standard / deep / critical + Kimi tier | **shipped** |
+| P0–P2 on PRs (dev process) | Inline severity badges | Map to `FindingSeverity`; use in our PR workflow | **shipped** schema · process now |
+| PR summary narrative | Top-level review comment | R6 check run `output.summary` + optional summary comment | **shipped** |
+| Inline file+line comments | Review comments on diff | R6 v1 subset from finding `file_path` + line range | **shipped** |
 | Suggested fix / patch | Copy-prompt, suggestion blocks | Optional `suggestion` on finding; GitHub suggestion when line-accurate | **defer** (`R6-Q3`) |
-| Issues table in review | `includeIssuesTable` | R7 findings table + R6 summary markdown | **R6–R7** |
+| Issues table in review | `includeIssuesTable` | R7 findings table + R6 summary markdown | **shipped** |
 | Sequence / ER diagrams | `includeSequenceDiagram` | Summary markdown diagrams | **future** |
 | Numeric confidence 0–5 | `includeConfidenceScore` | Not v1 — severity-derived conclusion instead | **defer** |
-| Merge readiness | Check state + optional score | Check run `conclusion` + R7 badge (R6-Q2) | **R6–R7** (locked) |
+| Merge readiness | Check state + optional score | Check run `conclusion` + R7 badge (R6-Q2) | **shipped** |
+| Email digest on review | GitHub notification with summary + confidence | In-app + GitHub surface only v1; email **defer** | **defer** post-R7 |
 
 ---
 
@@ -58,9 +59,9 @@
 
 | Pattern | Greptile-style reference | Revy approach | Status |
 |---------|-------------------------|---------------|--------|
-| Same issue every re-review | Learning + dedupe over time | R5 fingerprints + supersede / resolve | **R5** |
-| Idempotent GitHub surface | Known pain: new summary comment each push | R6-Q1: update check run + summary **in place** per revision | **R6** (locked) |
-| Human dismiss / ack | Resolve threads, 👍/👎 | R7 dismiss/acknowledge; feeds future precision metrics | **R7** |
+| Same issue every re-review | Learning + dedupe over time | R5 fingerprints + supersede / resolve | **shipped** |
+| Idempotent GitHub surface | Known pain: new summary comment each push | R6-Q1: update check run + summary **in place** per revision | **shipped** |
+| Human dismiss / ack | Resolve threads, 👍/👎 | R7 dismiss/acknowledge; feeds future precision metrics | **shipped** (UI); metrics **future** |
 | Learn from team comments | Memory from PR comments, reactions, commits | Post-R7 analytics + optional rule suggestions | **future** (R8+) |
 | Inferred custom rules | AI-generated rules from behavior | `workspace_review_policy` suggestions | **future** (R8+) |
 | Precision metrics | Internal addressed-rate tracking | Dismiss / addressed rate after R7 flows | **future** |
@@ -71,9 +72,11 @@
 
 | Pattern | Greptile-style reference | Revy approach | Status |
 |---------|-------------------------|---------------|--------|
-| Review on PR open | Default auto-review | R4 admin trigger API | **R4** (manual) |
-| Review on every commit | `triggerOnUpdates: true` | Webhook → index → review chain | **defer** (`Q11` → R8 automation) |
-| Manual-only reviews | `skipReview: "AUTOMATIC"` | Admin trigger only through R4 | **shipped** policy (`Q11`) |
+| **Autostart on PR open** | Default auto-review (no `@` needed) | R8: `pull_request.opened` → full pipeline | **defer** R8 (`Q11`) |
+| Review on every commit | `triggerOnUpdates: true` | R8: `pull_request.synchronize` → index → review → reconcile → publish | **defer** (`Q11` → R8) |
+| **On-demand `@` commands** | `@greptile` / `@cursor` comment | R8: **`@revy review`** on PR comment → re-run pipeline; namespace for `@revy index`, `@revy publish`, … | **defer** R8 |
+| Manual-only reviews | `skipReview: "AUTOMATIC"` | Admin API trigger only (R0–R7); workspace `autostart=false` in R8 | **shipped** policy (`Q11`) |
+| Admin re-trigger | N/A | `POST …/index`, `…/review`, `…/publish` (existing) | **shipped** |
 | Draft PR reviews | `triggerOnDrafts` | Workspace setting | **future** |
 | Label / path filters | Ignore patterns, directory rules | Repo path filters in workspace policy | **future** (R8+) |
 | `push` re-index / re-review | Product marketing | `push` handler stub; automation unowned | **defer** (R8) |
@@ -86,7 +89,7 @@
 |---------|-------------------------|---------------|--------|
 | Custom rules in plain English | `.greptile/rules`, cascading dirs | `workspace_review_policy` in DB (EN+LV) | **future** (R8+) |
 | Per-directory strictness | Cascading `.greptile/` overrides | Repo/path-scoped policy rows | **future** |
-| Workspace SaaS + audit | Limited in vendor SaaS | Workspace tenancy + `record_audit` on triggers | **shipped** shell · **R4** on review trigger |
+| Workspace SaaS + audit | Limited in vendor SaaS | Workspace tenancy + `record_audit` on review trigger | **shipped** |
 | Plan / volume gates | Credits per seat | Q9 plan gates after R4 cost data | **defer** |
 
 ---
@@ -97,7 +100,26 @@
 |---------|-------------------------|---------------|--------|
 | Sandbox test generation (T-REX) | Agent writes/runs tests per PR | Out of R0–R7 scope | **future** / separate program |
 | MCP / editor-native review | Greptile MCP server | Revy API + future MCP when publish stable | **future** |
-| Multi-agent “swarm” | Parallel specialized agents | R4 staged pipeline; R5 judge as cross-check | **R4–R5** (simpler architecture) |
+| Multi-agent “swarm” | Parallel specialized agents | R4 staged pipeline; R5 judge as cross-check | **shipped** |
+
+---
+
+## Industry patterns (Perplexity notes — advice only)
+
+Source: [code-review-arch_perplexity_searcj_advice_only.md](./code-review-arch_perplexity_searcj_advice_only.md). Mapped in [REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md](./REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md).
+
+| Pattern | Industry reference | Revy approach | Status |
+|---------|-------------------|---------------|--------|
+| Async queue-first (accuracy > latency) | Hookdeck + workflow queue | Celery per stage; webhook never blocks on GitHub API | **shipped** |
+| Incremental chunk hash index | SHA chunk IDs; embed diff only | Full re-index per revision (R3) | **defer** R9 |
+| Evidence attached at generation | Snippet link per finding | `file_path` + line; no stored evidence blob | **defer** R9 |
+| Grounding / citation judge | Claim vs evidence entailment | R5 Anthropic judge on severity rules | **partial** — extend grounding R9 |
+| Static pre-filter before LLM | 50+ analyzers (CodeRabbit) | CI owns style; R4-Q5 actionable-only | **shipped** policy |
+| Cross-model jury | Different families for gen vs judge | Moonshot R4 + Anthropic R5 | **shipped** |
+| Shuffled-diff majority voting | Bugbot multi-pass same model | Not planned | **future** eval only |
+| Resolution-rate metric | Re-check at next revision | Dismiss flows R7; analytics R9 | **future** |
+| Agentic tool loop mid-review | Bugbot go-to-definition tools | Retrieval-only R4; LSP sidecar | **defer** |
+| Checkpoint commit before retry | Idempotent external IDs | R6 publish surface | **shipped** — generalize R8 |
 
 ---
 
