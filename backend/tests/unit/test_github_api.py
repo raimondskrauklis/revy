@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+import httpx
 
 from app.core.exceptions import ServiceUnavailableError
 from app.integrations import github_api
@@ -56,3 +57,25 @@ async def test_list_installation_repositories_paginates():
 
     assert len(repos) == 1
     assert repos[0]["full_name"] == "org/a"
+
+
+@pytest.mark.asyncio
+async def test_list_installation_repositories_raises_on_http_error():
+    client = AsyncMock()
+    error_response = MagicMock()
+    error_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+        "error",
+        request=MagicMock(),
+        response=MagicMock(status_code=503),
+    )
+    client.request = AsyncMock(return_value=error_response)
+
+    with patch(
+        "app.integrations.github_api.create_installation_access_token",
+        AsyncMock(return_value="install-token"),
+    ):
+        with pytest.raises(httpx.HTTPStatusError):
+            await github_api.list_installation_repositories(
+                client,
+                github_installation_id=99,
+            )
