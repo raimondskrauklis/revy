@@ -88,3 +88,32 @@ def test_process_github_event_runs_installation_repositories_handler():
             github_tasks.process_github_event.run("d-2")
 
     apply_mock.assert_awaited_once()
+
+
+def test_process_github_event_runs_pull_request_handler():
+    delivery = GitHubWebhookDeliveryORM(
+        delivery_id="d-3",
+        event_type="pull_request",
+        installation_id=12345,
+        payload_json={
+            "action": "opened",
+            "installation": {"id": 12345},
+            "repository": {"id": 1},
+            "pull_request": {"id": 2, "number": 1},
+        },
+    )
+    session = AsyncMock()
+    session.get = AsyncMock(return_value=delivery)
+
+    db_context = MagicMock()
+    db_context.__aenter__ = AsyncMock(return_value=session)
+    db_context.__aexit__ = AsyncMock(return_value=None)
+
+    with patch("app.workers.github_tasks.get_db_context", return_value=db_context):
+        with patch(
+            "app.workers.github_tasks.apply_pull_request_webhook_event",
+            AsyncMock(),
+        ) as apply_mock:
+            github_tasks.process_github_event.run("d-3")
+
+    apply_mock.assert_awaited_once()

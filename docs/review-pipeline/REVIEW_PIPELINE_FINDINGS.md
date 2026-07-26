@@ -95,7 +95,7 @@ Revy code does not replace GitHub App registration. Use these before expecting w
 |-------|------------|--------------|-----------|--------|
 | **R0** | Webhook ingest + HMAC + dedupe + `github_events` | [R0](./REVIEW_PIPELINE_R0_WEBHOOKS_GENERAL_PLAN.md) | [R0 exec](./waves/REVIEW_PIPELINE_R0_EXECUTION.md) | **shipped** |
 | **R1** | Repository metadata + `repo_sync` | [R1](./REVIEW_PIPELINE_R1_REPO_SYNC_GENERAL_PLAN.md) | [R1 exec](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) | **shipped** |
-| **R2** | PR ingestion + revisions | [R2](./REVIEW_PIPELINE_R2_PR_INGESTION_GENERAL_PLAN.md) | — | **next** |
+| **R2** | PR ingestion + revisions | [R2](./REVIEW_PIPELINE_R2_PR_INGESTION_GENERAL_PLAN.md) | [R2 exec](./waves/REVIEW_PIPELINE_R2_EXECUTION.md) | **in progress** |
 | **R3** | Indexing (chunks, pgvector) | [R3](./REVIEW_PIPELINE_R3_INDEXING_GENERAL_PLAN.md) | — | planned |
 | **R4** | LLM review + findings | [R4](./REVIEW_PIPELINE_R4_REVIEW_RUN_GENERAL_PLAN.md) | — | planned |
 | **R5** | Reconciliation + judge | [R5](./REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md) | — | planned |
@@ -148,7 +148,7 @@ Revy code does not replace GitHub App registration. Use these before expecting w
 | Manual installation register | Row in `github_installations` |
 | R0: smee.io / staging → API | **200**, delivery row, Celery `github_events` |
 | R1: `installation_repositories` or sync API | Rows in `github_repositories` |
-| R2+: synthetic `pull_request` event | PR row created |
+| R2: `pull_request` `opened` delivery | PR row + revision `1` in `github_pull_requests` |
 | R7: UI lists findings | EN+LV strings |
 
 ---

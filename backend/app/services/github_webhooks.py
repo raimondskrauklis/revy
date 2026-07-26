@@ -11,7 +11,13 @@ from app.models.github_webhook_delivery import GitHubWebhookDeliveryORM
 
 logger = get_logger(__name__)
 
-SUPPORTED_EVENTS = frozenset({"installation", "installation_repositories", "push"})
+SUPPORTED_EVENTS = frozenset({
+    "installation",
+    "installation_repositories",
+    "push",
+    "pull_request",
+    "pull_request_review",
+})
 
 
 def extract_installation_id(payload: dict[str, Any]) -> int | None:

@@ -8,6 +8,10 @@ from app.core.database import get_db_context
 from app.core.logging import get_logger
 from app.models.github_webhook_delivery import GitHubWebhookDeliveryORM
 from app.services.github_installations import apply_installation_webhook_event
+from app.services.github_pull_requests import (
+    apply_pull_request_review_webhook_event,
+    apply_pull_request_webhook_event,
+)
 from app.services.github_repositories import apply_installation_repositories_webhook_event
 from app.workers.celery_app import celery_app
 
@@ -38,6 +42,14 @@ def process_github_event(self, delivery_id: str) -> None:
                         github_installation_id=installation["id"],
                         action=action,
                     )
+                return
+
+            if event_type == "pull_request":
+                await apply_pull_request_webhook_event(session, payload)
+                return
+
+            if event_type == "pull_request_review":
+                await apply_pull_request_review_webhook_event(session, payload)
                 return
 
             if event_type in {"push", "installation_repositories"}:
