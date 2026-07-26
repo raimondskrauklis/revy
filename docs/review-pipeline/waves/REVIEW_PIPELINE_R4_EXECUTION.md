@@ -16,10 +16,11 @@ Phase **R4** of [REVIEW_PIPELINE_R4_REVIEW_RUN_GENERAL_PLAN.md](../REVIEW_PIPELI
 - **LLM provider:** `REVY_LLM_PROVIDER` = `anthropic` (default) \| `moonshot`; `503 llm_disabled` when selected provider key missing.
 - **Models:** Anthropic `claude-sonnet-4-20250514`; Moonshot `moonshot-v1-8k` via OpenAI-compatible client (`https://api.moonshot.ai/v1`).
 - **Profile → timeout:** `standard` / `deep` / `critical` map to existing `revy_revision_timeout_*_seconds` settings; Celery `soft_time_limit` = profile timeout, `time_limit` = timeout + 60s.
-- **Prerequisite:** latest `github_index_jobs` for revision must be `completed` (else `409 index_required`).
+- **Prerequisite:** latest `github_index_jobs` for revision must be `completed` (else `409 index_required`); `embeddings_enabled` (`VOYAGE_API_KEY`) and `github_api_enabled` required for context retrieval.
 - **Context:** R3 `search_revision_chunks` — queries from PR title + fixed lenses (`security vulnerabilities`, `logic bugs`, `performance issues`); merge top chunks (dedupe by `file_path`+`chunk_index`, cap 30).
 - **Prompt output:** single JSON object `{"findings":[…]}`; invalid JSON → run `failed` with stored error.
-- **Trigger:** `POST …/pull-requests/{pr_id}/revisions/{revision_id}/review` (workspace admin) → Celery `review` queue; **no** auto-review on `push` (R5/R6).
+- **Trigger:** `POST …/pull-requests/{pr_id}/revisions/{revision_id}/review` (`admin_users`, same as R3 index) → Celery `review` queue; `idempotency_guard` on trigger; **no** auto-review on `push`.
+- **Concurrency:** reject new trigger with `409 review_in_progress` when a run for the revision is `pending` or `processing`.
 - **Audit:** `record_audit` on review trigger (`review.run_requested`).
 - **Out of scope:** judge/reconcile (R5), GitHub publish (R6), plan-gated volume (Q9), auto-review on webhook, multi-model ensemble.
 
@@ -89,7 +90,7 @@ pipenv run lint && pipenv run pytest \
   -q
 ```
 
-**Deploy:** `alembic upgrade head`; set `ANTHROPIC_API_KEY` and/or `MOONSHOT_API_KEY`; worker consumes `review` queue.
+**Deploy:** `alembic upgrade head`; set `VOYAGE_API_KEY`, `ANTHROPIC_API_KEY` and/or `MOONSHOT_API_KEY`; worker consumes at least `github_events,repo_sync,indexing,review` (see [REVIEW_PIPELINE_PROGRAM.md](../REVIEW_PIPELINE_PROGRAM.md) §5).
 
 **Human gate:** index one revision (R3), trigger review, confirm `github_findings` rows and API list returns them.
 

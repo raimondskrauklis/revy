@@ -16,6 +16,7 @@ docs/review-pipeline/
   REVIEW_PIPELINE_R0_…_GENERAL_PLAN.md   ← ② one file per phase (R0–R7)
   …
   REVIEW_PIPELINE_PROGRAM.md               ← branching, tags, releases
+  REVIEW_PIPELINE_RECOVERY_CHECKLIST.md    ← agent recovery + remediation
   GITHUB_WEBHOOK_DEV.md                    ← local ops
   waves/
     README.md                              ← execution table only
@@ -33,7 +34,7 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 | **Findings** | Retroactive update in [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) | Must be baseline-ready **before** execution |
 | **General plan** | Retroactive — [R0](./REVIEW_PIPELINE_R0_WEBHOOKS_GENERAL_PLAN.md), [R1](./REVIEW_PIPELINE_R1_REPO_SYNC_GENERAL_PLAN.md) | One file per phase — **all R0–R7 now exist** |
 | **Execution** | [R0](./waves/REVIEW_PIPELINE_R0_EXECUTION.md), [R1](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) shipped | Create only after `execution-peer-review` |
-| **Code** | On `main` + tags `review-r0-v1`, `review-r1-v1` | `phase-execution` LOOP per phase |
+| **Code** | On `main` + tags `review-r0-v1` … `review-r3-v1` | `phase-execution` LOOP per phase |
 | **GitHub App** | [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) · [GITHUB_APP_TARGET_CONFIG.md](../utils/GITHUB_APP_TARGET_CONFIG.md) | Configure per phase map in target config |
 
 **No corners cut from R2 onward:** findings locked → general plan → execution plan → peer-review → implement → phase gate → tag.

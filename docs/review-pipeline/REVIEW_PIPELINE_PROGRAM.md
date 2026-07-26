@@ -1,6 +1,6 @@
 # Review pipeline — program guide
 
-How to continue Revy **after SaaS base W0–W8** without forking. **No execution steps** — see per-phase execution files (to be created).
+How to continue Revy **after SaaS base W0–W8** without forking. **No execution steps** — see per-phase execution files under [waves/](./waves/). **Recovery:** [REVIEW_PIPELINE_RECOVERY_CHECKLIST.md](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md).
 
 ---
 
@@ -147,11 +147,12 @@ Additive under existing structure — no SaaS shell rewrites.
 ```text
 backend/app/
   api/v1/webhooks/github.py          # R0
-  models/repository.py               # R1+
-  models/pull_request.py             # R2+
-  models/review_*.py                 # R4+
+  models/github_repository.py        # R1
+  models/github_pull_request.py      # R2
+  models/github_review_run.py        # R4
+  models/github_finding.py           # R4
   services/github_webhooks.py        # R0
-  services/review/                   # R4+
+  services/github_review.py          # R4
   workers/github_tasks.py            # R0
   workers/repo_tasks.py              # R1
   workers/index_tasks.py             # R3
@@ -173,8 +174,9 @@ New secrets (document in R0 findings + `backend/.env.example`):
 
 | Variable | Phase |
 |----------|-------|
-| `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET` | R0 |
-| LLM provider keys | R4 |
+| `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY_PATH`, `GITHUB_WEBHOOK_SECRET` | R0–R1 |
+| `VOYAGE_API_KEY` | R3 |
+| `ANTHROPIC_API_KEY`, `MOONSHOT_API_KEY`, `REVY_LLM_PROVIDER` | R4 |
 | Webhook public URL | R0 — same pattern as [STRIPE_BILLING_SETUP.md](../utils/STRIPE_BILLING_SETUP.md) |
 
 Worker droplet must consume Revy queues (see `implementation.revy.md`). Export/maintenance queue unchanged from SaaS W6.
