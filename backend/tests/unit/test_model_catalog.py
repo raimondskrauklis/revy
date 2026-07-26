@@ -6,6 +6,23 @@ from app.constants.model_policy import ModelRole
 from app.services.model_catalog import build_model_catalog, is_valid_catalog_entry
 
 
+def test_anthropic_judge_catalog_uses_configured_model():
+    with patch("app.services.model_catalog.settings") as mock_settings:
+        mock_settings.moonshot_api_key = None
+        mock_settings.anthropic_api_key = "key"
+        mock_settings.bedrock_enabled.return_value = False
+        mock_settings.effective_judge_provider = "anthropic"
+        mock_settings.revy_anthropic_model = "claude-sonnet-5"
+        catalog = build_model_catalog()
+
+    judge_entries = catalog[ModelRole.judge.value]
+    assert any(
+        item.provider == "anthropic" and item.model_id == "claude-sonnet-5"
+        for item in judge_entries
+    )
+    assert not any(item.model_id == "claude-sonnet-4-20250514" for item in judge_entries)
+
+
 def test_build_model_catalog_includes_moonshot_when_configured():
     with patch("app.services.model_catalog.settings") as mock_settings:
         mock_settings.moonshot_api_key = "key"

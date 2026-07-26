@@ -35,7 +35,7 @@ PLATFORM_MODEL_DEFAULTS: dict[ModelRole, ModelCatalogEntry] = {
     ),
     ModelRole.judge: ModelCatalogEntry(
         provider="anthropic",
-        model_id="claude-sonnet-4-20250514",
+        model_id="claude-sonnet-5",
         display_name="Claude Sonnet",
     ),
 }

@@ -67,7 +67,14 @@ def _anthropic_judge_entries() -> list[ModelCatalogEntry]:
         return []
     if not settings.anthropic_api_key or not settings.anthropic_api_key.strip():
         return []
-    return [PLATFORM_MODEL_DEFAULTS[ModelRole.judge]]
+    model_id = settings.revy_anthropic_model
+    return [
+        ModelCatalogEntry(
+            provider="anthropic",
+            model_id=model_id,
+            display_name="Claude Sonnet (Anthropic API)",
+        ),
+    ]
 
 
 def _bedrock_judge_entries() -> list[ModelCatalogEntry]:
