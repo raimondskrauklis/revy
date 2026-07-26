@@ -161,6 +161,14 @@ async def reconcile_review_run(session: AsyncSession, *, review_run_id: UUID) ->
             group.message = finding.message
             group.file_path = finding.file_path
             group.state = GitHubFindingGroupState.active
+            await _mark_superseded_peers(
+                session,
+                pull_request_id=pull_request_id,
+                file_path=finding.file_path,
+                category=finding.category,
+                revision_id=revision.id,
+                exclude_group_id=group.id,
+            )
 
         finding.group_id = group.id
         linked_group_ids.append(group.id)

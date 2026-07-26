@@ -147,7 +147,7 @@ async def test_reconcile_same_fingerprint_updates_revision():
 
     session = AsyncMock()
     session.get = AsyncMock(side_effect=[run, revision])
-    session.scalars = AsyncMock(return_value=[finding])
+    session.scalars = AsyncMock(side_effect=[[finding], []])
     session.scalar = AsyncMock(return_value=group)
     session.flush = AsyncMock()
 
@@ -155,6 +155,87 @@ async def test_reconcile_same_fingerprint_updates_revision():
 
     assert group.last_seen_revision_id == revision_id
     assert group.state == GitHubFindingGroupState.active
+
+
+@pytest.mark.asyncio
+async def test_reconcile_existing_group_supersedes_peers():
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    old_revision_id = uuid.uuid4()
+
+    run = GitHubReviewRunORM(
+        revision_id=revision_id,
+        workspace_id=workspace_id,
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    run.id = review_run_id
+
+    revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=3,
+        head_sha="ghi",
+    )
+    revision.id = revision_id
+
+    finding = GitHubFindingORM(
+        review_run_id=review_run_id,
+        workspace_id=workspace_id,
+        severity=FindingSeverity.error,
+        category=FindingCategory.security,
+        title="SQLi",
+        message="Unsanitized input",
+        file_path="app/db.py",
+    )
+    finding.id = uuid.uuid4()
+
+    group = GitHubFindingGroupORM(
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint=compute_fingerprint(
+            workspace_id=workspace_id,
+            pull_request_id=pull_request_id,
+            file_path="app/db.py",
+            category=FindingCategory.security,
+            message="Unsanitized input",
+        ),
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.security,
+        title="SQLi",
+        message="Unsanitized input",
+        file_path="app/db.py",
+        last_seen_revision_id=old_revision_id,
+    )
+    group.id = uuid.uuid4()
+
+    peer = GitHubFindingGroupORM(
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="other-fingerprint",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.security,
+        title="Other",
+        message="Other issue",
+        file_path="app/db.py",
+        last_seen_revision_id=old_revision_id,
+    )
+    peer.id = uuid.uuid4()
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, revision])
+    session.scalars = AsyncMock(side_effect=[[finding], [peer]])
+    session.scalar = AsyncMock(return_value=group)
+    session.flush = AsyncMock()
+
+    await reconcile_review_run(session, review_run_id=review_run_id)
+
+    assert group.last_seen_revision_id == revision_id
+    assert peer.state == GitHubFindingGroupState.superseded
 
 
 @pytest.mark.asyncio

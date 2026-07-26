@@ -16,6 +16,7 @@ from app.constants.enums import (
     GitHubReviewRunStatus,
 )
 from app.core.config import settings
+from app.core.exceptions import ServiceUnavailableError
 from app.core.logging import get_logger
 from app.integrations import anthropic_review
 from app.models.github_finding import GitHubFindingORM
@@ -95,7 +96,7 @@ async def run_judge_for_review_run(session: AsyncSession, *, review_run_id: UUID
                     user_prompt=_build_judge_prompt(group=group),
                 )
                 outcome_str, notes = anthropic_review.parse_judge_outcome(raw)
-            except (httpx.HTTPError, ValueError) as exc:
+            except (httpx.HTTPError, ValueError, ServiceUnavailableError) as exc:
                 logger.error(
                     "github_finding_judge_failed",
                     extra={"group_id": str(group.id), "error": str(exc)},
