@@ -9,6 +9,7 @@ from app.constants.enums import (
     FindingCategory,
     FindingSeverity,
     GitHubFindingGroupState,
+    GitHubReviewJudgeStatus,
     GitHubReviewRunStatus,
     ReviewProfile,
 )
@@ -16,7 +17,7 @@ from app.core.exceptions import ServiceUnavailableError, ValidationError
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_review_run import GitHubReviewRunORM
-from app.services.github_finding_judge import is_judge_candidate, run_judge_for_review_run
+from app.services.github_finding_judge import is_judge_candidate, record_review_run_judge_status
 from app.services.model_policy import ModelRef
 
 
@@ -40,28 +41,159 @@ def test_is_judge_candidate_info_bug_false():
 
 @pytest.mark.asyncio
 async def test_run_judge_skipped_without_api_key():
-    session = AsyncMock()
-    with patch("app.services.github_finding_judge.settings") as mock_settings:
-        mock_settings.judge_llm_enabled.return_value = False
-        count = await run_judge_for_review_run(session, review_run_id=uuid.uuid4())
-    assert count == 0
-
-
-@pytest.mark.asyncio
-async def test_run_judge_stale_model_policy_returns_zero():
     review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    group_id = uuid.uuid4()
+
     run = GitHubReviewRunORM(
         revision_id=uuid.uuid4(),
-        workspace_id=uuid.uuid4(),
+        workspace_id=workspace_id,
         status=GitHubReviewRunStatus.completed,
         profile=ReviewProfile.standard,
         provider="moonshot",
     )
     run.id = review_run_id
 
+    group = GitHubFindingGroupORM(
+        workspace_id=workspace_id,
+        pull_request_id=uuid.uuid4(),
+        fingerprint="abc",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="RCE",
+        message="Remote code execution",
+        file_path="app/run.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+    group.id = group_id
+
+    finding = GitHubFindingORM(
+        review_run_id=review_run_id,
+        workspace_id=workspace_id,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="RCE",
+        message="Remote code execution",
+        file_path="app/run.py",
+        group_id=group_id,
+    )
+
     session = AsyncMock()
-    session.get = AsyncMock(return_value=run)
-    session.scalars = AsyncMock(return_value=[])
+    session.get = AsyncMock(side_effect=[run, group])
+    session.scalars = AsyncMock(return_value=[finding])
+    session.scalar = AsyncMock(return_value=None)
+    session.flush = AsyncMock()
+
+    with patch("app.services.github_finding_judge.settings") as mock_settings:
+        mock_settings.judge_llm_enabled.return_value = False
+        count = await record_review_run_judge_status(session, review_run_id=review_run_id)
+
+    assert count == 0
+    assert run.judge_escalation_candidate_count == 1
+    assert run.judge_status == GitHubReviewJudgeStatus.skipped_disabled
+
+
+@pytest.mark.asyncio
+async def test_record_judge_status_keeps_completed_when_outcomes_exist_and_judge_disabled():
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    group_id = uuid.uuid4()
+
+    run = GitHubReviewRunORM(
+        revision_id=uuid.uuid4(),
+        workspace_id=workspace_id,
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    run.id = review_run_id
+
+    group = GitHubFindingGroupORM(
+        workspace_id=workspace_id,
+        pull_request_id=uuid.uuid4(),
+        fingerprint="abc",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="RCE",
+        message="Remote code execution",
+        file_path="app/run.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+    group.id = group_id
+
+    finding = GitHubFindingORM(
+        review_run_id=review_run_id,
+        workspace_id=workspace_id,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="RCE",
+        message="Remote code execution",
+        file_path="app/run.py",
+        group_id=group_id,
+    )
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, group])
+    session.scalars = AsyncMock(return_value=[finding])
+    session.scalar = AsyncMock(side_effect=[uuid.uuid4(), None])
+    session.flush = AsyncMock()
+
+    with patch("app.services.github_finding_judge.settings") as mock_settings:
+        mock_settings.judge_llm_enabled.return_value = False
+        count = await record_review_run_judge_status(session, review_run_id=review_run_id)
+
+    assert count == 0
+    assert run.judge_escalation_candidate_count == 1
+    assert run.judge_status == GitHubReviewJudgeStatus.completed
+
+
+@pytest.mark.asyncio
+async def test_run_judge_stale_model_policy_returns_zero():
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    group_id = uuid.uuid4()
+
+    run = GitHubReviewRunORM(
+        revision_id=uuid.uuid4(),
+        workspace_id=workspace_id,
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    run.id = review_run_id
+
+    group = GitHubFindingGroupORM(
+        workspace_id=workspace_id,
+        pull_request_id=uuid.uuid4(),
+        fingerprint="abc",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="RCE",
+        message="Remote code execution",
+        file_path="app/run.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+    group.id = group_id
+
+    finding = GitHubFindingORM(
+        review_run_id=review_run_id,
+        workspace_id=workspace_id,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="RCE",
+        message="Remote code execution",
+        file_path="app/run.py",
+        group_id=group_id,
+    )
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, group])
+    session.scalars = AsyncMock(return_value=[finding])
+    session.scalar = AsyncMock(return_value=None)
+    session.flush = AsyncMock()
 
     with patch("app.services.github_finding_judge.settings") as mock_settings:
         mock_settings.judge_llm_enabled.return_value = True
@@ -74,9 +206,11 @@ async def test_run_judge_stale_model_policy_returns_zero():
                 )
             ),
         ):
-            count = await run_judge_for_review_run(session, review_run_id=review_run_id)
+            count = await record_review_run_judge_status(session, review_run_id=review_run_id)
 
     assert count == 0
+    assert run.judge_escalation_candidate_count == 1
+    assert run.judge_status == GitHubReviewJudgeStatus.skipped_unavailable
 
 
 @pytest.mark.asyncio
@@ -137,9 +271,10 @@ async def test_run_judge_dismissed_resolves_group():
                 "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
                 AsyncMock(return_value={"outcome": "dismissed", "notes": "false positive"}),
             ):
-                count = await run_judge_for_review_run(session, review_run_id=review_run_id)
+                count = await record_review_run_judge_status(session, review_run_id=review_run_id)
 
     assert count == 1
+    assert run.judge_status == GitHubReviewJudgeStatus.completed
     assert group.state == GitHubFindingGroupState.resolved
 
 
@@ -207,9 +342,10 @@ async def test_run_judge_bedrock_provider_without_anthropic_key():
                 "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
                 AsyncMock(return_value={"outcome": "upheld", "notes": "valid"}),
             ):
-                count = await run_judge_for_review_run(session, review_run_id=review_run_id)
+                count = await record_review_run_judge_status(session, review_run_id=review_run_id)
 
     assert count == 1
+    assert run.judge_status == GitHubReviewJudgeStatus.completed
 
 
 @pytest.mark.asyncio
@@ -275,8 +411,36 @@ async def test_run_judge_service_unavailable_continues():
                     )
                 ),
             ):
-                count = await run_judge_for_review_run(session, review_run_id=review_run_id)
+                count = await record_review_run_judge_status(session, review_run_id=review_run_id)
 
     assert count == 0
+    assert run.judge_status == GitHubReviewJudgeStatus.completed
     assert group.state == GitHubFindingGroupState.active
     session.add.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_record_judge_status_keeps_completed_when_no_candidates_but_outcomes_exist():
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+
+    run = GitHubReviewRunORM(
+        revision_id=uuid.uuid4(),
+        workspace_id=workspace_id,
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    run.id = review_run_id
+
+    session = AsyncMock()
+    session.get = AsyncMock(return_value=run)
+    session.scalars = AsyncMock(return_value=[])
+    session.scalar = AsyncMock(return_value=uuid.uuid4())
+    session.flush = AsyncMock()
+
+    count = await record_review_run_judge_status(session, review_run_id=review_run_id)
+
+    assert count == 0
+    assert run.judge_escalation_candidate_count == 0
+    assert run.judge_status == GitHubReviewJudgeStatus.completed

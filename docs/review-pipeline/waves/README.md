@@ -14,6 +14,22 @@ Linear **phase-execution** order.
 
 **Authority:** [REVIEW_PIPELINE_FINDINGS.md](../REVIEW_PIPELINE_FINDINGS.md), [GITHUB_APP_SETUP.md](../../utils/GITHUB_APP_SETUP.md), [GITHUB_APP_TARGET_CONFIG.md](../../utils/GITHUB_APP_TARGET_CONFIG.md).
 
+## Polish wave (post R6–R7)
+
+Baseline: [REVIEW_PIPELINE_POLISH_FINDINGS.md](../REVIEW_PIPELINE_POLISH_FINDINGS.md) · General plan: [REVIEW_PIPELINE_POLISH_GENERAL_PLAN.md](../REVIEW_PIPELINE_POLISH_GENERAL_PLAN.md).
+
+**Branch:** `feat/review-polish` · **LOOP order:** P0 → P1 → P2 (P1 ∥ P2 allowed after P0 migration lands; commit order P0 → P1 → P2).
+
+| Phase | Focus | Execution | Status |
+|-------|--------|-----------|--------|
+| P0 — Schema + enums | `suggestion`, `judge_status` columns | [REVIEW_PIPELINE_POLISH_P0_EXECUTION.md](./REVIEW_PIPELINE_POLISH_P0_EXECUTION.md) | done |
+| P1 — Suggestion pipeline | R6-Q3 GitHub suggestion blocks | [REVIEW_PIPELINE_POLISH_P1_EXECUTION.md](./REVIEW_PIPELINE_POLISH_P1_EXECUTION.md) | done |
+| P2 — Judge skipped badge | Reviewer UI + reconcile persist | [REVIEW_PIPELINE_POLISH_P2_EXECUTION.md](./REVIEW_PIPELINE_POLISH_P2_EXECUTION.md) | done |
+
+---
+
+## Program phases (R0–R8)
+
 | Phase | General plan | Execution | Status |
 |-------|--------------|-----------|--------|
 | R0 — GitHub webhooks | [R0](../REVIEW_PIPELINE_R0_WEBHOOKS_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R0_EXECUTION.md](./REVIEW_PIPELINE_R0_EXECUTION.md) | done (`review-r0-v1`) |

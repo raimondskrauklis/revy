@@ -46,7 +46,7 @@
 | P0–P2 on PRs (dev process) | Inline severity badges | Map to `FindingSeverity`; use in our PR workflow | **shipped** schema · process now |
 | PR summary narrative | Top-level review comment | R6 check run `output.summary` + optional summary comment | **shipped** |
 | Inline file+line comments | Review comments on diff | R6 v1 subset from finding `file_path` + line range | **shipped** |
-| Suggested fix / patch | Copy-prompt, suggestion blocks | Optional `suggestion` on finding; GitHub suggestion when line-accurate | **defer** (`R6-Q3`) |
+| Suggested fix / patch | Copy-prompt, suggestion blocks | Optional `suggestion` on finding; GitHub suggestion when line-accurate | **shipped** (`R6-Q3` polish) |
 | Issues table in review | `includeIssuesTable` | R7 findings table + R6 summary markdown | **shipped** |
 | Sequence / ER diagrams | `includeSequenceDiagram` | Summary markdown diagrams | **future** |
 | Numeric confidence 0–5 | `includeConfidenceScore` | Not v1 — severity-derived conclusion instead | **defer** |

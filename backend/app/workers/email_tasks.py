@@ -2,10 +2,9 @@
 """Email delivery tasks — notifications queue."""
 from __future__ import annotations
 
-import asyncio
-
 from app.core.logging import get_logger
 from app.services.email_dispatch import deliver_email_message, deserialize_email_message
+from app.workers.async_runner import run_worker_async
 from app.workers.celery_app import celery_app
 
 logger = get_logger(__name__)
@@ -21,7 +20,7 @@ def send_email_task(self, message_payload: dict) -> None:
             raise RuntimeError(result.error or "email_send_failed")
 
     try:
-        asyncio.run(_run())
+        run_worker_async(_run())
     except Exception as exc:
         countdown = 60 * (2 ** self.request.retries)
         logger.error(

@@ -2,14 +2,14 @@
 """Reconciliation Celery tasks — reconciliation queue."""
 from __future__ import annotations
 
-import asyncio
 from uuid import UUID
 
 from app.core.database import get_db_context
 from app.core.logging import get_logger
-from app.services.github_finding_judge import run_judge_for_review_run
+from app.services.github_finding_judge import record_review_run_judge_status
 from app.services.github_finding_reconcile import reconcile_review_run
 from app.services.github_publish import enqueue_publish_for_review_run
+from app.workers.async_runner import run_worker_async
 from app.workers.celery_app import celery_app
 
 logger = get_logger(__name__)
@@ -25,7 +25,7 @@ def reconcile_review_run_task(self, review_run_id: str) -> None:
     async def _run() -> None:
         async with get_db_context() as session:
             group_ids = await reconcile_review_run(session, review_run_id=UUID(review_run_id))
-            judged = await run_judge_for_review_run(session, review_run_id=UUID(review_run_id))
+            judged = await record_review_run_judge_status(session, review_run_id=UUID(review_run_id))
             await session.commit()
             # Judge runs inline here; judge_review_run task is reserved for future fan-out.
             enqueue_publish_for_review_run(UUID(review_run_id))
@@ -39,7 +39,7 @@ def reconcile_review_run_task(self, review_run_id: str) -> None:
             )
 
     try:
-        asyncio.run(_run())
+        run_worker_async(_run())
     except Exception as exc:
         logger.error(
             "github_reconcile_task_failed",

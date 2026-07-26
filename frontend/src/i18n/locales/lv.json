@@ -658,6 +658,10 @@
       "neutral": "Recenzijas piezīmes",
       "failure": "Bloķējoši atradumi"
     },
+    "judge": {
+      "skipped": "Tiesnesis izlaists",
+      "skippedUnavailable": "Tiesnesis nav pieejams"
+    },
     "widget": {
       "title": "Koda recenzija",
       "body": "Pārlūkojiet PR atradumus un sapludināšanas gatavību Revy.",

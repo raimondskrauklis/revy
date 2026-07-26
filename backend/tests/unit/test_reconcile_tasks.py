@@ -22,7 +22,7 @@ def test_reconcile_review_run_task_runs():
             AsyncMock(return_value=[uuid.uuid4()]),
         ) as reconcile_mock:
             with patch(
-                "app.workers.reconcile_tasks.run_judge_for_review_run",
+                "app.workers.reconcile_tasks.record_review_run_judge_status",
                 AsyncMock(return_value=0),
             ) as judge_mock:
                 reconcile_tasks.reconcile_review_run_task.run(str(review_run_id))

@@ -29,6 +29,7 @@ from app.models.github_pull_request import (
 from app.models.github_repository import GitHubRepositoryORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.services.github_indexing import ensure_revision_access
+from app.services.github_suggestion import is_publishable_suggestion
 
 logger = get_logger(__name__)
 
@@ -555,6 +556,7 @@ async def run_publish_job(
                                 title=finding.title,
                                 message=finding.message,
                                 severity=finding.severity.value,
+                                suggestion=is_publishable_suggestion(finding),
                             ),
                             auth_headers=auth_headers,
                         )

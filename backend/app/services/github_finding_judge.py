@@ -13,6 +13,7 @@ from app.constants.enums import (
     FindingSeverity,
     GitHubFindingGroupState,
     GitHubJudgeOutcome,
+    GitHubReviewJudgeStatus,
     GitHubReviewRunStatus,
 )
 from app.core.config import settings
@@ -24,7 +25,7 @@ from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_finding_judge_outcome import GitHubFindingJudgeOutcomeORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.services.github_finding_reconcile import severity_rank
-from app.services.model_policy import ModelRole, resolve_model
+from app.services.model_policy import ModelRef, ModelRole, resolve_model
 
 logger = get_logger(__name__)
 
@@ -50,14 +51,14 @@ def _build_judge_prompt(*, group: GitHubFindingGroupORM) -> str:
     )
 
 
-async def run_judge_for_review_run(session: AsyncSession, *, review_run_id: UUID) -> int:
-    """Run judge on escalation candidates. Returns outcome count (0 when skipped)."""
-    if not settings.judge_llm_enabled():
-        return 0
-
+async def _load_judge_candidates(
+    session: AsyncSession,
+    *,
+    review_run_id: UUID,
+) -> tuple[GitHubReviewRunORM | None, list[tuple[GitHubFindingORM, GitHubFindingGroupORM]]]:
     run = await session.get(GitHubReviewRunORM, review_run_id)
     if run is None or run.status != GitHubReviewRunStatus.completed:
-        return 0
+        return run, []
 
     findings = list(
         await session.scalars(
@@ -79,15 +80,18 @@ async def run_judge_for_review_run(session: AsyncSession, *, review_run_id: UUID
             continue
         candidates.append((finding, group))
 
+    return run, candidates
+
+
+async def _run_judge_llm_loop(
+    session: AsyncSession,
+    *,
+    run: GitHubReviewRunORM,
+    review_run_id: UUID,
+    candidates: list[tuple[GitHubFindingORM, GitHubFindingGroupORM]],
+    model_ref: ModelRef,
+) -> int:
     judged = 0
-    try:
-        model_ref = await resolve_model(session, run.workspace_id, ModelRole.judge)
-    except (ServiceUnavailableError, ValidationError) as exc:
-        logger.error(
-            "github_finding_judge_model_resolve_failed",
-            extra={"review_run_id": str(review_run_id), "error": str(exc)},
-        )
-        return 0
     async with httpx.AsyncClient(timeout=float(settings.revy_revision_timeout_standard_seconds)) as client:
         for _finding, group in candidates[:JUDGE_MAX_PER_RUN]:
             existing = await session.scalar(
@@ -134,5 +138,75 @@ async def run_judge_for_review_run(session: AsyncSession, *, review_run_id: UUID
 
             judged += 1
 
+    return judged
+
+
+async def _review_run_has_judge_outcomes(session: AsyncSession, *, review_run_id: UUID) -> bool:
+    existing = await session.scalar(
+        select(GitHubFindingJudgeOutcomeORM.id)
+        .where(GitHubFindingJudgeOutcomeORM.review_run_id == review_run_id)
+        .limit(1)
+    )
+    return existing is not None
+
+
+async def record_review_run_judge_status(
+    session: AsyncSession,
+    *,
+    review_run_id: UUID,
+) -> int:
+    """Count escalation candidates, persist judge status, run judge when applicable."""
+    run, candidates = await _load_judge_candidates(session, review_run_id=review_run_id)
+    if run is None:
+        return 0
+
+    candidate_count = len(candidates)
+    run.judge_escalation_candidate_count = candidate_count
+
+    if run.status != GitHubReviewRunStatus.completed or candidate_count == 0:
+        if candidate_count == 0 and await _review_run_has_judge_outcomes(
+            session, review_run_id=review_run_id
+        ):
+            run.judge_status = GitHubReviewJudgeStatus.completed
+        else:
+            run.judge_status = GitHubReviewJudgeStatus.not_applicable
+        await session.flush()
+        return 0
+
+    if not settings.judge_llm_enabled():
+        if await _review_run_has_judge_outcomes(session, review_run_id=review_run_id):
+            run.judge_status = GitHubReviewJudgeStatus.completed
+        else:
+            run.judge_status = GitHubReviewJudgeStatus.skipped_disabled
+        await session.flush()
+        return 0
+
+    try:
+        model_ref = await resolve_model(session, run.workspace_id, ModelRole.judge)
+    except (ServiceUnavailableError, ValidationError) as exc:
+        logger.error(
+            "github_finding_judge_model_resolve_failed",
+            extra={"review_run_id": str(review_run_id), "error": str(exc)},
+        )
+        if await _review_run_has_judge_outcomes(session, review_run_id=review_run_id):
+            run.judge_status = GitHubReviewJudgeStatus.completed
+        else:
+            run.judge_status = GitHubReviewJudgeStatus.skipped_unavailable
+        await session.flush()
+        return 0
+
+    judged = await _run_judge_llm_loop(
+        session,
+        run=run,
+        review_run_id=review_run_id,
+        candidates=candidates,
+        model_ref=model_ref,
+    )
+    run.judge_status = GitHubReviewJudgeStatus.completed
     await session.flush()
     return judged
+
+
+async def run_judge_for_review_run(session: AsyncSession, *, review_run_id: UUID) -> int:
+    """Run judge on escalation candidates. Returns outcome count (0 when skipped)."""
+    return await record_review_run_judge_status(session, review_run_id=review_run_id)

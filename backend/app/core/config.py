@@ -3,6 +3,7 @@
 import json
 import logging
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
@@ -114,6 +115,13 @@ class Settings(BaseSettings):
     # Embeddings — R3 indexing (Voyage)
     revy_embedding_model: str = "voyage-code-3"
     revy_embedding_dimensions: int = 1024
+
+    @field_validator("revy_embedding_model", mode="before")
+    @classmethod
+    def _strip_embedding_model(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.strip()
+        return value
 
     # Stripe billing — disabled by default; set STRIPE_ENABLED=true with keys in production
     stripe_enabled: bool = False

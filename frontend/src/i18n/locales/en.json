@@ -658,6 +658,10 @@
       "neutral": "Review notes",
       "failure": "Blocking findings"
     },
+    "judge": {
+      "skipped": "Judge skipped",
+      "skippedUnavailable": "Judge unavailable"
+    },
     "widget": {
       "title": "Code review",
       "body": "Browse PR findings and merge readiness in Revy.",

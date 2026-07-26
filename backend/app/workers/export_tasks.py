@@ -2,7 +2,6 @@
 """Data export Celery tasks — ACCOUNT_LIFECYCLE.md."""
 from __future__ import annotations
 
-import asyncio
 from uuid import UUID
 
 from app.core.database import get_db_context
@@ -15,6 +14,7 @@ from app.services.data_export import (
     mark_processing,
     write_export_zip,
 )
+from app.workers.async_runner import run_worker_async
 from app.workers.celery_app import celery_app
 
 logger = get_logger(__name__)
@@ -40,7 +40,7 @@ def run_data_export_job(self, job_id: str) -> None:
             )
 
     try:
-        asyncio.run(_run())
+        run_worker_async(_run())
     except Exception as exc:
         error_message = str(exc)
         logger.error(
@@ -53,7 +53,7 @@ def run_data_export_job(self, job_id: str) -> None:
                 await mark_failed(session, job_id=parsed_id, error_message=error_message)
 
         try:
-            asyncio.run(_fail())
+            run_worker_async(_fail())
         except Exception as mark_exc:  # noqa: BLE001
             logger.error(
                 "data_export_mark_failed_error",

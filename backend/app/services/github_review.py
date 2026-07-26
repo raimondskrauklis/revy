@@ -35,6 +35,7 @@ from app.services.github_indexing import (
     get_latest_index_job,
     search_revision_chunks,
 )
+from app.services.github_suggestion import normalize_end_line, validated_suggestion_for_row
 from app.services.model_policy import ModelRef, resolve_model, review_profile_to_model_role
 
 logger = get_logger(__name__)
@@ -196,16 +197,33 @@ def _parse_finding_row(raw: dict) -> dict | None:
     file_path = raw.get("file_path")
     start_line = raw.get("start_line")
     end_line = raw.get("end_line")
+    normalized_end_line = normalize_end_line(int(end_line) if isinstance(end_line, int) else None)
+    normalized_start_line = int(start_line) if isinstance(start_line, int) else None
+    if normalized_start_line == 0:
+        normalized_start_line = None
 
-    return {
+    parsed_file_path = (
+        file_path.strip() if isinstance(file_path, str) and file_path.strip() else None
+    )
+    suggestion = validated_suggestion_for_row(
+        suggestion=raw.get("suggestion"),
+        file_path=parsed_file_path,
+        start_line=normalized_start_line,
+        end_line=normalized_end_line,
+    )
+
+    row = {
         "severity": severity,
         "category": category,
         "title": title.strip(),
         "message": message.strip(),
-        "file_path": file_path.strip() if isinstance(file_path, str) and file_path.strip() else None,
-        "start_line": int(start_line) if isinstance(start_line, int) else None,
-        "end_line": int(end_line) if isinstance(end_line, int) else None,
+        "file_path": parsed_file_path,
+        "start_line": normalized_start_line,
+        "end_line": normalized_end_line,
     }
+    if suggestion is not None:
+        row["suggestion"] = suggestion
+    return row
 
 
 async def _call_llm(*, model_ref: ModelRef, profile: str, prompt: str) -> str:
