@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.constants.enums import (
     GitHubIndexJobStatus,
     GitHubIndexJobTriggerSource,
+    GitHubPullRequestState,
     GitHubReviewRunStatus,
 )
 from app.core.config import settings
@@ -215,6 +216,18 @@ async def prepare_review_after_index(
 
     pull_request = await session.get(GitHubPullRequestORM, revision.pull_request_id)
     if pull_request is None:
+        return None
+
+    if pull_request.is_draft or pull_request.state != GitHubPullRequestState.open:
+        logger.info(
+            "pipeline_review_skipped_pr_not_reviewable",
+            extra={
+                "index_job_id": str(job.id),
+                "revision_id": str(job.revision_id),
+                "is_draft": pull_request.is_draft,
+                "state": pull_request.state.value,
+            },
+        )
         return None
 
     try:

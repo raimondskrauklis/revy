@@ -36,6 +36,7 @@ def _revision_chain(
     workspace_id: uuid.UUID,
     *,
     is_draft: bool = False,
+    state: GitHubPullRequestState = GitHubPullRequestState.open,
 ) -> tuple[GitHubPullRequestRevisionORM, GitHubPullRequestORM]:
     pull_request = GitHubPullRequestORM(
         repository_id=uuid.uuid4(),
@@ -44,7 +45,7 @@ def _revision_chain(
         github_pull_request_id=1,
         number=1,
         title="PR",
-        state=GitHubPullRequestState.open,
+        state=state,
         head_sha="sha",
         head_ref="feature",
         base_ref="main",
@@ -209,6 +210,51 @@ async def test_prepare_review_after_index_for_autostart(create_review_run_mock: 
 
     assert result == review_run_id
     create_review_run_mock.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@patch("app.services.review_pipeline.create_review_run", new_callable=AsyncMock)
+async def test_prepare_review_after_index_skips_draft_pull_request(create_review_run_mock: AsyncMock):
+    workspace_id = uuid.uuid4()
+    revision, pull_request = _revision_chain(workspace_id, is_draft=True)
+    job = GitHubIndexJobORM(
+        revision_id=revision.id,
+        workspace_id=workspace_id,
+        status=GitHubIndexJobStatus.completed,
+        trigger_source=GitHubIndexJobTriggerSource.autostart,
+    )
+    job.id = uuid.uuid4()
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[revision, pull_request])
+    session.scalar = AsyncMock(return_value=None)
+
+    assert await prepare_review_after_index(session, job) is None
+    create_review_run_mock.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@patch("app.services.review_pipeline.create_review_run", new_callable=AsyncMock)
+async def test_prepare_review_after_index_skips_closed_pull_request(create_review_run_mock: AsyncMock):
+    workspace_id = uuid.uuid4()
+    revision, pull_request = _revision_chain(
+        workspace_id,
+        state=GitHubPullRequestState.closed,
+    )
+    job = GitHubIndexJobORM(
+        revision_id=revision.id,
+        workspace_id=workspace_id,
+        status=GitHubIndexJobStatus.completed,
+        trigger_source=GitHubIndexJobTriggerSource.command,
+    )
+    job.id = uuid.uuid4()
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[revision, pull_request])
+    session.scalar = AsyncMock(return_value=None)
+
+    assert await prepare_review_after_index(session, job) is None
+    create_review_run_mock.assert_not_awaited()
 
 
 @pytest.mark.asyncio
