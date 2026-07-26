@@ -113,6 +113,11 @@ def _revy_ui_link(pull_request_id: UUID) -> str:
     return f"{base}/reviewer/pull-requests/{pull_request_id}"
 
 
+def _escape_markdown_table_cell(value: str) -> str:
+    """Escape pipe/newline characters so GitHub markdown table rows stay valid."""
+    return value.replace("\\", "\\\\").replace("|", "\\|").replace("\r", " ").replace("\n", " ")
+
+
 def build_summary_markdown(
     *,
     pull_request_id: UUID,
@@ -129,9 +134,10 @@ def build_summary_markdown(
         "| --- | --- | --- | --- |",
     ]
     for group in active:
-        file_cell = group.file_path or "—"
+        file_cell = _escape_markdown_table_cell(group.file_path or "—")
+        title_cell = _escape_markdown_table_cell(group.title)
         lines.append(
-            f"| {group.severity.value} | {group.category.value} | {group.title} | {file_cell} |"
+            f"| {group.severity.value} | {group.category.value} | {title_cell} | {file_cell} |"
         )
     if len(active_all) > SUMMARY_ROW_CAP:
         lines.append("")
@@ -264,9 +270,9 @@ async def create_publish_job(
 
 
 def enqueue_publish_job(publish_job_id: UUID) -> None:
-    from app.workers.publish_tasks import publish_review_run
+    from app.workers.publish_tasks import dispatch_publish_review_run
 
-    publish_review_run.delay(str(publish_job_id))
+    dispatch_publish_review_run(str(publish_job_id))
 
 
 def enqueue_publish_for_review_run(review_run_id: UUID) -> None:

@@ -57,9 +57,20 @@ def test_publish_for_review_run_enqueues_publish_review_run():
             AsyncMock(return_value=job_id),
         ):
             with patch(
-                "app.workers.publish_tasks.publish_review_run.delay",
-            ) as delay_mock:
+                "app.workers.publish_tasks.dispatch_publish_review_run",
+            ) as dispatch_mock:
                 publish_tasks.publish_for_review_run.run(str(uuid.uuid4()))
 
-    delay_mock.assert_called_once_with(str(job_id))
+    dispatch_mock.assert_called_once_with(str(job_id))
     session.commit.assert_awaited_once()
+
+
+def test_dispatch_publish_review_run_falls_back_to_inline_run():
+    with patch(
+        "app.workers.publish_tasks.publish_review_run.delay",
+        side_effect=ConnectionError("broker down"),
+    ):
+        with patch("app.workers.publish_tasks.publish_review_run.run") as run_mock:
+            publish_tasks.dispatch_publish_review_run("job-id")
+
+    run_mock.assert_called_once_with("job-id")

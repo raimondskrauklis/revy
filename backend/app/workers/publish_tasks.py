@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 from uuid import UUID
 
+from kombu.exceptions import OperationalError
+
 from app.core.database import get_db_context
 from app.core.logging import get_logger
 from app.services.github_publish import (
@@ -16,6 +18,18 @@ from app.services.github_publish import (
 from app.workers.celery_app import celery_app
 
 logger = get_logger(__name__)
+
+
+def dispatch_publish_review_run(publish_job_id: str) -> None:
+    """Enqueue publish work; run inline if the broker rejects the task."""
+    try:
+        publish_review_run.delay(publish_job_id)
+    except (OperationalError, ConnectionError, OSError) as exc:
+        logger.warning(
+            "github_publish_enqueue_failed_running_inline",
+            extra={"publish_job_id": publish_job_id, "error": str(exc)},
+        )
+        publish_review_run.run(publish_job_id)
 
 
 def _finalize_publish_failure(
@@ -110,7 +124,7 @@ def publish_for_review_run(self, review_run_id: str) -> None:
         publish_job_id = asyncio.run(_create_job())
         if publish_job_id is None:
             return
-        publish_review_run.delay(publish_job_id)
+        dispatch_publish_review_run(publish_job_id)
     except Exception as exc:
         logger.error(
             "github_publish_for_review_run_failed",

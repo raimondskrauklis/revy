@@ -92,6 +92,29 @@ def test_build_summary_markdown_counts_active_findings_only():
     assert "Old" not in markdown
 
 
+def test_build_summary_markdown_escapes_pipe_in_cells():
+    pull_request_id = uuid.uuid4()
+    group = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint="pipe",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Bad | title",
+        message="m",
+        file_path="src/a|b.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+    markdown = github_publish.build_summary_markdown(
+        pull_request_id=pull_request_id,
+        groups=[group],
+    )
+    assert "Bad \\| title" in markdown
+    assert "src/a\\|b.py" in markdown
+    assert "| Bad | title |" not in markdown
+
+
 def test_compute_check_conclusion_success_when_no_active():
     group = GitHubFindingGroupORM(
         workspace_id=uuid.uuid4(),
