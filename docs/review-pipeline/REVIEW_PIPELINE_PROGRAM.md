@@ -52,7 +52,7 @@ main  ──●──●──●──●──  deployable; SaaS base + produc
 |------|--------|
 | **Base branch** | `main` only for merges |
 | **Feature branches** | `feat/review-<phase>-<topic>`, `fix/review-…`, `chore/…` |
-| **PRs** | Required; Greptile + CI (`deploy.yml`) |
+| **PRs** | Required; optional Greptile + CI (`deploy.yml`) while building; patterns → [product patterns](./REVIEW_PIPELINE_PRODUCT_PATTERNS.md) |
 | **SaaS base changes** | Bugfixes only unless new cross-cutting requirement; prefer small PRs |
 | **Planning docs** | `docs/review-pipeline/` — findings before execution LOOP |
 

@@ -29,8 +29,10 @@ Per-phase goals in **separate files** — same layout as [docs/saas-base](../saa
 | R1 | [waves/REVIEW_PIPELINE_R1_EXECUTION.md](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) | done |
 | R2 | [waves/REVIEW_PIPELINE_R2_EXECUTION.md](./waves/REVIEW_PIPELINE_R2_EXECUTION.md) | done |
 | R3 | [waves/REVIEW_PIPELINE_R3_EXECUTION.md](./waves/REVIEW_PIPELINE_R3_EXECUTION.md) | done |
-| R4 | [waves/REVIEW_PIPELINE_R4_EXECUTION.md](./waves/REVIEW_PIPELINE_R4_EXECUTION.md) | ready — manual peer-review pending |
-| R5–R7 | — | create per phase after peer-review |
+| R4 | [waves/REVIEW_PIPELINE_R4_EXECUTION.md](./waves/REVIEW_PIPELINE_R4_EXECUTION.md) | ready — peer-review → implement |
+| R5 | [waves/REVIEW_PIPELINE_R5_EXECUTION.md](./waves/REVIEW_PIPELINE_R5_EXECUTION.md) | draft — R5-Q locked; peer-review after R4 |
+| R6 | [waves/REVIEW_PIPELINE_R6_EXECUTION.md](./waves/REVIEW_PIPELINE_R6_EXECUTION.md) | draft — after R5 |
+| R7 | [waves/REVIEW_PIPELINE_R7_EXECUTION.md](./waves/REVIEW_PIPELINE_R7_EXECUTION.md) | draft — after R4 API |
 
 Full table: [waves/README.md](./waves/README.md).
 
