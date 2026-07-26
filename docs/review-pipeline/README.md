@@ -71,8 +71,9 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 | **P4** | [REVY_PRODUCT_SLICE.md](../starter-pack/REVY_PRODUCT_SLICE.md) | shipped |
 | **R0** | [waves/R0](./waves/REVIEW_PIPELINE_R0_EXECUTION.md) | shipped (`review-r0-v1`) |
 | **R1** | [waves/R1](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) | shipped (`review-r1-v1`) |
-| **R2** | — | **next** — execution file pending |
-| **R3–R7** | — | general plans ready; execution when prior phase ships |
+| **R2** | [waves/R2](./waves/REVIEW_PIPELINE_R2_EXECUTION.md) | shipped (`review-r2-v1`) |
+| **R3** | — | **next** — execution plan pending |
+| **R4–R7** | — | general plans ready |
 
 [waves/README.md](./waves/README.md) — full execution table.
 

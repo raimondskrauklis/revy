@@ -14,8 +14,8 @@ Per-phase goals in **separate files** — same layout as [docs/saas-base](../saa
 |-------|--------------|-------|--------|
 | R0 | [R0 webhooks](./REVIEW_PIPELINE_R0_WEBHOOKS_GENERAL_PLAN.md) | Webhook ingest, HMAC, `github_events` | shipped (`review-r0-v1`) |
 | R1 | [R1 repo sync](./REVIEW_PIPELINE_R1_REPO_SYNC_GENERAL_PLAN.md) | `github_repositories`, `repo_sync` | shipped (`review-r1-v1`) |
-| R2 | [R2 PR ingestion](./REVIEW_PIPELINE_R2_PR_INGESTION_GENERAL_PLAN.md) | PR + revision tracking | **next** |
-| R3 | [R3 indexing](./REVIEW_PIPELINE_R3_INDEXING_GENERAL_PLAN.md) | Chunks, embeddings, pgvector | not started |
+| R2 | [R2 PR ingestion](./REVIEW_PIPELINE_R2_PR_INGESTION_GENERAL_PLAN.md) | PR + revision tracking | shipped (`review-r2-v1`) |
+| R3 | [R3 indexing](./REVIEW_PIPELINE_R3_INDEXING_GENERAL_PLAN.md) | Chunks, embeddings, pgvector | **next** |
 | R4 | [R4 review run](./REVIEW_PIPELINE_R4_REVIEW_RUN_GENERAL_PLAN.md) | LLM pipeline, findings | not started |
 | R5 | [R5 reconcile + judge](./REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md) | Fingerprints, escalation | not started |
 | R6 | [R6 GitHub publish](./REVIEW_PIPELINE_R6_GITHUB_PUBLISH_GENERAL_PLAN.md) | Checks, PR comments | not started |
@@ -48,6 +48,5 @@ Workspace tenancy; audit on mutating routes; EN+LV for UI; unit tests; hand-writ
 
 ## Next
 
-1. `create-execution-plan` → `waves/REVIEW_PIPELINE_R2_EXECUTION.md`.
-2. `execution-peer-review` on R2 execution file.
-3. `phase-execution` on `feat/review-r2-pr-ingestion`.
+1. `create-execution-plan` → `waves/REVIEW_PIPELINE_R3_EXECUTION.md`.
+2. `execution-peer-review` → `phase-execution` on `feat/review-r3-indexing`.
