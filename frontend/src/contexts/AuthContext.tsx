@@ -16,7 +16,6 @@ import {
   getKeycloakInstance,
   getPostLogoutRedirectUri,
   initKeycloak,
-  resetKeycloak,
   setKeycloakInitialized,
 } from '@/lib/keycloak';
 import { log } from '@/lib/log';
@@ -125,14 +124,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(() => {
-    const kc = keycloak;
     setIsAuthenticated(false);
     setUser(null);
     setIsUserLoading(false);
     Sentry.setUser(null);
     setStoredWorkspaceId(null);
-    void kc?.logout({ redirectUri: getPostLogoutRedirectUri() });
-    resetKeycloak();
+    void keycloak?.logout({ redirectUri: getPostLogoutRedirectUri() });
   }, [keycloak]);
 
   return (

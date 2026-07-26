@@ -82,3 +82,15 @@ psql "$DATABASE_URL" -c "SELECT email, keycloak_user_id, status FROM users ORDER
 ```
 
 Full tier-A/B smoke: `docs/starter-pack/KEYCLOAK_DEV_CHECKLIST.md`.
+
+## OIDC logout (`revy-web`)
+
+After realm/client creation, configure post-logout redirect URIs (required for sign-out):
+
+```bash
+cd /mnt/revy_volume/keycloak/config
+chmod +x configure-revy-web-client.sh
+./configure-revy-web-client.sh
+```
+
+Symptom if skipped: Keycloak error page *Invalid redirect uri* on logout; users auto sign back in without a login prompt.
