@@ -554,6 +554,7 @@
       "empty": "No reconciled findings for this pull request.",
       "severity": "Severity",
       "category": "Category",
+      "state": "State",
       "title": "Title",
       "file": "File",
       "message": "Message"
@@ -571,6 +572,11 @@
       "style": "Style",
       "maintainability": "Maintainability",
       "other": "Other"
+    },
+    "groupState": {
+      "active": "Active",
+      "superseded": "Superseded",
+      "resolved": "Resolved"
     },
     "reviewRun": {
       "none": "No review run yet.",

@@ -18,7 +18,10 @@ docs/review-pipeline/
   REVIEW_PIPELINE_PROGRAM.md               ← branching, tags, releases
   REVIEW_PIPELINE_RECOVERY_CHECKLIST.md    ← agent handoff + active tracks
   REVIEW_PIPELINE_MERGE_CHECKLIST.md       ← babysit + merge gates (R4–R7 stack)
+  REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md ← Greptile babysit + industry patterns → product backlog
+  REVIEW_PIPELINE_GREPTILE_PR26_EMAIL.md   ← archived Greptile PR #26 email (triage reference)
   REVIEW_PIPELINE_PRODUCT_PATTERNS.md      ← Greptile-style patterns → Revy phases (defer/future map)
+  code-review-arch_perplexity_searcj_advice_only.md  ← external architecture notes (advice only)
   GITHUB_WEBHOOK_DEV.md                    ← local ops
   waves/
     README.md                              ← execution table only
@@ -106,4 +109,4 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 1. **Merge PR stack** — [#23](https://github.com/raimondskrauklis/revy/pull/23) (docs) → [#24](https://github.com/raimondskrauklis/revy/pull/24) → [#25](https://github.com/raimondskrauklis/revy/pull/25) → [#26](https://github.com/raimondskrauklis/revy/pull/26) → [#27](https://github.com/raimondskrauklis/revy/pull/27); rebase stack onto `main` after each merge.
 2. **Ops** — `alembic upgrade head` (migrations `0014`–`0016`); set `MOONSHOT_API_KEY`, `VOYAGE_API_KEY`, optional `ANTHROPIC_API_KEY`, `REVY_BOT_LOGIN`; worker consumes full queue list (see [PROGRAM](./REVIEW_PIPELINE_PROGRAM.md) §5).
 3. **Tags** — `review-r4-v1` … `review-r7-v1` on `main` after each phase merge.
-4. **Post-R7** — R8 automation (`Q11`); `/babysit-pr` on open PRs as needed.
+4. **Post-R7** — R8 **autostart** (`Q11`: PR open + `synchronize` chain; `@revy review` on-demand; workspace toggle); `/babysit-pr` on open PRs as needed.

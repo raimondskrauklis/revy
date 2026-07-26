@@ -36,9 +36,10 @@
 
 ### Track E — Merge PR stack
 
-**Prerequisites:** [merge checklist](./REVIEW_PIPELINE_MERGE_CHECKLIST.md) Phase 1 complete (babysit #23–#27).
+**Prerequisites:** [merge checklist](./REVIEW_PIPELINE_MERGE_CHECKLIST.md) Phase 1 complete (babysit #23–#27). Babysit **code fixes** done — see [learnings](./REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md).
 
-- [ ] Babysit + CI green on each PR in stack order
+- [x] Babysit code fixes on #23–#27 (Greptile P1 catalog in learnings doc)
+- [ ] Greptile threads resolved + CI green on each PR in stack order
 - [ ] Merge [#23](https://github.com/raimondskrauklis/revy/pull/23) docs (or fold into #24; close duplicate)
 - [ ] Merge [#24](https://github.com/raimondskrauklis/revy/pull/24) R4 → tag `review-r4-v1`
 - [ ] Rebase #25 onto `main`; merge → tag `review-r5-v1`
@@ -56,7 +57,13 @@
 
 **Defer until R4–R7 on `main` and dogfooded.**
 
-- [ ] Lock R8 findings: `pull_request.synchronize` / `push` → index → review chain (`Q11`)
+**Product goal:** Greptile/Bugbot parity — **autostart** on PR open + push by default; optional **`@revy review`** on-demand re-run; workspace toggle for manual-only (today’s behavior).
+
+- [ ] Lock R8 findings: autostart triggers + pipeline chain (`Q11`)
+  - `pull_request.opened` → index → review → reconcile → publish
+  - `pull_request.synchronize` → same chain (reuse R5→R6 auto-enqueue pattern)
+  - `issue_comment` with **`@revy review`** → on-demand full pipeline (skip if run in progress); reserve `@revy <command>` namespace for later (`index`, `publish`, …)
+  - Workspace/repo setting: `autostart` on \| off (off = admin API only, current R0–R7)
 - [ ] `create-general-plan` + execution for automation phase
 
 ---
@@ -116,7 +123,8 @@
 | Merge readiness | R6 check conclusion; R7 badge | **shipped** (#26/#27) |
 | Idempotent GitHub publish | R6 update in place (R6-Q1) | **shipped** (#26) |
 | Repo-wide context | R3 embeddings + R4 retrieval | **shipped** |
-| Auto-trigger on push/synchronize | **defer** R8 (`Q11`) |
+| Auto-trigger on push/synchronize | **defer** R8 (`Q11`) — **autostart** default |
+| `@revy review` on-demand command | **defer** R8 |
 
 **Where “rules” live:** `.cursor/rules/` (agent dev); `REVIEW_PIPELINE_FINDINGS.md` (locks + [domain states](./REVIEW_PIPELINE_FINDINGS.md#domain-states-enums)); `REVIEW_PIPELINE_PRODUCT_PATTERNS.md` (roadmap); future `workspace_review_policy` in DB.
 
@@ -126,7 +134,8 @@
 
 | Item | Owner / when |
 |------|----------------|
-| Auto index + review on `pull_request.synchronize` / `push` | **Defer R8 / automation** — Q11 |
+| Auto index + review on `pull_request.synchronize` / `push` | **Defer R8** — Q11 autostart |
+| `@revy review` comment command (+ future `@revy <cmd>`) | **Defer R8** |
 | `push` handler stub | Same as above |
 | Orphan delivery (crash after commit, before enqueue) | Manual replay or future sweep job |
 | Concurrent index jobs per revision | No `index_in_progress` guard yet |

@@ -17,6 +17,9 @@ export function FindingRow({ finding }: FindingRowProps) {
       <td className="px-3 py-2 text-sm text-[color:var(--app-text-muted)]">
         {t(`reviewer.category.${finding.category}`)}
       </td>
+      <td className="px-3 py-2 text-sm text-[color:var(--app-text-muted)]">
+        {t(`reviewer.groupState.${finding.state}`)}
+      </td>
       <td className="px-3 py-2 text-sm text-[color:var(--app-text-strong)]">{finding.title}</td>
       <td className="px-3 py-2 text-sm font-mono text-[color:var(--app-text-muted)]">
         {finding.file_path ?? '—'}

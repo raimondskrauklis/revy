@@ -114,6 +114,7 @@ export function PullRequestDetailPage() {
               <tr>
                 <th className="px-3 py-2 font-medium">{t('reviewer.findings.severity')}</th>
                 <th className="px-3 py-2 font-medium">{t('reviewer.findings.category')}</th>
+                <th className="px-3 py-2 font-medium">{t('reviewer.findings.state')}</th>
                 <th className="px-3 py-2 font-medium">{t('reviewer.findings.title')}</th>
                 <th className="px-3 py-2 font-medium">{t('reviewer.findings.file')}</th>
                 <th className="px-3 py-2 font-medium">{t('reviewer.findings.message')}</th>

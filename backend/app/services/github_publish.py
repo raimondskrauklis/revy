@@ -5,7 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import case, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import (
@@ -33,6 +33,13 @@ from app.services.github_indexing import ensure_revision_access
 logger = get_logger(__name__)
 
 SUMMARY_ROW_CAP = 50
+
+_PUBLISH_GROUP_SEVERITY_ORDER = case(
+    (GitHubFindingGroupORM.severity == FindingSeverity.critical, 0),
+    (GitHubFindingGroupORM.severity == FindingSeverity.error, 1),
+    (GitHubFindingGroupORM.severity == FindingSeverity.warning, 2),
+    else_=3,
+)
 
 
 class PublishJobRetryableError(Exception):
@@ -342,9 +349,16 @@ async def run_publish_job(
 
     groups = list(
         await session.scalars(
-            select(GitHubFindingGroupORM).where(
+            select(GitHubFindingGroupORM)
+            .where(
                 GitHubFindingGroupORM.pull_request_id == pull_request.id,
                 GitHubFindingGroupORM.state != GitHubFindingGroupState.superseded,
+            )
+            .order_by(
+                _PUBLISH_GROUP_SEVERITY_ORDER,
+                GitHubFindingGroupORM.file_path.asc().nulls_last(),
+                GitHubFindingGroupORM.title,
+                GitHubFindingGroupORM.id,
             )
         )
     )
@@ -461,7 +475,11 @@ async def run_publish_job(
             if post_inline:
                 inline_findings = list(
                     await session.scalars(
-                        inline_publish_findings_statement(review_run_id=job.review_run_id)
+                        inline_publish_findings_statement(review_run_id=job.review_run_id).order_by(
+                            GitHubFindingORM.file_path,
+                            GitHubFindingORM.start_line,
+                            GitHubFindingORM.id,
+                        )
                     )
                 )
                 for finding in inline_findings:

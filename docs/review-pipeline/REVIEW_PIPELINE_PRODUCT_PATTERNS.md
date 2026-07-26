@@ -6,7 +6,7 @@
 
 **Priority:** R4–R7 implemented on PR stack [#24](https://github.com/raimondskrauklis/revy/pull/24)–[#27](https://github.com/raimondskrauklis/revy/pull/27); merge to `main` then iterate on deferred rows.
 
-**Locks:** [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) Q-registry · **Handoff:** [REVIEW_PIPELINE_RECOVERY_CHECKLIST.md](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md)
+**Locks:** [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) Q-registry · **Babysit learnings:** [REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md](./REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md) · **Handoff:** [REVIEW_PIPELINE_RECOVERY_CHECKLIST.md](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md)
 
 **Greptile public docs (reference only):** [greptile.com/docs](https://www.greptile.com/docs/code-review/greptile-config) — strictness, comment types, triggers, output sections.
 
@@ -51,6 +51,7 @@
 | Sequence / ER diagrams | `includeSequenceDiagram` | Summary markdown diagrams | **future** |
 | Numeric confidence 0–5 | `includeConfidenceScore` | Not v1 — severity-derived conclusion instead | **defer** |
 | Merge readiness | Check state + optional score | Check run `conclusion` + R7 badge (R6-Q2) | **shipped** |
+| Email digest on review | GitHub notification with summary + confidence | In-app + GitHub surface only v1; email **defer** | **defer** post-R7 |
 
 ---
 
@@ -71,9 +72,11 @@
 
 | Pattern | Greptile-style reference | Revy approach | Status |
 |---------|-------------------------|---------------|--------|
-| Review on PR open | Default auto-review | R4 admin trigger API | **shipped** (manual trigger — Q11) |
-| Review on every commit | `triggerOnUpdates: true` | Webhook → index → review chain | **defer** (`Q11` → R8 automation) |
-| Manual-only reviews | `skipReview: "AUTOMATIC"` | Admin trigger only through R4 | **shipped** policy (`Q11`) |
+| **Autostart on PR open** | Default auto-review (no `@` needed) | R8: `pull_request.opened` → full pipeline | **defer** R8 (`Q11`) |
+| Review on every commit | `triggerOnUpdates: true` | R8: `pull_request.synchronize` → index → review → reconcile → publish | **defer** (`Q11` → R8) |
+| **On-demand `@` commands** | `@greptile` / `@cursor` comment | R8: **`@revy review`** on PR comment → re-run pipeline; namespace for `@revy index`, `@revy publish`, … | **defer** R8 |
+| Manual-only reviews | `skipReview: "AUTOMATIC"` | Admin API trigger only (R0–R7); workspace `autostart=false` in R8 | **shipped** policy (`Q11`) |
+| Admin re-trigger | N/A | `POST …/index`, `…/review`, `…/publish` (existing) | **shipped** |
 | Draft PR reviews | `triggerOnDrafts` | Workspace setting | **future** |
 | Label / path filters | Ignore patterns, directory rules | Repo path filters in workspace policy | **future** (R8+) |
 | `push` re-index / re-review | Product marketing | `push` handler stub; automation unowned | **defer** (R8) |
@@ -98,6 +101,25 @@
 | Sandbox test generation (T-REX) | Agent writes/runs tests per PR | Out of R0–R7 scope | **future** / separate program |
 | MCP / editor-native review | Greptile MCP server | Revy API + future MCP when publish stable | **future** |
 | Multi-agent “swarm” | Parallel specialized agents | R4 staged pipeline; R5 judge as cross-check | **shipped** |
+
+---
+
+## Industry patterns (Perplexity notes — advice only)
+
+Source: [code-review-arch_perplexity_searcj_advice_only.md](./code-review-arch_perplexity_searcj_advice_only.md). Mapped in [REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md](./REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md).
+
+| Pattern | Industry reference | Revy approach | Status |
+|---------|-------------------|---------------|--------|
+| Async queue-first (accuracy > latency) | Hookdeck + workflow queue | Celery per stage; webhook never blocks on GitHub API | **shipped** |
+| Incremental chunk hash index | SHA chunk IDs; embed diff only | Full re-index per revision (R3) | **defer** R8 |
+| Evidence attached at generation | Snippet link per finding | `file_path` + line; no stored evidence blob | **defer** R8 |
+| Grounding / citation judge | Claim vs evidence entailment | R5 Anthropic judge on severity rules | **partial** — extend grounding R8 |
+| Static pre-filter before LLM | 50+ analyzers (CodeRabbit) | CI owns style; R4-Q5 actionable-only | **shipped** policy |
+| Cross-model jury | Different families for gen vs judge | Moonshot R4 + Anthropic R5 | **shipped** |
+| Shuffled-diff majority voting | Bugbot multi-pass same model | Not planned | **future** eval only |
+| Resolution-rate metric | Re-check at next revision | Dismiss flows R7; analytics R9 | **future** |
+| Agentic tool loop mid-review | Bugbot go-to-definition tools | Retrieval-only R4; LSP sidecar | **defer** |
+| Checkpoint commit before retry | Idempotent external IDs | R6 publish surface | **shipped** — generalize R8 |
 
 ---
 

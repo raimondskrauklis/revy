@@ -38,21 +38,28 @@ async def _execute_publish_review_run(publish_job_id: str) -> None:
         )
 
 
+async def _finalize_inline_publish_failure(publish_job_id: str, error_message: str) -> None:
+    logger.error(
+        "github_publish_inline_failed",
+        extra={"publish_job_id": publish_job_id, "error": error_message},
+    )
+    async with get_db_context() as session:
+        await mark_publish_job_failed(
+            session,
+            publish_job_id=UUID(publish_job_id),
+            error_message=error_message,
+        )
+        await session.commit()
+
+
 async def _run_publish_review_run_inline(publish_job_id: str) -> None:
     try:
         await _execute_publish_review_run(publish_job_id)
+    except asyncio.CancelledError:
+        await _finalize_inline_publish_failure(publish_job_id, "inline publish cancelled")
+        raise
     except (PublishJobRetryableError, Exception) as exc:  # noqa: BLE001
-        logger.error(
-            "github_publish_inline_failed",
-            extra={"publish_job_id": publish_job_id, "error": str(exc)},
-        )
-        async with get_db_context() as session:
-            await mark_publish_job_failed(
-                session,
-                publish_job_id=UUID(publish_job_id),
-                error_message=str(exc),
-            )
-            await session.commit()
+        await _finalize_inline_publish_failure(publish_job_id, str(exc))
 
 
 def dispatch_publish_review_run(publish_job_id: str) -> None:

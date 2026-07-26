@@ -11,6 +11,10 @@ import {
   fetchRevisionFindings,
   probeReviewerApi,
 } from '@/features/reviewer/api';
+import type { GitHubPullRequest } from '@/features/reviewer/types';
+
+/** Cap list scans until GET …/pull-requests/{id} exists (R7.1 / R8). */
+export const MAX_PULL_REQUEST_SCAN_PAGES = 50;
 
 export const reviewerQueryKeys = {
   repositories: (workspaceId: string, installationId: string) =>
@@ -41,6 +45,26 @@ export const reviewerQueryKeys = {
   ) => ['reviewer', 'publishJob', workspaceId, repositoryId, pullRequestId, revisionId] as const,
   availability: (workspaceId: string) => ['reviewer', 'availability', workspaceId] as const,
 };
+
+export async function findPullRequestInList(
+  workspaceId: string,
+  repositoryId: string,
+  pullRequestId: string,
+): Promise<GitHubPullRequest | null> {
+  let cursor: string | null = null;
+  for (let page = 0; page < MAX_PULL_REQUEST_SCAN_PAGES; page += 1) {
+    const result = await fetchPullRequests(workspaceId, repositoryId, cursor);
+    const found = result.items.find((item) => item.id === pullRequestId);
+    if (found) {
+      return found;
+    }
+    if (!result.cursor.has_next || !result.cursor.next_cursor) {
+      return null;
+    }
+    cursor = result.cursor.next_cursor;
+  }
+  return null;
+}
 
 export function useInstallationRepositories(
   workspaceId: string | null | undefined,
@@ -75,20 +99,7 @@ export function usePullRequest(
       repositoryId ?? '',
       pullRequestId ?? '',
     ),
-    queryFn: async () => {
-      let cursor: string | null = null;
-      for (;;) {
-        const page = await fetchPullRequests(workspaceId!, repositoryId!, cursor);
-        const found = page.items.find((item) => item.id === pullRequestId);
-        if (found) {
-          return found;
-        }
-        if (!page.cursor.has_next || !page.cursor.next_cursor) {
-          return null;
-        }
-        cursor = page.cursor.next_cursor;
-      }
-    },
+    queryFn: () => findPullRequestInList(workspaceId!, repositoryId!, pullRequestId!),
     enabled: Boolean(workspaceId && repositoryId && pullRequestId),
   });
 }
