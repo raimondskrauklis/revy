@@ -58,6 +58,19 @@ export function getKeycloakAccountUrl(): string {
   return `${baseUrl}/realms/${realm}/account`;
 }
 
+/** Open KC account console with the active browser SSO session (not a bare /account URL). */
+export function openKeycloakAccountConsole(
+  keycloak: Keycloak,
+  redirectPath = '/settings/security',
+): void {
+  const override = optionalViteEnv('VITE_KEYCLOAK_ACCOUNT_URL');
+  const redirectUri = `${window.location.origin}${
+    redirectPath.startsWith('/') ? redirectPath : `/${redirectPath}`
+  }`;
+  const url = override ?? keycloak.createAccountUrl({ redirectUri });
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
 export function getKeycloakAdminConsoleUrl(): string {
   const override = optionalViteEnv('VITE_KEYCLOAK_ADMIN_URL');
   if (override) {

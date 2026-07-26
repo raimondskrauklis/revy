@@ -110,10 +110,10 @@ Droplet: `/mnt/revy_volume/backend/.env` — see `deploy/env-examples/backend.en
 ### GitHub App (required R0+)
 
 ```env
-GITHUB_APP_ID=<numeric app id>
-GITHUB_APP_PRIVATE_KEY_PATH=/mnt/revy/secrets/github-app.pem
+GITHUB_APP_ID=<numeric app id from app settings About — NOT installation URL>
+GITHUB_APP_PRIVATE_KEY_PATH=/mnt/revy_volume/secrets/github-app.pem
 GITHUB_WEBHOOK_SECRET=<same as GitHub App webhook secret>
-REVY_BOT_LOGIN=revy[bot]
+REVY_BOT_LOGIN=<app-slug>[bot]
 ```
 
 **Installation tokens:** GitHub may return longer `ghs_…` tokens (~520 chars) during its 2026 rollout. Revy uses them as opaque strings and does not persist them — no env change. See [GITHUB_APP_SETUP.md](./GITHUB_APP_SETUP.md) § Installation access tokens.
@@ -202,12 +202,12 @@ pipenv run celery -A app.workers.celery_app worker \
 
 | Step | Action |
 |------|--------|
-| 1 | **Generate private key** → PEM on volume → `GITHUB_APP_PRIVATE_KEY_PATH` |
-| 2 | Copy **App ID** → `GITHUB_APP_ID` |
+| 1 | **Generate private key** → PEM at `/mnt/revy_volume/secrets/github-app.pem` → `chown 1000:deploy`, `chmod 640` → `GITHUB_APP_PRIVATE_KEY_PATH` |
+| 2 | Copy **App ID** (About page) → `GITHUB_APP_ID` — verify with [GITHUB_APP_SETUP.md](./GITHUB_APP_SETUP.md) § Verify on droplet |
 | 3 | `alembic upgrade head` on target DB |
 | 4 | Deploy API + worker with env above |
-| 5 | **Install App** on customer org (all repos or selected) |
-| 6 | Link installation in Revy workspace (manual register until OAuth UI) |
+| 5 | **Install App** on customer org/account (all repos or selected) — note **installation ID** from settings URL |
+| 6 | Link **installation ID** in Revy workspace (manual register until OAuth UI; pro plan) |
 | 7 | Verify webhook deliveries → **200** on `POST /api/v1/webhooks/github` |
 | 8 | Optional: `POST …/sync-repositories` for full repo reconcile |
 

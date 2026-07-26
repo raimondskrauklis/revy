@@ -98,6 +98,21 @@ def test_judge_llm_enabled_moonshot_is_false():
     assert settings.judge_llm_enabled() is False
 
 
+@pytest.mark.asyncio
+async def test_resolve_unsupported_judge_provider_falls_back_to_default():
+    session = AsyncMock()
+    session.scalar = AsyncMock(return_value=None)
+    with patch("app.services.model_policy.settings") as mock_settings:
+        mock_settings.effective_judge_provider = "moonshot"
+        model_ref = await resolve_model(
+            session,
+            uuid.uuid4(),
+            ModelRole.judge,
+            require_credentials=False,
+        )
+    assert model_ref == ModelRef(provider="anthropic", model_id="claude-sonnet-5")
+
+
 def test_reviewer_llm_enabled_disabled_without_key():
     settings = _test_settings(moonshot_api_key=None, revy_reviewer_provider="moonshot")
     assert settings.reviewer_llm_enabled() is False
