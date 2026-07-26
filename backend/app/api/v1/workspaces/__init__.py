@@ -8,6 +8,7 @@ from app.api.v1.workspaces import (
     installation_indexing,
     installation_pull_requests,
     installation_repositories,
+    installation_review,
     installations,
     invitations,
     lifecycle,
@@ -23,6 +24,7 @@ router.include_router(installations.router)
 router.include_router(installation_repositories.router)
 router.include_router(installation_pull_requests.router)
 router.include_router(installation_indexing.router)
+router.include_router(installation_review.router)
 router.include_router(audit.router)
 router.include_router(billing.router)
 router.include_router(lifecycle.router)
