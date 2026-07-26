@@ -167,6 +167,8 @@ SELECT severity, category, title FROM github_findings ORDER BY created_at DESC L
 
 ---
 
+---
+
 ## Reconcile + judge (R5)
 
 Runs automatically after R4 review completes; requires worker on `reconciliation` and `judge` queues. Optional `ANTHROPIC_API_KEY` for judge (reconcile still completes without it).
@@ -215,4 +217,3 @@ Requires R4+ API reachable from frontend; merge badge uses latest publish job + 
 3. Confirm merge readiness badge matches check conclusion
 
 Verify: browser EN+LV strings; `npm run build` passes with `features/reviewer/` routes registered.
-
