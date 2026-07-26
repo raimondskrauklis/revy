@@ -48,8 +48,9 @@ async def _request(
     url: str,
     *,
     headers: dict[str, str],
+    params: dict[str, Any] | None = None,
 ) -> httpx.Response:
-    response = await client.request(method, url, headers=headers)
+    response = await client.request(method, url, headers=headers, params=params)
     response.raise_for_status()
     return response
 
@@ -97,7 +98,8 @@ async def list_installation_repositories(
     repos: list[dict[str, Any]] = []
     page = 1
     while True:
-        response = await client.request(
+        response = await _request(
+            client,
             "GET",
             f"{GITHUB_API_BASE}/installation/repositories",
             headers=headers,
