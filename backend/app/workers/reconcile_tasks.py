@@ -9,6 +9,7 @@ from app.core.database import get_db_context
 from app.core.logging import get_logger
 from app.services.github_finding_judge import run_judge_for_review_run
 from app.services.github_finding_reconcile import reconcile_review_run
+from app.services.github_publish import enqueue_publish_for_review_run
 from app.workers.celery_app import celery_app
 
 logger = get_logger(__name__)
@@ -27,6 +28,7 @@ def reconcile_review_run_task(self, review_run_id: str) -> None:
             judged = await run_judge_for_review_run(session, review_run_id=UUID(review_run_id))
             await session.commit()
             # Judge runs inline here; judge_review_run task is reserved for future fan-out.
+            enqueue_publish_for_review_run(UUID(review_run_id))
             logger.info(
                 "github_reconcile_complete",
                 extra={

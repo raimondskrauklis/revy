@@ -116,3 +116,167 @@ async def list_installation_repositories(
             break
         page += 1
     return repos
+
+
+CHECK_RUN_NAME = "revy/review"
+
+
+def build_check_run_external_id(
+    *,
+    github_installation_id: int,
+    github_pr_number: int,
+    head_sha: str,
+) -> str:
+    return f"revy:{github_installation_id}:{github_pr_number}:{head_sha}"
+
+
+async def _installation_headers(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+) -> dict[str, str]:
+    token = await create_installation_access_token(
+        client,
+        github_installation_id=github_installation_id,
+    )
+    return {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+
+
+async def create_check_run(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+    owner: str,
+    repo: str,
+    head_sha: str,
+    external_id: str,
+    conclusion: str,
+    summary: str,
+    title: str = "Revy code review",
+) -> int:
+    headers = await _installation_headers(client, github_installation_id=github_installation_id)
+    response = await client.post(
+        f"{GITHUB_API_BASE}/repos/{owner}/{repo}/check-runs",
+        headers=headers,
+        json={
+            "name": CHECK_RUN_NAME,
+            "head_sha": head_sha,
+            "external_id": external_id,
+            "status": "completed",
+            "conclusion": conclusion,
+            "output": {"title": title, "summary": summary},
+        },
+    )
+    response.raise_for_status()
+    data = response.json()
+    check_run_id = data.get("id")
+    if not isinstance(check_run_id, int):
+        raise ServiceUnavailableError(
+            message="GitHub check run response invalid",
+            error_code="github_api_error",
+        )
+    return check_run_id
+
+
+async def update_check_run(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+    owner: str,
+    repo: str,
+    check_run_id: int,
+    conclusion: str,
+    summary: str,
+    title: str = "Revy code review",
+) -> None:
+    headers = await _installation_headers(client, github_installation_id=github_installation_id)
+    response = await client.patch(
+        f"{GITHUB_API_BASE}/repos/{owner}/{repo}/check-runs/{check_run_id}",
+        headers=headers,
+        json={
+            "status": "completed",
+            "conclusion": conclusion,
+            "output": {"title": title, "summary": summary},
+        },
+    )
+    response.raise_for_status()
+
+
+async def create_issue_comment(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+    owner: str,
+    repo: str,
+    issue_number: int,
+    body: str,
+) -> int:
+    headers = await _installation_headers(client, github_installation_id=github_installation_id)
+    response = await client.post(
+        f"{GITHUB_API_BASE}/repos/{owner}/{repo}/issues/{issue_number}/comments",
+        headers=headers,
+        json={"body": body},
+    )
+    response.raise_for_status()
+    data = response.json()
+    comment_id = data.get("id")
+    if not isinstance(comment_id, int):
+        raise ServiceUnavailableError(
+            message="GitHub issue comment response invalid",
+            error_code="github_api_error",
+        )
+    return comment_id
+
+
+async def update_issue_comment(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+    owner: str,
+    repo: str,
+    comment_id: int,
+    body: str,
+) -> None:
+    headers = await _installation_headers(client, github_installation_id=github_installation_id)
+    response = await client.patch(
+        f"{GITHUB_API_BASE}/repos/{owner}/{repo}/issues/comments/{comment_id}",
+        headers=headers,
+        json={"body": body},
+    )
+    response.raise_for_status()
+
+
+async def create_pull_request_review_comment(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+    owner: str,
+    repo: str,
+    pull_number: int,
+    commit_id: str,
+    path: str,
+    line: int,
+    body: str,
+) -> None:
+    headers = await _installation_headers(client, github_installation_id=github_installation_id)
+    response = await client.post(
+        f"{GITHUB_API_BASE}/repos/{owner}/{repo}/pulls/{pull_number}/comments",
+        headers=headers,
+        json={
+            "body": body,
+            "commit_id": commit_id,
+            "path": path,
+            "line": line,
+            "side": "RIGHT",
+        },
+    )
+    response.raise_for_status()
+
+
+def format_inline_comment_body(*, title: str, message: str, severity: str) -> str:
+    return f"**[{severity.upper()}] {title}**\n\n{message}"
+
