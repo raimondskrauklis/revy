@@ -1,22 +1,28 @@
 # backend/app/services/model_policy.py
-"""Platform model resolver — MODEL_POLICY M0 (env-only; workspace overrides in M2)."""
+"""Platform model resolver — MODEL_POLICY M0/M2."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.model_policy import ModelRole
 from app.constants.model_registry import BEDROCK_CATALOG_EXAMPLES, PLATFORM_MODEL_DEFAULTS
 from app.core.config import settings
-from app.core.exceptions import ServiceUnavailableError
+from app.core.exceptions import ServiceUnavailableError, ValidationError
+from app.models.workspace_model_policy import WorkspaceModelPolicyORM
+from app.services.model_catalog import is_valid_catalog_entry
 
-_REVIEWER_ROLES = frozenset({
-    ModelRole.reviewer_standard,
-    ModelRole.reviewer_deep,
-    ModelRole.reviewer_critical,
-})
+_REVIEWER_ROLES = frozenset(
+    {
+        ModelRole.reviewer_standard,
+        ModelRole.reviewer_deep,
+        ModelRole.reviewer_critical,
+    }
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,14 +89,7 @@ def _assert_provider_credentials(provider: str, *, role: ModelRole) -> None:
         )
 
 
-async def resolve_model(
-    session: AsyncSession,
-    workspace_id: UUID,
-    role: ModelRole,
-) -> ModelRef:
-    """Resolve provider + model for a pipeline role (M0: platform env only)."""
-    _ = session, workspace_id  # workspace overrides — M2
-
+def _resolve_platform_model(role: ModelRole) -> ModelRef:
     if role in _REVIEWER_ROLES:
         provider = settings.effective_reviewer_provider
         _assert_provider_credentials(provider, role=role)
@@ -115,3 +114,45 @@ async def resolve_model(
         return ModelRef(provider=provider, model_id=model_id, region=region)
 
     raise ValueError(f"Unsupported model role: {role}")
+
+
+async def _resolve_workspace_override(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    role: ModelRole,
+) -> ModelRef | None:
+    row = await session.scalar(
+        select(WorkspaceModelPolicyORM).where(
+            WorkspaceModelPolicyORM.workspace_id == workspace_id,
+            WorkspaceModelPolicyORM.role == role.value,
+        )
+    )
+    if row is None:
+        return None
+
+    provider = row.provider.strip().lower()
+    model_id = row.model_id.strip()
+    if not is_valid_catalog_entry(role=role, provider=provider, model_id=model_id):
+        raise ValidationError(
+            message="Workspace model override is no longer valid",
+            field=role.value,
+        )
+
+    region = row.region
+    if provider == "bedrock" and not region:
+        region = settings.aws_region
+    _assert_provider_credentials(provider, role=role)
+    return ModelRef(provider=provider, model_id=model_id, region=region)
+
+
+async def resolve_model(
+    session: AsyncSession,
+    workspace_id: UUID,
+    role: ModelRole,
+) -> ModelRef:
+    """Resolve provider + model for a pipeline role."""
+    override = await _resolve_workspace_override(session, workspace_id=workspace_id, role=role)
+    if override is not None:
+        return override
+    return _resolve_platform_model(role)

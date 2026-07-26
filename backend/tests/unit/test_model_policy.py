@@ -7,7 +7,7 @@ import pytest
 
 from app.constants.model_policy import ModelRole
 from app.core.config import Settings
-from app.core.exceptions import ServiceUnavailableError
+from app.core.exceptions import ServiceUnavailableError, ValidationError
 from app.services.model_policy import (
     ModelRef,
     resolve_model,
@@ -24,6 +24,7 @@ def test_review_profile_to_model_role():
 @pytest.mark.asyncio
 async def test_resolve_platform_defaults():
     session = AsyncMock()
+    session.scalar = AsyncMock(return_value=None)
     workspace_id = uuid.uuid4()
     with patch("app.services.model_policy.settings") as mock_settings:
         mock_settings.effective_reviewer_provider = "moonshot"
@@ -45,6 +46,7 @@ async def test_resolve_platform_defaults():
 @pytest.mark.asyncio
 async def test_resolve_reviewer_missing_credentials_raises():
     session = AsyncMock()
+    session.scalar = AsyncMock(return_value=None)
     with patch("app.services.model_policy.settings") as mock_settings:
         mock_settings.effective_reviewer_provider = "moonshot"
         mock_settings.reviewer_llm_enabled.return_value = False
@@ -56,6 +58,7 @@ async def test_resolve_reviewer_missing_credentials_raises():
 @pytest.mark.asyncio
 async def test_resolve_judge_missing_credentials_raises():
     session = AsyncMock()
+    session.scalar = AsyncMock(return_value=None)
     with patch("app.services.model_policy.settings") as mock_settings:
         mock_settings.effective_judge_provider = "anthropic"
         mock_settings.judge_llm_enabled.return_value = False
@@ -165,6 +168,7 @@ def test_bedrock_config_disabled_without_region():
 @pytest.mark.asyncio
 async def test_resolve_bedrock_judge():
     session = AsyncMock()
+    session.scalar = AsyncMock(return_value=None)
     with patch("app.services.model_policy.settings") as mock_settings:
         mock_settings.effective_judge_provider = "bedrock"
         mock_settings.judge_llm_enabled.return_value = True
@@ -204,3 +208,49 @@ async def test_dispatch_bedrock_judge():
         region="eu-central-1",
         timeout_seconds=30.0,
     )
+
+
+@pytest.mark.asyncio
+async def test_resolve_workspace_override():
+    from app.models.workspace_model_policy import WorkspaceModelPolicyORM
+
+    session = AsyncMock()
+    workspace_id = uuid.uuid4()
+    row = WorkspaceModelPolicyORM(
+        workspace_id=workspace_id,
+        role=ModelRole.judge.value,
+        provider="anthropic",
+        model_id="claude-sonnet-4-20250514",
+        region=None,
+    )
+    session.scalar = AsyncMock(return_value=row)
+    with (
+        patch("app.services.model_policy.is_valid_catalog_entry", return_value=True),
+        patch("app.services.model_policy.settings") as mock_settings,
+    ):
+        mock_settings.anthropic_api_key = "key"
+        mock_settings.judge_llm_enabled.return_value = True
+        model_ref = await resolve_model(session, workspace_id, ModelRole.judge)
+    assert model_ref.provider == "anthropic"
+    assert model_ref.model_id == "claude-sonnet-4-20250514"
+
+
+@pytest.mark.asyncio
+async def test_resolve_workspace_override_invalid_rejected():
+    from app.models.workspace_model_policy import WorkspaceModelPolicyORM
+
+    session = AsyncMock()
+    workspace_id = uuid.uuid4()
+    row = WorkspaceModelPolicyORM(
+        workspace_id=workspace_id,
+        role=ModelRole.judge.value,
+        provider="anthropic",
+        model_id="removed-model",
+        region=None,
+    )
+    session.scalar = AsyncMock(return_value=row)
+    with (
+        patch("app.services.model_policy.is_valid_catalog_entry", return_value=False),
+        pytest.raises(ValidationError),
+    ):
+        await resolve_model(session, workspace_id, ModelRole.judge)

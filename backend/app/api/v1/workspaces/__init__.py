@@ -13,11 +13,13 @@ from app.api.v1.workspaces import (
     invitations,
     lifecycle,
     members,
+    model_policy,
     settings,
 )
 
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
 router.include_router(settings.router)
+router.include_router(model_policy.router)
 router.include_router(members.router)
 router.include_router(invitations.router)
 router.include_router(installations.router)
