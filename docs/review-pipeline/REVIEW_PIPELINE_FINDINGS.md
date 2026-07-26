@@ -127,7 +127,8 @@ Revy code does not replace GitHub App registration. Use these before expecting w
 | R2-Q5 | `pull_request_review` v1 | **locked** | Store review activity row; no publish |
 | R4-Q1 | Review trigger permission | **locked** | `admin_users` (same as R3 index trigger) |
 | R4-Q2 | Concurrent review runs | **locked** | `409 review_in_progress` if pending/processing run exists for revision |
-| R4-Q3 | Review prerequisites | **locked** | Latest index job `completed` + `VOYAGE_API_KEY` + `github_api_enabled` + LLM key for selected provider |
+| R4-Q3 | Review prerequisites | **locked** | Latest index job `completed` + `VOYAGE_API_KEY` + `github_api_enabled` + `MOONSHOT_API_KEY` |
+| R4-Q4 | Primary LLM / model tiers | **locked** | Moonshot Kimi — `kimi-k2.7-code` (Standard), `kimi-k3` (Deep/Critical). Anthropic Claude = judge / cross-check in **R5** only (`architecture.md` §13–14) |
 
 ---
 

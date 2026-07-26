@@ -12,7 +12,9 @@ General plan from [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md). 
 
 Deduplicate findings across PR revisions and run judge/escalation when models disagree — stable finding identity for UI and publish.
 
-**Scope:** In — `reconcile_tasks` + `judge_tasks` queues; fingerprint logic (file + rule + message hash or product-defined key); link findings across revisions; judge outcome persisted; supersede/resolve states. Out — human-in-the-loop approval workflow; GitHub comment posting (R6).
+**Scope:** In — `reconcile_tasks` + `judge_tasks` queues; fingerprint logic (file + rule + message hash or product-defined key); link findings across revisions; **Anthropic Claude** judge for cross-family escalation (high-severity dismissals, Tier-3 fingerprints, disagreement); judge outcome persisted; supersede/resolve states. Out — human-in-the-loop approval workflow; GitHub comment posting (R6).
+
+**Model policy:** Primary review remains Moonshot Kimi (R4). Judge stage uses **Anthropic** as the secondary model family — `internal-docs/product/revy/docs/architecture.md` §14.
 
 **Deliverables:** Stable `finding_id` across pushes where applicable; reconciliation job after each review run; judge escalation rows; API exposes reconciled finding set.
 

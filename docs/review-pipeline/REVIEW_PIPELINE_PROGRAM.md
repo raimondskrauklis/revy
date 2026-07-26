@@ -175,8 +175,9 @@ New secrets (document in R0 findings + `backend/.env.example`):
 | Variable | Phase |
 |----------|-------|
 | `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY_PATH`, `GITHUB_WEBHOOK_SECRET` | R0–R1 |
+| `MOONSHOT_API_KEY`, `REVY_LLM_PROVIDER`, Kimi model tier env | R4 (primary) |
+| `ANTHROPIC_API_KEY` | R5 (judge / cross-family) |
 | `VOYAGE_API_KEY` | R3 |
-| `ANTHROPIC_API_KEY`, `MOONSHOT_API_KEY`, `REVY_LLM_PROVIDER` | R4 |
 | Webhook public URL | R0 — same pattern as [STRIPE_BILLING_SETUP.md](../utils/STRIPE_BILLING_SETUP.md) |
 
 Worker droplet must consume Revy queues (see `implementation.revy.md`). Export/maintenance queue unchanged from SaaS W6.

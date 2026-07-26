@@ -88,6 +88,8 @@ Each: tests + `pipenv run lint` + `babysit-pr` until Greptile clean.
 
 **Branch:** `feat/review-r4-review-run` (rebase on `main`)
 
+**Note:** Stashed R4 WIP predates Moonshot-primary docs — on pop, set `revy_llm_provider=moonshot`, Kimi model tier env vars, and drop `moonshot-v1-8k` placeholder.
+
 | Subphase | Scope | Done |
 |----------|--------|------|
 | R4.1 | Migration `0014`, models, enums, `models/__init__.py` | [ ] |
@@ -109,7 +111,9 @@ Each: tests + `pipenv run lint` + `babysit-pr` until Greptile clean.
 |----------|--------|
 | Trigger permission | `admin_users` (same as R3 index) |
 | Concurrent runs | `409 review_in_progress` if pending/processing exists |
-| Prerequisites | Completed index job + `VOYAGE_API_KEY` + `github_api_enabled` + LLM key |
+| Prerequisites | Completed index job + `VOYAGE_API_KEY` + `github_api_enabled` + `MOONSHOT_API_KEY` |
+| Primary LLM | Moonshot Kimi — `kimi-k2.7-code` (Standard), `kimi-k3` (Deep/Critical) |
+| Judge LLM (R5) | Anthropic Claude — cross-family only |
 | Worker queues (min) | `github_events,repo_sync,indexing,review` (+ SaaS queues) |
 
 ---
