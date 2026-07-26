@@ -7,12 +7,12 @@ judge work is split off the reconcile worker); it is not enqueued in R5.
 """
 from __future__ import annotations
 
-import asyncio
 from uuid import UUID
 
 from app.core.database import get_db_context
 from app.core.logging import get_logger
 from app.services.github_finding_judge import run_judge_for_review_run
+from app.workers.async_runner import run_worker_async
 from app.workers.celery_app import celery_app
 
 logger = get_logger(__name__)
@@ -35,7 +35,7 @@ def judge_review_run(self, review_run_id: str) -> None:
             )
 
     try:
-        asyncio.run(_run())
+        run_worker_async(_run())
     except Exception as exc:
         logger.error(
             "github_judge_task_failed",

@@ -2,13 +2,13 @@
 """Review Celery tasks — review queue."""
 from __future__ import annotations
 
-import asyncio
 from uuid import UUID
 
 from app.constants.enums import GitHubReviewRunStatus
 from app.core.database import get_db_context
 from app.core.logging import get_logger
 from app.services.github_review import mark_review_run_failed, run_review_run
+from app.workers.async_runner import run_worker_async
 from app.workers.celery_app import celery_app
 
 logger = get_logger(__name__)
@@ -42,7 +42,7 @@ def review_pull_request_revision(self, review_run_id: str) -> None:
                 _enqueue_reconcile(review_run_id)
 
     try:
-        asyncio.run(_run())
+        run_worker_async(_run())
     except Exception as exc:
         logger.error(
             "github_review_run_task_failed",
@@ -67,7 +67,7 @@ def review_pull_request_revision(self, review_run_id: str) -> None:
                 await session.commit()
 
         try:
-            asyncio.run(_fail())
+            run_worker_async(_fail())
         except Exception as mark_exc:  # noqa: BLE001
             logger.error(
                 "github_review_run_mark_failed_error",

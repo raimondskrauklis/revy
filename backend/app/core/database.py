@@ -42,6 +42,12 @@ engine: AsyncEngine = _create_engine()
 AsyncSessionLocal = _create_session_factory(engine)
 
 
+def _recreate_async_engine() -> None:
+    global engine, AsyncSessionLocal
+    engine = _create_engine()
+    AsyncSessionLocal = _create_session_factory(engine)
+
+
 def reset_async_engine_for_fork() -> None:
     """Dispose and recreate the async engine after Celery prefork.
 
@@ -49,8 +55,6 @@ def reset_async_engine_for_fork() -> None:
     be shared across worker children or asyncio.run() event loops.
     """
     import asyncio
-
-    global engine, AsyncSessionLocal
 
     try:
         asyncio.run(engine.dispose())
@@ -60,8 +64,7 @@ def reset_async_engine_for_fork() -> None:
             exc_info=True,
         )
 
-    engine = _create_engine()
-    AsyncSessionLocal = _create_session_factory(engine)
+    _recreate_async_engine()
     logger.info("database_engine_reset_for_worker", extra={"operation": "reset_async_engine_for_fork"})
 
 

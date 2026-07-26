@@ -15,6 +15,7 @@ from app.services.github_publish import (
     resolve_publish_job_id_for_review_run,
     run_publish_job,
 )
+from app.workers.async_runner import run_worker_async
 from app.workers.celery_app import celery_app
 
 logger = get_logger(__name__)
@@ -77,7 +78,7 @@ def _inline_publish_task_done(publish_job_id: str, task: asyncio.Task[None]) -> 
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
-        asyncio.run(
+        run_worker_async(
             _finalize_inline_publish_failure(publish_job_id, f"inline publish failed: {exc}")
         )
         return
@@ -127,7 +128,7 @@ def _finalize_publish_failure(
             )
             await session.commit()
 
-    asyncio.run(_mark_failed())
+    run_worker_async(_mark_failed())
 
 
 @celery_app.task(
@@ -138,7 +139,7 @@ def _finalize_publish_failure(
 )
 def publish_review_run(self, publish_job_id: str) -> None:
     try:
-        asyncio.run(_execute_publish_review_run(publish_job_id))
+        run_worker_async(_execute_publish_review_run(publish_job_id))
     except (PublishJobRetryableError, Exception) as exc:
         logger.error(
             "github_publish_task_failed",
@@ -181,7 +182,7 @@ def publish_for_review_run(self, review_run_id: str) -> None:
             return str(job_id)
 
     try:
-        publish_job_id = asyncio.run(_resolve_publish_job())
+        publish_job_id = run_worker_async(_resolve_publish_job())
         if publish_job_id is None:
             return
         dispatch_publish_review_run(publish_job_id)

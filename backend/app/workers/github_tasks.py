@@ -2,7 +2,6 @@
 """GitHub webhook Celery tasks — github_events queue."""
 from __future__ import annotations
 
-import asyncio
 from uuid import UUID
 
 from app.constants.enums import GitHubIndexJobTriggerSource
@@ -18,6 +17,7 @@ from app.services.github_pull_requests import (
 )
 from app.services.github_repositories import apply_installation_repositories_webhook_event
 from app.services.review_pipeline import maybe_enqueue_pipeline_for_revision
+from app.workers.async_runner import run_worker_async
 from app.workers.celery_app import celery_app
 
 logger = get_logger(__name__)
@@ -106,7 +106,7 @@ def process_github_event(self, delivery_id: str) -> None:
             )
 
     try:
-        asyncio.run(_run())
+        run_worker_async(_run())
     except Exception as exc:
         logger.error(
             "github_webhook_task_failed",

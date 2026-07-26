@@ -6,6 +6,9 @@ import httpx
 
 from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 VOYAGE_API_URL = "https://api.voyageai.com/v1/embeddings"
 BATCH_SIZE = 128
@@ -68,6 +71,15 @@ async def embed_texts(
             json=_embedding_request_body(batch, input_type="document"),
             timeout=60.0,
         )
+        if response.status_code >= 400:
+            logger.error(
+                "voyage_embeddings_request_failed",
+                extra={
+                    "status_code": response.status_code,
+                    "model": settings.revy_embedding_model,
+                    "body": response.text[:2000],
+                },
+            )
         response.raise_for_status()
         data = response.json()
         items = data.get("data")
@@ -105,6 +117,15 @@ async def embed_query(client: httpx.AsyncClient, query: str) -> list[float]:
         json=_embedding_request_body([query], input_type="query"),
         timeout=60.0,
     )
+    if response.status_code >= 400:
+        logger.error(
+            "voyage_embeddings_request_failed",
+            extra={
+                "status_code": response.status_code,
+                "model": settings.revy_embedding_model,
+                "body": response.text[:2000],
+            },
+        )
     response.raise_for_status()
     data = response.json()
     items = data.get("data")

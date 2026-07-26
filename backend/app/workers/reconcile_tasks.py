@@ -2,7 +2,6 @@
 """Reconciliation Celery tasks — reconciliation queue."""
 from __future__ import annotations
 
-import asyncio
 from uuid import UUID
 
 from app.core.database import get_db_context
@@ -10,6 +9,7 @@ from app.core.logging import get_logger
 from app.services.github_finding_judge import record_review_run_judge_status
 from app.services.github_finding_reconcile import reconcile_review_run
 from app.services.github_publish import enqueue_publish_for_review_run
+from app.workers.async_runner import run_worker_async
 from app.workers.celery_app import celery_app
 
 logger = get_logger(__name__)
@@ -39,7 +39,7 @@ def reconcile_review_run_task(self, review_run_id: str) -> None:
             )
 
     try:
-        asyncio.run(_run())
+        run_worker_async(_run())
     except Exception as exc:
         logger.error(
             "github_reconcile_task_failed",

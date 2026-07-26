@@ -2,7 +2,6 @@
 """Repository sync Celery tasks — repo_sync queue."""
 from __future__ import annotations
 
-import asyncio
 from uuid import UUID
 
 import httpx
@@ -12,6 +11,7 @@ from app.core.logging import get_logger
 from app.integrations.github_api import list_installation_repositories
 from app.models.github_installation import GitHubInstallationORM
 from app.services.github_repositories import reconcile_repositories_from_api
+from app.workers.async_runner import run_worker_async
 from app.workers.celery_app import celery_app
 
 logger = get_logger(__name__)
@@ -45,7 +45,7 @@ def sync_installation_repositories(self, installation_id: str) -> None:
             )
 
     try:
-        asyncio.run(_run())
+        run_worker_async(_run())
     except Exception as exc:
         logger.error(
             "github_repository_sync_failed",
