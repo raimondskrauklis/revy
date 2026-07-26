@@ -29,7 +29,8 @@ Per-phase goals in **separate files** — same layout as [docs/saas-base](../saa
 | R1 | [waves/REVIEW_PIPELINE_R1_EXECUTION.md](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) | done |
 | R2 | [waves/REVIEW_PIPELINE_R2_EXECUTION.md](./waves/REVIEW_PIPELINE_R2_EXECUTION.md) | done |
 | R3 | [waves/REVIEW_PIPELINE_R3_EXECUTION.md](./waves/REVIEW_PIPELINE_R3_EXECUTION.md) | done |
-| R4–R7 | — | create per phase after peer-review |
+| R4 | [waves/REVIEW_PIPELINE_R4_EXECUTION.md](./waves/REVIEW_PIPELINE_R4_EXECUTION.md) | pending |
+| R5–R7 | — | create per phase after peer-review |
 
 Full table: [waves/README.md](./waves/README.md).
 
@@ -49,5 +50,5 @@ Workspace tenancy; audit on mutating routes; EN+LV for UI; unit tests; hand-writ
 
 ## Next
 
-1. `create-execution-plan` → `waves/REVIEW_PIPELINE_R4_EXECUTION.md`.
-2. `execution-peer-review` → `phase-execution` on `feat/review-r4-review-run`.
+1. `execution-peer-review` → [waves/REVIEW_PIPELINE_R4_EXECUTION.md](./waves/REVIEW_PIPELINE_R4_EXECUTION.md).
+2. `phase-execution` on `feat/review-r4-review-run`.

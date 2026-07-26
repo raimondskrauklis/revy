@@ -20,6 +20,6 @@ Run the LLM review pipeline for a PR revision and persist structured findings �
 
 **Status:** Not started.
 
-**Next:** `create-execution-plan` when R3 ships — [waves/REVIEW_PIPELINE_R4_EXECUTION.md](./waves/REVIEW_PIPELINE_R4_EXECUTION.md) (to be created).
+**Next:** [waves/REVIEW_PIPELINE_R4_EXECUTION.md](./waves/REVIEW_PIPELINE_R4_EXECUTION.md) — peer-review then implement.
 
 **Next phase:** [REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md](./REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md).
