@@ -112,6 +112,75 @@ async def test_run_judge_dismissed_resolves_group():
 
 
 @pytest.mark.asyncio
+async def test_run_judge_bedrock_provider_without_anthropic_key():
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    group_id = uuid.uuid4()
+
+    run = GitHubReviewRunORM(
+        revision_id=uuid.uuid4(),
+        workspace_id=workspace_id,
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="bedrock",
+    )
+    run.id = review_run_id
+
+    group = GitHubFindingGroupORM(
+        workspace_id=workspace_id,
+        pull_request_id=uuid.uuid4(),
+        fingerprint="abc",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="RCE",
+        message="Remote code execution",
+        file_path="app/run.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+    group.id = group_id
+
+    finding = GitHubFindingORM(
+        review_run_id=review_run_id,
+        workspace_id=workspace_id,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="RCE",
+        message="Remote code execution",
+        file_path="app/run.py",
+        group_id=group_id,
+    )
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, group])
+    session.scalars = AsyncMock(return_value=[finding])
+    session.scalar = AsyncMock(return_value=None)
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    bedrock_ref = ModelRef(
+        provider="bedrock",
+        model_id="anthropic.claude-sonnet-4-20250514-v1:0",
+        region="eu-central-1",
+    )
+
+    with patch("app.services.github_finding_judge.settings") as mock_settings:
+        mock_settings.judge_llm_enabled.return_value = True
+        mock_settings.revy_revision_timeout_standard_seconds = 900
+        with patch(
+            "app.services.github_finding_judge.resolve_model",
+            AsyncMock(return_value=bedrock_ref),
+        ):
+            with patch(
+                "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
+                AsyncMock(return_value={"outcome": "upheld", "notes": "valid"}),
+            ):
+                count = await run_judge_for_review_run(session, review_run_id=review_run_id)
+
+    assert count == 1
+
+
+@pytest.mark.asyncio
 async def test_run_judge_service_unavailable_continues():
     review_run_id = uuid.uuid4()
     workspace_id = uuid.uuid4()

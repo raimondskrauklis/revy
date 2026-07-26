@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import httpx
 
-from app.integrations import anthropic_review, moonshot_review
+from app.integrations import anthropic_review, bedrock_review, moonshot_review
 from app.services.model_policy import ModelRef
 
 
@@ -32,6 +32,13 @@ async def call_review_llm(
             model_id=model_ref.model_id,
             timeout_seconds=timeout_seconds,
         )
+    if provider == "bedrock":
+        return await bedrock_review.complete_review(
+            user_prompt=user_prompt,
+            model_id=model_ref.model_id,
+            region=model_ref.region,
+            timeout_seconds=timeout_seconds,
+        )
     raise NotImplementedError(f"Review provider not implemented: {provider}")
 
 
@@ -48,6 +55,13 @@ async def call_judge_llm(
             client,
             user_prompt=user_prompt,
             model_id=model_ref.model_id,
+            timeout_seconds=timeout_seconds,
+        )
+    if provider == "bedrock":
+        return await bedrock_review.judge_finding(
+            user_prompt=user_prompt,
+            model_id=model_ref.model_id,
+            region=model_ref.region,
             timeout_seconds=timeout_seconds,
         )
     raise NotImplementedError(f"Judge provider not implemented: {provider}")

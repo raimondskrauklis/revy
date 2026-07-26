@@ -40,12 +40,31 @@ PLATFORM_MODEL_DEFAULTS: dict[ModelRole, ModelCatalogEntry] = {
     ),
 }
 
+BEDROCK_CATALOG_EXAMPLES: tuple[ModelCatalogEntry, ...] = (
+    ModelCatalogEntry(
+        provider="bedrock",
+        model_id="anthropic.claude-sonnet-4-20250514-v1:0",
+        display_name="Claude Sonnet (Bedrock)",
+    ),
+    ModelCatalogEntry(
+        provider="bedrock",
+        model_id="anthropic.claude-3-5-sonnet-20241022-v2:0",
+        display_name="Claude 3.5 Sonnet (Bedrock)",
+    ),
+)
+
 
 def catalog_entries() -> list[ModelCatalogEntry]:
     """Deduped catalog list for future workspace policy API."""
     seen: set[tuple[str, str]] = set()
     entries: list[ModelCatalogEntry] = []
     for entry in PLATFORM_MODEL_DEFAULTS.values():
+        key = (entry.provider, entry.model_id)
+        if key in seen:
+            continue
+        seen.add(key)
+        entries.append(entry)
+    for entry in BEDROCK_CATALOG_EXAMPLES:
         key = (entry.provider, entry.model_id)
         if key in seen:
             continue

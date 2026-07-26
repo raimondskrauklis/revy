@@ -24,6 +24,7 @@ pgvector>=0.3.0,<1.0
 # Model providers (review pipeline — wired when application code lands)
 anthropic>=0.40.0,<1.0
 openai>=1.0.0,<2.0
+boto3>=1.35.0,<2.0
 
 # Lint + test (CI validate job installs prod.txt or base via dev.txt)
 ruff>=0.8.0,<1.0

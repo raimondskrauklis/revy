@@ -94,6 +94,12 @@ class Settings(BaseSettings):
     anthropic_api_key: str | None = None
     voyage_api_key: str | None = None
 
+    # AWS Bedrock — MODEL_POLICY M1
+    aws_region: str | None = None
+    revy_bedrock_judge_model_id: str | None = None
+    revy_bedrock_reviewer_model_id: str | None = None
+    revy_bedrock_inference_profile_arn: str | None = None
+
     # Revy runtime paths (outside repo — see .env.example)
     revy_repos_root: str | None = None
     revy_worktrees_root: str | None = None
@@ -182,6 +188,14 @@ class Settings(BaseSettings):
     def effective_judge_provider(self) -> str:
         return (self.revy_judge_provider or "anthropic").strip().lower()
 
+    def bedrock_enabled(self) -> bool:
+        region = (self.aws_region or "").strip()
+        if not region:
+            return False
+        judge_model = (self.revy_bedrock_judge_model_id or "").strip()
+        reviewer_model = (self.revy_bedrock_reviewer_model_id or "").strip()
+        return bool(judge_model or reviewer_model)
+
     def reviewer_llm_enabled(self) -> bool:
         provider = self.effective_reviewer_provider
         if provider == "moonshot":
@@ -189,7 +203,9 @@ class Settings(BaseSettings):
         if provider == "anthropic":
             return bool(self.anthropic_api_key and self.anthropic_api_key.strip())
         if provider == "bedrock":
-            return False
+            return self.bedrock_enabled() and bool(
+                (self.revy_bedrock_reviewer_model_id or "").strip()
+            )
         return False
 
     def judge_llm_enabled(self) -> bool:
@@ -197,7 +213,9 @@ class Settings(BaseSettings):
         if provider == "anthropic":
             return bool(self.anthropic_api_key and self.anthropic_api_key.strip())
         if provider == "bedrock":
-            return False
+            return self.bedrock_enabled() and bool(
+                (self.revy_bedrock_judge_model_id or "").strip()
+            )
         return False
 
     @property

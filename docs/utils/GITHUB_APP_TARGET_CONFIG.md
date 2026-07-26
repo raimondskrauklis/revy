@@ -169,6 +169,16 @@ ANTHROPIC_API_KEY=
 # REVY_ANTHROPIC_MODEL=claude-sonnet-4-20250514
 ```
 
+**Bedrock (optional M1):** IAM auth instead of `ANTHROPIC_API_KEY` for judge and/or reviewer.
+
+```env
+AWS_REGION=eu-central-1
+REVY_JUDGE_PROVIDER=bedrock
+REVY_BEDROCK_JUDGE_MODEL_ID=anthropic.claude-sonnet-4-20250514-v1:0
+# REVY_REVIEWER_PROVIDER=bedrock
+# REVY_BEDROCK_REVIEWER_MODEL_ID=anthropic.claude-sonnet-4-20250514-v1:0
+```
+
 ### Review SLAs
 
 ```env

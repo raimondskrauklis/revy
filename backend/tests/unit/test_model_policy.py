@@ -143,3 +143,64 @@ async def test_dispatch_passes_model_id_to_anthropic_judge():
         model_id="claude-test",
         timeout_seconds=30.0,
     )
+
+
+def test_bedrock_config_enabled():
+    settings = _test_settings(
+        aws_region="eu-central-1",
+        revy_judge_provider="bedrock",
+        revy_bedrock_judge_model_id="anthropic.claude-sonnet-4-20250514-v1:0",
+    )
+    assert settings.bedrock_enabled() is True
+    assert settings.judge_llm_enabled() is True
+
+
+def test_bedrock_config_disabled_without_region():
+    settings = _test_settings(
+        revy_bedrock_judge_model_id="anthropic.claude-sonnet-4-20250514-v1:0",
+    )
+    assert settings.bedrock_enabled() is False
+
+
+@pytest.mark.asyncio
+async def test_resolve_bedrock_judge():
+    session = AsyncMock()
+    with patch("app.services.model_policy.settings") as mock_settings:
+        mock_settings.effective_judge_provider = "bedrock"
+        mock_settings.judge_llm_enabled.return_value = True
+        mock_settings.revy_bedrock_judge_model_id = "anthropic.claude-sonnet-4-20250514-v1:0"
+        mock_settings.aws_region = "eu-central-1"
+        judge = await resolve_model(session, uuid.uuid4(), ModelRole.judge)
+    assert judge == ModelRef(
+        provider="bedrock",
+        model_id="anthropic.claude-sonnet-4-20250514-v1:0",
+        region="eu-central-1",
+    )
+
+
+@pytest.mark.asyncio
+async def test_dispatch_bedrock_judge():
+    from app.integrations.llm_dispatch import call_judge_llm
+
+    client = AsyncMock()
+    model_ref = ModelRef(
+        provider="bedrock",
+        model_id="anthropic.claude-sonnet-4-20250514-v1:0",
+        region="eu-central-1",
+    )
+    with patch(
+        "app.integrations.llm_dispatch.bedrock_review.judge_finding",
+        AsyncMock(return_value={"outcome": "upheld"}),
+    ) as judge_mock:
+        await call_judge_llm(
+            client,
+            model_ref=model_ref,
+            user_prompt="prompt",
+            timeout_seconds=30.0,
+        )
+    judge_mock.assert_awaited_once_with(
+        user_prompt="prompt",
+        model_id="anthropic.claude-sonnet-4-20250514-v1:0",
+        region="eu-central-1",
+        timeout_seconds=30.0,
+    )

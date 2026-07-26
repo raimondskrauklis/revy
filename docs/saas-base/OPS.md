@@ -54,6 +54,23 @@ Setup: [STRIPE_BILLING_SETUP.md](../utils/STRIPE_BILLING_SETUP.md).
 
 ---
 
+## AWS Bedrock (optional judge / reviewer)
+
+Model policy M1 — use when operators prefer IAM over `ANTHROPIC_API_KEY`.
+
+| Env | Purpose |
+|-----|---------|
+| `AWS_REGION` | Bedrock runtime region (e.g. `eu-central-1`) |
+| `REVY_JUDGE_PROVIDER=bedrock` | Route R5 judge to Bedrock |
+| `REVY_BEDROCK_JUDGE_MODEL_ID` | Bedrock model ID (e.g. `anthropic.claude-sonnet-4-20250514-v1:0`) |
+| `REVY_REVIEWER_PROVIDER=bedrock` | Optional — route R4 reviewer to Bedrock |
+| `REVY_BEDROCK_REVIEWER_MODEL_ID` | Single model ID for all reviewer profiles |
+| `REVY_BEDROCK_INFERENCE_PROFILE_ARN` | Optional — documented; v1 uses `modelId` when unset |
+
+Grant the API/worker IAM role `bedrock:InvokeModel` on the chosen model(s). After a judge run, verify `judge_provider` / `judge_model_id` on `github_finding_judge_outcomes`.
+
+---
+
 ## Staging sign-off
 
 Human checklist: [STAGING_VERIFICATION.md](./STAGING_VERIFICATION.md) — run before production SaaS base sign-off.
