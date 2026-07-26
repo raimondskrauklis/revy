@@ -23,6 +23,7 @@ env:
   FRONTEND_CONTAINER_NAME: revy-web
   DOCKER_NETWORK: revy-net
   ENV_FILE_PATH: /mnt/revy_volume/backend/.env
+  REVY_VOLUME_ROOT: /mnt/revy_volume
   RESTART_WORKERS: "true"
   # "true" skips frontend + backend tests and test-DB migrate in CI. Set "false" once Actions secrets exist.
   SKIP_CI_TESTS: "true"
@@ -333,6 +334,30 @@ jobs:
 
             echo "✅ Redis ready"
 
+      # ----------------- REVY DATA DIRS -----------------
+      - name: Ensure Revy data directories on volume
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DROPLET_IP }}
+          username: deploy
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            echo "📁 Ensuring Revy data directories on block volume..."
+
+            mkdir -p \
+              ${{ env.REVY_VOLUME_ROOT }}/data/repos \
+              ${{ env.REVY_VOLUME_ROOT }}/data/worktrees \
+              ${{ env.REVY_VOLUME_ROOT }}/data/exports \
+              ${{ env.REVY_VOLUME_ROOT }}/data/hf-cache \
+              ${{ env.REVY_VOLUME_ROOT }}/secrets
+
+            if [ ! -f "${{ env.REVY_VOLUME_ROOT }}/secrets/github-app.pem" ]; then
+              echo "⚠️  Missing ${{ env.REVY_VOLUME_ROOT }}/secrets/github-app.pem — GitHub App API will fail until added"
+            fi
+
+            echo "✅ Data directories ready"
+
       # ----------------- DB MIGRATIONS -----------------
       - name: Run database migrations on droplet
         uses: appleboy/ssh-action@v1.0.3
@@ -385,6 +410,11 @@ jobs:
               -p 127.0.0.1:8000:8000 \
               --env-file ${{ env.ENV_FILE_PATH }} \
               -e SENTRY_RELEASE=${{ github.sha }} \
+              -v ${{ env.REVY_VOLUME_ROOT }}/data/repos:/data/repos \
+              -v ${{ env.REVY_VOLUME_ROOT }}/data/worktrees:/data/worktrees \
+              -v ${{ env.REVY_VOLUME_ROOT }}/data/exports:/data/exports \
+              -v ${{ env.REVY_VOLUME_ROOT }}/data/hf-cache:/data/hf-cache \
+              -v ${{ env.REVY_VOLUME_ROOT }}/secrets/github-app.pem:${{ env.REVY_VOLUME_ROOT }}/secrets/github-app.pem:ro \
               --name ${{ env.BACKEND_CONTAINER_NAME }} \
               ${{ env.REGISTRY }}/${{ env.REGISTRY_NAME }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
 
@@ -446,6 +476,11 @@ jobs:
               --network ${{ env.DOCKER_NETWORK }} \
               --env-file ${{ env.ENV_FILE_PATH }} \
               -e SENTRY_RELEASE=${{ github.sha }} \
+              -v ${{ env.REVY_VOLUME_ROOT }}/data/repos:/data/repos \
+              -v ${{ env.REVY_VOLUME_ROOT }}/data/worktrees:/data/worktrees \
+              -v ${{ env.REVY_VOLUME_ROOT }}/data/exports:/data/exports \
+              -v ${{ env.REVY_VOLUME_ROOT }}/data/hf-cache:/data/hf-cache \
+              -v ${{ env.REVY_VOLUME_ROOT }}/secrets/github-app.pem:${{ env.REVY_VOLUME_ROOT }}/secrets/github-app.pem:ro \
               --name revy-worker \
               "$BACKEND_IMAGE" \
               celery -A app.workers.celery_app worker --loglevel=info --concurrency=2 -Q default,notifications,heavy,github_events,repo_sync,indexing,review,reconciliation,judge,github_publish,maintenance
