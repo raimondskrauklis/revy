@@ -27,7 +27,8 @@ Per-phase goals in **separate files** — same layout as [docs/saas-base](../saa
 |-------|-----------|--------|
 | R0 | [waves/REVIEW_PIPELINE_R0_EXECUTION.md](./waves/REVIEW_PIPELINE_R0_EXECUTION.md) | done |
 | R1 | [waves/REVIEW_PIPELINE_R1_EXECUTION.md](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) | done |
-| R2–R7 | — | create per phase after general plan peer-review |
+| R2 | [waves/REVIEW_PIPELINE_R2_EXECUTION.md](./waves/REVIEW_PIPELINE_R2_EXECUTION.md) | done |
+| R3–R7 | — | create per phase after peer-review |
 
 Full table: [waves/README.md](./waves/README.md).
 

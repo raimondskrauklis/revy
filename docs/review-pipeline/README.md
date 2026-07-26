@@ -95,9 +95,5 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 
 ## Next (strict order)
 
-1. **`create-execution-plan`** → [waves/REVIEW_PIPELINE_R2_EXECUTION.md](./waves/REVIEW_PIPELINE_R2_EXECUTION.md)
-2. **`execution-peer-review`** on R2 execution file
-3. Branch `feat/review-r2-pr-ingestion` → **`phase-execution`**
-4. Tag `review-r2-v1` on merge; update findings catalog + waves README
-
-Do **not** start R2 code until step 2 passes.
+1. **`create-execution-plan`** → [waves/REVIEW_PIPELINE_R3_EXECUTION.md](./waves/REVIEW_PIPELINE_R3_EXECUTION.md)
+2. **`execution-peer-review`** → `phase-execution` on `feat/review-r3-indexing`

@@ -33,8 +33,9 @@ git show saas-base-v1   # annotated tag → dacfc5b
 | `saas-base-v1.1` | `48c361e` | Alembic AUTOCOMMIT fix; review pipeline findings + R0 execution |
 | `review-r0-v1` | `754c88c` | GitHub webhook ingestion (`POST /api/v1/webhooks/github`), delivery dedupe, `github_events` worker |
 | `review-r1-v1` | `dddfde0` | Repository metadata sync (`github_repositories`), `repo_sync` worker, list/sync API |
+| `review-r2-v1` | `035f304` | PR ingestion (`github_pull_requests`), revisions, `pull_request` webhooks |
 
-Future product milestones: `review-r2-v1`, `v0.2.0`, etc. Pushing a tag whose commit **includes** `.github/workflows/release-tag.yml` triggers an automatic GitHub Release. Tags on older commits (e.g. `saas-base-v1`) may need a one-time `gh release create` or **Actions → Release tag → Run workflow** with the tag name.
+Future product milestones: `review-r3-v1`, `v0.2.0`, etc. Pushing a tag whose commit **includes** `.github/workflows/release-tag.yml` triggers an automatic GitHub Release. Tags on older commits (e.g. `saas-base-v1`) may need a one-time `gh release create` or **Actions → Release tag → Run workflow** with the tag name.
 
 ---
 
@@ -88,11 +89,19 @@ main  ──●──●──●──●──  deployable; SaaS base + produc
 | **Repo sync worker** | `backend/app/workers/repo_tasks.py` — GitHub API full reconcile |
 | **Repositories API** | `GET/POST …/installations/{id}/repositories`, `sync-repositories` |
 
-### Not shipped (R2–R7)
+### Shipped (R2)
+
+| Layer | Path / surface |
+|-------|----------------|
+| **PR ORM** | `github_pull_requests`, `github_pull_request_revisions`, `github_pull_request_reviews`; migration `0012` |
+| **Webhook apply** | `pull_request`, `pull_request_review` → PR rows + revisions + review activity |
+| **PR list API** | `GET …/repositories/{repo_id}/pull-requests` |
+
+### Not shipped (R3–R7)
 
 | Gap | Notes |
 |-----|--------|
-| `pull_request`, review/findings tables | Per `REVY_PRODUCT_SLICE.md` § Later |
+| Review/findings tables | R4+ |
 | Worker modules | `index_tasks`, `review_tasks`, … |
 | LLM provider runtime | Config + Celery `review` queue |
 | pgvector index jobs | `indexing` queue |

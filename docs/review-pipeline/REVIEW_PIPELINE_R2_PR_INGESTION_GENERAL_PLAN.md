@@ -18,8 +18,6 @@ Track pull requests and per-push revisions from GitHub webhook events; enable wo
 
 **Depends on:** R1 (`github_repositories` rows for known repos).
 
-**Status:** Not started — general plan baseline-ready; execution file + peer-review required before code.
-
-**Next:** `create-execution-plan` → [waves/REVIEW_PIPELINE_R2_EXECUTION.md](./waves/REVIEW_PIPELINE_R2_EXECUTION.md) (to be created) → `execution-peer-review` → `phase-execution`.
+**Status:** Shipped — tag `review-r2-v1`.
 
 **Next phase:** [REVIEW_PIPELINE_R3_INDEXING_GENERAL_PLAN.md](./REVIEW_PIPELINE_R3_INDEXING_GENERAL_PLAN.md).
