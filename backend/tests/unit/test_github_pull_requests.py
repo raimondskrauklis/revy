@@ -1,6 +1,7 @@
 # backend/tests/unit/test_github_pull_requests.py
 """GitHub pull request service — R2 PR ingestion."""
 import uuid
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
@@ -26,6 +27,21 @@ from app.services.github_pull_requests import (
 _INSTALLATION_ID = 42
 _REPO_GITHUB_ID = 100
 _PR_GITHUB_ID = 5001
+
+
+class _UniqueViolation(Exception):
+    pgcode = "23505"
+
+
+def _session_with_nested() -> AsyncMock:
+    session = AsyncMock()
+
+    @asynccontextmanager
+    async def _begin_nested():
+        yield
+
+    session.begin_nested = MagicMock(side_effect=_begin_nested)
+    return session
 
 
 def _installation() -> GitHubInstallationORM:
@@ -76,7 +92,7 @@ def _pull_request_payload(*, action: str, head_sha: str = "abc123") -> dict:
 async def test_apply_pull_request_opened_creates_pr_and_revision():
     installation = _installation()
     repository = _repository(installation)
-    session = AsyncMock()
+    session = _session_with_nested()
     session.scalar = AsyncMock(side_effect=[installation, repository, None])
     session.add = MagicMock()
     session.flush = AsyncMock()
@@ -105,15 +121,17 @@ async def test_apply_pull_request_opened_handles_concurrent_insert():
     )
     raced.id = uuid.uuid4()
 
-    session = AsyncMock()
+    session = _session_with_nested()
     session.scalar = AsyncMock(side_effect=[installation, repository, None, raced])
     session.add = MagicMock()
-    session.rollback = AsyncMock()
-    session.flush = AsyncMock(side_effect=[IntegrityError("insert", {}, Exception("unique")), None])
+    session.flush = AsyncMock(
+        side_effect=[IntegrityError("insert", {}, _UniqueViolation("unique")), None],
+    )
 
     await apply_pull_request_webhook_event(session, _pull_request_payload(action="opened"))
 
-    session.rollback.assert_awaited_once()
+    session.rollback.assert_not_called()
+    assert session.flush.await_count == 2
     assert raced.title == "Add feature"
     assert raced.head_sha == "abc123"
 

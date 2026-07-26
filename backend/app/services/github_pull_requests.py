@@ -32,8 +32,15 @@ from app.schemas.github_pull_request import GitHubPullRequestResponse
 
 logger = get_logger(__name__)
 
+_UNIQUE_VIOLATION_PG_CODE = "23505"
+
 _PULL_REQUEST_ACTIONS = frozenset({"opened", "synchronize", "closed", "reopened"})
 _REVIEW_ACTIONS = frozenset({"submitted", "edited", "dismissed"})
+
+
+def _is_unique_violation(exc: IntegrityError) -> bool:
+    orig = exc.orig
+    return orig is not None and getattr(orig, "pgcode", None) == _UNIQUE_VIOLATION_PG_CODE
 
 
 def _parse_github_datetime(value: str | None) -> datetime | None:
@@ -205,9 +212,11 @@ async def _upsert_pull_request(
     )
     if existing is None:
         try:
-            return await _create_pull_request(session, repository=repository, fields=fields)
-        except IntegrityError:
-            await session.rollback()
+            async with session.begin_nested():
+                return await _create_pull_request(session, repository=repository, fields=fields)
+        except IntegrityError as exc:
+            if not _is_unique_violation(exc):
+                raise
             existing = await _find_pull_request(
                 session,
                 repository_id=repository.id,
