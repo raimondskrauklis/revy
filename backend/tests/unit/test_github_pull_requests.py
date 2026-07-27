@@ -3,7 +3,7 @@
 import uuid
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from sqlalchemy.exc import IntegrityError
@@ -85,7 +85,7 @@ def _pull_request_payload(*, action: str, head_sha: str = "abc123", draft: bool 
             "draft": draft,
             "html_url": "https://github.com/acme/demo/pull/7",
             "head": {"sha": head_sha, "ref": "feature"},
-            "base": {"ref": "main"},
+            "base": {"sha": "base000", "ref": "main"},
         },
     }
 
@@ -102,6 +102,23 @@ async def test_apply_pull_request_opened_creates_pr_and_revision():
     await apply_pull_request_webhook_event(session, _pull_request_payload(action="opened"))
 
     assert session.add.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_apply_pull_request_opened_persists_base_sha():
+    installation = _installation()
+    repository = _repository(installation)
+    session = _session_with_nested()
+    session.scalar = AsyncMock(side_effect=[installation, repository, None])
+    added: list[object] = []
+    session.add = MagicMock(side_effect=lambda obj: added.append(obj))
+    session.flush = AsyncMock()
+
+    await apply_pull_request_webhook_event(session, _pull_request_payload(action="opened"))
+
+    revisions = [obj for obj in added if hasattr(obj, "base_sha")]
+    assert len(revisions) == 1
+    assert revisions[0].base_sha == "base000"
 
 
 @pytest.mark.asyncio
@@ -162,10 +179,14 @@ async def test_apply_pull_request_synchronize_appends_revision():
     session.add = MagicMock()
     session.flush = AsyncMock()
 
-    await apply_pull_request_webhook_event(
-        session,
-        _pull_request_payload(action="synchronize", head_sha="newsha"),
-    )
+    with patch(
+        "app.services.github_pull_requests.apply_resolution_status_for_synchronize",
+        AsyncMock(return_value=0),
+    ):
+        await apply_pull_request_webhook_event(
+            session,
+            _pull_request_payload(action="synchronize", head_sha="newsha"),
+        )
 
     assert existing.revision_count == 2
     assert existing.head_sha == "newsha"
@@ -197,10 +218,14 @@ async def test_apply_pull_request_synchronize_updates_is_draft():
     session.add = MagicMock()
     session.flush = AsyncMock()
 
-    await apply_pull_request_webhook_event(
-        session,
-        _pull_request_payload(action="synchronize", head_sha="newsha", draft=True),
-    )
+    with patch(
+        "app.services.github_pull_requests.apply_resolution_status_for_synchronize",
+        AsyncMock(return_value=0),
+    ):
+        await apply_pull_request_webhook_event(
+            session,
+            _pull_request_payload(action="synchronize", head_sha="newsha", draft=True),
+        )
 
     assert existing.is_draft is True
     assert existing.revision_count == 2

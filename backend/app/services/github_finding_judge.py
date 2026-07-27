@@ -2,6 +2,8 @@
 """GitHub finding judge escalation — R5."""
 from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import Any
 from uuid import UUID
 
 import httpx
@@ -32,6 +34,24 @@ logger = get_logger(__name__)
 
 JUDGE_MAX_PER_RUN = 10
 
+_GROUNDING_WITH_EVIDENCE = (
+    "Grounding (E2): Dismiss or weaken the finding if the claim is not entailed by "
+    "the evidence excerpt. Uphold only when the excerpt supports the severity and message."
+)
+_GROUNDING_WITHOUT_EVIDENCE = (
+    "Grounding (E2): No evidence excerpt was captured. Judge conservatively; dismiss "
+    "if the claim cannot be verified from the message alone."
+)
+
+
+@dataclass(frozen=True)
+class JudgeCandidateArtifact:
+    group_id: UUID
+    evidence_snippet: str | None
+    user_prompt: str
+    raw_response: dict[str, Any] | None
+    outcome: str | None
+
 
 def is_judge_candidate(*, severity: FindingSeverity, category: FindingCategory) -> bool:
     if severity in (FindingSeverity.error, FindingSeverity.critical):
@@ -42,14 +62,31 @@ def is_judge_candidate(*, severity: FindingSeverity, category: FindingCategory) 
     )
 
 
-def _build_judge_prompt(*, group: GitHubFindingGroupORM) -> str:
-    return (
-        f"Title: {group.title}\n"
-        f"Severity: {stored_enum_value(group.severity)}\n"
-        f"Category: {stored_enum_value(group.category)}\n"
-        f"File: {group.file_path or 'n/a'}\n"
-        f"Message: {group.message}\n"
-    )
+def _build_judge_prompt(
+    *,
+    group: GitHubFindingGroupORM,
+    evidence_snippet: str | None,
+) -> str:
+    parts = [
+        f"Title: {group.title}",
+        f"Severity: {stored_enum_value(group.severity)}",
+        f"Category: {stored_enum_value(group.category)}",
+        f"File: {group.file_path or 'n/a'}",
+        f"Message: {group.message}",
+    ]
+    if evidence_snippet:
+        parts.extend(
+            [
+                "",
+                "Evidence (code excerpt from diff or retrieval):",
+                evidence_snippet,
+                "",
+                _GROUNDING_WITH_EVIDENCE,
+            ]
+        )
+    else:
+        parts.extend(["", _GROUNDING_WITHOUT_EVIDENCE])
+    return "\n".join(parts)
 
 
 async def _load_judge_candidates(
@@ -91,10 +128,11 @@ async def _run_judge_llm_loop(
     review_run_id: UUID,
     candidates: list[tuple[GitHubFindingORM, GitHubFindingGroupORM]],
     model_ref: ModelRef,
+    artifacts_out: list[JudgeCandidateArtifact] | None = None,
 ) -> int:
     judged = 0
     async with httpx.AsyncClient(timeout=float(settings.revy_revision_timeout_standard_seconds)) as client:
-        for _finding, group in candidates[:JUDGE_MAX_PER_RUN]:
+        for finding, group in candidates[:JUDGE_MAX_PER_RUN]:
             existing = await session.scalar(
                 select(GitHubFindingJudgeOutcomeORM.id).where(
                     GitHubFindingJudgeOutcomeORM.review_run_id == review_run_id,
@@ -104,11 +142,19 @@ async def _run_judge_llm_loop(
             if existing is not None:
                 continue
 
+            user_prompt = _build_judge_prompt(
+                group=group,
+                evidence_snippet=finding.evidence_snippet,
+            )
+            raw: dict[str, Any] | None = None
+            outcome_str: str | None = None
+            notes: str | None = None
+
             try:
                 raw = await llm_dispatch.call_judge_llm(
                     client,
                     model_ref=model_ref,
-                    user_prompt=_build_judge_prompt(group=group),
+                    user_prompt=user_prompt,
                     timeout_seconds=float(settings.revy_revision_timeout_standard_seconds),
                 )
                 outcome_str, notes = anthropic_review.parse_judge_outcome(raw)
@@ -117,6 +163,16 @@ async def _run_judge_llm_loop(
                     "github_finding_judge_failed",
                     extra={"group_id": str(group.id), "error": str(exc)},
                 )
+                if artifacts_out is not None:
+                    artifacts_out.append(
+                        JudgeCandidateArtifact(
+                            group_id=group.id,
+                            evidence_snippet=finding.evidence_snippet,
+                            user_prompt=user_prompt,
+                            raw_response=None,
+                            outcome=None,
+                        )
+                    )
                 continue
 
             outcome = GitHubJudgeOutcome(outcome_str)
@@ -137,6 +193,16 @@ async def _run_judge_llm_loop(
             elif outcome == GitHubJudgeOutcome.modified:
                 group.severity = FindingSeverity.warning
 
+            if artifacts_out is not None:
+                artifacts_out.append(
+                    JudgeCandidateArtifact(
+                        group_id=group.id,
+                        evidence_snippet=finding.evidence_snippet,
+                        user_prompt=user_prompt,
+                        raw_response=raw,
+                        outcome=outcome_str,
+                    )
+                )
             judged += 1
 
     return judged
@@ -155,6 +221,7 @@ async def record_review_run_judge_status(
     session: AsyncSession,
     *,
     review_run_id: UUID,
+    artifacts_out: list[JudgeCandidateArtifact] | None = None,
 ) -> int:
     """Count escalation candidates, persist judge status, run judge when applicable."""
     run, candidates = await _load_judge_candidates(session, review_run_id=review_run_id)
@@ -202,6 +269,7 @@ async def record_review_run_judge_status(
         review_run_id=review_run_id,
         candidates=candidates,
         model_ref=model_ref,
+        artifacts_out=artifacts_out,
     )
     run.judge_status = GitHubReviewJudgeStatus.completed
     await session.flush()

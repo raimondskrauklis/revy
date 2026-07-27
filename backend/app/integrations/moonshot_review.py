@@ -23,7 +23,9 @@ REVIEW_SYSTEM_PROMPT = (
     '"suggestion":"optional single-line replacement or omit"}]}. '
     "Include suggestion only for a concrete single-line fix on an anchored line; "
     "one physical line only — omit for architectural or multi-hunk fixes. "
-    "Do not include style or lint findings. Return only valid JSON."
+    "Do not include style or lint findings. Return only valid JSON. "
+    "Prioritize issues in the unified diff hunks below; use supplemental context "
+    "only to validate cross-file impact."
 )
 
 _K2_THINKING_MODEL_PREFIXES = (
@@ -76,13 +78,11 @@ def _chat_completion_body(
     }
     if _uses_k3_params(model):
         body["reasoning_effort"] = _reasoning_effort_for_profile(profile)
-        body["max_completion_tokens"] = settings.revy_moonshot_max_completion_tokens
         return body
     if _uses_k2_thinking_params(model):
         # K2 thinking models share the completion budget between reasoning_content and
-        # content; a low cap can return HTTP 200 with empty content (finish_reason=length).
+        # content; omit max_completion_tokens so Moonshot applies the model default.
         return body
-    body["max_completion_tokens"] = settings.revy_moonshot_max_completion_tokens
     body["temperature"] = 0.2
     return body
 

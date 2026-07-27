@@ -27,16 +27,62 @@ def test_compute_fingerprint_stable():
         pull_request_id=pull_request_id,
         file_path="app/main.py",
         category=FindingCategory.bug,
-        message="  Possible   null  ",
+        title="Possible null",
+        start_line=10,
     )
     fp2 = compute_fingerprint(
         workspace_id=workspace_id,
         pull_request_id=pull_request_id,
         file_path="app/main.py",
         category=FindingCategory.bug,
-        message="Possible null",
+        title="Possible null",
+        start_line=10,
     )
     assert fp1 == fp2
+
+
+def test_compute_fingerprint_ignores_message_paraphrase():
+    workspace_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    fp1 = compute_fingerprint(
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        file_path="app/main.py",
+        category=FindingCategory.bug,
+        title="Null dereference",
+        start_line=12,
+    )
+    fp2 = compute_fingerprint(
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        file_path="app/main.py",
+        category=FindingCategory.bug,
+        title="Null dereference",
+        start_line=12,
+    )
+    assert fp1 == fp2
+
+
+def test_compute_fingerprint_differs_by_start_line():
+    workspace_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    fp1 = compute_fingerprint(
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        file_path="app/main.py",
+        category=FindingCategory.bug,
+        title="Null dereference",
+        start_line=12,
+    )
+    fp2 = compute_fingerprint(
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        file_path="app/main.py",
+        category=FindingCategory.bug,
+        title="Null dereference",
+        start_line=13,
+    )
+    assert fp1 != fp2
 
 
 def test_compute_fingerprint_accepts_string_category():
@@ -47,14 +93,16 @@ def test_compute_fingerprint_accepts_string_category():
         pull_request_id=pull_request_id,
         file_path="app/main.py",
         category=FindingCategory.bug,
-        message="Possible null",
+        title="Possible null",
+        start_line=None,
     )
     fp_str = compute_fingerprint(
         workspace_id=workspace_id,
         pull_request_id=pull_request_id,
         file_path="app/main.py",
         category="bug",
-        message="Possible null",
+        title="Possible null",
+        start_line=None,
     )
     assert fp_enum == fp_str
 
@@ -203,7 +251,8 @@ async def test_reconcile_same_fingerprint_updates_revision():
             pull_request_id=pull_request_id,
             file_path="app/db.py",
             category=FindingCategory.security,
-            message="Unsanitized input",
+            title="SQLi",
+            start_line=finding.start_line,
         ),
         state=GitHubFindingGroupState.active,
         severity=FindingSeverity.error,
@@ -270,7 +319,8 @@ async def test_reconcile_existing_group_supersedes_peers():
             pull_request_id=pull_request_id,
             file_path="app/db.py",
             category=FindingCategory.security,
-            message="Unsanitized input",
+            title="SQLi",
+            start_line=finding.start_line,
         ),
         state=GitHubFindingGroupState.active,
         severity=FindingSeverity.error,
@@ -351,7 +401,8 @@ async def test_reconcile_resolved_group_unchanged():
             pull_request_id=pull_request_id,
             file_path="app/x.py",
             category=FindingCategory.bug,
-            message="Handle empty",
+            title="Edge",
+            start_line=finding.start_line,
         ),
         state=GitHubFindingGroupState.resolved,
         severity=FindingSeverity.warning,

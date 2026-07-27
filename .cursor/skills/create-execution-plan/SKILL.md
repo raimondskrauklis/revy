@@ -115,6 +115,11 @@ Phase **C0** of [`<GENERAL_PLAN>.md`](./...). Baseline: [`<FINDINGS>.md`](./...)
 ## Decisions locked for C0
 - bullet decisions — no options downstream
 
+## PR review context (optional — required when code + docs ship in one PR)
+- **Greptile:** `.greptile/files.json` — execution + findings; `scope: ["backend/**"]` (adjust per program)
+- **Bugbot:** `.cursor/BUGBOT.md` — links to same docs
+- Ship in **first phase commit**; per-phase commits touch README status only (not full findings tree)
+
 ## Out of scope for C0 (later phases)
 - item → **C1** / **C3**
 
@@ -229,6 +234,7 @@ P0…Pn-1: README status row only when that phase ships.
 - [ ] Phase gate block(s) — backend and/or frontend
 - [ ] Migration subphases flagged for LOOP pause
 - [ ] Human gate marked where ops/sign-off required
+- [ ] **Code + docs in one PR:** first phase includes PR review context (`.greptile/files.json`, `.cursor/BUGBOT.md`) — see `phase-execution` skill
 - [ ] **Final phase:** doc-sync subphase (+ `changelog.json` if user-facing); optional `post-finish-gap-pass`
 - [ ] **`execution-peer-review`** on all files (one-by-one report) — no critical/high open
 ```

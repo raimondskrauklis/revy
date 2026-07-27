@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import ForeignKey, Integer, Text, Uuid
+from sqlalchemy import ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.config import settings
@@ -33,6 +33,7 @@ class GitHubCodeChunkORM(TimestampedModel):
     file_path: Mapped[str] = mapped_column(Text, nullable=False)
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
+    content_hash: Mapped[str | None] = mapped_column(String(length=64), nullable=True)
     embedding: Mapped[list[float] | None] = mapped_column(
         Vector(settings.revy_embedding_dimensions),
         nullable=True,

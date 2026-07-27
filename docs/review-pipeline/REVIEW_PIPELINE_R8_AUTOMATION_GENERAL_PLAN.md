@@ -32,7 +32,7 @@ Greptile/Bugbot parity — **autostart** the full review pipeline on PR open and
 
 **Locked decisions:** [findings § R8-Q1–R8-Q7](./REVIEW_PIPELINE_FINDINGS.md#decisions-registry)
 
-**Next:** [waves/REVIEW_PIPELINE_R8_EXECUTION.md](./waves/REVIEW_PIPELINE_R8_EXECUTION.md) after execution peer-review → `phase-execution` on `feat/review-r8-automation`.
+**Next:** [waves/REVIEW_PIPELINE_R8_EXECUTION.md](./waves/REVIEW_PIPELINE_R8_EXECUTION.md) — shipped on `main` (#31). Follow-on: [review-quality execution](./waves/REVIEW_QUALITY_EXECUTION.md).
 
 ---
 

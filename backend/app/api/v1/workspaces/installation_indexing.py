@@ -19,6 +19,7 @@ from app.schemas.github_indexing import (
     GitHubChunkSearchResult,
     GitHubCodeChunkListResponse,
     GitHubIndexJobResponse,
+    IndexTriggerRequest,
 )
 from app.services.github_indexing import (
     CHUNK_LIST_DEFAULT_LIMIT,
@@ -44,6 +45,7 @@ async def post_index_pull_request_revision(
     repository_id: UUID,
     pull_request_id: UUID,
     revision_id: UUID,
+    body: IndexTriggerRequest,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
     idempotent: Annotated[JSONResponse | None, Depends(idempotency_guard)] = None,
@@ -62,6 +64,7 @@ async def post_index_pull_request_revision(
         repository_id=repository_id,
         pull_request_id=pull_request_id,
         revision_id=revision_id,
+        index_mode=body.mode,
     )
     await session.commit()
 

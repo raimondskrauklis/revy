@@ -118,6 +118,52 @@ class GitHubIndexJobTriggerSource(str, Enum):
     command = "command"
 
 
+class GitHubIndexMode(str, Enum):
+    """github_index_jobs.index_mode — review-quality diff-first indexing."""
+
+    diff = "diff"
+    full = "full"
+
+
+class PipelineStepType(str, Enum):
+    """github_pipeline_steps.step_type — pipeline trace."""
+
+    index = "index"
+    retrieve = "retrieve"
+    review = "review"
+    reconcile = "reconcile"
+    judge = "judge"
+    publish = "publish"
+
+
+class PipelineStepStatus(str, Enum):
+    """github_pipeline_steps.status — pipeline trace."""
+
+    pending = "pending"
+    processing = "processing"
+    completed = "completed"
+    failed = "failed"
+
+
+class PipelineArtifactKind(str, Enum):
+    """github_pipeline_artifacts.kind — pipeline trace."""
+
+    manifest = "manifest"
+    prompt = "prompt"
+    raw_response = "raw_response"
+    parse_report = "parse_report"
+    summary_markdown = "summary_markdown"
+    retrieval_hits = "retrieval_hits"
+
+
+class ResolutionStatus(str, Enum):
+    """github_finding_groups.resolution_status — review-quality metrics (M2)."""
+
+    addressed = "addressed"
+    still_open = "still_open"
+    judge_dismissed = "judge_dismissed"
+
+
 class GitHubReviewRunStatus(str, Enum):
     """github_review_runs.status — R4 review run."""
 

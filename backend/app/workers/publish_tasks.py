@@ -11,6 +11,7 @@ from app.constants.enums import stored_enum_value
 from app.core.database import get_db_context
 from app.core.logging import get_logger
 from app.core.worker_retries import classify_transient_error
+from app.services.github_pipeline_trace import finalize_pipeline_github_check_for_publish_job
 from app.services.github_publish import (
     PublishJobRetryableError,
     mark_publish_job_failed,
@@ -53,6 +54,11 @@ async def _finalize_inline_publish_failure(publish_job_id: str, error_message: s
                 session,
                 publish_job_id=UUID(publish_job_id),
                 error_message=error_message,
+            )
+            await finalize_pipeline_github_check_for_publish_job(
+                session,
+                publish_job_id=UUID(publish_job_id),
+                summary=error_message,
             )
             await session.commit()
     except Exception:
@@ -129,6 +135,11 @@ def _finalize_publish_failure(
                 publish_job_id=UUID(publish_job_id),
                 error_message=str(exc),
             )
+            await finalize_pipeline_github_check_for_publish_job(
+                session,
+                publish_job_id=UUID(publish_job_id),
+                summary=str(exc),
+            )
             await session.commit()
 
     run_worker_async(_mark_failed())
@@ -147,6 +158,11 @@ def publish_review_run(self, publish_job_id: str) -> None:
                 session,
                 publish_job_id=UUID(publish_job_id),
                 error_message=error_message,
+            )
+            await finalize_pipeline_github_check_for_publish_job(
+                session,
+                publish_job_id=UUID(publish_job_id),
+                summary=error_message,
             )
             await session.commit()
 

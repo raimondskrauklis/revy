@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import re
 from uuid import UUID
 
 from sqlalchemy import select
@@ -36,11 +35,10 @@ from app.schemas.github_review import ReconciledFindingResponse
 logger = get_logger(__name__)
 
 _FINGERPRINT_SEP = "\x1f"
-_WHITESPACE_RE = re.compile(r"\s+")
 
 
-def normalize_message(message: str) -> str:
-    return _WHITESPACE_RE.sub(" ", message.strip())
+def start_line_key(start_line: int | None) -> str:
+    return str(start_line) if start_line is not None else "0"
 
 
 def compute_fingerprint(
@@ -49,16 +47,19 @@ def compute_fingerprint(
     pull_request_id: UUID,
     file_path: str | None,
     category: FindingCategory | str,
-    message: str,
+    title: str,
+    start_line: int | None,
 ) -> str:
-    normalized = normalize_message(message)[:500]
+    """D10 identity key (message excluded). Deploy supersede pass in 0026 per D10-M."""
+    normalized_title = title.strip()
     payload = _FINGERPRINT_SEP.join(
         [
             str(workspace_id),
             str(pull_request_id),
             file_path or "",
             stored_enum_value(category),
-            normalized,
+            normalized_title,
+            start_line_key(start_line),
         ]
     )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
@@ -119,7 +120,8 @@ async def reconcile_review_run(session: AsyncSession, *, review_run_id: UUID) ->
             pull_request_id=pull_request_id,
             file_path=finding.file_path,
             category=finding.category,
-            message=finding.message,
+            title=finding.title,
+            start_line=finding.start_line,
         )
 
         group = await session.scalar(

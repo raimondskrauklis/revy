@@ -30,7 +30,7 @@ Two distinct approaches observed:
 
 **Language Server integration:** Ellipsis sidecars an `Lsproxy` container (via Modal) providing go-to-definition / find-all-references as tool calls to the agent, abstracting over multiple language servers behind one API. Practical LLM-weakness workaround: since LLMs are unreliable at exact line/column numbers, the tool interface lets the agent reference symbols by name and fuzzy-matches to the nearest matching symbol rather than requiring exact coordinates.
 
-**Takeaway for diff-scoped review:** the LSP-sidecar + incremental-chunk-hash approach is the right-sized pattern — you get symbol-level cross-file context without full-repo embedding costs on every run.
+**Takeaway for diff-scoped review:** the LSP-sidecar + incremental-chunk-hash approach is the right-sized pattern — symbol-level cross-file context without full-repo embedding costs on every run. **Revy:** v1 = diff-first (no LSP); v1.1 = grep/import bridge ([RQ-STRUCT-1](./review-quality/REVIEW_QUALITY_STRUCTURAL_CONTEXT.md)); v2 = sidecar or agent — see structural context doc.
 
 ---
 

@@ -3,7 +3,7 @@
 **Purpose:** Single handoff for agents when context is limited. Work **top to bottom** on active tracks; mark `[x]` as done.  
 **Rules:** No direct pushes to `main`. One concern per PR. **Peer review = separate agent session** (human-invoked); never self-certified by the implementing agent.
 
-**Last updated:** 2026-07-26 — R8 code on [#31](https://github.com/raimondskrauklis/revy/pull/31); **active: Track F (ops) → merge R8**
+**Last updated:** 2026-07-27 — R8 merged (#31); **active: review-quality** (`feat/review-quality`)
 
 ---
 
@@ -11,12 +11,12 @@
 
 | Item | Value |
 |------|--------|
-| `main` | R0–R7 shipped; `e413487` (docs #30 on top of #29 `c8bf883`) |
-| `feat/review-r8-automation` | R8.1–R8.6 + migration `0018` (`is_draft` guard) — PR [#31](https://github.com/raimondskrauklis/revy/pull/31) |
-| Tags | `review-r0-v1` … `review-r3-v1` on `main`; **`review-r4-v1` … `review-r8-v1` pending** after merges |
-| Migrations on branch | `0001`–`0018` (`0017` autostart, `0018` `is_draft`) |
-| Worker deploy | `deploy.yml` worker `-Q` includes `reconciliation`, `judge`, `github_publish` |
-| Next program slice | **Merge R8** → staging e2e → **R9** incremental index (when scoped) |
+| `main` | R0–R8 shipped; polish wave (#43); post-R8 hotfixes through #48 |
+| `feat/review-quality` | Review quality RQ0–RQ8 — [execution](./waves/REVIEW_QUALITY_EXECUTION.md) peer-reviewed |
+| Tags | `review-r0-v1` … `review-r3-v1` on `main`; `review-r4-v1` … `review-r8-v1` optional; **`review-quality-v1`** after review-quality merge |
+| Migrations on `main` | `0001`–`0025` (through polish `0025`); **`0026`** on review-quality branch |
+| Worker deploy | `deploy.yml` worker `-Q` includes `reconciliation`, `judge`, `github_publish`, `maintenance` |
+| Next program slice | **`phase-execution`** review-quality on `feat/review-quality` |
 
 ---
 
@@ -34,24 +34,35 @@
 
 ## Active tracks (strict order)
 
-### Track F — Post-merge ops (before R8 dogfood)
+### Track F — Post-merge ops (staging / prod)
 
-- [ ] `alembic upgrade head` on staging/prod (through `0021` for `voyage-code-3` embeddings)
+- [ ] `alembic upgrade head` on staging/prod (through `0025` on `main`; `0026` after review-quality merge)
 - [ ] GitHub App: **Install App** on target account → register **installation ID** in Revy (pro plan) — see [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) § App ID vs installation ID
 - [ ] PEM: `/mnt/revy_volume/secrets/github-app.pem` readable by container (`chown 1000:deploy`, `chmod 640`); `token mint: 201` verify script in setup doc
 - [ ] Env: `MOONSHOT_API_KEY`, `VOYAGE_API_KEY` (`REVY_EMBEDDING_MODEL=voyage-code-3`, `REVY_EMBEDDING_DIMENSIONS=1024`), `REVY_BOT_LOGIN=<slug>[bot]`; optional `ANTHROPIC_API_KEY` + `REVY_ANTHROPIC_MODEL=claude-sonnet-5`
-- [ ] Redeploy or restart worker so droplet runs latest `deploy.yml` `-Q` list:
+- [ ] Redeploy or restart worker **and Celery beat** so droplet runs latest `deploy.yml` `-Q` list:
   `github_events,repo_sync,indexing,review,reconciliation,judge,github_publish,maintenance,default,notifications,heavy`
 - [ ] Staging e2e: autostart + `@revy review` + toggle off ([GITHUB_WEBHOOK_DEV.md](./GITHUB_WEBHOOK_DEV.md) § R8)
-- [ ] Optional: `git tag review-r4-v1` … `review-r7-v1` on `main` (and `review-r8-v1` after #31 merge)
+- [ ] Optional: `git tag review-r4-v1` … `review-r8-v1` on `main`
 
-### Track G — R8 automation — [x] code on `feat/review-r8-automation`
+### Track G — R8 automation — [x] merged (#31)
 
 - [x] Lock R8 findings: Q11 + R8-Q1–R8-Q7 in [findings](./REVIEW_PIPELINE_FINDINGS.md)
 - [x] `create-general-plan` + execution for automation phase
 - [x] `execution-peer-review` on R8 execution (2026-07-26)
 - [x] `phase-execution` R8.1–R8.6 (migrations `0017`–`0018`, orchestrator, webhooks, UI, docs)
-- [ ] Merge PR [#31](https://github.com/raimondskrauklis/revy/pull/31) → `main`; tag `review-r8-v1`; GitHub App subscribe **Issue comments**
+- [x] Merge PR [#31](https://github.com/raimondskrauklis/revy/pull/31) → `main`; GitHub App subscribe **Issue comments**
+- [ ] Tag `review-r8-v1` (optional)
+
+### Track H — Review quality — **active**
+
+- [x] Findings + general plans R1–R5 locked — [review-quality/findings](./review-quality/REVIEW_QUALITY_FINDINGS.md)
+- [x] Architecture peer review — [REVIEW_QUALITY_PEER_REVIEW.md](./review-quality/REVIEW_QUALITY_PEER_REVIEW.md)
+- [x] Execution plan — [REVIEW_QUALITY_EXECUTION.md](./waves/REVIEW_QUALITY_EXECUTION.md)
+- [x] `execution-peer-review` (2026-07-27, two passes)
+- [ ] `phase-execution` RQ0–RQ8 on `feat/review-quality`
+- [ ] Human gate S4 + AS2 — [execution](./waves/REVIEW_QUALITY_EXECUTION.md) RQ8
+- [ ] Tag `review-quality-v1` on `main`
 
 ---
 
@@ -125,8 +136,8 @@ Historical babysit detail: [REVIEW_PIPELINE_MERGE_CHECKLIST.md](./REVIEW_PIPELIN
 | Merge readiness | R6 check conclusion; R7 badge | **shipped** |
 | Idempotent GitHub publish | R6 update in place (R6-Q1) | **shipped** |
 | Repo-wide context | R3 embeddings + R4 retrieval | **shipped** |
-| Auto-trigger on `opened` / `synchronize` | **R8** (`Q11`) — **next** |
-| `@revy review` on-demand command | **R8** — **next** |
+| Auto-trigger on `opened` / `synchronize` | **R8** — Q11 autostart | **shipped** |
+| `@revy review` on-demand command | **R8** | **shipped** |
 
 **Where “rules” live:** `.cursor/rules/` (agent dev); `REVIEW_PIPELINE_FINDINGS.md` (locks + [domain states](./REVIEW_PIPELINE_FINDINGS.md#domain-states-enums)); `REVIEW_PIPELINE_PRODUCT_PATTERNS.md` (roadmap); future `workspace_review_policy` in DB.
 
@@ -136,15 +147,15 @@ Historical babysit detail: [REVIEW_PIPELINE_MERGE_CHECKLIST.md](./REVIEW_PIPELIN
 
 | Item | Owner / when |
 |------|----------------|
-| Auto index + review on `pull_request.synchronize` | **R8** — Q11 autostart ([execution](./waves/REVIEW_PIPELINE_R8_EXECUTION.md)) |
-| `@revy review` comment command (+ future `@revy <cmd>`) | **R8** |
-| `index_in_progress` guard | **R8-Q5** |
-| Incremental chunk hash index | **R9** (not R8) |
+| Auto index + review on `pull_request.synchronize` | **R8** — shipped |
+| `@revy review` comment command (+ future `@revy <cmd>`) | **R8** — shipped |
+| `index_in_progress` guard | **R8-Q5** — shipped |
+| Incremental chunk hash index | **Review quality** C1 — [execution](./waves/REVIEW_QUALITY_EXECUTION.md) RQ4 |
 | Orphan delivery (crash after commit, before enqueue) | Manual replay or future sweep job |
 | `REVY_REPOS_ROOT` documented but unused | Indexing uses tarball → `REVY_WORKTREES_ROOT` only |
 | Workspace review rules UI | Post-R8; empty state “using workspace default profile” |
-| Symbol / call-graph index | Defer — parking lot |
-| Precision metrics (dismiss / addressed rate) | Post-R7 when dismiss flows exist |
+| Symbol / call-graph index | Defer v1 — [structural context](./review-quality/REVIEW_QUALITY_STRUCTURAL_CONTEXT.md) |
+| Precision metrics (dismiss / addressed rate) | **Review quality** M2 — [execution](./waves/REVIEW_QUALITY_EXECUTION.md) RQ6 (judge + diff heuristic; human dismiss R7.6) |
 | Plan-gated review volume | Q9 — after staging cost data |
 | nginx GitHub IP allowlist, OAuth install UI, `heavy_job` cleanup | Existing parking lot |
 
@@ -167,8 +178,8 @@ Historical babysit detail: [REVIEW_PIPELINE_MERGE_CHECKLIST.md](./REVIEW_PIPELIN
 ## Agent resume command
 
 ```text
-Read docs/review-pipeline/REVIEW_PIPELINE_RECOVERY_CHECKLIST.md (tracks F–G).
-Read docs/review-pipeline/REVIEW_PIPELINE_FINDINGS.md for locked Q# + domain states.
-Merge or babysit PR #31 (R8); after merge: alembic 0017–0018, staging e2e § R8, tag review-r8-v1.
-Do not push to main directly.
+Read docs/review-pipeline/REVIEW_PIPELINE_RECOVERY_CHECKLIST.md (Track H — review-quality).
+Read docs/review-pipeline/waves/REVIEW_QUALITY_EXECUTION.md — start at RQ0.
+Read docs/review-pipeline/review-quality/REVIEW_QUALITY_FINDINGS.md for locked Q#.
+phase-execution on feat/review-quality. Do not push to main directly.
 ```

@@ -242,11 +242,12 @@ Items **not blocking R8**; re-check on staging or in a focused publish hardening
 
 - **R8 execution** — [waves/REVIEW_PIPELINE_R8_EXECUTION.md](./waves/REVIEW_PIPELINE_R8_EXECUTION.md) (autostart + `@revy review` — items below folded into R8-Q#)
 - Auto index/review on `push` to default branch (secondary to PR `synchronize`; post-R8)
-- **Incremental chunk hash index** on `synchronize` — **R9** (not R8)
-- **Evidence snippet on findings** — store retrieved chunk used in R4 prompt; R5 judge grounds claim vs evidence (Perplexity Layer 2–3)
+- **Incremental chunk hash index** on `synchronize` — **Track I** — [review-quality/findings](./review-quality/REVIEW_QUALITY_FINDINGS.md)
+- **Greptile-shaped GitHub publish** — narrative summary, confidence 0–5, files needing attention — **Track G** — [review-quality/findings](./review-quality/REVIEW_QUALITY_FINDINGS.md)
+- **Evidence snippet on findings** — store retrieved chunk used in R4 prompt; R5 judge grounds claim vs evidence — **Track E** — [review-quality/findings](./review-quality/REVIEW_QUALITY_FINDINGS.md)
 - **Publish–UI parity regression** — contract test: `resolved` groups never in inline publish set (caught by Greptile babysit R6)
 - **`GET …/pull-requests/{id}`** — reviewer detail should not scan cursor list pages → **R8-Q6**
-- Symbol / call-graph index (defer — embeddings + R5 judge first; see product patterns)
+- Symbol / call-graph index (defer v1 — [review-quality structural context](./review-quality/REVIEW_QUALITY_STRUCTURAL_CONTEXT.md); RQ-STRUCT-1 v1.1)
 - Precision metrics — dismiss / addressed / resolution rate (post-R7 when dismiss flows exist)
 - Generator exploratory + filter conservative — keep R4 broad; tighten in R5 judge, not primary prompt (Perplexity Layer 4)
 - Orphan webhook delivery replay / sweep job

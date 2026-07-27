@@ -19,13 +19,24 @@ docs/review-pipeline/
   REVIEW_PIPELINE_RECOVERY_CHECKLIST.md    ← agent handoff + active tracks
   REVIEW_PIPELINE_MERGE_CHECKLIST.md       ← babysit + merge gates (R4–R7 stack)
   REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md ← Greptile babysit + industry patterns → product backlog
+  agents/                                  ← living: Cursor LOOP, Bugbot, prompts (update each RQ)
+    README.md
+    ORCHESTRATION.md
+    PROMPTS.md
+  REVIEW_PIPELINE_STAGING_SMOKE_VALIDATION.md ← 2026-07-27 staging e2e smoke + hotfix log
+  review-quality/                          ← post-R8: diff-first, trace, GitHub publish
+    README.md                              ← program index
+    REVIEW_QUALITY_FINDINGS.md             ← ① baseline
+    REVIEW_QUALITY_PEER_REVIEW.md          ← architecture peer review + pre-execution locks
+    REVIEW_QUALITY_STRUCTURAL_CONTEXT.md   ← LSP defer; cross-file roadmap (SC8)
   REVIEW_PIPELINE_GREPTILE_PR26_EMAIL.md   ← archived Greptile PR #26 email (triage reference)
   REVIEW_PIPELINE_PRODUCT_PATTERNS.md      ← Greptile-style patterns → Revy phases (defer/future map)
   code-review-arch_perplexity_searcj_advice_only.md  ← external architecture notes (advice only)
   GITHUB_WEBHOOK_DEV.md                    ← local ops
-  waves/
+    waves/
     README.md                              ← execution table only
-    REVIEW_PIPELINE_R*_EXECUTION.md        ← ③ after general plan peer-review
+    REVIEW_PIPELINE_R*_EXECUTION.md        ← R0–R8
+    REVIEW_QUALITY_EXECUTION.md            ← review-quality RQ0–RQ8
 ```
 
 ---
@@ -39,7 +50,7 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 | **Findings** | Retroactive update in [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) | Must be baseline-ready **before** execution |
 | **General plan** | Retroactive — [R0](./REVIEW_PIPELINE_R0_WEBHOOKS_GENERAL_PLAN.md), [R1](./REVIEW_PIPELINE_R1_REPO_SYNC_GENERAL_PLAN.md) | One file per phase — **all R0–R7 now exist** |
 | **Execution** | [R0](./waves/REVIEW_PIPELINE_R0_EXECUTION.md), [R1](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) shipped | Create after general plan; **manual peer-review** (separate agent) before `phase-execution` |
-| **Code** | R0–R7 on `main` (`review-r0-v1` … `review-r3-v1`; R4 [#24](https://github.com/raimondskrauklis/revy/pull/24); R5–R7 [#29](https://github.com/raimondskrauklis/revy/pull/29)); optional tags `review-r4-v1` … `review-r7-v1` | **R8** `phase-execution` on `feat/review-r8-automation` |
+| **Code** | R0–R8 on `main`; polish + hotfixes through #48; optional tags `review-r4-v1` … `review-r8-v1` | **Review quality** `phase-execution` on `feat/review-quality` |
 | **GitHub App** | [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) · [GITHUB_APP_TARGET_CONFIG.md](../utils/GITHUB_APP_TARGET_CONFIG.md) | Configure per phase map in target config |
 
 **No corners cut from R2 onward:** findings locked → general plan → execution plan → peer-review → implement → phase gate → tag.
@@ -53,6 +64,7 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 | 1 | [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) | Baseline, catalog, locked decisions |
 | 2 | `REVIEW_PIPELINE_R*_GENERAL_PLAN.md` | Per-phase goals — [index](./REVIEW_PIPELINE_GENERAL_PLAN.md) |
 | 3 | [waves/REVIEW_PIPELINE_R*_EXECUTION.md](./waves/) | Subphases + phase gate |
+| — | [REVIEW_PIPELINE_STAGING_SMOKE_VALIDATION.md](./REVIEW_PIPELINE_STAGING_SMOKE_VALIDATION.md) | 2026-07-27 staging e2e smoke + hotfix chronology |
 | — | [REVIEW_PIPELINE_PRODUCT_PATTERNS.md](./REVIEW_PIPELINE_PRODUCT_PATTERNS.md) | Industry patterns (Greptile reference) → Revy roadmap; nothing dropped |
 | — | [REVIEW_PIPELINE_PROGRAM.md](./REVIEW_PIPELINE_PROGRAM.md) | Branching, milestone tags |
 
@@ -71,6 +83,7 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 | R6 | [R6 GitHub publish](./REVIEW_PIPELINE_R6_GITHUB_PUBLISH_GENERAL_PLAN.md) | Checks, PR comments |
 | R7 | [R7 reviewer UI](./REVIEW_PIPELINE_R7_REVIEWER_UI_GENERAL_PLAN.md) | `features/reviewer/` |
 | R8 | [R8 automation](./REVIEW_PIPELINE_R8_AUTOMATION_GENERAL_PLAN.md) | Autostart, `@revy review`, workspace toggle |
+| Review quality | [review-quality/](./review-quality/README.md) | R1–R5 general plans; [index](./review-quality/REVIEW_QUALITY_GENERAL_PLAN.md) |
 
 ## Program status
 
@@ -86,6 +99,7 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 | **R6** | [waves/R6](./waves/REVIEW_PIPELINE_R6_EXECUTION.md) | shipped on `main` ([#29](https://github.com/raimondskrauklis/revy/pull/29)) |
 | **R7** | [waves/R7](./waves/REVIEW_PIPELINE_R7_EXECUTION.md) | shipped on `main` ([#29](https://github.com/raimondskrauklis/revy/pull/29)) |
 | **R8** | [waves/R8](./waves/REVIEW_PIPELINE_R8_EXECUTION.md) | in PR [#31](https://github.com/raimondskrauklis/revy/pull/31) — tag `review-r8-v1` after merge |
+| **Review quality** | [review-quality/](./review-quality/README.md) | findings baseline — diff-first + explainability + GitHub surface (post-R8) |
 
 [waves/README.md](./waves/README.md) — full execution table.
 
@@ -108,7 +122,6 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 
 ## Next (strict order)
 
-1. **Ops** — Track F in [recovery checklist](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md): migrations `0014`–`0018`, env keys, worker `-Q` list, staging e2e (R8 autostart + `@revy review`).
-2. **Merge R8** — [#31](https://github.com/raimondskrauklis/revy/pull/31); tag `review-r8-v1`; GitHub App **Issue comments** subscribed.
-3. **Tags (optional)** — `review-r4-v1` … `review-r7-v1` on `main` if not already tagged.
-4. **R9** — incremental index general plan when scoped.
+1. **Review quality** — `phase-execution` on `feat/review-quality` starting at RQ0 — [execution](./waves/REVIEW_QUALITY_EXECUTION.md) (peer-reviewed 2026-07-27).
+2. **Ops** — Track F in [recovery checklist](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md): migrations through `0026` after review-quality merge; env keys; worker `-Q` + **Celery beat** for O8 purge.
+3. **Tags (optional)** — `review-r4-v1` … `review-r8-v1`, then `review-quality-v1` after review-quality merge.

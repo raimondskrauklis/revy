@@ -20,7 +20,9 @@ REVIEW_SYSTEM_PROMPT = (
     '"suggestion":"optional single-line replacement or omit"}]}. '
     "Include suggestion only for a concrete single-line fix on an anchored line; "
     "one physical line only — omit for architectural or multi-hunk fixes. "
-    "Do not include style or lint findings. Return only valid JSON."
+    "Do not include style or lint findings. Return only valid JSON. "
+    "Prioritize issues in the unified diff hunks below; use supplemental context "
+    "only to validate cross-file impact."
 )
 
 

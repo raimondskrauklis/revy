@@ -1,0 +1,101 @@
+The bug fix is now clear. The underlying issue is being identified.
+
+The root cause is a race condition. Fallback diagnostics update index_mode and fallback_reason in memory. If tarball download fails, rollback erases those changes. The fix flushes the job before downloading the tarball when fallback is applied. This persists the diagnostics to the database before rollback can overwrite them.
+
+The proposed fix may be ineffective. SQLAlchemy flush() writes to the database within the current transaction but does not commit. A subsequent rollback() would erase those changes along with everything else. The flush might only survive if the session uses autocommit or nested transactions.
+
+The fix appears broken for production. The flush occurs inside the same transaction, so rollback undoes it. No higher-level commit exists to persist the changes.
+
+The test suite assumes the flush survives rollback. It simulates database persistence by saving fallback diagnostics to a persisted dictionary. Rollback then resets the job to diff mode. The test restores the saved values afterward. This assumption may not match real SQLAlchemy behavior.
+
+The flush fix may be a bug itself. Standard SQLAlchemy does not preserve flushes across rollback within the same transaction. The next step is to verify whether the Celery task commits separately or if the session expires objects after rollback.
+
+Checking transaction boundaries: whether flush survives rollback in this codebase.
+
+Checking index_tasks.py to verify whether transactions commit after run_index_job.
+
+Checking whether get_db_context commits on exit.
+
+run_index_job is called within get_db_context, which commits on successful exit.
+
+The flush-before-tarball workaround is ineffective. Tarball failure triggers a full transaction rollback, erasing the fallback_reason flush. The job reloads from the database after rollback, so the flush is lost.
+
+The rollback reloads the original database state, so the fallback_reason flush disappears entirely. The failure handler only updates status and error_message, leaving index_mode and fallback_reason untouched. The proposed fix is therefore not merely ineffective; it is a bug introduced by the change itself.
+
+Reconsidering whether this counts as a newly introduced bug. Since the change leaves production behavior unchanged, it may not satisfy the definition of a new bug. The focus shifts to whether flushing before the tarball call introduces any new incorrect behavior.
+
+The flush-before-tarball approach is semantically correct. A successful fallback write and commit preserves fallback_reason in the manifest, matching D13-F requirements. The rollback scenario remains unchanged from pre-fix behavior.
+
+SQLAlchemy rollback erases all flushed changes since the last commit. The flush-before-tarball workaround therefore cannot survive a rollback. A nested savepoint around the chunk work would isolate the fallback flush from the rollback, but the current code does not use that pattern.
+
+The real bug is the flawed logic inside the fix itself. The change assumes a flush survives a subsequent rollback, which it does not. The test suite reinforces this false assumption by simulating flush persistence. This is a logic bug introduced by the change.
+
+The flush-before-tarball change introduces no new production bugs. It causes no regression, worsens diagnostics, or creates partial state issues. SQLAlchemy flushes do not create savepoints, so the fallback flush is fully exposed to a subsequent rollback.
+
+The diff only modifies github_indexing.py. The failure handler _fail_index_job_after_chunk_work was not changed. This confirms the fix is incomplete. The flush cannot survive a rollback without a corresponding update to the failure handler.
+
+An alternative fix would be to commit the session before the tarball call. This would persist the fallback flush and the processing status together, avoiding the rollback problem entirely.
+
+Committing before the tarball call would prevent the fallback flush from being erased by rollback. After commit, the failure handler would roll back only the new transaction, leaving the persisted fallback intact.
+
+The bug is a LOGIC_BUG in the change itself. The flush does not survive rollback, and the test falsely validates this broken behavior. Edge cases were checked and appear sound.
+
+A new concern surfaced in the diff: the tarball download call now sits inside the httpx.AsyncClient context manager but outside the if use_diff guard. This means the fallback flush is always executed, even when diff mode is disabled, which is a structural inconsistency.
+
+The test mocks flush to persist fallback data and rollback to simulate losing uncommitted state. It then asserts the job still contains fallback after the failure path. Because the test reloads the job from the database after rollback, it appears to pass while actually validating a false assumption. This gives false confidence rather than exposing a real production bug.
+
+The flush-only change is confirmed insufficient. Severity is medium because the fallback flush is erased by rollback, violating D13-F requirements and losing manifest diagnostics.
+
+The test may be masking a deeper issue. The returned index_mode could come from an in-memory job object that was never reloaded from the database after rollback. Production behavior is still being verified.
+
+The failure handler reloads the job after rollback and only updates status and error_message. It never restores index_mode or fallback_reason, so those fields revert to their pre-rollback values. The test passes only because its mock restores persisted data after rollback; in a real session, the assertion would fail.
+
+The extra flush during fallback application is unlikely to cause row locking or concurrency issues, though it may add minor overhead. One edge case stands out: if the repository lacks a base SHA, the code forces full mode and marks the fallback as missing, which could misclassify an already-full index. The remaining scenarios—empty diff results, successful compare, and API errors—were verified as correct.
+
+Considering whether an alternative interpretation might change the bug assessment.
+
+Checking if SQLAlchemy rollback preserves stale in-memory attributes on the job object. The function returns a fresh instance fetched via session.get(), so the returned result reflects database state rather than the pre-rollback object. There may be an exception to this rule.
+
+The test mock validates intended flush behavior rather than actual SQLAlchemy semantics. The fix is broken for production. Stashing index_mode and fallback_reason before rollback, or passing them as parameters, would be a viable alternative.
+
+A different approach is being considered: committing the fallback changes before the tarball work begins. This would persist processing and fallback status, then start a fresh transaction for tarball operations. If tarball fails, the rollback would only undo the new transaction, leaving the previously committed data intact. The thought ends by questioning whether rollback would actually affect anything in that fresh transaction.
+
+Committing before tarball is viable. If tarball succeeds but embedding fails later, the fallback remains committed while only chunk changes are rolled back. Concurrent jobs on the same revision are unlikely. A brief partial state—processing with fallback reason but no chunks—could occur if the worker crashes after commit but before tarball completion, though this seems acceptable.
+
+The diff uses flush() rather than commit(). This confirms the bug. Committing before tarball was not added. The compare fallback path flushes fallback before tarball. Tarball succeeds and fallback persists. The embed failure scenario is being traced next.
+
+The rollback would also erase the fallback reason if embedding fails after the compare fallback step. The current fix only protects fallback data when the failure occurs before any successful completion, specifically during tarball failure. The original issue targeted exactly that scenario.
+
+Confirmed the flush helper only persists the fallback reason when it is non-null. The initial flush lacks this value, but the compare fallback flush includes it. Exception handling is cleanly separated: compare errors trigger fallback, while tarball errors route to the outer handler. No additional bugs were found.
+
+Verifying exact diff line numbers for the bug report. Checking whether AsyncSessionLocal uses expire_on_commit=False, which could alter how SQLAlchemy handles the flush and rollback. The rollback is intentionally scoped to chunk writes within the same transaction, so the flush must be visible to the rollback. The next step is to inspect the session configuration.
+
+The code uses standard transaction settings with autocommit and autoflush disabled.
+
+The production bug is clear: flush() persists data without committing, while rollback() undoes everything. The test suite mirrors this flaw by saving to a persisted dictionary during flush and restoring from it after rollback, which masks the real database persistence issue.
+
+The fallback path returns a fresh session object rather than a stale in-memory instance. The test also omits assertions that rollback and flush were invoked.
+
+The bug is a logic error. The flush before tarball download is discarded by rollback, so fallback_reason and index_mode remain lost when the tarball download fails after compare fallback. Severity is medium. It causes diagnostic loss on a specific failure path. It is not data corruption or a security issue. The change introduced incorrect logic by assuming flush alone would persist the state.
+
+Reconsidering whether this qualifies as a newly introduced bug. The fallback loss existed before the change. The new flush attempt is ineffective and produces the same broken outcome. The new test merely creates false confidence. The change does not introduce a regression.
+
+The flush adds an unnecessary database roundtrip with no benefit on the failure path. Because the fix is ineffective, it does not introduce a regression. However, the user instructed to report bugs when in doubt, and missing a bug is far more costly than a false positive. The new code attempts to persist fallback before tarball failure but fails to do so.
+
+The ineffective flush creates a false sense of security. It ships a broken fix as a completed P1 resolution. SQLAlchemy documentation confirms that rollback expires all objects, so session.get() always queries the database and never returns stale in-memory state.
+
+No other bugs were found in the diff. The docs file and test assertions are not production code. The missing base_sha handling is correct. A generic Exception raised by compare_commits is not caught by the except list, leaving use_diff as True and paths_to_index as None.
+
+The generic Exception path is pre-existing and outside the diff scope. The new flush does not regress the embed-failure path either; fallback was already lost there before the change.
+
+The bug is isolated to the tarball-failure path. The ineffective flush is at lines 428–429 of the diff. One additional scenario was considered and dismissed.
+
+No savepoints were found in github_indexing.
+
+One bug remains. I will provide the XML answer.
+
+Flush lost on rollback
+backend/app/services/github_indexing.py:428-429 · Severity: medium
+
+Description
+Pre-tarball session.flush() for compare-fallback index_mode and fallback_reason does not survive _fail_index_job_after_chunk_work, which calls session.rollback() before reloading the job. On tarball download failure after compare fallback, the job row still ends up failed without the intended fallback diagnostics, so D13-F visibility is not fixed.

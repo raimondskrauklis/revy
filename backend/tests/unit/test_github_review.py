@@ -12,6 +12,7 @@ from app.constants.enums import (
     FindingCategory,
     FindingSeverity,
     GitHubIndexJobStatus,
+    GitHubIndexMode,
     GitHubPullRequestState,
     GitHubReviewJudgeStatus,
     GitHubReviewRunStatus,
@@ -25,6 +26,22 @@ from app.models.github_review_run import GitHubReviewRunORM
 from app.schemas.github_review import GitHubReviewRunResponse
 from app.services import github_review
 from app.services.model_policy import ModelRef
+
+
+def _completed_index_job(*, revision_id: uuid.UUID, workspace_id: uuid.UUID) -> GitHubIndexJobORM:
+    return GitHubIndexJobORM(
+        revision_id=revision_id,
+        workspace_id=workspace_id,
+        status=GitHubIndexJobStatus.completed,
+        index_mode=GitHubIndexMode.diff,
+    )
+
+
+def _review_context_pack() -> github_review.ReviewContextPack:
+    return github_review.ReviewContextPack(
+        prompt="review prompt",
+        manifest={"index_mode": "diff", "changed_files": ["app/main.py"]},
+    )
 
 
 @pytest.mark.asyncio
@@ -60,11 +77,15 @@ async def test_create_review_run_index_required_raises():
             AsyncMock(),
         ):
             with patch(
-                "app.services.github_review.get_latest_index_job",
-                AsyncMock(return_value=None),
+                "app.services.github_review.index_job_in_progress",
+                AsyncMock(return_value=False),
             ):
-                with pytest.raises(ConflictError) as exc:
-                    await github_review.create_review_run(
+                with patch(
+                    "app.services.github_review.get_latest_completed_index_job",
+                    AsyncMock(return_value=None),
+                ):
+                    with pytest.raises(ConflictError) as exc:
+                        await github_review.create_review_run(
                         session,
                         workspace_id=workspace_id,
                         repository_id=uuid.uuid4(),
@@ -72,6 +93,45 @@ async def test_create_review_run_index_required_raises():
                         revision_id=revision_id,
                     )
     assert exc.value.error_code == "index_required"
+
+
+@pytest.mark.asyncio
+async def test_create_review_run_deep_profile_requires_full_index():
+    workspace_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    index_job = GitHubIndexJobORM(
+        revision_id=revision_id,
+        workspace_id=workspace_id,
+        status=GitHubIndexJobStatus.completed,
+        index_mode=GitHubIndexMode.diff,
+    )
+    session = AsyncMock()
+    session.scalar = AsyncMock(return_value=None)
+
+    with patch("app.services.github_review.settings") as mock_settings:
+        mock_settings.reviewer_llm_enabled.return_value = True
+        mock_settings.embeddings_enabled = True
+        mock_settings.github_api_enabled = True
+        mock_settings.revy_llm_provider = "moonshot"
+        with patch("app.services.github_review.ensure_revision_access", AsyncMock()):
+            with patch(
+                "app.services.github_review.index_job_in_progress",
+                AsyncMock(return_value=False),
+            ):
+                with patch(
+                    "app.services.github_review.get_latest_completed_index_job",
+                    AsyncMock(return_value=index_job),
+                ):
+                    with pytest.raises(ConflictError) as exc:
+                        await github_review.create_review_run(
+                            session,
+                            workspace_id=workspace_id,
+                            repository_id=uuid.uuid4(),
+                            pull_request_id=uuid.uuid4(),
+                            revision_id=revision_id,
+                            profile=ReviewProfile.deep,
+                        )
+    assert exc.value.error_code == "index_mode_mismatch"
 
 
 @pytest.mark.asyncio
@@ -93,33 +153,39 @@ async def test_create_review_run_review_in_progress_raises():
         mock_settings.revy_llm_provider = "moonshot"
         with patch("app.services.github_review.ensure_revision_access", AsyncMock()):
             with patch(
-                "app.services.github_review.get_latest_index_job",
-                AsyncMock(return_value=index_job),
+                "app.services.github_review.index_job_in_progress",
+                AsyncMock(return_value=False),
             ):
-                with pytest.raises(ConflictError) as exc:
-                    await github_review.create_review_run(
-                        session,
-                        workspace_id=workspace_id,
-                        repository_id=uuid.uuid4(),
-                        pull_request_id=uuid.uuid4(),
-                        revision_id=revision_id,
-                    )
+                with patch(
+                    "app.services.github_review.get_latest_completed_index_job",
+                    AsyncMock(return_value=index_job),
+                ):
+                    with pytest.raises(ConflictError) as exc:
+                        await github_review.create_review_run(
+                            session,
+                            workspace_id=workspace_id,
+                            repository_id=uuid.uuid4(),
+                            pull_request_id=uuid.uuid4(),
+                            revision_id=revision_id,
+                        )
     assert exc.value.error_code == "review_in_progress"
 
 
 def test_parse_finding_row_drops_style():
-    assert github_review._parse_finding_row(
+    row, reason = github_review._parse_finding_row(
         {
             "severity": "info",
             "category": "style",
             "title": "Lint",
             "message": "Format",
         }
-    ) is None
+    )
+    assert row is None
+    assert reason == "style_category"
 
 
 def test_parse_finding_row_accepts_valid():
-    parsed = github_review._parse_finding_row(
+    parsed, reason = github_review._parse_finding_row(
         {
             "severity": "error",
             "category": "security",
@@ -129,13 +195,14 @@ def test_parse_finding_row_accepts_valid():
             "start_line": 10,
         }
     )
+    assert reason is None
     assert parsed is not None
     assert parsed["severity"] == FindingSeverity.error
     assert parsed["category"] == FindingCategory.security
 
 
 def test_parse_finding_row_accepts_suggestion():
-    parsed = github_review._parse_finding_row(
+    parsed, reason = github_review._parse_finding_row(
         {
             "severity": "error",
             "category": "bug",
@@ -146,12 +213,13 @@ def test_parse_finding_row_accepts_suggestion():
             "suggestion": "return True",
         }
     )
+    assert reason is None
     assert parsed is not None
     assert parsed["suggestion"] == "return True"
 
 
 def test_parse_finding_row_drops_multiline_suggestion():
-    parsed = github_review._parse_finding_row(
+    parsed, reason = github_review._parse_finding_row(
         {
             "severity": "error",
             "category": "bug",
@@ -162,12 +230,13 @@ def test_parse_finding_row_drops_multiline_suggestion():
             "suggestion": "line one\nline two",
         }
     )
+    assert reason is None
     assert parsed is not None
     assert "suggestion" not in parsed
 
 
 def test_parse_finding_row_normalizes_end_line_zero():
-    parsed = github_review._parse_finding_row(
+    parsed, reason = github_review._parse_finding_row(
         {
             "severity": "error",
             "category": "bug",
@@ -179,6 +248,7 @@ def test_parse_finding_row_normalizes_end_line_zero():
             "suggestion": "return True",
         }
     )
+    assert reason is None
     assert parsed is not None
     assert parsed["end_line"] is None
     assert parsed["suggestion"] == "return True"
@@ -199,11 +269,11 @@ async def test_run_review_run_skips_non_pending_status():
     session = AsyncMock()
     session.get = AsyncMock(return_value=run)
 
-    with patch("app.services.github_review._collect_context_chunks", AsyncMock()) as collect_mock:
+    with patch("app.services.github_review.prepare_review_context", AsyncMock()) as context_mock:
         result = await github_review.run_review_run(session, review_run_id=review_run_id)
 
-    assert result.status == GitHubReviewRunStatus.processing
-    collect_mock.assert_not_awaited()
+    assert result.run.status == GitHubReviewRunStatus.processing
+    context_mock.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -251,23 +321,28 @@ async def test_run_review_run_stale_model_policy_marks_failed():
     session.get = AsyncMock(side_effect=[run, revision, pull_request])
     session.flush = AsyncMock()
 
+    index_job = _completed_index_job(revision_id=revision_id, workspace_id=workspace_id)
     with patch(
-        "app.services.github_review._collect_context_chunks",
-        AsyncMock(return_value=[]),
+        "app.services.github_review.get_latest_completed_index_job",
+        AsyncMock(return_value=index_job),
     ):
         with patch(
-            "app.services.github_review.resolve_model",
-            AsyncMock(
-                side_effect=ValidationError(
-                    message="Workspace model override is no longer valid",
-                    field="reviewer_standard",
-                )
-            ),
+            "app.services.github_review.prepare_review_context",
+            AsyncMock(return_value=_review_context_pack()),
         ):
-            result = await github_review.run_review_run(session, review_run_id=review_run_id)
+            with patch(
+                "app.services.github_review.resolve_model",
+                AsyncMock(
+                    side_effect=ValidationError(
+                        message="Workspace model override is no longer valid",
+                        field="reviewer_standard",
+                    )
+                ),
+            ):
+                result = await github_review.run_review_run(session, review_run_id=review_run_id)
 
-    assert result.status == GitHubReviewRunStatus.failed
-    assert "no longer valid" in (result.error_message or "")
+    assert result.run.status == GitHubReviewRunStatus.failed
+    assert "no longer valid" in (result.run.error_message or "")
 
 
 @pytest.mark.asyncio
@@ -316,22 +391,27 @@ async def test_run_review_run_invalid_json_marks_failed():
     session.flush = AsyncMock()
     session.execute = AsyncMock()
 
+    index_job = _completed_index_job(revision_id=revision_id, workspace_id=workspace_id)
     with patch(
-        "app.services.github_review._collect_context_chunks",
-        AsyncMock(return_value=[]),
+        "app.services.github_review.get_latest_completed_index_job",
+        AsyncMock(return_value=index_job),
     ):
         with patch(
-            "app.services.github_review.resolve_model",
-            AsyncMock(return_value=ModelRef(provider="moonshot", model_id="kimi-k2.7-code")),
+            "app.services.github_review.prepare_review_context",
+            AsyncMock(return_value=_review_context_pack()),
         ):
             with patch(
-                "app.services.github_review._call_llm",
-                AsyncMock(return_value="not-json"),
+                "app.services.github_review.resolve_model",
+                AsyncMock(return_value=ModelRef(provider="moonshot", model_id="kimi-k2.7-code")),
             ):
-                result = await github_review.run_review_run(session, review_run_id=review_run_id)
+                with patch(
+                    "app.services.github_review._call_llm",
+                    AsyncMock(return_value="not-json"),
+                ):
+                    result = await github_review.run_review_run(session, review_run_id=review_run_id)
 
-    assert result.status == GitHubReviewRunStatus.failed
-    assert result.error_message is not None
+    assert result.run.status == GitHubReviewRunStatus.failed
+    assert result.run.error_message is not None
 
 
 @pytest.mark.asyncio
@@ -400,22 +480,122 @@ async def test_run_review_run_happy_path_persists_findings():
         }
     )
 
+    index_job = _completed_index_job(revision_id=revision_id, workspace_id=workspace_id)
     with patch(
-        "app.services.github_review._collect_context_chunks",
-        AsyncMock(return_value=[]),
+        "app.services.github_review.get_latest_completed_index_job",
+        AsyncMock(return_value=index_job),
     ):
         with patch(
-            "app.services.github_review.resolve_model",
-            AsyncMock(return_value=ModelRef(provider="moonshot", model_id="kimi-k2.7-code")),
+            "app.services.github_review.prepare_review_context",
+            AsyncMock(return_value=_review_context_pack()),
         ):
             with patch(
-                "app.services.github_review._call_llm",
-                AsyncMock(return_value=llm_payload),
+                "app.services.github_review.resolve_model",
+                AsyncMock(return_value=ModelRef(provider="moonshot", model_id="kimi-k2.7-code")),
             ):
-                result = await github_review.run_review_run(session, review_run_id=review_run_id)
+                with patch(
+                    "app.services.github_review._call_llm",
+                    AsyncMock(return_value=llm_payload),
+                ):
+                    result = await github_review.run_review_run(session, review_run_id=review_run_id)
 
-    assert result.status == GitHubReviewRunStatus.completed
+    assert result.run.status == GitHubReviewRunStatus.completed
     assert session.add.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_run_review_run_persists_evidence_snippet_from_diff():
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    repository_id = uuid.uuid4()
+
+    run = GitHubReviewRunORM(
+        revision_id=revision_id,
+        workspace_id=workspace_id,
+        status=GitHubReviewRunStatus.pending,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    run.id = review_run_id
+
+    from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
+
+    revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="abc",
+    )
+    revision.id = revision_id
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=repository_id,
+        workspace_id=workspace_id,
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=1,
+        title="Fix bug",
+        state=GitHubPullRequestState.open,
+        head_sha="abc",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=1,
+    )
+    pull_request.id = pull_request_id
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, revision, pull_request])
+    session.flush = AsyncMock()
+    session.execute = AsyncMock()
+
+    added: list = []
+    session.add = MagicMock(side_effect=lambda obj: added.append(obj))
+
+    patch_body = "@@ -1,1 +1,2 @@\n-old\n+new_line\n"
+    context_pack = github_review.ReviewContextPack(
+        prompt="review prompt",
+        manifest={"index_mode": "diff"},
+        patches_by_file={"app/main.py": patch_body},
+    )
+    llm_payload = json.dumps(
+        {
+            "findings": [
+                {
+                    "severity": "error",
+                    "category": "bug",
+                    "title": "Bug",
+                    "message": "Bad change",
+                    "file_path": "app/main.py",
+                    "start_line": 1,
+                },
+            ]
+        }
+    )
+
+    index_job = _completed_index_job(revision_id=revision_id, workspace_id=workspace_id)
+    with patch(
+        "app.services.github_review.get_latest_completed_index_job",
+        AsyncMock(return_value=index_job),
+    ):
+        with patch(
+            "app.services.github_review.prepare_review_context",
+            AsyncMock(return_value=context_pack),
+        ):
+            with patch(
+                "app.services.github_review.resolve_model",
+                AsyncMock(return_value=ModelRef(provider="moonshot", model_id="kimi-k2.7-code")),
+            ):
+                with patch(
+                    "app.services.github_review._call_llm",
+                    AsyncMock(return_value=llm_payload),
+                ):
+                    result = await github_review.run_review_run(session, review_run_id=review_run_id)
+
+    assert result.run.status == GitHubReviewRunStatus.completed
+    assert len(added) == 1
+    assert added[0].evidence_snippet is not None
+    assert "new_line" in added[0].evidence_snippet
 
 
 @pytest.mark.asyncio
@@ -465,21 +645,26 @@ async def test_run_review_run_accepts_profile_string_from_db():
     session.execute = AsyncMock()
     session.add = MagicMock()
 
+    index_job = _completed_index_job(revision_id=revision_id, workspace_id=workspace_id)
     with patch(
-        "app.services.github_review._collect_context_chunks",
-        AsyncMock(return_value=[]),
+        "app.services.github_review.get_latest_completed_index_job",
+        AsyncMock(return_value=index_job),
     ):
         with patch(
-            "app.services.github_review.resolve_model",
-            AsyncMock(return_value=ModelRef(provider="moonshot", model_id="kimi-k2.7-code")),
+            "app.services.github_review.prepare_review_context",
+            AsyncMock(return_value=_review_context_pack()),
         ):
             with patch(
-                "app.services.github_review._call_llm",
-                AsyncMock(return_value='{"findings": []}'),
-            ) as llm_mock:
-                result = await github_review.run_review_run(session, review_run_id=review_run_id)
+                "app.services.github_review.resolve_model",
+                AsyncMock(return_value=ModelRef(provider="moonshot", model_id="kimi-k2.7-code")),
+            ):
+                with patch(
+                    "app.services.github_review._call_llm",
+                    AsyncMock(return_value='{"findings": []}'),
+                ) as llm_mock:
+                    result = await github_review.run_review_run(session, review_run_id=review_run_id)
 
-    assert result.status == GitHubReviewRunStatus.completed
+    assert result.run.status == GitHubReviewRunStatus.completed
     assert llm_mock.await_args.kwargs["profile"] == "standard"
 
 
@@ -531,20 +716,219 @@ async def test_run_review_run_raises_retryable_on_transient_llm_failure():
     response = httpx.Response(503, request=httpx.Request("POST", "https://api.moonshot.ai"))
     transient_error = httpx.HTTPStatusError("unavailable", request=response.request, response=response)
 
+    index_job = _completed_index_job(revision_id=revision_id, workspace_id=workspace_id)
     with patch(
-        "app.services.github_review._collect_context_chunks",
-        AsyncMock(return_value=[]),
+        "app.services.github_review.get_latest_completed_index_job",
+        AsyncMock(return_value=index_job),
     ):
         with patch(
-            "app.services.github_review.resolve_model",
-            AsyncMock(return_value=ModelRef(provider="moonshot", model_id="kimi-k2.7-code")),
+            "app.services.github_review.prepare_review_context",
+            AsyncMock(return_value=_review_context_pack()),
         ):
             with patch(
-                "app.services.github_review._call_llm",
-                AsyncMock(side_effect=transient_error),
+                "app.services.github_review.resolve_model",
+                AsyncMock(return_value=ModelRef(provider="moonshot", model_id="kimi-k2.7-code")),
             ):
-                with pytest.raises(WorkerRetryableError):
-                    await github_review.run_review_run(session, review_run_id=review_run_id)
+                with patch(
+                    "app.services.github_review._call_llm",
+                    AsyncMock(side_effect=transient_error),
+                ):
+                    with pytest.raises(WorkerRetryableError):
+                        await github_review.run_review_run(session, review_run_id=review_run_id)
+
+
+def test_build_unified_diff_truncates_largest_files_first():
+    from app.integrations.github_api import CompareFileChange
+
+    small_patch = "+" + ("a" * 100)
+    large_patch = "+" + ("b" * 200_000)
+    files = (
+        CompareFileChange(filename="small.py", status="modified", patch=small_patch),
+        CompareFileChange(filename="large.py", status="modified", patch=large_patch),
+    )
+
+    diff, truncated, omitted = github_review.build_unified_diff(files, max_bytes=8_000)
+
+    assert truncated is True
+    assert omitted == ["large.py"]
+    assert "small.py" in diff
+    assert "large.py" not in diff
+
+
+def test_extract_evidence_from_patch_around_line():
+    patch = """@@ -10,3 +10,4 @@
+ def foo():
+-    old()
++    new_call()
+     return x
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=12)
+    assert snippet is not None
+    assert "new_call" in snippet
+
+
+def test_resolve_evidence_snippet_prefers_diff_over_supplemental():
+    from app.schemas.github_indexing import GitHubChunkSearchResult
+
+    chunk = GitHubChunkSearchResult(
+        id=uuid.uuid4(),
+        file_path="app/main.py",
+        chunk_index=0,
+        content="retrieval fallback",
+        score=0.5,
+    )
+    supplemental = {
+        "app/main.py": github_review.ScopedChunkHit(
+            hit=chunk,
+            lens="logic bugs",
+            in_diff=True,
+            rank=1,
+        )
+    }
+    snippet = github_review.resolve_evidence_snippet(
+        file_path="app/main.py",
+        start_line=2,
+        patches_by_file={"app/main.py": "@@ -1,1 +1,2 @@\n-old\n+new_line\n"},
+        supplemental_top_by_file=supplemental,
+    )
+    assert snippet is not None
+    assert "new_line" in snippet
+    assert "retrieval fallback" not in snippet
+
+
+def test_resolve_evidence_snippet_uses_supplemental_when_hunk_misses():
+    from app.schemas.github_indexing import GitHubChunkSearchResult
+
+    chunk = GitHubChunkSearchResult(
+        id=uuid.uuid4(),
+        file_path="app/main.py",
+        chunk_index=0,
+        content="retrieval fallback",
+        score=0.5,
+    )
+    supplemental = {
+        "app/main.py": github_review.ScopedChunkHit(
+            hit=chunk,
+            lens="logic bugs",
+            in_diff=True,
+            rank=1,
+        )
+    }
+    snippet = github_review.resolve_evidence_snippet(
+        file_path="app/main.py",
+        start_line=99,
+        patches_by_file={"app/main.py": "@@ -1,1 +1,2 @@\n-old\n+new_line\n"},
+        supplemental_top_by_file=supplemental,
+    )
+    assert snippet == "retrieval fallback"
+
+
+def test_resolve_evidence_snippet_uses_supplemental_without_patch():
+    from app.schemas.github_indexing import GitHubChunkSearchResult
+
+    chunk = GitHubChunkSearchResult(
+        id=uuid.uuid4(),
+        file_path="app/other.py",
+        chunk_index=0,
+        content="chunk body",
+        score=0.5,
+    )
+    supplemental = {
+        "app/other.py": github_review.ScopedChunkHit(
+            hit=chunk,
+            lens="logic bugs",
+            in_diff=False,
+            rank=1,
+        )
+    }
+    snippet = github_review.resolve_evidence_snippet(
+        file_path="app/other.py",
+        start_line=10,
+        patches_by_file={},
+        supplemental_top_by_file=supplemental,
+    )
+    assert snippet == "chunk body"
+
+
+def test_build_review_prompt_orders_diff_before_supplemental():
+    from app.schemas.github_indexing import GitHubChunkSearchResult
+
+    chunk = GitHubChunkSearchResult(
+        id=uuid.uuid4(),
+        file_path="app/main.py",
+        chunk_index=0,
+        content="helper context",
+        score=0.9,
+    )
+    supplemental = [
+        github_review.ScopedChunkHit(hit=chunk, lens="logic bugs", in_diff=True, rank=1),
+    ]
+    prompt = github_review._build_review_prompt(
+        pr_title="Fix handler",
+        pr_body=None,
+        head_sha="head123",
+        base_ref="main",
+        head_ref="feature",
+        index_mode=GitHubIndexMode.diff,
+        changed_files=["app/main.py"],
+        unified_diff="@@ patch @@",
+        supplemental=supplemental,
+    )
+
+    diff_pos = prompt.index("Unified diff (primary):")
+    supplemental_pos = prompt.index("Supplemental context (bounded):")
+    assert diff_pos < supplemental_pos
+    assert "@@ patch @@" in prompt
+    assert "helper context" in prompt
+
+
+def test_retrieval_file_paths_excludes_tests_unless_pr_touches_tests():
+    changed = frozenset({"app/main.py", "tests/unit/test_main.py"})
+    assert "tests/unit/test_main.py" in github_review._retrieval_file_paths(changed)
+
+    only_app = frozenset({"app/main.py"})
+    assert github_review._retrieval_file_paths(only_app) == frozenset({"app/main.py"})
+
+
+def test_parse_finding_rows_returns_parse_report():
+    rows, report = github_review.parse_finding_rows(
+        [
+            {
+                "severity": "error",
+                "category": "bug",
+                "title": "Bug",
+                "message": "Details",
+            },
+            {
+                "severity": "info",
+                "category": "style",
+                "title": "Format",
+                "message": "Ignored",
+            },
+            "not-a-dict",
+        ]
+    )
+
+    assert len(rows) == 1
+    assert report["parsed_count"] == 1
+    assert report["dropped_count"] == 2
+    assert report["drop_reasons"]["style_category"] == 1
+    assert report["drop_reasons"]["invalid_row"] == 1
+
+
+def test_build_retrieval_manifest_includes_sc3_defaults():
+    manifest = github_review.build_retrieval_manifest(
+        index_mode=GitHubIndexMode.diff,
+        changed_files=["app/main.py"],
+        diff_truncated=False,
+        omitted_files=[],
+        fallback_reason=None,
+        supplemental=[],
+    )
+
+    assert manifest["structural_context_mode"] == "none"
+    assert manifest["structural_context_attempted"] is False
+    assert manifest["changed_symbols"] == []
 
 
 def test_review_run_polish_defaults():

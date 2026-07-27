@@ -2,7 +2,7 @@
 
 **Purpose:** Catalog **good patterns** from the AI code-review category (Greptile is the primary public reference) and map each to **Revy’s phase + status**. Nothing here is dropped — items are **shipped**, **in flight**, **planned**, or **deferred**.
 
-**Not in scope:** Greptile vendor config (`.greptile/`, `greptile.json`) in this repo. Revy owns product behavior via DB + workspace policy + findings registry.
+**Not in scope:** Greptile vendor config (`.greptile/`, `greptile.json`) in **customer** repos — Revy owns product behavior via DB + workspace policy. **Exception:** this **Revy repo** uses `.greptile/files.json` for dogfood during program PRs ([review context](./review-quality/REVIEW_QUALITY_REVIEW_CONTEXT.md)).
 
 **Priority:** R4–R7 implemented on PR stack [#24](https://github.com/raimondskrauklis/revy/pull/24)–[#27](https://github.com/raimondskrauklis/revy/pull/27); merge to `main` then iterate on deferred rows.
 
@@ -28,12 +28,12 @@
 | Pattern | Greptile-style reference | Revy approach | Status |
 |---------|-------------------------|---------------|--------|
 | Repo-wide context beyond diff | Graph / symbol index + agent swarm | R3 pgvector chunks + R4 lens retrieval | **shipped** (R3–R4) |
-| Full call graph | Deterministic cross-file callers | Embeddings first; optional symbol index if staging misses bugs | **defer** — parking lot |
+| Full call graph | Deterministic cross-file callers | Embeddings + judge v1; **RQ-STRUCT-1** grep/import bridge v1.1; graph/agent v2 | **defer** v1 — [structural context](./review-quality/REVIEW_QUALITY_STRUCTURAL_CONTEXT.md) |
 | Reranker on retrieval | N/A (graph-heavy) | API/local reranker (`R3-Q3`) | **defer** |
 | Auto-ingest rule files | Reads `CLAUDE.md`, `.cursor/rules` | Workspace/repo context attachments in policy | **future** (R8+ policy) |
 | External tool context | Jira, Notion connectors | Integration layer post-core | **future** |
 
-**Bet for R4–R6:** semantic retrieval + judge beats building call-graph parity on day one. Revisit if recall gaps show up in dogfood.
+**Bet for R4–R6:** semantic retrieval + judge beats building call-graph parity on day one. **Updated (review-quality):** still true for v1; cross-file recall via [RQ-STRUCT-1](./review-quality/REVIEW_QUALITY_STRUCTURAL_CONTEXT.md) before Greptile “impact beyond diff” claims.
 
 ---
 
@@ -61,10 +61,11 @@
 |---------|-------------------------|---------------|--------|
 | Same issue every re-review | Learning + dedupe over time | R5 fingerprints + supersede / resolve | **shipped** |
 | Idempotent GitHub surface | Known pain: new summary comment each push | R6-Q1: update check run + summary **in place** per revision | **shipped** |
-| Human dismiss / ack | Resolve threads, 👍/👎 | R7 dismiss/acknowledge; feeds future precision metrics | **shipped** (UI); metrics **future** |
+| Check run **in progress** on PR | Greptile/Bugbot show spinner while reviewing | **G10:** `in_progress` at pipeline start; `completed` at publish (RQ3/RQ7) | **in flight** |
+| Human dismiss / ack | Resolve threads, 👍/👎 | R7 execution **deferred** dismiss/ack → **R7.6**; judge `resolved` exists | **defer** — [review-quality peer review](./review-quality/REVIEW_QUALITY_PEER_REVIEW.md) M2 |
 | Learn from team comments | Memory from PR comments, reactions, commits | Post-R7 analytics + optional rule suggestions | **future** (R8+) |
 | Inferred custom rules | AI-generated rules from behavior | `workspace_review_policy` suggestions | **future** (R8+) |
-| Precision metrics | Internal addressed-rate tracking | Dismiss / addressed rate after R7 flows | **future** |
+| Precision metrics | Internal addressed-rate tracking | **Review quality** M2 — diff + `judge_dismissed`; human dismiss R7.6 | **in flight** — [execution](./waves/REVIEW_QUALITY_EXECUTION.md) |
 
 ---
 
@@ -88,6 +89,7 @@
 | Pattern | Greptile-style reference | Revy approach | Status |
 |---------|-------------------------|---------------|--------|
 | Custom rules in plain English | `.greptile/rules`, cascading dirs | `workspace_review_policy` in DB (EN+LV) | **future** (R8+) |
+| Planning-doc context for reviewers | Greptile `files.json` + rules | Dogfood: RC0 in RQ0; product: RC4 `.revy/rules` | **in flight** (RC0) / **future** (RC4) |
 | Per-directory strictness | Cascading `.greptile/` overrides | Repo/path-scoped policy rows | **future** |
 | Workspace SaaS + audit | Limited in vendor SaaS | Workspace tenancy + `record_audit` on review trigger | **shipped** |
 | Plan / volume gates | Credits per seat | Q9 plan gates after R4 cost data | **defer** |

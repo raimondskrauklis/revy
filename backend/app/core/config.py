@@ -96,7 +96,6 @@ class Settings(BaseSettings):
     revy_moonshot_model_standard: str = "kimi-k2.7-code"
     revy_moonshot_model_deep: str = "kimi-k3"
     revy_moonshot_model_critical: str = "kimi-k3"
-    revy_moonshot_max_completion_tokens: int = 8192
     revy_anthropic_model: str = "claude-sonnet-5"
     moonshot_api_key: str | None = None
     anthropic_api_key: str | None = None
@@ -135,6 +134,9 @@ class Settings(BaseSettings):
     # Data export — ACCOUNT_LIFECYCLE.md
     export_storage_path: str = "/tmp/revy/exports"
     export_ttl_days: int = 7
+
+    # Pipeline trace retention — review-quality O8
+    pipeline_retention_days: int = 90
 
     # Review policy
     revy_default_review_profile: str = "standard"

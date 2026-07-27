@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.constants.enums import GitHubIndexJobStatus, GitHubIndexJobTriggerSource
+from app.constants.enums import (
+    GitHubIndexJobStatus,
+    GitHubIndexJobTriggerSource,
+    GitHubIndexMode,
+)
 from app.models.base import TimestampedModel
 
 
@@ -37,4 +41,18 @@ class GitHubIndexJobORM(TimestampedModel):
         nullable=False,
         default=GitHubIndexJobTriggerSource.manual,
         server_default=GitHubIndexJobTriggerSource.manual.value,
+    )
+    index_mode: Mapped[GitHubIndexMode] = mapped_column(
+        String(length=32),
+        nullable=False,
+        default=GitHubIndexMode.full,
+        server_default=GitHubIndexMode.full.value,
+    )
+    fallback_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    warning_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    index_incremental: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
     )
