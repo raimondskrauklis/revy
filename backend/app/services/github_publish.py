@@ -246,6 +246,42 @@ async def get_latest_publish_job_for_revision(
     )
 
 
+def deserialize_inline_thread_map(raw: object) -> dict[str, int]:
+    """Read legacy int or v2 {comment_id, thread_id?} entries into a comment-id map."""
+    if not isinstance(raw, dict):
+        return {}
+    merged: dict[str, int] = {}
+    for fingerprint, value in raw.items():
+        if not isinstance(fingerprint, str):
+            continue
+        if isinstance(value, int):
+            merged[fingerprint] = value
+        elif isinstance(value, dict):
+            comment_id = value.get("comment_id")
+            if isinstance(comment_id, int):
+                merged[fingerprint] = comment_id
+    return merged
+
+
+def serialize_inline_thread_map(
+    comment_map: dict[str, int],
+    *,
+    prior_v2: dict | None = None,
+) -> dict[str, dict[str, int | str]]:
+    """Persist v2 thread-map entries; preserve thread_id from prior_v2 when fingerprint unchanged."""
+    prior = prior_v2 if isinstance(prior_v2, dict) else {}
+    result: dict[str, dict[str, int | str]] = {}
+    for fingerprint, comment_id in comment_map.items():
+        entry: dict[str, int | str] = {"comment_id": comment_id}
+        prior_entry = prior.get(fingerprint)
+        if isinstance(prior_entry, dict):
+            thread_id = prior_entry.get("thread_id")
+            if isinstance(thread_id, str) and thread_id:
+                entry["thread_id"] = thread_id
+        result[fingerprint] = entry
+    return result
+
+
 def _load_inline_thread_map(jobs: list[GitHubPublishJobORM]) -> dict[str, int]:
     merged: dict[str, int] = {}
     for prior in jobs:
@@ -253,18 +289,40 @@ def _load_inline_thread_map(jobs: list[GitHubPublishJobORM]) -> dict[str, int]:
         if not isinstance(summary, dict):
             continue
         inline = summary.get("github_inline_threads")
-        if isinstance(inline, dict):
-            for fingerprint, comment_id in inline.items():
-                if isinstance(fingerprint, str) and isinstance(comment_id, int):
-                    merged[fingerprint] = comment_id
+        merged.update(deserialize_inline_thread_map(inline))
     return merged
 
 
-async def _load_prior_inline_thread_map(
+def _load_v2_inline_thread_map(jobs: list[GitHubPublishJobORM]) -> dict[str, dict[str, int | str]]:
+    merged: dict[str, dict[str, int | str]] = {}
+    for prior in jobs:
+        summary = prior.summary_json
+        if not isinstance(summary, dict):
+            continue
+        inline = summary.get("github_inline_threads")
+        if not isinstance(inline, dict):
+            continue
+        for fingerprint, value in inline.items():
+            if not isinstance(fingerprint, str):
+                continue
+            if isinstance(value, int):
+                merged[fingerprint] = {"comment_id": value}
+            elif isinstance(value, dict):
+                comment_id = value.get("comment_id")
+                if isinstance(comment_id, int):
+                    entry: dict[str, int | str] = {"comment_id": comment_id}
+                    thread_id = value.get("thread_id")
+                    if isinstance(thread_id, str) and thread_id:
+                        entry["thread_id"] = thread_id
+                    merged[fingerprint] = entry
+    return merged
+
+
+async def _fetch_prior_completed_publish_jobs(
     session: AsyncSession,
     *,
     pull_request_id: UUID,
-) -> dict[str, int]:
+) -> list[GitHubPublishJobORM]:
     revision_ids = list(
         await session.scalars(
             select(GitHubPullRequestRevisionORM.id).where(
@@ -273,8 +331,8 @@ async def _load_prior_inline_thread_map(
         )
     )
     if not revision_ids:
-        return {}
-    jobs = list(
+        return []
+    return list(
         await session.scalars(
             select(GitHubPublishJobORM)
             .where(
@@ -284,6 +342,14 @@ async def _load_prior_inline_thread_map(
             .order_by(GitHubPublishJobORM.created_at.asc())
         )
     )
+
+
+async def _load_prior_inline_thread_map(
+    session: AsyncSession,
+    *,
+    pull_request_id: UUID,
+) -> dict[str, int]:
+    jobs = await _fetch_prior_completed_publish_jobs(session, pull_request_id=pull_request_id)
     return _load_inline_thread_map(jobs)
 
 
@@ -589,13 +655,18 @@ async def run_publish_job(
     )
     check_summary = formatted.check_summary
     issue_comment = formatted.issue_comment
-    inline_threads = await _load_prior_inline_thread_map(
+    prior_jobs = await _fetch_prior_completed_publish_jobs(
         session,
         pull_request_id=pull_request.id,
     )
+    inline_threads = _load_inline_thread_map(prior_jobs)
+    prior_v2 = _load_v2_inline_thread_map(prior_jobs)
     job.summary_json = {
         **formatted.summary_json,
-        "github_inline_threads": inline_threads,
+        "github_inline_threads": serialize_inline_thread_map(
+            inline_threads,
+            prior_v2=prior_v2,
+        ),
     }
     owner, repo_name = repository.full_name.split("/", 1)
     external_id = github_api.build_check_run_external_id(
@@ -795,9 +866,13 @@ async def run_publish_job(
                             )
                             continue
                         raise
+                prior_v2 = (job.summary_json or {}).get("github_inline_threads")
                 job.summary_json = {
                     **(job.summary_json or {}),
-                    "github_inline_threads": inline_threads,
+                    "github_inline_threads": serialize_inline_thread_map(
+                        inline_threads,
+                        prior_v2=prior_v2 if isinstance(prior_v2, dict) else None,
+                    ),
                 }
                 job.inline_comments_posted = True
                 await _checkpoint_publish_surface(session, persist=persist_github_surface)

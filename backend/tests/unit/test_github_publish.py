@@ -184,6 +184,34 @@ def test_load_inline_thread_map_keeps_latest_comment_id():
     assert github_publish._load_inline_thread_map([older, newer]) == {"fp": 999}
 
 
+def test_deserialize_inline_thread_map_legacy_int():
+    assert github_publish.deserialize_inline_thread_map({"fp": 100}) == {"fp": 100}
+
+
+def test_deserialize_inline_thread_map_v2():
+    raw = {"fp": {"comment_id": 200, "thread_id": "PRRT_x"}}
+    assert github_publish.deserialize_inline_thread_map(raw) == {"fp": 200}
+
+
+def test_serialize_inline_thread_map_emits_v2():
+    result = github_publish.serialize_inline_thread_map({"fp": 100})
+    assert result == {"fp": {"comment_id": 100}}
+
+
+def test_serialize_inline_thread_map_preserves_thread_id():
+    prior_v2 = {"fp": {"comment_id": 99, "thread_id": "PRRT_keep"}}
+    result = github_publish.serialize_inline_thread_map({"fp": 100}, prior_v2=prior_v2)
+    assert result == {"fp": {"comment_id": 100, "thread_id": "PRRT_keep"}}
+
+
+def test_load_inline_thread_map_reads_v2_entries():
+    job = MagicMock()
+    job.summary_json = {
+        "github_inline_threads": {"fp": {"comment_id": 200, "thread_id": "PRRT_x"}},
+    }
+    assert github_publish._load_inline_thread_map([job]) == {"fp": 200}
+
+
 @pytest.mark.asyncio
 async def test_run_publish_job_creates_check_run():
     publish_job_id = uuid.uuid4()

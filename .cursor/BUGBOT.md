@@ -2,11 +2,11 @@
 
 When reviewing **backend** changes that touch publish / formatter / pipeline code, treat these as authoritative:
 
-**GitHub surface (active program):**
+**GitHub surface hardening (active program):**
 
-- [GITHUB_SURFACE_EXECUTION.md](../docs/review-pipeline/post-review-quality/GITHUB_SURFACE_EXECUTION.md) — P0–P4 scope, gates, dogfood rubric
-- [POST_REVIEW_QUALITY_FINDINGS.md](../docs/review-pipeline/post-review-quality/POST_REVIEW_QUALITY_FINDINGS.md) — platform baseline, track A/B
-- [POST_REVIEW_QUALITY_GENERAL_PLAN.md](../docs/review-pipeline/post-review-quality/POST_REVIEW_QUALITY_GENERAL_PLAN.md) — phase goals
+- [GITHUB_SURFACE_HARDENING_EXECUTION.md](../docs/review-pipeline/github-surface-hardening/GITHUB_SURFACE_HARDENING_EXECUTION.md) — P0–P4 scope, gates, dogfood rubric
+- [GITHUB_SURFACE_HARDENING_FINDINGS.md](../docs/review-pipeline/github-surface-hardening/GITHUB_SURFACE_HARDENING_FINDINGS.md) — GH-* gaps, Option A resolve
+- [GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md](../docs/review-pipeline/github-surface-hardening/GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md) — phase goals
 
 **Review-quality engine (shipped on `main`):**
 
@@ -19,4 +19,4 @@ When reviewing **backend** changes that touch publish / formatter / pipeline cod
 - [CURSOR_AGENT_WORKFLOW.md](../docs/utils/CURSOR_AGENT_WORKFLOW.md) — roles + verbs quick ref
 - [agents/prompts/ROLES.md](../docs/review-pipeline/agents/prompts/ROLES.md) — master/reviewer boundaries
 
-**Program:** GitHub surface on feature branch `feat/revy-github` — Greptile-comparable L1–L3 on PR branch pushes (pre-merge autostart). **Status:** P0–P4 code + doc sync shipped; dogfood rows pending on real PR push.
+**Program:** GitHub surface hardening on feature branch `feat/github-surface-hardening` — thread auto-resolve (GH-1), GraphQL scale, publish test harness.

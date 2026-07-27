@@ -12,7 +12,7 @@
 
 | Phase | Focus | Execution | Status |
 |-------|--------|-----------|--------|
-| P0 — Foundations | Thread map v2 + Greptile/Bugbot | [GITHUB_SURFACE_HARDENING_P0_EXECUTION.md](./GITHUB_SURFACE_HARDENING_P0_EXECUTION.md) | pending |
+| P0 — Foundations | Thread map v2 + Greptile/Bugbot | [GITHUB_SURFACE_HARDENING_P0_EXECUTION.md](./GITHUB_SURFACE_HARDENING_P0_EXECUTION.md) | Done (d61f4ed) |
 | P1 — Auto-resolve | GH-1, GH-1b (Option A) | [GITHUB_SURFACE_HARDENING_P1_EXECUTION.md](./GITHUB_SURFACE_HARDENING_P1_EXECUTION.md) | pending |
 | P2 — GraphQL scale | GH-2, GH-3 | [GITHUB_SURFACE_HARDENING_P2_EXECUTION.md](./GITHUB_SURFACE_HARDENING_P2_EXECUTION.md) | pending |
 | P3 — Edge cases | GH-4, GH-5 | [GITHUB_SURFACE_HARDENING_P3_EXECUTION.md](./GITHUB_SURFACE_HARDENING_P3_EXECUTION.md) | pending |
