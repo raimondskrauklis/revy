@@ -9,6 +9,7 @@ from kombu.exceptions import OperationalError
 
 from app.core.database import get_db_context
 from app.core.logging import get_logger
+from app.core.worker_retries import classify_transient_error
 from app.services.github_publish import (
     PublishJobRetryableError,
     mark_publish_job_failed,
@@ -17,6 +18,7 @@ from app.services.github_publish import (
 )
 from app.workers.async_runner import run_worker_async
 from app.workers.celery_app import celery_app
+from app.workers.task_retries import run_with_retryable_failure
 
 logger = get_logger(__name__)
 
@@ -65,7 +67,7 @@ async def _run_publish_review_run_inline(publish_job_id: str) -> None:
     except asyncio.CancelledError:
         await _finalize_inline_publish_failure(publish_job_id, "inline publish cancelled")
         raise
-    except (PublishJobRetryableError, Exception) as exc:  # noqa: BLE001
+    except (PublishJobRetryableError, Exception) as exc:  # noqa: BLE001 — inline fallback has no Celery retry
         await _finalize_inline_publish_failure(publish_job_id, str(exc))
 
 
@@ -138,26 +140,23 @@ def _finalize_publish_failure(
     queue="github_publish",
 )
 def publish_review_run(self, publish_job_id: str) -> None:
-    try:
-        run_worker_async(_execute_publish_review_run(publish_job_id))
-    except (PublishJobRetryableError, Exception) as exc:
-        logger.error(
-            "github_publish_task_failed",
-            extra={
-                "publish_job_id": publish_job_id,
-                "error": str(exc),
-                "retries": self.request.retries,
-            },
-        )
-        _finalize_publish_failure(
-            publish_job_id=publish_job_id,
-            exc=exc,
-            retries=self.request.retries,
-            max_retries=self.max_retries,
-        )
-        if self.request.retries < self.max_retries:
-            raise self.retry(exc=exc, countdown=60 * (2**self.request.retries)) from exc
-        raise
+    async def _mark_failed(error_message: str) -> None:
+        async with get_db_context() as session:
+            await mark_publish_job_failed(
+                session,
+                publish_job_id=UUID(publish_job_id),
+                error_message=error_message,
+            )
+            await session.commit()
+
+    run_with_retryable_failure(
+        self,
+        max_retries=self.max_retries,
+        run=lambda: _execute_publish_review_run(publish_job_id),
+        mark_permanent_failure=_mark_failed,
+        log_context={"publish_job_id": publish_job_id},
+        logger=logger,
+    )
 
 
 @celery_app.task(
@@ -202,6 +201,6 @@ def publish_for_review_run(self, review_run_id: str) -> None:
             retries=self.request.retries,
             max_retries=self.max_retries,
         )
-        if self.request.retries < self.max_retries:
+        if classify_transient_error(exc) is not None and self.request.retries < self.max_retries:
             raise self.retry(exc=exc, countdown=60 * (2**self.request.retries)) from exc
         raise

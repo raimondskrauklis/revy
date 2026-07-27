@@ -24,6 +24,7 @@ from app.core.exceptions import (
     ValidationError,
 )
 from app.core.logging import get_logger
+from app.core.worker_retries import classify_transient_error
 from app.integrations import llm_dispatch, moonshot_review
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
@@ -324,7 +325,23 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> GitHu
         run.status = GitHubReviewRunStatus.completed
         await session.flush()
         return run
-    except (httpx.HTTPError, ServiceUnavailableError, ValidationError) as exc:
+    except ValidationError as exc:
+        logger.error(
+            "github_review_run_failed",
+            extra={"review_run_id": str(review_run_id), "error": str(exc)},
+        )
+        run.status = GitHubReviewRunStatus.failed
+        run.error_message = str(exc)[:2000]
+        await session.flush()
+        return run
+    except (httpx.HTTPError, ServiceUnavailableError) as exc:
+        retryable = classify_transient_error(exc)
+        if retryable is not None:
+            logger.warning(
+                "github_review_run_transient_failure",
+                extra={"review_run_id": str(review_run_id), "error": str(exc)},
+            )
+            raise retryable from exc
         logger.error(
             "github_review_run_failed",
             extra={"review_run_id": str(review_run_id), "error": str(exc)},

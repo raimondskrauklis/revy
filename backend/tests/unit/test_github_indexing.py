@@ -318,7 +318,7 @@ async def test_run_index_job_preserves_chunks_when_embed_fails():
 
 
 @pytest.mark.asyncio
-async def test_run_index_job_resets_pending_on_rate_limit():
+async def test_run_index_job_marks_failed_on_rate_limit():
     session, job, revision = _index_job_fixture()
     response = MagicMock()
     response.status_code = 429
@@ -345,11 +345,10 @@ async def test_run_index_job_resets_pending_on_rate_limit():
                             AsyncMock(side_effect=rate_limit_error),
                         ):
                             with patch("pathlib.Path.exists", return_value=False):
-                                with pytest.raises(httpx.HTTPStatusError):
-                                    await run_index_job(session, index_job_id=job.id)
+                                result = await run_index_job(session, index_job_id=job.id)
 
-    assert job.status == GitHubIndexJobStatus.pending
-    assert job.error_message is None
+    assert result.status == GitHubIndexJobStatus.failed
+    assert result.error_message is not None
     session.execute.assert_not_awaited()
 
 

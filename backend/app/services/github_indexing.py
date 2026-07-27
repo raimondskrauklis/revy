@@ -146,6 +146,22 @@ def enqueue_index_job(index_job_id: UUID) -> None:
     index_pull_request_revision.delay(str(index_job_id))
 
 
+async def mark_index_job_failed(
+    session: AsyncSession,
+    *,
+    index_job_id: UUID,
+    error_message: str,
+) -> None:
+    job = await session.get(GitHubIndexJobORM, index_job_id)
+    if job is None:
+        return
+    if job.status == GitHubIndexJobStatus.completed:
+        return
+    job.status = GitHubIndexJobStatus.failed
+    job.error_message = error_message[:2000]
+    await session.flush()
+
+
 async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubIndexJobORM:
     job = await session.get(GitHubIndexJobORM, index_job_id)
     if job is None:
@@ -243,19 +259,19 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
         await session.flush()
         return job
     except httpx.HTTPStatusError as exc:
-        if exc.response.status_code in (429, 503):
-            logger.warning(
-                "github_index_job_transient_failure",
-                extra={
-                    "index_job_id": str(index_job_id),
-                    "status_code": exc.response.status_code,
-                    "error": str(exc),
-                },
-            )
-            job.status = GitHubIndexJobStatus.pending
-            job.error_message = None
-            await session.flush()
-            raise
+        logger.error(
+            "github_index_job_failed",
+            extra={
+                "index_job_id": str(index_job_id),
+                "error": str(exc),
+                "status_code": exc.response.status_code,
+            },
+        )
+        job.status = GitHubIndexJobStatus.failed
+        job.error_message = str(exc)[:2000]
+        await session.flush()
+        return job
+    except httpx.TimeoutException as exc:
         logger.error(
             "github_index_job_failed",
             extra={"index_job_id": str(index_job_id), "error": str(exc)},
@@ -264,15 +280,6 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
         job.error_message = str(exc)[:2000]
         await session.flush()
         return job
-    except httpx.TimeoutException as exc:
-        logger.warning(
-            "github_index_job_transient_failure",
-            extra={"index_job_id": str(index_job_id), "error": str(exc)},
-        )
-        job.status = GitHubIndexJobStatus.pending
-        job.error_message = None
-        await session.flush()
-        raise
     except (OSError, RuntimeError, httpx.HTTPError, ServiceUnavailableError) as exc:
         logger.error("github_index_job_failed", extra={"index_job_id": str(index_job_id), "error": str(exc)})
         job.status = GitHubIndexJobStatus.failed
