@@ -985,7 +985,8 @@ async def _flush_publish_surface(
     installation: GitHubInstallationORM,
     persist_github_surface: bool,
     retry_posted_inline: dict[str, int] | None = None,
-) -> None:
+    run: GitHubReviewRunORM,
+) -> GitHubPublishJobORM | None:
     inline_threads = dict(build.inline_threads)
     retry_posted = retry_posted_inline or {}
 
@@ -1100,6 +1101,17 @@ async def _flush_publish_surface(
             )
             job.github_comment_id = comment_id
 
+        await _commit_publish_job_progress(session)
+
+        skipped_before_inline = await _recheck_publish_authority_before_flush(
+            session,
+            job,
+            run,
+            pull_request,
+        )
+        if skipped_before_inline is not None:
+            return skipped_before_inline
+
         inline_thread_ids: dict[str, str] = {}
         if build.post_inline:
             for spec in build.inline_posts:
@@ -1138,7 +1150,7 @@ async def _flush_publish_surface(
                             thread_ids=inline_thread_ids,
                         ),
                     }
-                    await _commit_inline_retry_progress(session)
+                    await _commit_publish_job_progress(session)
                 except httpx.HTTPStatusError as exc:
                     if exc.response.status_code in (404, 422):
                         logger.warning(
@@ -1168,6 +1180,13 @@ async def _flush_publish_surface(
                 }
 
         await _checkpoint_publish_surface(session, persist=persist_github_surface)
+    return None
+
+
+async def _commit_publish_job_progress(session: AsyncSession) -> None:
+    """Commit publish job row so Celery retry survives mid-flush failures."""
+    await session.flush()
+    await session.commit()
 
 
 async def _checkpoint_publish_surface(
@@ -1178,12 +1197,6 @@ async def _checkpoint_publish_surface(
     await session.flush()
     if persist:
         await session.commit()
-
-
-async def _commit_inline_retry_progress(session: AsyncSession) -> None:
-    """Commit partial inline thread map so Celery retry survives mid-loop failures."""
-    await session.flush()
-    await session.commit()
 
 
 async def run_publish_job(
@@ -1265,7 +1278,7 @@ async def run_publish_job(
         if skipped is not None:
             return skipped
 
-        await _flush_publish_surface(
+        skipped_mid_flush = await _flush_publish_surface(
             session,
             job=job,
             publish_job_id=publish_job_id,
@@ -1274,7 +1287,10 @@ async def run_publish_job(
             installation=installation,
             persist_github_surface=persist_github_surface,
             retry_posted_inline=retry_posted_inline,
+            run=run,
         )
+        if skipped_mid_flush is not None:
+            return skipped_mid_flush
 
         job.status = GitHubPublishJobStatus.completed
         await session.flush()
