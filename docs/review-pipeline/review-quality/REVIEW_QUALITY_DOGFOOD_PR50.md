@@ -24,6 +24,7 @@
 | **Context depth** | Cites **AS1**, execution contract, behavioral regression (“RQ0→RQ1 window”) | Table row: title + file — **message lives in Revy UI** | **G5** narrative + execution-aware prompts when wired |
 | **Actionability** | `suggestion` fenced blocks on some threads | Table is read-only; action in app | Inline `suggestion` + check footer `@revy review` |
 | **Planning docs** | Low noise on `.md` when scoped to `backend/**` | Flags doc inconsistencies in table | RC1 slice scoping if needed |
+| **Lightweight ack** | 👀 on PR open; “read your summary” affordance | Check `in_progress` only (G10) — no emoji/ack comment | **G-UX+** — post-v1; not blocking `review-quality-v1` |
 
 ### What Greptile does well (copy the pattern, not the vendor)
 
@@ -438,6 +439,7 @@ Greptile diagnosed symptom correctly (D13-F diagnostics lost on tarball fail) bu
 | ID | Wave | Item |
 |----|------|------|
 | **G-UX** | RQ7 | Greptile-shaped **issue comment** + P-badge inline + G3 split bodies — see [visual UX §](./REVIEW_QUALITY_DOGFOOD_PR50.md#visual--context-ux--greptile--bugbot-vs-revy-target-bar) |
+| **G-UX+** | Post-v1 | **Ack affordances** — lightweight “noticed you” UX: webhook/`@revy` ack, short status on issue comment, optional reaction-style signal. Functional review unchanged; users expect interaction (Greptile 👀). **Not** blocking `review-quality-v1`. |
 | **RQ1** | RQ1 | Diff-first retrieval — fixes Revy error on deploy |
 | **RQ3** | RQ3 | Pipeline GET — agents can read trace without UI paste |
 | **RC1** | RQ-RC-1 | Scope Greptile files to active RQ slice if noise grows |
@@ -469,3 +471,49 @@ After each LOOP commit on #50, add a row:
 | babysit | 2 P1 (G10 TX, D10 supersede) | — | RC-D16 — shallow Greptile fix + deep Bugbot; [§](#greptile-babysit-vs-bugbot-depth-rc-d16) |
 | babysit | 1 P1 (compare-fallback flush) | — | RC-D17 — Greptile minimum fix ≠ production; [§](#greptile-minimum-fix--production-fix-rc-d17) |
 | RQ5–RQ8 | — | — | LOOP complete on branch — evidence/judge, resolution, Greptile publish, doc-sync |
+| RQ9 | *fill on first comment* | suspended | PR [#51](https://github.com/raimondskrauklis/revy/pull/51) `docs/agent-work` — [§](#dogfood-pr-51--docsagent-work-rq9) |
+
+---
+
+## Dogfood PR #51 — `docs/agent-work` (RQ9)
+
+**PR:** [#51](https://github.com/raimondskrauklis/revy/pull/51) · **branch:** `docs/agent-work` · **commit:** `8cd8e03`
+
+**RC0 wiring (this PR):** `.greptile/files.json` adds `CURSOR_AGENT_WORKFLOW.md` + `ROLES.md` (4 files total).
+
+### Greptile first-comment log (fill when comment lands)
+
+| Field | Value |
+|-------|--------|
+| **When** | *pending* |
+| **👀 reaction** | Yes on PR open — queued ack, not comprehension (RC-D20) |
+| **Cited execution § RQ9?** | *pending — yes/no + quote* |
+| **Cited wired docs (ROLES, workflow)?** | *pending* |
+| **Diff-only review?** | *pending* |
+| **Inline severity** | *pending — count P0/P1/P2* |
+| **Paste / link** | *optional — `actual_output_greptile_pr51.txt`* |
+
+**Master checklist after Greptile comments:**
+
+1. Did inline cite **AS1 / G10 / RQ9** from execution, or only local code smell?
+2. Did top comment reference **draft-after-index** vs misleading draft-autostart?
+3. Log row in table above → distill RC-D# if pattern repeats.
+
+### Local Bugbot (pre-push)
+
+| Field | Value |
+|-------|--------|
+| **Run** | FIND · `docs/agent-work` vs `main` |
+| **Thinking** | [cursor_bugbot_form_ui_7.txt](../agents/chain_of_thoughts/cursor_bugbot_form_ui_7.txt) |
+| **Findings** | 4 (medium: draft smoke; low: links, my-commands, trace test) — all fixed pre-push |
+| **RC-D19** | No Deferred table in output; platform XML over table — [OUTPUT_FORMAT § RC-D19](../agents/prompts/OUTPUT_FORMAT.md#bugbot-pass-1--format-compliance-rc-d19) |
+
+### RC-D20 — Greptile 👀 ≠ comprehension
+
+| Signal | Meaning |
+|--------|---------|
+| 👀 on PR open | Bot subscribed; review queued |
+| Check running (orange dot) | CI/Greptile in progress — same class as Revy G10 `in_progress` |
+| First comment | First real engineering-context signal — log in table above |
+
+**Product:** **G-UX+** — optional ack layer on top of functional G10 (not blocking v1).

@@ -48,6 +48,7 @@ VERB: FIND | VALIDATE | CLOSE
 SCOPE: <files>
 VALIDATE: <fn → failure path>   # babysit only — stops wrong-mechanism fixes
 OUT OF SCOPE: <one line>
+OUTPUT: Findings + Deferred + Scope note (always) — see OUTPUT_FORMAT.md
 <OUTPUT_FORMAT tail from agents/prompts/OUTPUT_FORMAT.md>
 ```
 
@@ -81,6 +82,10 @@ Skills: `phase-execution` · `ship-changes` · `babysit-pr`
 
 Greptile minimum fix ≠ production fix (RC-D17). Always VALIDATE with a named failure path.
 
+**Greptile 👀** on PR open = queued ack (RC-D20), not “read your summary.” Log first comment in [DOGFOOD § PR #51](../review-pipeline/review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#dogfood-pr-51--docsagent-work-rq9) — did it cite execution § RQn?
+
+**Bugbot output:** Findings + Deferred + Scope note always (RC-D19). Platform XML may win on shape — master reads thinking export when Deferred missing.
+
 ---
 
 ## Priority now vs later
@@ -89,7 +94,7 @@ Greptile minimum fix ≠ production fix (RC-D17). Always VALIDATE with a named f
 |-----|----------------------|
 | Cursor ops — master + Bugbot + Greptile parallel | Distill patterns into Revy |
 | Fix schema/ops while diff is small | Customer pipeline without Cursor parent |
-| Keep agent docs in sync — agents read them | |
+| Keep agent docs in sync — agents read them | **G-UX+** ack affordances (👀 parity) — post-v1 |
 
 ---
 

@@ -49,7 +49,7 @@ Agent won't infer the track — master must set VERB in the brief. Wrong verb = 
 ## Gate sequence (phase LOOP)
 
 ```text
-Pass 1 — FIND     Custom Instructions: PHASES § RQn + “report all actionable bugs”
+Pass 1 — FIND     Custom Instructions: PHASES § RQn + OUTPUT_FORMAT (Findings + Deferred + Scope note always)
 Fix blockers
 Pass 2 — CLOSE    “Verify pass 1 closed; NEW bugs only; REQUIRED deferred table”
 Fix blockers (if any)
