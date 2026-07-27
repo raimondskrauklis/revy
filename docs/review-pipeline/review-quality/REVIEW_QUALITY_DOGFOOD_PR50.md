@@ -225,6 +225,43 @@ After each fix, re-run Bugbot on the **same feature slice**. New passes found **
 
 ---
 
+## RQ2 Bugbot — focus vs bias
+
+**Yes — this is review-quality dogfood.** Local Bugbot on RQ2 (`ed0ef7a`) is high-signal product research, not a side note.
+
+### Focus vs bias (both, different layers)
+
+| Layer | What | RQ2 example |
+|-------|------|-------------|
+| **Focus** | Narrow *where* the model looks | Diff-first prompt: metadata → changed files → **unified diff** → bounded supplemental. Review worker scopes RAG to changed paths (D7). |
+| **Bias** | Steer *what kinds* of issues to prefer | Search lenses (`security`, `logic bugs`, …); system prompt “prioritize diff hunks”. Mild category bias **inside** a focused scope. |
+| **Contract focus** | Steer the **review agent** (Bugbot), not just the review LLM | `.BUGBOT.md` + EXECUTION § RQ2 + FINDINGS D13-F — subagent reasons against locked Q#, not generic advice. |
+
+**We want focus + contract focus for v1.** Category bias stays light (generators exploratory; judge/publish filter downstream). **Not** whole-repo haystack “focus” that is actually no focus.
+
+**Revy product:** customer review LLM gets diff-first pack (RQ2); future **trace agents** (RQ4) get rules + tools — same split as Cursor Bugbot today.
+
+### RQ2 iterative Bugbot (2 passes)
+
+```text
+  Pass 1 — read EXECUTION/FINDINGS + diff
+           → D13-F: index fallback_reason missing from manifest
+           → compare failure left supplemental empty in diff mode
+           → fix both
+
+  Pass 2 — re-gate on same slice
+           → explicitly verifies prior findings addressed
+           → clean
+```
+
+**Why valuable:** catches **cross-worker consistency** (index job vs review worker) that pytest slices often miss. Pass 2 **closure** (“prior findings addressed”) is the behavior we want Revy resolution + re-review to automate (RQ5/RQ6).
+
+### Greptile hypothesis (unverified on #50)
+
+Greptile likely combines **PR diff** + **codebase graph** (signup index) for cross-file recall — marketing aside, the bug class is real ([STRUCTURAL_CONTEXT](./REVIEW_QUALITY_STRUCTURAL_CONTEXT.md)). Our v1 path: diff-first (RQ2) → manifest instrumentation (SC3) → grep/graph bridge (RQ-STRUCT-1) → focused agents (RQ4+). Parallel research tracks, same north star.
+
+---
+
 ## Revy — triage (old deploy)
 
 | Sev | Location | Finding | Action |
@@ -280,4 +317,4 @@ After each LOOP commit on #50, add a row:
 |-------|----------|------|-------|
 | RQ0 | 6 threads, FK fixes; pass 2 `index_mode` | 4 findings, 1 error (RQ1) | Distillation notes; babysit `87c50d2` |
 | RQ1 code | **No new findings** on `bd4d084` after ~6× iterative local Bugbot | suspended | RC-D10 — Bugbot caught impl bugs Greptile missed; [§](#iterative-agent-review--rq1-local-bugbot); [chain_of_thoughts](../agents/chain_of_thoughts/) |
-| RQ2 | pending | suspended | Diff-first prompt + D10 fingerprint + SC3 manifest — RC-D11 |
+| RQ2 | pending | suspended | Bugbot 2-pass: D13-F + compare supplemental; pass 2 closure — [§](#rq2-bugbot--focus-vs-bias) RC-D12 |

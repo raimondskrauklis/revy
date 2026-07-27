@@ -316,6 +316,7 @@ When shipping **large program PRs** (code + planning docs), wire bots to the **e
 | **RC-D9** | **Local Bugbot mechanics** — diff seeds review; subagent expands via **Read/Grep** across repo + execution docs (no vector embed). `.BUGBOT.md` active phase steers without overload. Parent should **skim subagent transcript** after each spin. Distill → RQ4 trace agents. |
 | **RC-D10** | **Iterative Bugbot validated (RQ1 code push)** — ~6 pre-push Bugbot passes on `bd4d084` each surfaced **new** implementation bugs; after clean gate, code pushed. **Greptile re-review of that code push = no new findings** (AS1/schema already fixed in earlier babysit). Not “all bugs forever” — but Bugbot iteration caught what Greptile missed on the same slice. Layered gate: **iterate Bugbot pre-push → Greptile post-push on code**. |
 | **RC-D11** | **RQ2 = diff-first review pack** — unified diff primary, scoped supplemental RAG, SC3 manifest placeholders (`structural_context_mode=none`). **North star for agents (RQ4+):** Cursor/Composer = focused subagent + fast Read/Grep trace (no customer-facing SKU); Revy ships same pattern repo-native with graph/sidecars later ([STRUCTURAL_CONTEXT](./review-quality/REVIEW_QUALITY_STRUCTURAL_CONTEXT.md)). |
+| **RC-D12** | **RQ2 Bugbot = contract reviewer** — subagent reads `.BUGBOT.md` + EXECUTION/FINDINGS, cites locked IDs (e.g. **D13-F** `index_job.fallback_reason` in manifest). Caught cross-worker inconsistency unit tests miss. **Pass 2 explicitly verified prior fixes** (“broaden_on_compare_failure”, merged `fallback_reason`) — closure pattern Revy should ship (RQ5 resolution). [RQ2 Bugbot §](./review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#rq2-bugbot--focus-vs-bias). |
 
 Full log: [REVIEW_QUALITY_DOGFOOD_PR50.md](./review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md).
 
@@ -324,6 +325,8 @@ Full log: [REVIEW_QUALITY_DOGFOOD_PR50.md](./review-quality/REVIEW_QUALITY_DOGFO
 **Distillation (RQ0):** Greptile + local Bugbot + Revy outputs → findings (RC-D4). GitHub Bugbot informs design via operator experience, not #50 runs.
 
 **Distillation (RQ1):** Six pre-push Bugbot passes on same change set — each pass after fixes found **new** logic bugs (RC-D8). Greptile AS1 still unique on **earlier** code passes; local Bugbot caught implementation regressions once contract wired (RC-D9). **After `bd4d084` code push:** Greptile re-review = **no new threads** — validates RC-D10 (Bugbot found what Greptile did not on that slice).
+
+**Distillation (RQ2):** Bugbot pass 1 cited **D13-F** from findings (manifest must carry index `fallback_reason`); pass 2 confirmed fixes + clean gate (RC-D12). Uses wired docs — same RC0 pattern as Greptile on contract rows.
 
 ### Iterative review (industry + dogfood)
 
