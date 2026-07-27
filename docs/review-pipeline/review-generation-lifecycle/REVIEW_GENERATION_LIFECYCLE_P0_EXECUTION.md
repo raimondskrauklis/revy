@@ -11,7 +11,7 @@ Phase **P0** of [REVIEW_GENERATION_LIFECYCLE_GENERAL_PLAN.md](./REVIEW_GENERATIO
 - New module `github_generation_lifecycle.py` owns `is_authoritative_for_pull_request_head`, `mark_review_runs_superseded_for_pull_request`, `is_review_run_superseded`.
 - `is_authoritative_for_pull_request_head`: `revision.head_sha == pull_request.head_sha` for the revision’s PR.
 - `mark_review_runs_superseded_for_pull_request`: set `superseded` on pending/processing review runs for **older revisions** on same PR; leave `keep_revision_id` authoritative.
-- `mark_pending_review_runs_superseded_for_revision(session, *, revision_id)` (or equivalent): set `superseded` on pending/processing runs for **that revision** — used when `@revy review` supersedes autostart on same HEAD (P2).
+- `mark_active_review_runs_superseded_for_revision(session, *, revision_id)` (or equivalent): set `superseded` on pending/processing runs for **that revision** — used when `@revy review` supersedes autostart on same HEAD (P2).
 - `review_coalesce_seconds`: int, **default 0** (off), max **10**; validated in `Settings`.
 - First LOOP commit updates `.greptile/files.json` + `.cursor/BUGBOT.md` to this program.
 - Module docstring documents **trace field contract** (manifest keys added in P5) and **smart-trigger guard** table (bot events that must not supersede).
@@ -64,7 +64,7 @@ cd backend && pipenv run ruff check app/constants/enums.py
 
 - `async def is_authoritative_for_pull_request_head(session, *, revision_id: UUID) -> bool`
 - `async def mark_review_runs_superseded_for_pull_request(session, *, pull_request_id: UUID, keep_revision_id: UUID) -> list[UUID]` — older revisions only; returns superseded review_run ids
-- `async def mark_pending_review_runs_superseded_for_revision(session, *, revision_id: UUID) -> list[UUID]` — same revision, pending/processing only (command vs autostart)
+- `async def mark_active_review_runs_superseded_for_revision(session, *, revision_id: UUID) -> list[UUID]` — same revision, pending/processing only (command vs autostart)
 - `def is_review_run_superseded(run: GitHubReviewRunORM) -> bool`
 
 Log `generation_superseded` with `review_run_id`, `revision_id`, `pull_request_id`.
@@ -105,7 +105,7 @@ cd backend && pipenv run ruff check app/core/config.py
 
 ## P0.5 — Unit tests (authority + supersede marking)
 
-**What:** Tests: authoritative when revision matches PR `head_sha`; not authoritative when superseded by newer revision; `mark_review_runs_superseded_for_pull_request` flips pending/processing runs on old revisions only; `mark_pending_review_runs_superseded_for_revision` flips same-revision pending/processing; completed runs unchanged.
+**What:** Tests: authoritative when revision matches PR `head_sha`; not authoritative when superseded by newer revision; `mark_review_runs_superseded_for_pull_request` flips pending/processing runs on old revisions only; `mark_active_review_runs_superseded_for_revision` flips same-revision pending/processing; completed runs unchanged.
 
 **Files:** `backend/tests/unit/test_github_generation_lifecycle.py`
 

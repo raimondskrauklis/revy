@@ -16,6 +16,21 @@
       "scope": ["backend/**"]
     },
     {
+      "path": "docs/review-pipeline/github-surface-hardening/GITHUB_SURFACE_HARDENING_EXECUTION.md",
+      "description": "GitHub surface hardening — LOOP order, locked decisions, phase gates (P0–P4)",
+      "scope": ["backend/**"]
+    },
+    {
+      "path": "docs/review-pipeline/github-surface-hardening/GITHUB_SURFACE_HARDENING_FINDINGS.md",
+      "description": "Hardening baseline — GH-1 thread resolve, GraphQL scale, test harness",
+      "scope": ["backend/**"]
+    },
+    {
+      "path": "docs/review-pipeline/github-surface-hardening/GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md",
+      "description": "General plan — hardening phases P0–P4",
+      "scope": ["backend/**"]
+    },
+    {
       "path": "docs/review-pipeline/waves/REVIEW_QUALITY_EXECUTION.md",
       "description": "Review-quality engine contract (RQ0–RQ9) — baseline for publish pipeline",
       "scope": ["backend/**"]

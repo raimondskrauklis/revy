@@ -10,7 +10,7 @@ Phase **P2** of [REVIEW_GENERATION_LIFECYCLE_GENERAL_PLAN.md](./REVIEW_GENERATIO
 - `index_pull_request_revision`: before `start_pipeline_github_check`, if not `is_authoritative_for_pull_request_head` → skip G10 + `ensure_pipeline_run_for_index_job` / stash (index `run_index_job` may still execute — RG-Q11).
 - `prepare_review_after_index`: if not authoritative → return `ReviewAfterIndexOutcome()` without `create_review_run`.
 - `reconcile_tasks.py`: after reconcile, if review run `superseded` → skip `enqueue_publish_for_review_run`.
-- `@revy review` on same PR: on **command** enqueue (`issue_comment` path), call `mark_pending_review_runs_superseded_for_revision` for current HEAD revision before `maybe_enqueue_pipeline_for_revision` (supersedes autostart in-flight on same revision).
+- `@revy review` on same PR: on **command** enqueue (`issue_comment` path), call `mark_active_review_runs_superseded_for_revision` for current HEAD revision before `maybe_enqueue_pipeline_for_revision` (supersedes autostart in-flight on same revision).
 - PRODUCT_PATTERNS generation row → **in flight** (link to this program).
 
 ## Out of scope for P2
@@ -79,7 +79,7 @@ cd backend && pipenv run pytest tests/unit/test_reconcile_tasks_generation.py -q
 
 ## P2.5 — Command supersede (same revision)
 
-**What:** In `process_github_event` `issue_comment` path, before `maybe_enqueue_pipeline_for_revision` with `trigger=command`: call `mark_pending_review_runs_superseded_for_revision(session, revision_id=…)` so `@revy review` wins over autostart on same HEAD.
+**What:** In `process_github_event` `issue_comment` path, before `maybe_enqueue_pipeline_for_revision` with `trigger=command`: call `mark_active_review_runs_superseded_for_revision(session, revision_id=…)` so `@revy review` wins over autostart on same HEAD.
 
 **Files:** `backend/app/workers/github_tasks.py`, `backend/app/services/github_generation_lifecycle.py`
 

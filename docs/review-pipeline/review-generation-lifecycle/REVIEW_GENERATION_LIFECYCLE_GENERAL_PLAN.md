@@ -26,7 +26,7 @@
 
 **Goal:** Generation lifecycle primitives — authority helpers, enum values, coalesce setting, smart-trigger guard.
 
-**Scope — in:** `GitHubReviewRunStatus.superseded`; `GitHubPublishJobStatus.skipped_not_head` + `skipped_superseded`; `is_authoritative_for_pull_request_head(session, revision_id)`; `mark_review_runs_superseded_for_pull_request(session, pull_request_id, keep_revision_id)`; `mark_pending_review_runs_superseded_for_revision(session, revision_id)` for command vs autostart on same HEAD; settings `review_coalesce_seconds` (0–10); smart-trigger guard documented in `github_generation_lifecycle` module docstring (`pull_request_review` does not enqueue pipeline).
+**Scope — in:** `GitHubReviewRunStatus.superseded`; `GitHubPublishJobStatus.skipped_not_head` + `skipped_superseded`; `is_authoritative_for_pull_request_head(session, revision_id)`; `mark_review_runs_superseded_for_pull_request(session, pull_request_id, keep_revision_id)`; `mark_active_review_runs_superseded_for_revision(session, revision_id)` for command vs autostart on same HEAD; settings `review_coalesce_seconds` (0–10); smart-trigger guard documented in `github_generation_lifecycle` module docstring (`pull_request_review` does not enqueue pipeline).
 
 **Scope — out:** HEAD gate (P1); G10 finalize (P2); Alembic unless CHECK constraints chosen.
 
@@ -54,7 +54,7 @@
 
 **Goal:** New `synchronize` supersedes prior generations; authority enforced at every stage entry; stale G10 checks finalized at supersede moment.
 
-**Scope — in:** On new revision: `mark_review_runs_superseded_for_pull_request`; on **command** enqueue: `mark_pending_review_runs_superseded_for_revision` (same HEAD revision); **`index_pull_request_revision`**: if not authoritative → skip entire pipeline-trace block (`ensure_pipeline_run_for_index_job`, G10, stash); index DB may still run (RG-Q11); **`prepare_review_after_index`**: skip `create_review_run` when not authoritative; **`reconcile_tasks`**: skip enqueue **before commit** when superseded; on supersede moment: `finalize_pipeline_github_check_neutral` for superseded in-flight pipelines; `@revy review` supersedes autostart on same revision; manual bypasses coalesce (P4). PRODUCT_PATTERNS row → **in flight**.
+**Scope — in:** On new revision: `mark_review_runs_superseded_for_pull_request`; on **command** enqueue: `mark_active_review_runs_superseded_for_revision` (same HEAD revision); **`index_pull_request_revision`**: if not authoritative → skip entire pipeline-trace block (`ensure_pipeline_run_for_index_job`, G10, stash); index DB may still run (RG-Q11); **`prepare_review_after_index`**: skip `create_review_run` when not authoritative; **`reconcile_tasks`**: skip enqueue **before commit** when superseded; on supersede moment: `finalize_pipeline_github_check_neutral` for superseded in-flight pipelines; `@revy review` supersedes autostart on same revision; manual bypasses coalesce (P4). PRODUCT_PATTERNS row → **in flight**.
 
 **Scope — out:** Hard Celery revoke; judge changes.
 

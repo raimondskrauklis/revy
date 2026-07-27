@@ -56,11 +56,15 @@ async def mark_review_runs_superseded_for_pull_request(
     keep_revision_id: UUID,
 ) -> list[UUID]:
     """Mark pending/processing review runs on older revisions superseded; keep ``keep_revision_id``."""
+    keep_revision = await session.get(GitHubPullRequestRevisionORM, keep_revision_id)
+    if keep_revision is None or keep_revision.pull_request_id != pull_request_id:
+        return []
+
     older_revision_ids = list(
         await session.scalars(
             select(GitHubPullRequestRevisionORM.id).where(
                 GitHubPullRequestRevisionORM.pull_request_id == pull_request_id,
-                GitHubPullRequestRevisionORM.id != keep_revision_id,
+                GitHubPullRequestRevisionORM.revision_number < keep_revision.revision_number,
             )
         )
     )
@@ -92,7 +96,7 @@ async def mark_review_runs_superseded_for_pull_request(
     return superseded_ids
 
 
-async def mark_pending_review_runs_superseded_for_revision(
+async def mark_active_review_runs_superseded_for_revision(
     session: AsyncSession,
     *,
     revision_id: UUID,

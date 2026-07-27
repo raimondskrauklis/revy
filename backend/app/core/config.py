@@ -144,7 +144,14 @@ class Settings(BaseSettings):
     @field_validator("review_coalesce_seconds", mode="after")
     @classmethod
     def _clamp_review_coalesce_seconds(cls, value: int) -> int:
-        return max(0, min(10, value))
+        clamped = max(0, min(10, value))
+        if clamped != value:
+            logger.warning(
+                "review_coalesce_seconds=%s clamped to %s (allowed range 0-10)",
+                value,
+                clamped,
+            )
+        return clamped
 
     # Review policy
     revy_default_review_profile: str = "standard"

@@ -11,7 +11,7 @@ from app.models.github_review_run import GitHubReviewRunORM
 from app.services.github_generation_lifecycle import (
     is_authoritative_for_pull_request_head,
     is_review_run_superseded,
-    mark_pending_review_runs_superseded_for_revision,
+    mark_active_review_runs_superseded_for_revision,
     mark_review_runs_superseded_for_pull_request,
 )
 
@@ -97,6 +97,7 @@ async def test_mark_review_runs_superseded_for_pull_request_older_revisions_only
     pending_keep = _review_run(keep_revision, status=GitHubReviewRunStatus.pending)
 
     session = AsyncMock()
+    session.get = AsyncMock(return_value=keep_revision)
     session.scalars = AsyncMock(
         side_effect=[
             [old_revision.id],
@@ -120,7 +121,7 @@ async def test_mark_review_runs_superseded_for_pull_request_older_revisions_only
 
 
 @pytest.mark.asyncio
-async def test_mark_pending_review_runs_superseded_for_revision():
+async def test_mark_active_review_runs_superseded_for_revision():
     pull_request = _pull_request()
     revision = _revision(pull_request, revision_number=1, head_sha="sha")
     pending = _review_run(revision, status=GitHubReviewRunStatus.pending)
@@ -131,7 +132,7 @@ async def test_mark_pending_review_runs_superseded_for_revision():
     session.scalars = AsyncMock(return_value=[pending])
     session.flush = AsyncMock()
 
-    superseded_ids = await mark_pending_review_runs_superseded_for_revision(
+    superseded_ids = await mark_active_review_runs_superseded_for_revision(
         session,
         revision_id=revision.id,
     )
@@ -139,6 +140,7 @@ async def test_mark_pending_review_runs_superseded_for_revision():
     assert superseded_ids == [pending.id]
     assert pending.status == GitHubReviewRunStatus.superseded
     assert completed.status == GitHubReviewRunStatus.completed
+    session.flush.assert_awaited_once()
 
 
 def test_is_review_run_superseded():
