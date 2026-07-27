@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 
 from sqlalchemy import BigInteger, ForeignKey, String, Text, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.constants.enums import GitHubPublishJobStatus
@@ -39,4 +40,5 @@ class GitHubPublishJobORM(TimestampedModel):
     github_check_run_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     github_comment_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     inline_comments_posted: Mapped[bool] = mapped_column(nullable=False, default=False, server_default="false")
+    summary_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)

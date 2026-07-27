@@ -54,7 +54,7 @@ Baseline: [REVIEW_QUALITY_FINDINGS.md](../review-quality/REVIEW_QUALITY_FINDINGS
 
 | Phase | Focus | Execution | Status |
 |-------|--------|-----------|--------|
-| **Review quality** | Diff-first + trace + Greptile publish + evidence + metrics | [REVIEW_QUALITY_EXECUTION.md](./REVIEW_QUALITY_EXECUTION.md) | peer-reviewed — pending `phase-execution` |
+| **Review quality** | Diff-first + trace + Greptile publish + evidence + metrics | [REVIEW_QUALITY_EXECUTION.md](./REVIEW_QUALITY_EXECUTION.md) | RQ0 in progress (`1ea0bdf`) |
 
 **Tag after merge:** `review-quality-v1`
 

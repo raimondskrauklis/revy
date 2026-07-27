@@ -62,6 +62,7 @@ class GitHubPullRequestRevisionORM(TimestampedModel):
     )
     revision_number: Mapped[int] = mapped_column(Integer, nullable=False)
     head_sha: Mapped[str] = mapped_column(Text, nullable=False)
+    base_sha: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class GitHubPullRequestReviewORM(TimestampedModel):
