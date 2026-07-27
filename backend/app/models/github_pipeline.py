@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from sqlalchemy import ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -20,6 +20,7 @@ from app.models.base import TimestampedModel
 
 class GitHubPipelineRunORM(TimestampedModel):
     __tablename__ = "github_pipeline_runs"
+    __table_args__ = (Index("ix_github_pipeline_runs_created_at", "created_at"),)
 
     workspace_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True),
@@ -28,24 +29,24 @@ class GitHubPipelineRunORM(TimestampedModel):
     )
     revision_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True),
-        ForeignKey("github_pull_request_revisions.id"),
+        ForeignKey("github_pull_request_revisions.id", ondelete="CASCADE"),
         nullable=False,
     )
     head_sha: Mapped[str] = mapped_column(Text, nullable=False)
     index_mode: Mapped[GitHubIndexMode] = mapped_column(String(length=32), nullable=False)
     index_job_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),
-        ForeignKey("github_index_jobs.id"),
+        ForeignKey("github_index_jobs.id", ondelete="SET NULL"),
         nullable=True,
     )
     review_run_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),
-        ForeignKey("github_review_runs.id"),
+        ForeignKey("github_review_runs.id", ondelete="SET NULL"),
         nullable=True,
     )
     publish_job_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),
-        ForeignKey("github_publish_jobs.id"),
+        ForeignKey("github_publish_jobs.id", ondelete="SET NULL"),
         nullable=True,
     )
 
@@ -75,6 +76,12 @@ class GitHubPipelineStepORM(TimestampedModel):
 
 class GitHubPipelineArtifactORM(TimestampedModel):
     __tablename__ = "github_pipeline_artifacts"
+    __table_args__ = (
+        CheckConstraint(
+            "content_text IS NOT NULL OR content_json IS NOT NULL",
+            name="ck_github_pipeline_artifacts_content_present",
+        ),
+    )
 
     step_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True),

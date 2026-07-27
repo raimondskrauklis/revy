@@ -102,11 +102,13 @@ Evaluate during **`feat/review-quality` PR** dogfood; ship improvements in **RQ-
 
 **PR:** [#50](https://github.com/raimondskrauklis/revy/pull/50) · **branch:** `feat/review-quality` · **RQ0:** `64f661c` · **deploy:** pre-RQ0 prod/staging (findings reflect **current** pipeline, not this branch).
 
+**Full triage:** [REVIEW_QUALITY_DOGFOOD_PR50.md](./REVIEW_QUALITY_DOGFOOD_PR50.md) · **paste:** [actual_output_revy_greptile.txt](./actual_output_revy_greptile.txt)
+
 | ID | Date | Signal | Result | Action |
 |----|------|--------|--------|--------|
 | **RC-D1** | 2026-07-27 | GitHub Checks UX — Greptile shows spinner; Revy does not | **Gap** — `create_check_run` posts `status: completed` only at publish end | **G10** locked → RQ3/RQ7 |
 | **RC-D2** | 2026-07-27 | Revy autostart on planning PR (old deploy) | **Useful** — flagged full-RAG vs diff-first (`github_review.py`) | Validates RQ1 scope; not a false positive |
-| **RC-D3** | 2026-07-27 | Greptile wired context (RC0) | **Pass** — 37 files, 6 comments | Triage threads; note schema/route hits vs noise |
+| **RC-D3** | 2026-07-27 | Greptile wired context (RC0) | **Pass** — 37 files, 6 comments; P1 FK/index fixes in babysit | [DOGFOOD_PR50](./REVIEW_QUALITY_DOGFOOD_PR50.md) |
 | **RC-D4** | 2026-07-27 | CI on RQ0 migration | **Pass** | — |
 | **RC-D5** | 2026-07-27 | Local Bugbot pre-push | **No findings** | — |
 

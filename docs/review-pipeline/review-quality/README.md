@@ -18,7 +18,8 @@ Post-R8 program: **diff-first review**, **pipeline explainability**, Greptile-sh
 | 4 | [REVIEW_QUALITY_EXECUTION.md](../waves/REVIEW_QUALITY_EXECUTION.md) | RQ0–RQ8 — **`phase-execution`** on `feat/review-quality` (peer-reviewed) |
 | — | [REVIEW_QUALITY_PEER_REVIEW.md](./REVIEW_QUALITY_PEER_REVIEW.md) | Architecture peer review + pre-execution locks |
 | — | [REVIEW_QUALITY_STRUCTURAL_CONTEXT.md](./REVIEW_QUALITY_STRUCTURAL_CONTEXT.md) | **Post-v1 strategy** — LSP defer, RQ-STRUCT-1/2, Greptile parity |
-| — | [REVIEW_QUALITY_REVIEW_CONTEXT.md](./REVIEW_QUALITY_REVIEW_CONTEXT.md) | **Post-v1 strategy** — Greptile/Bugbot planning-doc wiring, RQ-RC-1 |
+| — | [REVIEW_QUALITY_REVIEW_CONTEXT.md](./REVIEW_QUALITY_REVIEW_CONTEXT.md) | Greptile/Bugbot wiring; RQ-RC-1; dogfood log |
+| — | [REVIEW_QUALITY_DOGFOOD_PR50.md](./REVIEW_QUALITY_DOGFOOD_PR50.md) | **PR #50** — Greptile + Revy triage, babysit, wave backlog |
 
 ---
 

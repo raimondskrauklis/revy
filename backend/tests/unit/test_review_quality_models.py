@@ -57,6 +57,24 @@ def test_pipeline_run_links_workspace_with_cascade():
     assert workspace_fk.ondelete == "CASCADE"
 
 
+def test_pipeline_run_optional_fks_set_null_on_delete():
+    for column_name in ("index_job_id", "review_run_id", "publish_job_id"):
+        fk = next(fk for fk in inspect(GitHubPipelineRunORM).columns[column_name].foreign_keys)
+        assert fk.ondelete == "SET NULL"
+
+
+def test_pipeline_run_revision_cascades():
+    revision_fk = next(
+        fk for fk in inspect(GitHubPipelineRunORM).columns["revision_id"].foreign_keys
+    )
+    assert revision_fk.ondelete == "CASCADE"
+
+
+def test_pipeline_runs_table_has_created_at_index():
+    indexes = {index.name for index in inspect(GitHubPipelineRunORM).local_table.indexes}
+    assert "ix_github_pipeline_runs_created_at" in indexes
+
+
 def test_finding_and_group_quality_columns():
     finding_columns = {column.name for column in inspect(GitHubFindingORM).columns}
     group_columns = {column.name for column in inspect(GitHubFindingGroupORM).columns}

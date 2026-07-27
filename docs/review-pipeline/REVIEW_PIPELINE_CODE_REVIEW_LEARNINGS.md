@@ -309,7 +309,9 @@ When shipping **large program PRs** (code + planning docs), wire bots to the **e
 | **RC-D2** | Pre-deploy Revy autostart on planning PR still useful — flagged full-RAG vs diff-first (`github_review.py`); validates RQ1. |
 | **RC-D3** | Greptile RC0 wiring: pass, 37 files / 6 comments. |
 
-Full log: [REVIEW_QUALITY_REVIEW_CONTEXT.md](./review-quality/REVIEW_QUALITY_REVIEW_CONTEXT.md#dogfood-log-pr-50).
+Full log: [REVIEW_QUALITY_DOGFOOD_PR50.md](./review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md) · paste: [actual_output_revy_greptile.txt](./review-quality/actual_output_revy_greptile.txt).
+
+**Babysit (RQ0):** Greptile P1/P2 migration fixes applied — SET NULL FKs, `created_at` index, `index_mode` backfill `full`, revision CASCADE, artifact CHECK.
 
 ---
 

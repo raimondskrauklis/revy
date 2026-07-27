@@ -18,7 +18,14 @@ def upgrade() -> None:
 
     op.add_column(
         "github_index_jobs",
-        sa.Column("index_mode", sa.String(length=32), nullable=False, server_default="diff"),
+        sa.Column("index_mode", sa.String(length=32), nullable=True),
+    )
+    op.execute(sa.text("UPDATE github_index_jobs SET index_mode = 'full'"))
+    op.alter_column(
+        "github_index_jobs",
+        "index_mode",
+        nullable=False,
+        server_default="diff",
     )
     op.add_column("github_index_jobs", sa.Column("fallback_reason", sa.Text(), nullable=True))
     op.add_column("github_index_jobs", sa.Column("warning_message", sa.Text(), nullable=True))
@@ -64,13 +71,30 @@ def upgrade() -> None:
             server_default=sa.text("NOW()"),
         ),
         sa.ForeignKeyConstraint(["workspace_id"], ["workspaces.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["revision_id"], ["github_pull_request_revisions.id"]),
-        sa.ForeignKeyConstraint(["index_job_id"], ["github_index_jobs.id"]),
-        sa.ForeignKeyConstraint(["review_run_id"], ["github_review_runs.id"]),
-        sa.ForeignKeyConstraint(["publish_job_id"], ["github_publish_jobs.id"]),
+        sa.ForeignKeyConstraint(
+            ["revision_id"],
+            ["github_pull_request_revisions.id"],
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["index_job_id"],
+            ["github_index_jobs.id"],
+            ondelete="SET NULL",
+        ),
+        sa.ForeignKeyConstraint(
+            ["review_run_id"],
+            ["github_review_runs.id"],
+            ondelete="SET NULL",
+        ),
+        sa.ForeignKeyConstraint(
+            ["publish_job_id"],
+            ["github_publish_jobs.id"],
+            ondelete="SET NULL",
+        ),
     )
     op.create_index("ix_github_pipeline_runs_workspace_id", "github_pipeline_runs", ["workspace_id"])
     op.create_index("ix_github_pipeline_runs_revision_id", "github_pipeline_runs", ["revision_id"])
+    op.create_index("ix_github_pipeline_runs_created_at", "github_pipeline_runs", ["created_at"])
     op.create_index(
         "ix_github_pipeline_runs_workspace_id_revision_id",
         "github_pipeline_runs",
@@ -150,6 +174,10 @@ def upgrade() -> None:
             ["github_pipeline_steps.id"],
             ondelete="CASCADE",
         ),
+        sa.CheckConstraint(
+            "content_text IS NOT NULL OR content_json IS NOT NULL",
+            name="ck_github_pipeline_artifacts_content_present",
+        ),
     )
     op.create_index(
         "ix_github_pipeline_artifacts_step_id",
@@ -163,6 +191,7 @@ def downgrade() -> None:
     op.drop_table("github_pipeline_artifacts")
     op.drop_index("ix_github_pipeline_steps_pipeline_run_id", table_name="github_pipeline_steps")
     op.drop_table("github_pipeline_steps")
+    op.drop_index("ix_github_pipeline_runs_created_at", table_name="github_pipeline_runs")
     op.drop_index(
         "ix_github_pipeline_runs_workspace_id_revision_id",
         table_name="github_pipeline_runs",
