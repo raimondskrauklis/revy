@@ -7,6 +7,7 @@ from uuid import UUID
 
 from kombu.exceptions import OperationalError
 
+from app.constants.enums import stored_enum_value
 from app.core.database import get_db_context
 from app.core.logging import get_logger
 from app.core.worker_retries import classify_transient_error
@@ -35,7 +36,7 @@ async def _execute_publish_review_run(publish_job_id: str) -> None:
             "github_publish_complete",
             extra={
                 "publish_job_id": publish_job_id,
-                "status": job.status.value,
+                "status": stored_enum_value(job.status),
                 "check_run_id": job.github_check_run_id,
             },
         )

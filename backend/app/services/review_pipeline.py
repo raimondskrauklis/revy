@@ -12,6 +12,7 @@ from app.constants.enums import (
     GitHubIndexJobTriggerSource,
     GitHubPullRequestState,
     GitHubReviewRunStatus,
+    stored_enum_value,
 )
 from app.core.config import settings
 from app.core.exceptions import ConflictError, ServiceUnavailableError
@@ -127,7 +128,7 @@ async def maybe_enqueue_pipeline_for_revision(
                 "revision_id": str(revision_id),
                 "trigger": trigger.value,
                 "is_draft": pull_request.is_draft,
-                "state": pull_request.state.value,
+                "state": stored_enum_value(pull_request.state),
             },
         )
         return None
@@ -227,7 +228,7 @@ async def prepare_review_after_index(
                 "index_job_id": str(job.id),
                 "revision_id": str(job.revision_id),
                 "is_draft": pull_request.is_draft,
-                "state": pull_request.state.value,
+                "state": stored_enum_value(pull_request.state),
             },
         )
         return None
