@@ -81,4 +81,24 @@ Baseline: [post-review-quality/](../post-review-quality/README.md) · **LOOP:** 
 | P3 — L3 inline | Warning threads | [GITHUB_SURFACE_P3_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_P3_EXECUTION.md) | **merged** (#52) |
 | P4 — Doc sync | PRODUCT_PATTERNS | [GITHUB_SURFACE_P4_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_P4_EXECUTION.md) | done |
 
-**Next:** [POST_REVIEW_QUALITY_FOLLOWUPS.md](../post-review-quality/POST_REVIEW_QUALITY_FOLLOWUPS.md) · Index: [GITHUB_SURFACE_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_EXECUTION.md)
+Index: [GITHUB_SURFACE_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_EXECUTION.md)
+
+---
+
+## GitHub surface hardening (post P0–P4)
+
+Baseline: [github-surface-hardening/](../github-surface-hardening/README.md) · **Status:** code complete · **PR:** [#53](https://github.com/raimondskrauklis/revy/pull/53) · GH-7 dogfood pending staging
+
+| Phase | Focus | Status |
+|-------|--------|--------|
+| P0 — Foundations | Thread map v2 + review wiring | Done |
+| P1 — Auto-resolve | GH-1 Option A + GH-1b | Done |
+| P2 — GraphQL scale | GH-2, GH-3 | Done |
+| P3 — Edge cases | GH-4, GH-5 | Done |
+| P4 — Harness + sign-off | GH-6, GH-7 | Done (GH-7 dogfood pending) |
+
+| Focus | Doc |
+|-------|-----|
+| Findings | [GITHUB_SURFACE_HARDENING_FINDINGS.md](../github-surface-hardening/GITHUB_SURFACE_HARDENING_FINDINGS.md) |
+| General plan | [GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md](../github-surface-hardening/GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md) |
+| Execution | [GITHUB_SURFACE_HARDENING_EXECUTION.md](../github-surface-hardening/GITHUB_SURFACE_HARDENING_EXECUTION.md) |

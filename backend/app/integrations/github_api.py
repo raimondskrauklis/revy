@@ -12,8 +12,15 @@ import jwt
 
 from app.core.config import settings
 from app.core.exceptions import NotFoundError, RateLimitedError, ServiceUnavailableError
+from app.core.logging import get_logger
 
 GITHUB_API_BASE = "https://api.github.com"
+
+REVIEW_THREADS_PAGE_SIZE = 100
+REVIEW_THREAD_COMMENTS_PAGE_SIZE = 20
+MAX_REVIEW_THREADS_PER_PUBLISH = 500
+
+logger = get_logger(__name__)
 
 _INDEXABLE_COMPARE_STATUSES = frozenset({"added", "modified", "copied", "renamed", "changed"})
 _REMOVED_COMPARE_STATUSES = frozenset({"removed"})
@@ -437,6 +444,209 @@ async def create_pull_request_review_comment(
     return comment_id
 
 
+@dataclass(frozen=True)
+class ReviewThreadNode:
+    thread_id: str
+    comment_database_ids: tuple[int, ...]
+
+
+async def list_review_threads(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+    owner: str,
+    repo: str,
+    pull_number: int,
+    auth_headers: dict[str, str] | None = None,
+) -> list[ReviewThreadNode]:
+    """Paginated PR review threads with comment database ids."""
+    headers = await _resolve_auth_headers(
+        client,
+        github_installation_id=github_installation_id,
+        auth_headers=auth_headers,
+    )
+    threads: list[ReviewThreadNode] = []
+    thread_cursor: str | None = None
+    thread_query = f"""
+    query($owner: String!, $repo: String!, $number: Int!, $threadCursor: String) {{
+      repository(owner: $owner, name: $repo) {{
+        pullRequest(number: $number) {{
+          reviewThreads(first: {REVIEW_THREADS_PAGE_SIZE}, after: $threadCursor) {{
+            pageInfo {{ hasNextPage endCursor }}
+            nodes {{
+              id
+              comments(first: {REVIEW_THREAD_COMMENTS_PAGE_SIZE}) {{
+                pageInfo {{ hasNextPage endCursor }}
+                nodes {{ databaseId }}
+              }}
+            }}
+          }}
+        }}
+      }}
+    }}
+    """
+    comment_page_query = f"""
+    query($threadId: ID!, $commentCursor: String) {{
+      node(id: $threadId) {{
+        ... on PullRequestReviewThread {{
+          comments(first: {REVIEW_THREAD_COMMENTS_PAGE_SIZE}, after: $commentCursor) {{
+            pageInfo {{ hasNextPage endCursor }}
+            nodes {{ databaseId }}
+          }}
+        }}
+      }}
+    }}
+    """
+
+    while True:
+        if len(threads) >= MAX_REVIEW_THREADS_PER_PUBLISH:
+            logger.warning(
+                "github_list_review_threads_cap_hit",
+                extra={"pull_number": pull_number, "thread_count": len(threads)},
+            )
+            break
+        variables: dict[str, Any] = {
+            "owner": owner,
+            "repo": repo,
+            "number": pull_number,
+            "threadCursor": thread_cursor,
+        }
+        response = await client.post(
+            f"{GITHUB_API_BASE}/graphql",
+            headers=headers,
+            json={"query": thread_query, "variables": variables},
+        )
+        response.raise_for_status()
+        payload = response.json()
+        if payload.get("errors"):
+            logger.warning(
+                "github_list_review_threads_graphql_error",
+                extra={"pull_number": pull_number, "errors": payload.get("errors")},
+            )
+            break
+        data = payload.get("data")
+        if not isinstance(data, dict):
+            break
+        repository = data.get("repository")
+        if not isinstance(repository, dict):
+            break
+        pull_request = repository.get("pullRequest")
+        if not isinstance(pull_request, dict):
+            break
+        review_threads = pull_request.get("reviewThreads")
+        if not isinstance(review_threads, dict):
+            break
+        nodes = review_threads.get("nodes", [])
+        if not isinstance(nodes, list):
+            break
+        for thread in nodes:
+            if len(threads) >= MAX_REVIEW_THREADS_PER_PUBLISH:
+                logger.warning(
+                    "github_list_review_threads_cap_hit",
+                    extra={"pull_number": pull_number, "thread_count": len(threads)},
+                )
+                break
+            if not isinstance(thread, dict):
+                continue
+            thread_id = thread.get("id")
+            if not isinstance(thread_id, str) or not thread_id:
+                continue
+            comment_ids: list[int] = []
+            comments = thread.get("comments")
+            if isinstance(comments, dict):
+                comment_nodes = comments.get("nodes", [])
+                if isinstance(comment_nodes, list):
+                    for comment in comment_nodes:
+                        if isinstance(comment, dict):
+                            database_id = comment.get("databaseId")
+                            if isinstance(database_id, int):
+                                comment_ids.append(database_id)
+                page_info = comments.get("pageInfo")
+                if isinstance(page_info, dict) and page_info.get("hasNextPage"):
+                    comment_cursor = page_info.get("endCursor")
+                    while isinstance(comment_cursor, str):
+                        comment_response = await client.post(
+                            f"{GITHUB_API_BASE}/graphql",
+                            headers=headers,
+                            json={
+                                "query": comment_page_query,
+                                "variables": {
+                                    "threadId": thread_id,
+                                    "commentCursor": comment_cursor,
+                                },
+                            },
+                        )
+                        comment_response.raise_for_status()
+                        comment_payload = comment_response.json()
+                        if comment_payload.get("errors"):
+                            logger.warning(
+                                "github_list_review_threads_graphql_error",
+                                extra={
+                                    "pull_number": pull_number,
+                                    "errors": comment_payload.get("errors"),
+                                },
+                            )
+                            break
+                        node = comment_payload.get("data", {}).get("node")
+                        if not isinstance(node, dict):
+                            break
+                        more_comments = node.get("comments")
+                        if not isinstance(more_comments, dict):
+                            break
+                        more_nodes = more_comments.get("nodes", [])
+                        if isinstance(more_nodes, list):
+                            for comment in more_nodes:
+                                if isinstance(comment, dict):
+                                    database_id = comment.get("databaseId")
+                                    if isinstance(database_id, int):
+                                        comment_ids.append(database_id)
+                        more_page = more_comments.get("pageInfo")
+                        if isinstance(more_page, dict) and more_page.get("hasNextPage"):
+                            comment_cursor = more_page.get("endCursor")
+                            if not isinstance(comment_cursor, str):
+                                break
+                        else:
+                            break
+            threads.append(
+                ReviewThreadNode(
+                    thread_id=thread_id,
+                    comment_database_ids=tuple(comment_ids),
+                )
+            )
+        page_info = review_threads.get("pageInfo")
+        if not isinstance(page_info, dict) or not page_info.get("hasNextPage"):
+            break
+        thread_cursor = page_info.get("endCursor")
+        if not isinstance(thread_cursor, str):
+            break
+
+    return threads
+
+
+async def build_review_thread_comment_index(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+    owner: str,
+    repo: str,
+    pull_number: int,
+    auth_headers: dict[str, str] | None = None,
+) -> dict[int, str]:
+    """Map REST review comment database id → GraphQL thread id (PRRT_…)."""
+    index: dict[int, str] = {}
+    for thread in await list_review_threads(
+        client,
+        github_installation_id=github_installation_id,
+        owner=owner,
+        repo=repo,
+        pull_number=pull_number,
+        auth_headers=auth_headers,
+    ):
+        for comment_id in thread.comment_database_ids:
+            index[comment_id] = thread.thread_id
+    return index
+
+
 async def find_review_thread_id_for_comment(
     client: httpx.AsyncClient,
     *,
@@ -446,64 +656,20 @@ async def find_review_thread_id_for_comment(
     pull_number: int,
     comment_database_id: int,
     auth_headers: dict[str, str] | None = None,
+    thread_index: dict[int, str] | None = None,
 ) -> str | None:
     """GraphQL lookup: REST comment id → review thread node id (PRRT_…)."""
-    headers = await _resolve_auth_headers(
+    if thread_index is not None:
+        return thread_index.get(comment_database_id)
+    index = await build_review_thread_comment_index(
         client,
         github_installation_id=github_installation_id,
+        owner=owner,
+        repo=repo,
+        pull_number=pull_number,
         auth_headers=auth_headers,
     )
-    query = """
-    query($owner: String!, $repo: String!, $number: Int!) {
-      repository(owner: $owner, name: $repo) {
-        pullRequest(number: $number) {
-          reviewThreads(first: 100) {
-            nodes {
-              id
-              comments(first: 20) {
-                nodes { databaseId }
-              }
-            }
-          }
-        }
-      }
-    }
-    """
-    response = await client.post(
-        f"{GITHUB_API_BASE}/graphql",
-        headers=headers,
-        json={"query": query, "variables": {"owner": owner, "repo": repo, "number": pull_number}},
-    )
-    response.raise_for_status()
-    payload = response.json()
-    if payload.get("errors"):
-        return None
-    data = payload.get("data")
-    if not isinstance(data, dict):
-        return None
-    repository = data.get("repository")
-    if not isinstance(repository, dict):
-        return None
-    pull_request = repository.get("pullRequest")
-    if not isinstance(pull_request, dict):
-        return None
-    review_threads = pull_request.get("reviewThreads")
-    if not isinstance(review_threads, dict):
-        return None
-    threads = review_threads.get("nodes", [])
-    if not isinstance(threads, list):
-        return None
-    for thread in threads:
-        if not isinstance(thread, dict):
-            continue
-        thread_id = thread.get("id")
-        comments = thread.get("comments", {}).get("nodes", [])
-        for comment in comments:
-            if not isinstance(comment, dict):
-                continue
-            if comment.get("databaseId") == comment_database_id:
-                return thread_id if isinstance(thread_id, str) else None
-    return None
+    return index.get(comment_database_id)
 
 
 async def resolve_review_thread(

@@ -1,18 +1,18 @@
 {
   "files": [
     {
-      "path": "docs/review-pipeline/post-review-quality/GITHUB_SURFACE_EXECUTION.md",
-      "description": "GitHub surface program — LOOP order, locked decisions, phase gates (P0–P4)",
+      "path": "docs/review-pipeline/github-surface-hardening/GITHUB_SURFACE_HARDENING_EXECUTION.md",
+      "description": "GitHub surface hardening — LOOP order, locked decisions, phase gates (P0–P4)",
       "scope": ["backend/**"]
     },
     {
-      "path": "docs/review-pipeline/post-review-quality/POST_REVIEW_QUALITY_FINDINGS.md",
-      "description": "Platform findings — L1–L3 vs Greptile, dogfood method, track A/B",
+      "path": "docs/review-pipeline/github-surface-hardening/GITHUB_SURFACE_HARDENING_FINDINGS.md",
+      "description": "Hardening baseline — GH-1 thread resolve, GraphQL scale, test harness",
       "scope": ["backend/**"]
     },
     {
-      "path": "docs/review-pipeline/post-review-quality/POST_REVIEW_QUALITY_GENERAL_PLAN.md",
-      "description": "General plan — GitHub surface phases P0–P4",
+      "path": "docs/review-pipeline/github-surface-hardening/GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md",
+      "description": "General plan — hardening phases P0–P4",
       "scope": ["backend/**"]
     },
     {
