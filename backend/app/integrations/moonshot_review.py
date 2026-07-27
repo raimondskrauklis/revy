@@ -28,6 +28,15 @@ REVIEW_SYSTEM_PROMPT = (
     "only to validate cross-file impact."
 )
 
+ISSUE_COMMENT_FORMAT_SYSTEM_PROMPT = (
+    "You format GitHub pull request review issue comments. "
+    "Return ONLY raw GitHub-flavored markdown — no JSON wrapper, no code fences, "
+    "no {\"body\": ...} or {\"review_comment\": ...} envelope. "
+    "Sections: short narrative, confidence score, files needing attention (bullets), "
+    "findings severity table (Severity | Category | Title | File — no message column), "
+    "and a metadata footer. Do not use mermaid. Keep under 12000 characters."
+)
+
 _K2_THINKING_MODEL_PREFIXES = (
     "kimi-k2.7-code",
     "kimi-k2.6",
@@ -70,12 +79,14 @@ def _chat_completion_body(
     model: str,
     profile: str,
     messages: list[dict[str, str]],
+    json_response: bool = True,
 ) -> dict[str, object]:
     body: dict[str, object] = {
         "model": model,
         "messages": messages,
-        "response_format": {"type": "json_object"},
     }
+    if json_response:
+        body["response_format"] = {"type": "json_object"}
     if _uses_k3_params(model):
         body["reasoning_effort"] = _reasoning_effort_for_profile(profile)
         return body
@@ -130,13 +141,15 @@ def _log_moonshot_error(response: httpx.Response, *, model: str) -> None:
     )
 
 
-async def complete_review(
+async def _complete_chat(
     client: httpx.AsyncClient,
     *,
     profile: str,
+    system_prompt: str,
     user_prompt: str,
     model_id: str | None = None,
     timeout_seconds: float | None = None,
+    json_response: bool = True,
 ) -> str:
     _require_moonshot_configured()
     api_key = settings.moonshot_api_key
@@ -148,7 +161,7 @@ async def complete_review(
 
     model = _normalized_model_id(model_id or settings.revy_moonshot_model_for_profile(profile))
     messages = [
-        {"role": "system", "content": REVIEW_SYSTEM_PROMPT},
+        {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
     ]
     response = await client.post(
@@ -157,7 +170,12 @@ async def complete_review(
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         },
-        json=_chat_completion_body(model=model, profile=profile, messages=messages),
+        json=_chat_completion_body(
+            model=model,
+            profile=profile,
+            messages=messages,
+            json_response=json_response,
+        ),
         timeout=timeout_seconds or settings.revy_revision_timeout_seconds(profile),
     )
     _log_moonshot_error(response, model=model)
@@ -176,6 +194,45 @@ async def complete_review(
             error_code="llm_error",
         )
     return _extract_message_content(first, model=model)
+
+
+async def complete_review(
+    client: httpx.AsyncClient,
+    *,
+    profile: str,
+    user_prompt: str,
+    model_id: str | None = None,
+    timeout_seconds: float | None = None,
+) -> str:
+    return await _complete_chat(
+        client,
+        profile=profile,
+        system_prompt=REVIEW_SYSTEM_PROMPT,
+        user_prompt=user_prompt,
+        model_id=model_id,
+        timeout_seconds=timeout_seconds,
+        json_response=True,
+    )
+
+
+async def complete_issue_comment_markdown(
+    client: httpx.AsyncClient,
+    *,
+    profile: str,
+    user_prompt: str,
+    model_id: str | None = None,
+    timeout_seconds: float | None = None,
+) -> str:
+    """Moonshot chat completion for Greptile-shaped PR issue comments — markdown only."""
+    return await _complete_chat(
+        client,
+        profile=profile,
+        system_prompt=ISSUE_COMMENT_FORMAT_SYSTEM_PROMPT,
+        user_prompt=user_prompt,
+        model_id=model_id,
+        timeout_seconds=timeout_seconds,
+        json_response=False,
+    )
 
 
 def parse_review_json(raw: str) -> list[dict]:

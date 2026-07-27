@@ -2291,7 +2291,8 @@ async def test_find_publish_job_for_head_sha_completed_only():
 
 
 @pytest.mark.asyncio
-async def test_create_publish_job_for_review_run_skips_superseded():
+async def test_create_publish_job_for_review_run_skips_non_completed_superseded():
+    """Superseded runs are not completed — create_publish_job returns None via status gate."""
     review_run_id = uuid.uuid4()
     run = GitHubReviewRunORM(
         revision_id=uuid.uuid4(),

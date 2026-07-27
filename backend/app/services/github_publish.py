@@ -130,8 +130,6 @@ async def create_publish_job_for_review_run(
     )
     if run is None or run.status != GitHubReviewRunStatus.completed:
         return None
-    if is_review_run_superseded(run):
-        return None
 
     pending = await session.scalar(
         select(GitHubPublishJobORM.id)
