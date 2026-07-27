@@ -86,6 +86,8 @@ Patterns that worked on PR #50 (Composer-class parent):
 
 **Do not** spawn Bugbot in parallel with implementation — **sequential:** code complete → Bugbot → fix → **re-Bugbot if blockers** → push.
 
+**Pass 2+ output:** require **Closed** + **Deferred** tables — not only “no bugs” ([OUTPUT_FORMAT.md](./prompts/OUTPUT_FORMAT.md), RC-D14).
+
 **Iterative expectation:** each Bugbot pass after fixes may surface **new** bugs on the same diff (lifecycle, cross-file). That is correct behavior — same as Greptile multi-pass on PRs. See [RQ1 local Bugbot §](../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#iterative-agent-review--rq1-local-bugbot) and RC-D8 in [learnings](../REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md).
 
 **Dogfood stance:** Cursor + local Bugbot complement Revy while we build (RC-D7). Product north star: **Revy on repo** replaces external review for customers.
@@ -108,7 +110,8 @@ Patterns that worked on PR #50 (Composer-class parent):
 [ ] Implement + deliverable pytest
 [ ] ruff (backend if touched)
 [ ] Phase gate green
-[ ] LOCAL BUGBOT — blockers fixed, re-gate if needed
+[ ] LOCAL BUGBOT Pass 1 — blockers fixed
+[ ] LOCAL BUGBOT Pass 2+ — Closed + Deferred tables; re-gate if blockers
 [ ] Commit: feat(review-quality): RQn …
 [ ] Push
 [ ] Optional: note dogfood row (Greptile/Revy when available)
@@ -117,7 +120,7 @@ Patterns that worked on PR #50 (Composer-class parent):
 
 **First iteration only:** `.greptile/files.json` + `.cursor/BUGBOT.md` (RC0).
 
-Copy-paste prompts: [PROMPTS.md](./PROMPTS.md).
+Copy-paste prompts: [PROMPTS.md](./PROMPTS.md) · Distilled: [prompts/](./prompts/).
 
 ---
 
@@ -151,7 +154,8 @@ Copy-paste prompts: [PROMPTS.md](./PROMPTS.md).
 
 ## Backlog (evolve this folder)
 
-- [ ] Per-RQ prompt blocks in [PROMPTS.md](./PROMPTS.md)
+- [x] Per-RQ distill in [prompts/PHASES.md](./prompts/PHASES.md)
+- [x] Pass 1/2 output contract [prompts/OUTPUT_FORMAT.md](./prompts/OUTPUT_FORMAT.md)
 - [ ] `SUBAGENTS.md` — Task vs explore decision tree
 - [ ] `DOGFOOD_INDEX.md` — one row per program PR
 - [ ] RC-API: fetch Revy run JSON for agent babysit without paste

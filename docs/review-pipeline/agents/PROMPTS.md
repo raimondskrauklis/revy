@@ -1,71 +1,75 @@
 # Agent prompts (copy-paste)
 
-**Index:** [agents/README.md](./README.md) · **LOOP rules:** [ORCHESTRATION.md](./ORCHESTRATION.md)
+**Index:** [agents/README.md](./README.md) · **Distilled prompts:** [prompts/README.md](./prompts/README.md) · **LOOP:** [ORCHESTRATION.md](./ORCHESTRATION.md)
 
-Add a section per program phase as we ship it. Keep **Custom Instructions** pointed at the active execution § and locked Q#.
+Per-RQ Custom Instructions live in **[prompts/PHASES.md](./prompts/PHASES.md)**.  
+Response shape (pass 1 vs pass 2 + **Deferred** table): **[prompts/OUTPUT_FORMAT.md](./prompts/OUTPUT_FORMAT.md)**.
 
 ---
 
-## Review quality — RQ0 (schema)
-
-### Local Bugbot (pre-push)
+## Local Bugbot — template
 
 ```text
-Full Repository Path: /absolute/path/to/revy
+Full Repository Path: /Users/raimonds.krauklis/projects/revy
 Diff: uncommitted changes
-Custom Instructions: Review against docs/review-pipeline/waves/REVIEW_QUALITY_EXECUTION.md
-§ RQ0 and REVIEW_QUALITY_FINDINGS.md locked Q#. Migration 0026 only — hand-written Alembic.
-FK ondelete SET NULL on optional pipeline FKs; created_at index for O8. Fix blockers only.
+Change Description:
+  <5–10 bullets on what changed — optional but helps pass 2>
+
+Custom Instructions:
+  <paste PHASES.md § RQn block>
+  <paste OUTPUT_FORMAT.md Pass 1 or Pass 2 block>
 ```
 
-### phase-execution invoke
+**Pass 1:** after implement, before first commit on slice.  
+**Pass 2+:** after fixes; must include Deferred table even if clean (RC-D14).
+
+---
+
+## phase-execution invoke
 
 ```text
 @docs/review-pipeline/waves/REVIEW_QUALITY_EXECUTION.md /phase-execution
 ```
 
-Stop after RQ0 migration pause until staging `alembic upgrade head`.
+Migration pause: stop after RQ0 until staging `alembic upgrade head`.
 
-### babysit-pr
+---
+
+## babysit-pr
 
 ```text
 /babysit-pr 50
 ```
 
-Skip Revy findings for RQ1 scope; fix Greptile P1/P2 in migration/ORM. **Local Bugbot before push.**
+Greptile is post-push. Re-run **Pass 1** Bugbot on fixes before push.
+
+---
+
+## Generic parent reminders
+
+```text
+- Implementer ≠ reviewer — same model, different task (prompts/TWO_AGENTS.md).
+- Local Bugbot Pass 1 → fix → Pass 2 (with Deferred table) → push.
+- Read only current RQ execution section.
+- Update .cursor/BUGBOT.md active phase line each RQ.
+```
+
+Legacy per-phase blocks below are **superseded by prompts/PHASES.md** — kept for grep only.
+
+---
+
+## Review quality — RQ0 (schema)
+
+See [prompts/PHASES.md § RQ0](./prompts/PHASES.md#rq0--schema).
 
 ---
 
 ## Review quality — RQ1 (diff + compare)
 
-*(Add when RQ1 starts — AS1 index_mode at job create, compare_commits, D13.)*
-
-```text
-Full Repository Path: …
-Diff: branch changes
-Custom Instructions: REVIEW_QUALITY_EXECUTION.md § RQ1. AS1: index_mode at job create not column default.
-D13 hybrid index; re-call compare in review worker.
-```
+See [prompts/PHASES.md § RQ1](./prompts/PHASES.md#rq1--diff--compare).
 
 ---
 
 ## Review quality — RQ7 (Greptile publish)
 
-*(Add when RQ7 starts — G3 split, G5 formatter, G10 check finalize.)*
-
-```text
-Custom Instructions: § RQ7. G3 compact check vs full issue comment. G10 update_check_run not one-shot create.
-```
-
----
-
-## Generic parent agent reminders
-
-Paste into long sessions when context drifts:
-
-```text
-- Local Bugbot before every push (not optional).
-- Read only current RQ execution section.
-- Migration pause: stop LOOP after RQ0 until human confirms staging migration.
-- Minimal doc commit per phase; update BUGBOT.md active phase line.
-```
+See [prompts/PHASES.md § RQ7](./prompts/PHASES.md#rq7--greptile-publish).

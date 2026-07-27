@@ -323,6 +323,23 @@ The thinking trace explores **many** hypotheses (deletion-only sync, `paths_to_i
 
 ---
 
+## Prompt handling — RC-D15
+
+**Insight:** Composer (implement) and Bugbot (review) share the same model class but **different tasks**. Smart agents need **contract context + thin routers**, not long prompts. Long thinking traces that “talk themselves out” of hypotheses are **valuable** — the bug is collapsing that to one line.
+
+**Shipped:** [agents/prompts/](../agents/prompts/)
+
+| File | Role |
+|------|------|
+| [TWO_AGENTS.md](../agents/prompts/TWO_AGENTS.md) | Implementer blind spots vs reviewer adversarial trace |
+| [OUTPUT_FORMAT.md](../agents/prompts/OUTPUT_FORMAT.md) | Pass 1 FIND; Pass 2+ CLOSED + **Deferred** (required) |
+| [PHASES.md](../agents/prompts/PHASES.md) | One distilled Custom Instructions block per RQn |
+| [README.md](../agents/prompts/README.md) | Stack diagram + gate sequence |
+
+**RQ5+:** update `PHASES.md § RQ5` when implementing; append OUTPUT_FORMAT tail unchanged.
+
+---
+
 ## Revy — triage (old deploy)
 
 | Sev | Location | Finding | Action |
@@ -381,3 +398,4 @@ After each LOOP commit on #50, add a row:
 | RQ2 | pending | suspended | Bugbot 2-pass: D13-F + compare supplemental; pass 2 closure — [§](#rq2-bugbot--focus-vs-bias) RC-D12 |
 | RQ4 | pending | suspended | RC-D13 — initial push skipped Bugbot; retro pass 1 → 3 bugs; pass 2 clean — [§](#loop-discipline-failure--rq3rq4-rc-d13) |
 | RQ4 pass 2 | — | — | RC-D14 closure trace + 2 deferred fixes before RQ5 — [§](#rq4-bugbot-pass-2--closure-vs-thinking-trace-rc-d14) |
+| prompts | — | — | RC-D15 — `agents/prompts/` distill directory — [§](#prompt-handling--rc-d15) |

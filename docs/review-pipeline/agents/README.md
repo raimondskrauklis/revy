@@ -11,7 +11,7 @@
 | Layer | What | Where | Agent reads when |
 |-------|------|-------|------------------|
 | **1. Contract** | Locked Q#, schema, routes, RQ scope | [FINDINGS](../review-quality/REVIEW_QUALITY_FINDINGS.md) + [EXECUTION](../waves/REVIEW_QUALITY_EXECUTION.md) § RQn | Implementing RQn |
-| **2. Process** | LOOP, gates, prompts | **This folder** + [skills](../../../.cursor/skills/) | Every push / phase-execution |
+| **2. Process** | LOOP, gates, prompts | **This folder** + [prompts/](./prompts/) + [skills](../../../.cursor/skills/) | Every push / phase-execution |
 | **3. Wiring** | Greptile + Bugbot see the contract | `.greptile/files.json`, `.cursor/BUGBOT.md` | RQ0 + update active phase line |
 | **4. Evidence** | What we learned on a real PR | [DOGFOOD_PR50](../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md), [CODE_REVIEW_LEARNINGS](../REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md), [`chain_of_thoughts/`](./chain_of_thoughts/) (raw exports) | After push; before next RQ |
 
@@ -58,7 +58,8 @@ Next RQ
 | File | Role |
 |------|------|
 | [ORCHESTRATION.md](./ORCHESTRATION.md) | LOOP detail, anti-patterns, reference reviewer distillation |
-| [PROMPTS.md](./PROMPTS.md) | Copy-paste Bugbot / invoke per RQ |
+| [prompts/](./prompts/) | **Distilled** implement vs review, output format, per-RQ Custom Instructions |
+| [PROMPTS.md](./PROMPTS.md) | Copy-paste Bugbot shells (points at `prompts/`) |
 | [chain_of_thoughts/](./chain_of_thoughts/) | Committed Bugbot gate + Cursor chat exports (evidence archive; add selectively) |
 
 **Skills (gates):** [phase-execution](../../../.cursor/skills/phase-execution/SKILL.md) · [ship-changes](../../../.cursor/skills/ship-changes/SKILL.md) · [babysit-pr](../../../.cursor/skills/babysit-pr/SKILL.md)
