@@ -295,6 +295,8 @@ Same PR as D/O/I/E/M. Narrative, confidence 0–5 (deterministic), files needing
 
 **G3 (locked):** **Split bodies** — check run = compact (verdict + confidence + severity table); issue comment = full Greptile narrative. Avoids GitHub check output size limits while keeping rich PR comment.
 
+**G10 (locked):** **Check run lifecycle** — create `revy/review` with `status=in_progress` when pipeline starts (RQ3); `update_check_run` → `completed` at publish (RQ7). Parity with Greptile/Bugbot PR check UX. Today only one-shot `completed` at publish end — [dogfood RC-D1](./REVIEW_QUALITY_REVIEW_CONTEXT.md#dogfood-log-pr-50).
+
 **R3 vs R5 “fixed since last review” (locked G9):** **R5 owns** `resolution_status` on groups at next revision; **R3 reads** it for prose. Fingerprint delta from publish snapshot is secondary signal only.
 
 ---
@@ -414,6 +416,7 @@ Bugbot-style resolution rate at next revision. **v1 (M2):** diff heuristic + jud
 | **G6** | **locked** | P2 inline off by default |
 | **G7** | **locked** | Message column off in table |
 | **G9** | **locked** | R5 metrics owns `resolution_status`; R3 publish reads it |
+| **G10** | **locked** | `in_progress` check at pipeline start (RQ3); finalize at publish (RQ7) — Greptile/Bugbot parity |
 | I1–I3, C1 | **locked** | content_hash; compare paths; copy-forward incremental |
 | E1–E2 | **locked** | evidence_snippet; grounding judge |
 | M1 | **locked** | `resolution_status` on groups at next revision; v1 counts only |
@@ -445,6 +448,7 @@ Full strategy: [REVIEW_QUALITY_REVIEW_CONTEXT.md](./REVIEW_QUALITY_REVIEW_CONTEX
 | **RC1** | Path-scoped doc subsets? | **open** | **RQ-RC-1** post-v1 if dogfood noisy |
 | **RC2** | Active RQ phase pointer in Bugbot? | **open** | **RQ-RC-1** |
 | **RC4** | `.revy/rules` workspace policy? | **open** | Post-G product |
+| **G10** | `revy/review` in-progress on PR? | **locked** | RQ3 + RQ7 — [dogfood log](./REVIEW_QUALITY_REVIEW_CONTEXT.md#dogfood-log-pr-50) |
 
 ---
 

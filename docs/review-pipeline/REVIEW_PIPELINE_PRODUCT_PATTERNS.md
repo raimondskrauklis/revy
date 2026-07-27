@@ -61,6 +61,7 @@
 |---------|-------------------------|---------------|--------|
 | Same issue every re-review | Learning + dedupe over time | R5 fingerprints + supersede / resolve | **shipped** |
 | Idempotent GitHub surface | Known pain: new summary comment each push | R6-Q1: update check run + summary **in place** per revision | **shipped** |
+| Check run **in progress** on PR | Greptile/Bugbot show spinner while reviewing | **G10:** `in_progress` at pipeline start; `completed` at publish (RQ3/RQ7) | **in flight** |
 | Human dismiss / ack | Resolve threads, 👍/👎 | R7 execution **deferred** dismiss/ack → **R7.6**; judge `resolved` exists | **defer** — [review-quality peer review](./review-quality/REVIEW_QUALITY_PEER_REVIEW.md) M2 |
 | Learn from team comments | Memory from PR comments, reactions, commits | Post-R7 analytics + optional rule suggestions | **future** (R8+) |
 | Inferred custom rules | AI-generated rules from behavior | `workspace_review_policy` suggestions | **future** (R8+) |

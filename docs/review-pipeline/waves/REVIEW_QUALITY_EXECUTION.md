@@ -25,6 +25,7 @@
 - **Pipeline GET route (locked):** `GET /{workspace_id}/repositories/{repository_id}/pull-requests/{pull_request_id}/revisions/{revision_id}/review-runs/{review_run_id}/pipeline` — matches `installation_review.py` revision-scoped pattern (no `installations/` segment).
 - **SC3:** Manifest fields `changed_symbols`, `structural_context_mode`, `caller_files_*` — default `structural_context_mode=none`.
 - **G5 formatter LLM:** `services/github_publish_formatter.py` calling existing Moonshot client (`integrations/moonshot_review.py` pattern) — structured JSON in/out; no new vendor.
+- **G10:** GitHub check run **`in_progress` at pipeline start** (RQ3) → **`completed` at publish** (RQ7). Parity with Greptile/Bugbot PR check UX — today `create_check_run` posts only `completed` in one shot.
 - **PR review context (dogfood):** Ship `.greptile/files.json` + `.cursor/BUGBOT.md` in **RQ0** (first commit). Point Greptile/Bugbot at execution + findings for `backend/**` scope. Per-phase commits: code + minimal doc status (execution table row) — not full doc tree every push.
 
 ## PR review context (Greptile + Bugbot)
@@ -167,9 +168,10 @@ cd backend && pipenv run pytest \
    `items_view`; `ensure_revision_access`; return steps + artifacts.
 
 4. **O8 purge** — `workers/pipeline_purge_tasks.py` → maintenance queue; register in `celery_app.py` imports + routes; `beat_schedule` daily `purge_old_pipeline_artifacts`; `PIPELINE_RETENTION_DAYS=90` in `config.py` / `.env.example`.
-5. **Schemas** — `PipelineRunResponse`, `PipelineStepResponse`, `PipelineArtifactResponse`.
+5. **G10 check lifecycle** — on pipeline enqueue / first worker start: `create_check_run` with `status=in_progress` (store `github_check_run_id` on publish job or pipeline run). Publish path uses `update_check_run` → `completed` + conclusion (RQ7). On pipeline failure: `completed` + `failure`/`neutral` — never leave orphan `in_progress`.
+6. **Schemas** — `PipelineRunResponse`, `PipelineStepResponse`, `PipelineArtifactResponse`.
 
-**Files:** `services/github_pipeline_trace.py`, `schemas/github_pipeline.py`, `api/v1/workspaces/installation_review.py`, `workers/index_tasks.py`, `workers/review_tasks.py`, `workers/reconcile_tasks.py`, `workers/publish_tasks.py`, `services/github_finding_reconcile.py`, `services/github_finding_judge.py`, `workers/pipeline_purge_tasks.py`, `workers/celery_app.py`, `core/config.py`, `tests/unit/test_github_pipeline_trace.py`, `tests/unit/test_github_pipeline_routes.py`, `tests/unit/test_pipeline_purge_tasks.py`
+**Files:** `services/github_pipeline_trace.py`, `schemas/github_pipeline.py`, `api/v1/workspaces/installation_review.py`, `integrations/github_api.py`, `workers/index_tasks.py`, `workers/review_tasks.py`, `workers/reconcile_tasks.py`, `workers/publish_tasks.py`, `services/github_finding_reconcile.py`, `services/github_finding_judge.py`, `workers/pipeline_purge_tasks.py`, `workers/celery_app.py`, `core/config.py`, `tests/unit/test_github_pipeline_trace.py`, `tests/unit/test_github_pipeline_routes.py`, `tests/unit/test_pipeline_purge_tasks.py`, `tests/unit/test_github_api_publish.py`
 
 **Deliverable:**
 
@@ -255,7 +257,8 @@ cd backend && pipenv run pytest tests/unit/test_github_resolution_metrics.py -q
 5. **G8** — `summary_json` on publish job.
 6. **D13-F + D3** — footer/check warning for `fallback_reason` and intentional `index_mode=full` (deep/critical).
 7. **G6/G7** — assert no regression: inline remains error/critical only; summary table without message column.
-8. **Pipeline** — publish artifacts for both markdown bodies.
+8. **G10 finalize** — publish uses `update_check_run` (not one-shot `create` with `completed`); compact G3 body on finalize.
+9. **Pipeline** — publish artifacts for both markdown bodies.
 
 **Files:** `services/github_publish.py`, `services/github_publish_formatter.py`, `integrations/moonshot_review.py` (extend if needed), `tests/unit/test_github_publish.py`, `tests/unit/test_github_publish_formatter.py`
 

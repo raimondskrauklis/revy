@@ -301,6 +301,16 @@ When shipping **large program PRs** (code + planning docs), wire bots to the **e
 
 **Lesson from planning:** Greptile/Bugbot catch **intent vs implementation** drift (wrong routes, missing columns) when wired; without wiring, `.md` in diff is ignored as spec.
 
+### Dogfood log — PR #50 (RQ0)
+
+| ID | Finding |
+|----|---------|
+| **RC-D1** | Revy `revy/review` has **no in-progress spinner** — check appears only at publish (`create_check_run` → `completed` one-shot). Greptile/Bugbot show `in_progress` immediately. **Fix: G10** (RQ3/RQ7). |
+| **RC-D2** | Pre-deploy Revy autostart on planning PR still useful — flagged full-RAG vs diff-first (`github_review.py`); validates RQ1. |
+| **RC-D3** | Greptile RC0 wiring: pass, 37 files / 6 comments. |
+
+Full log: [REVIEW_QUALITY_REVIEW_CONTEXT.md](./review-quality/REVIEW_QUALITY_REVIEW_CONTEXT.md#dogfood-log-pr-50).
+
 ---
 
 ## References

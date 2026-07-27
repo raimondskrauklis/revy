@@ -70,7 +70,8 @@ Evaluate during **`feat/review-quality` PR** dogfood; ship improvements in **RQ-
 
 | Rung | ID | What | Trigger |
 |------|-----|------|---------|
-| **v0** | RC0 | Static `files.json` + `BUGBOT.md` | RQ0 — **in flight** |
+| **v0** | RC0 | Static `files.json` + `BUGBOT.md` | RQ0 — **shipped** (`64f661c`) |
+| **v1** | **G10** | **`revy/review` check `in_progress` → `completed`** (Greptile/Bugbot parity) | **RQ3** start + **RQ7** finalize — [dogfood log](#dogfood-log-pr-50) |
 | **v1.1** | RC1 | **Path-scoped** doc sets — e.g. `backend/**` → execution RQn section + findings D/O locks only | Greptile noise from irrelevant Q# |
 | **v1.1** | RC2 | **Active slice pointer** — README or `BUGBOT.md` names current RQ phase; update each LOOP commit | Bugbot cites wrong subphase |
 | **v1.2** | RC3 | **Greptile cascading rules** — `.greptile/rules` per directory (mirror vendor pattern) for monorepo areas | Frontend-heavy phases |
@@ -93,6 +94,38 @@ Evaluate during **`feat/review-quality` PR** dogfood; ship improvements in **RQ-
 | **RC4** | `.revy/rules` workspace policy (product)? | **open** | Post-G — was parking lot; see [findings](./REVIEW_QUALITY_FINDINGS.md) |
 | **RC5** | Pipeline injects locked decisions into review prompt? | **open** | Track A + workspace policy |
 | **RC6** | `read_planning_doc` agent tool? | **open** | Track A — pairs with SC8 investigator |
+| **G10** | `revy/review` check shows in-progress on PR? | **locked** | **Yes** — RQ3 create `in_progress`; RQ7 `update_check_run` → `completed` |
+
+---
+
+## Dogfood log (PR #50)
+
+**PR:** [#50](https://github.com/raimondskrauklis/revy/pull/50) · **branch:** `feat/review-quality` · **RQ0:** `64f661c` · **deploy:** pre-RQ0 prod/staging (findings reflect **current** pipeline, not this branch).
+
+| ID | Date | Signal | Result | Action |
+|----|------|--------|--------|--------|
+| **RC-D1** | 2026-07-27 | GitHub Checks UX — Greptile shows spinner; Revy does not | **Gap** — `create_check_run` posts `status: completed` only at publish end | **G10** locked → RQ3/RQ7 |
+| **RC-D2** | 2026-07-27 | Revy autostart on planning PR (old deploy) | **Useful** — flagged full-RAG vs diff-first (`github_review.py`) | Validates RQ1 scope; not a false positive |
+| **RC-D3** | 2026-07-27 | Greptile wired context (RC0) | **Pass** — 37 files, 6 comments | Triage threads; note schema/route hits vs noise |
+| **RC-D4** | 2026-07-27 | CI on RQ0 migration | **Pass** | — |
+| **RC-D5** | 2026-07-27 | Local Bugbot pre-push | **No findings** | — |
+
+**G10 target behavior (parity with Greptile/Bugbot):**
+
+```text
+Pipeline enqueue / first worker
+        │
+        ▼
+  create_check_run(status=in_progress)   ← visible on PR immediately
+        │
+        ▼
+  index → review → reconcile → judge → publish
+        │
+        ▼
+  update_check_run(status=completed, conclusion=…)   ← RQ7 publish path
+```
+
+On failure: `update_check_run` with `failure` or `neutral` — never leave orphan `in_progress`.
 
 ---
 
@@ -106,8 +139,9 @@ After each RQ phase merge on the PR, note:
 | Bugbot flags plan/code drift | Catches peer-review locks | Missing → expand `BUGBOT.md` links |
 | False positives from stale Q# | Low | **RC1** — slice findings by track (D/O/G…) |
 | Review latency / token blow-up | Stable | Trim per-phase doc commits; avoid full corpus edits |
+| **`revy/review` in-progress on PR** | Spinner like Greptile/Bugbot | **G10** — RQ3/RQ7 |
 
-Log anecdotes in [CODE_REVIEW_LEARNINGS](../REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md) § PR review context.
+Log anecdotes in [CODE_REVIEW_LEARNINGS](../REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md) § PR review context and [dogfood log](#dogfood-log-pr-50) above.
 
 ---
 
@@ -137,7 +171,7 @@ Log anecdotes in [CODE_REVIEW_LEARNINGS](../REVIEW_PIPELINE_CODE_REVIEW_LEARNING
 
 ## Next
 
-1. **RQ0** — ship RC0 wiring with migration `0026`.
-2. **During RQ1–RQ8** — minimal README status updates; collect dogfood metrics above.
+1. **RQ0** — ship RC0 wiring with migration `0026` — **done** (`64f661c`).
+2. **During RQ1–RQ8** — minimal README status updates; extend [dogfood log](#dogfood-log-pr-50).
 3. **After `review-quality-v1` tag** — if metrics warrant, draft `REVIEW_QUALITY_RQ_RC_1_GENERAL_PLAN.md` + execution file under `waves/`.
 4. **Product** — keep RC4–RC6 aligned with workspace policy row in [PRODUCT_PATTERNS](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md).
