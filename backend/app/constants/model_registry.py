@@ -10,6 +10,11 @@ SUPPORTED_LLM_PROVIDERS = frozenset({"moonshot", "anthropic", "bedrock"})
 SUPPORTED_JUDGE_PROVIDERS = frozenset({"anthropic", "bedrock"})
 
 
+def normalize_provider_slug(provider: str) -> str:
+    """Normalize provider identifiers from API input or env."""
+    return provider.strip().lower()
+
+
 @dataclass(frozen=True, slots=True)
 class ModelCatalogEntry:
     provider: str
