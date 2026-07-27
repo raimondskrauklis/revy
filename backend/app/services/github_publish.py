@@ -989,6 +989,7 @@ async def _flush_publish_surface(
 ) -> GitHubPublishJobORM | None:
     inline_threads = dict(build.inline_threads)
     retry_posted = retry_posted_inline or {}
+    inline_threads.update(retry_posted)
 
     async with httpx.AsyncClient(timeout=120.0) as client:
         auth_headers = await github_api.installation_auth_headers(
