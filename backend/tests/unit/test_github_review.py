@@ -416,6 +416,71 @@ async def test_run_review_run_happy_path_persists_findings():
     assert session.add.call_count == 1
 
 
+@pytest.mark.asyncio
+async def test_run_review_run_accepts_profile_string_from_db():
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    repository_id = uuid.uuid4()
+
+    run = GitHubReviewRunORM(
+        revision_id=revision_id,
+        workspace_id=workspace_id,
+        status=GitHubReviewRunStatus.pending,
+        profile="standard",
+        provider="moonshot",
+    )
+    run.id = review_run_id
+
+    from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
+
+    revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="abc",
+    )
+    revision.id = revision_id
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=repository_id,
+        workspace_id=workspace_id,
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=1,
+        title="Fix bug",
+        state=GitHubPullRequestState.open,
+        head_sha="abc",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=1,
+    )
+    pull_request.id = pull_request_id
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, revision, pull_request])
+    session.flush = AsyncMock()
+    session.execute = AsyncMock()
+    session.add = MagicMock()
+
+    with patch(
+        "app.services.github_review._collect_context_chunks",
+        AsyncMock(return_value=[]),
+    ):
+        with patch(
+            "app.services.github_review.resolve_model",
+            AsyncMock(return_value=ModelRef(provider="moonshot", model_id="kimi-k2.7-code")),
+        ):
+            with patch(
+                "app.services.github_review._call_llm",
+                AsyncMock(return_value='{"findings": []}'),
+            ) as llm_mock:
+                result = await github_review.run_review_run(session, review_run_id=review_run_id)
+
+    assert result.status == GitHubReviewRunStatus.completed
+    assert llm_mock.await_args.kwargs["profile"] == "standard"
+
+
 def test_review_run_polish_defaults():
     run = GitHubReviewRunORM(
         revision_id=uuid.uuid4(),

@@ -35,7 +35,7 @@ def review_pull_request_revision(self, review_run_id: str) -> None:
                 "github_review_run_complete",
                 extra={
                     "review_run_id": review_run_id,
-                    "status": run.status.value,
+                    "status": str(run.status),
                 },
             )
             if run.status == GitHubReviewRunStatus.completed:

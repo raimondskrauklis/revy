@@ -51,6 +51,10 @@ FINDING_LIST_DEFAULT_LIMIT = 100
 FINDING_LIST_MAX_LIMIT = 500
 
 
+def _review_profile_str(profile: ReviewProfile | str) -> str:
+    return profile if isinstance(profile, str) else profile.value
+
+
 async def create_review_run(
     session: AsyncSession,
     *,
@@ -246,7 +250,7 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> GitHu
     if run.status != GitHubReviewRunStatus.pending:
         logger.info(
             "github_review_run_skip_non_pending",
-            extra={"review_run_id": str(review_run_id), "status": run.status.value},
+            extra={"review_run_id": str(review_run_id), "status": str(run.status)},
         )
         return run
 
@@ -281,7 +285,7 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> GitHu
             pr_title=pull_request.title,
         )
         prompt = _build_review_prompt(pr_title=pull_request.title, chunks=chunks)
-        model_role = review_profile_to_model_role(run.profile.value)
+        model_role = review_profile_to_model_role(_review_profile_str(run.profile))
         model_ref = await resolve_model(session, run.workspace_id, model_role)
         run.provider = model_ref.provider
         run.model_id = model_ref.model_id
@@ -289,7 +293,7 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> GitHu
 
         raw_json = await _call_llm(
             model_ref=model_ref,
-            profile=run.profile.value,
+            profile=_review_profile_str(run.profile),
             prompt=prompt,
         )
 
