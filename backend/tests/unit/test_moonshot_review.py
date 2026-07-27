@@ -40,7 +40,6 @@ async def test_complete_review_returns_content():
     with patch("app.integrations.moonshot_review.settings") as mock_settings:
         mock_settings.moonshot_api_key = "test-key"
         mock_settings.revy_moonshot_model_for_profile.return_value = "kimi-k2.7-code"
-        mock_settings.revy_moonshot_max_completion_tokens = 8192
         mock_settings.revy_revision_timeout_seconds.return_value = 60.0
         content = await complete_review(client, profile="standard", user_prompt="review")
 
@@ -89,16 +88,14 @@ def test_chat_completion_body_k2_7_code_omits_temperature():
 
 
 def test_chat_completion_body_k3_deep_uses_high_reasoning():
-    with patch("app.integrations.moonshot_review.settings") as mock_settings:
-        mock_settings.revy_moonshot_max_completion_tokens = 4096
-        body = _chat_completion_body(
-            model="kimi-k3",
-            profile="deep",
-            messages=[{"role": "user", "content": "x"}],
-        )
+    body = _chat_completion_body(
+        model="kimi-k3",
+        profile="deep",
+        messages=[{"role": "user", "content": "x"}],
+    )
     assert "temperature" not in body
     assert body["reasoning_effort"] == "high"
-    assert body["max_completion_tokens"] == 4096
+    assert "max_completion_tokens" not in body
     assert "thinking" not in body
 
 
@@ -109,18 +106,17 @@ def test_chat_completion_body_k3_critical_uses_max_reasoning():
         messages=[{"role": "user", "content": "x"}],
     )
     assert body["reasoning_effort"] == "max"
+    assert "max_completion_tokens" not in body
 
 
 def test_chat_completion_body_legacy_uses_temperature():
-    with patch("app.integrations.moonshot_review.settings") as mock_settings:
-        mock_settings.revy_moonshot_max_completion_tokens = 8192
-        body = _chat_completion_body(
-            model="moonshot-v1-8k",
-            profile="standard",
-            messages=[{"role": "user", "content": "x"}],
-        )
+    body = _chat_completion_body(
+        model="moonshot-v1-8k",
+        profile="standard",
+        messages=[{"role": "user", "content": "x"}],
+    )
     assert body["temperature"] == 0.2
-    assert body["max_completion_tokens"] == 8192
+    assert "max_completion_tokens" not in body
     assert "thinking" not in body
     assert "reasoning_effort" not in body
 
