@@ -2,7 +2,9 @@
 
 **Index:** [agents/README.md](./README.md) · **Prompts:** [PROMPTS.md](./PROMPTS.md)
 
-Distill how to run **phase-execution** on large program PRs with **local Bugbot**, **Greptile**, and **Revy**. Grows from [PR #50 dogfood](../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md).
+Distill how to run **phase-execution** on large program PRs: ship **Revy**, run **Greptile + local Bugbot + Revy** on our PRs (#50 has **no GitHub Bugbot**) and distill what to absorb — not depend on external tools long-term. Grows from [PR #50 dogfood](../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md).
+
+**North star:** tune Revy to do what Greptile (and GitHub Bugbot-class depth, from operator/arch reference) do well. External tools = **reference + dogfood**, not product architecture.
 
 **Audience:** Humans + parent agents (Composer) orchestrating subagents.
 
@@ -17,7 +19,7 @@ Distill how to run **phase-execution** on large program PRs with **local Bugbot*
 | After fixing Greptile (`babysit-pr`) | Re-run Bugbot, then push | **No** |
 | After `ruff`/test fixes only | Re-run Bugbot if Python changed | **No** |
 
-**Greptile / Revy on GitHub are post-push** — they do not replace pre-push Bugbot.
+**Greptile + Revy on PR are post-push** dogfood — distill into findings. **Local Bugbot** stays (Cursor, pre-push). **GitHub Bugbot** is not on #50; use operator experience + [arch notes](../code-review-arch_perplexity_searcj_advice_only.md) as the deeper-review bar for Revy RQ4+.
 
 ```text
 implement → pytest → ruff → phase gate → LOCAL BUGBOT → commit → push
@@ -32,15 +34,20 @@ implement → pytest → ruff → phase gate → LOCAL BUGBOT → commit → pus
 
 ---
 
-## Three reviewers — roles
+## Reference reviewers — distill, don’t depend
 
-| Agent | When | Input contract | Output use |
-|-------|------|----------------|------------|
-| **Bugbot** (local) | Pre-push | `.cursor/BUGBOT.md` + diff | Block commit on real bugs; table in chat |
-| **Greptile** | Post-push | `.greptile/files.json` | Inline P1/P2 + summary; `babysit-pr` |
-| **Revy** | Post-push | Shipped code on staging/prod | Table check + app link; RQ1+ improves |
+Run in **parallel on our PRs** while building Revy. Capture **what they do well and how** → findings → RQ waves. Customer-facing product is **Revy only**.
 
-**Visual/context bar:** Greptile/Bugbot — [dogfood visual §](../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#visual--context-ux--greptile--bugbot-vs-revy-target-bar).
+| Reference | On PR #50? | Why we care | What to distill into Revy | Stays after v1? |
+|-----------|------------|-------------|---------------------------|-----------------|
+| **Local Bugbot** (Cursor) | Yes (pre-push) | Hygiene; included in IDE | Fast diff pass; agent read/grep on harder hunks | **Yes** — dev workflow |
+| **Greptile** (GitHub) | Yes (post-push) | Contract/spec via RC0 `files.json` | Execution-doc findings; P-badge inline; confidence (RQ7) | **No** — patterns → Revy |
+| **GitHub Bugbot** | **No** on #50 | Operator knowledge + arch notes — deeper than local, often finds more | Multi-pass / agentic trace (RQ4+) | **No** — patterns → Revy |
+| **Revy** (deploy) | Yes | Product on real stack | Gap vs Greptile UX + retrieval | **Yes** — the product |
+
+**Hypothesis:** Greptile and GitHub Bugbot (where used) are **agent loops** under the hood — same class as local Bugbot, more passes/PR context. Revy implements distilled mechanics; we do not stack vendors.
+
+**Visual/context bar:** Greptile/Bugbot UX — [dogfood visual §](../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#visual--context-ux--greptile--bugbot-vs-revy-target-bar).
 
 ---
 
@@ -123,7 +130,10 @@ Copy-paste prompts: [PROMPTS.md](./PROMPTS.md).
 
 | Anti-pattern | Why |
 |--------------|-----|
-| Push without local Bugbot | Greptile/Revy are slower feedback; miss easy blockers |
+| **Rely** on Greptile/GitHub Bugbot as permanent product stack | We distill their strengths into Revy; parallel runs are research |
+| Push without local Bugbot | Cheap pre-push gate while building (Cursor) |
+| Treat Greptile findings as “done” without dogfood row | Distillation is the deliverable — update DOGFOOD / learnings |
+| Expect local Bugbot = GitHub Bugbot | Same class (agents), different depth/passes — both inform Revy design |
 | Treat Greptile as pre-push gate | Runs after push only |
 | Full findings edit every commit | Blows Bugbot/Greptile context budget |
 | Parent + Bugbot same turn as half-done code | Wastes review; review incomplete diff |

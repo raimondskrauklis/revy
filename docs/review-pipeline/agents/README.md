@@ -30,16 +30,14 @@ LOCAL BUGBOT  ← mandatory (skills enforce)
         ↓
 commit → push
         ↓
-Greptile + Revy on PR  →  babysit valid threads  →  Bugbot  →  push
-        ↓
-One dogfood note (DOGFOOD doc row)
+Greptile + Revy on PR  →  babysit + distill  →  findings row  →  Bugbot  →  push
         ↓
 Human gate if execution says stop (e.g. migration pause)
         ↓
 Next RQ
 ```
 
-**Three reviewers:** Bugbot (pre-push) · Greptile (contract + inline) · Revy (deployed behavior). Disagreement is signal, not noise.
+**Parallel dogfood on #50:** Greptile (GitHub) · local Bugbot (Cursor) · Revy (deploy). GitHub Bugbot = reference only (not on this repo). Distill → Revy.
 
 ---
 
@@ -47,7 +45,7 @@ Next RQ
 
 | | |
 |-|-|
-| **Distill** | Code without a dogfood note or prompt update = incomplete phase |
+| **Distill** | Parallel Greptile/Bugbot runs → findings → Revy features; code without a dogfood note = incomplete phase |
 | **Pause** | Migration / staging gates are features |
 | **Awesome for us** | Greptile-shaped GitHub UX (RQ7) is the bar — see PR #50 visual gap |
 | **Thin routers** | [AGENTS.md](../../../AGENTS.md) = pointer; detail stays here |
@@ -58,7 +56,7 @@ Next RQ
 
 | File | Role |
 |------|------|
-| [ORCHESTRATION.md](./ORCHESTRATION.md) | LOOP detail, anti-patterns, reviewer roles |
+| [ORCHESTRATION.md](./ORCHESTRATION.md) | LOOP detail, anti-patterns, reference reviewer distillation |
 | [PROMPTS.md](./PROMPTS.md) | Copy-paste Bugbot / invoke per RQ |
 
 **Skills (gates):** [phase-execution](../../../.cursor/skills/phase-execution/SKILL.md) · [ship-changes](../../../.cursor/skills/ship-changes/SKILL.md) · [babysit-pr](../../../.cursor/skills/babysit-pr/SKILL.md)

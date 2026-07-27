@@ -307,12 +307,16 @@ When shipping **large program PRs** (code + planning docs), wire bots to the **e
 |----|---------|
 | **RC-D1** | Revy `revy/review` has **no in-progress spinner** — check appears only at publish end. Greptile/Bugbot show `in_progress` immediately. **Fix: G10** (RQ3/RQ7). |
 | **RC-D2** | Pre-deploy Revy autostart useful — full-RAG vs diff-first (`github_review.py`); validates RQ1. |
-| **RC-D3** | Greptile RC0 wiring: pass; inline cites AS1 on `index_mode` default. |
+| **RC-D3** | Greptile RC0 wiring: pass; inline cites AS1 on `index_mode` default — **distill** into Revy rules/publish, not permanent Greptile dependency. |
+| **RC-D4** | **Parallel dogfood, not layered product** — on #50: Greptile (GitHub) + local Bugbot + Revy. GitHub Bugbot **not** on repo; operator/arch reference for deeper bar. Distill → Revy. [dogfood §](./review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#reference-reviewers--distill-for-revy-pr-50). |
+| **RC-D5** | GitHub Bugbot (reference) / Greptile likely **agent loops** for hard cases; local Bugbot same class, lighter — distill into RQ4+ trace/judge. |
 | **RC-D6** | **Visual/context gap** — Revy check = table + app link; Greptile/Bugbot = narrative + P-badge inline + resolve threads. **Target: RQ7 G track** — [dogfood visual §](./review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#visual--context-ux--greptile--bugbot-vs-revy-target-bar). |
 
 Full log: [REVIEW_QUALITY_DOGFOOD_PR50.md](./review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md).
 
-**Babysit (RQ0):** Greptile P1/P2 migration fixes applied — SET NULL FKs, `created_at` index, `index_mode` backfill `full`, revision CASCADE, artifact CHECK.
+**Babysit (RQ0):** Greptile P1/P2 migration fixes applied — SET NULL FKs, `created_at` index, `index_mode` backfill `full`, revision CASCADE, artifact CHECK. Pass 2: `index_mode` at job create + `full` default (`87c50d2`).
+
+**Distillation (RQ0):** Greptile + local Bugbot + Revy outputs → findings (RC-D4). GitHub Bugbot informs design via operator experience, not #50 runs.
 
 ### Agent orchestration (LOOP + prompts)
 

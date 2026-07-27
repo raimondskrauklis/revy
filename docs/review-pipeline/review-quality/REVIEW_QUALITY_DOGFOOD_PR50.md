@@ -4,7 +4,7 @@
 **Raw paste:** [actual_output_revy_greptile.txt](./actual_output_revy_greptile.txt) (GitHub copy, 2026-07-27)  
 **Strategy:** [REVIEW_QUALITY_REVIEW_CONTEXT.md](./REVIEW_QUALITY_REVIEW_CONTEXT.md) · **Lessons:** [CODE_REVIEW_LEARNINGS](../REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md) · **Agents:** [agents/](../agents/README.md)
 
-**Deploy context:** Revy autostart ran on **pre-RQ0 production/staging** — findings about `github_review.py` reflect **shipped** code, not this branch. Greptile/Bugbot reviewed **this PR diff** with RC0 wiring.
+**Deploy context:** Revy autostart ran on **pre-RQ0 production/staging** — findings about `github_review.py` reflect **shipped** code, not this branch. **On GitHub for #50:** Greptile only (RC0 wiring). **Local:** Cursor Bugbot pre-push. No GitHub Bugbot on this repo.
 
 ---
 
@@ -110,9 +110,49 @@ Same **class** as Greptile for UX: severity table, file:line, explanation in rev
 | P2 | `0026_review_quality.py` | Historical `index_mode` backfill → `full` | **Fixed** |
 | P2 | `0026_review_quality.py` | `revision_id` → `ON DELETE CASCADE` | **Fixed** |
 | P2 | `0026_review_quality.py` | Artifact `CHECK` content present | **Fixed** |
-| P1 | `github_index_job.py` | ORM `index_mode` default `diff` breaks AS1 manual → `full` | **RQ1** — set at job create, not column default alone |
+| P1 | `github_index_job.py` | ORM `index_mode` default `diff` breaks AS1 manual → `full` | **Fixed** (`87c50d2`) — `full` default + explicit at job create (manual=`full`, pipeline=`diff`) |
 
 **Greptile verdict:** RC0 wiring worked — cited O8, execution contract, AS1 on inline thread. Visual UX is the bar for RQ7.
+
+**Babysit pass 2 (`87c50d2`):** Local Bugbot clean on same fix; Greptile had caught AS1 earlier — see [distillation §](#reference-reviewers--distill-for-revy-pr-50).
+
+---
+
+## Reference reviewers — distill for Revy (PR #50)
+
+**Not the product architecture.** On **PR #50** we actually run **Greptile (GitHub) + local Bugbot (Cursor) + Revy (deploy)** — compare outputs and distill into findings / RQ waves. **GitHub Bugbot is not on this repo**; operator experience on other GitHub PRs + [arch notes](../code-review-arch_perplexity_searcj_advice_only.md) inform what Revy should absorb (deeper agentic review, RQ4+). Goal: **Revy absorbs those patterns** — external tools are benchmarks, not layers customers need forever.
+
+```text
+  PR #50 (what we run)                         NORTH STAR
+  ────────────────────                         ──────────
+  Local Bugbot (Cursor, pre-push) ──┐          Revy pipeline:
+  Greptile (GitHub, post-push) ─────┼── distill  • spec/rules (RC4)
+  Revy (deploy, post-push) ─────────┘      →    • trace agents (RQ4+)
+                                                • Greptile UX (RQ7)
+
+  GitHub Bugbot — not on #50; industry reference for deeper review bar
+  Local Bugbot likely stays — Cursor dev gate, not Revy SKU
+```
+
+| Reference | On #50? | What they do well | Revy absorbs via | #50 example |
+|-----------|---------|-------------------|------------------|-------------|
+| **Local Bugbot** | Yes (pre-push) | Fast diff hygiene; read/grep on harder hunks | Dev habit only | Clean on `index_mode` fix; missed AS1 before babysit |
+| **Greptile** | Yes (GitHub) | RC0 execution-doc citations; schema/FK; P-badge inline | RQ7 + RC4 | P1 `index_mode`, O8 index, SET NULL FKs |
+| **GitHub Bugbot** | **No** — other repos / operator knowledge | Deeper cross-file; often finds what local skips; multi-pass agent loop ([arch notes](../code-review-arch_perplexity_searcj_advice_only.md)) | RQ4 evidence + trace | — (not logged on #50) |
+| **Revy** | Yes (deploy) | Intent vs **shipped** code | The product | `github_review.py` full-RAG vs diff-first |
+
+### Under the hood (working hypothesis)
+
+Greptile (and **GitHub Bugbot where available**) are probably **agent-shaped** for harder findings — not one static prompt. Local Bugbot is the same **class** (subagent + read/grep), lighter and single-pass. Distillation job: note **which behaviors** to copy (contract wiring, inline severity, trace-before-claim), not which vendor to stack.
+
+| Signal | Local Bugbot | Greptile (#50) | GitHub Bugbot (reference) |
+|--------|--------------|----------------|---------------------------|
+| On our PR #50 | Yes | Yes | No |
+| Input | `.cursor/BUGBOT.md` + diff | `.greptile/files.json` + diff | PR + repo index (other repos) |
+| Mechanism | Cursor `bugbot` subagent | Opaque; RC0 suggests doc-aware agent | Documented agentic loop + multi-pass |
+| Distill into Revy | — (dev only) | Rules + narrative + inline UX | Trace agents + judge (RQ4+) |
+
+**`index_mode` lesson:** Greptile caught **contract** regression (AS1); local Bugbot validated the **fix** diff. Both observations go into findings — neither replaces shipping Revy.
 
 ---
 
@@ -135,7 +175,7 @@ Same **class** as Greptile for UX: severity table, file:line, explanation in rev
 |---|-------------|
 | G1 | Greptile + RC0 reads execution/findings — schema defects caught pre-staging |
 | G2 | Revy autostart on planning PR — validates intent drift even on doc-heavy diffs |
-| G3 | Local Bugbot pre-push — zero findings on RQ0 ORM |
+| G3 | Greptile AS1 on `index_mode` — **distill** contract-aware review into Revy (RC4/RQ7); local Bugbot stays dev-only |
 | G4 | CI green on migration + models |
 | G5 | Greptile confidence + “files needing attention” — good triage surface |
 | G6 | Greptile inline cites locked spec (AS1) on exact line — **target UX for Revy RQ7** |
@@ -169,5 +209,5 @@ After each LOOP commit on #50, add a row:
 
 | Phase | Greptile | Revy | Notes |
 |-------|----------|------|-------|
-| RQ0 | 6 threads, FK fixes | 4 findings, 1 error (RQ1) | This doc |
+| RQ0 | 6 threads, FK fixes; pass 2 `index_mode` | 4 findings, 1 error (RQ1) | Distillation notes; babysit `87c50d2` |
 | RQ1 | — | — | Diff-first deploy target |
