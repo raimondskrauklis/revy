@@ -73,6 +73,8 @@ def test_pipeline_run_revision_cascades():
 def test_pipeline_runs_table_has_created_at_index():
     indexes = {index.name for index in inspect(GitHubPipelineRunORM).local_table.indexes}
     assert "ix_github_pipeline_runs_created_at" in indexes
+    assert "ix_github_pipeline_runs_index_job_id" in indexes
+    assert "ix_github_pipeline_runs_review_run_id" in indexes
 
 
 def test_finding_and_group_quality_columns():

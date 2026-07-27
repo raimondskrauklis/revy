@@ -95,6 +95,8 @@ def upgrade() -> None:
     op.create_index("ix_github_pipeline_runs_workspace_id", "github_pipeline_runs", ["workspace_id"])
     op.create_index("ix_github_pipeline_runs_revision_id", "github_pipeline_runs", ["revision_id"])
     op.create_index("ix_github_pipeline_runs_created_at", "github_pipeline_runs", ["created_at"])
+    op.create_index("ix_github_pipeline_runs_index_job_id", "github_pipeline_runs", ["index_job_id"])
+    op.create_index("ix_github_pipeline_runs_review_run_id", "github_pipeline_runs", ["review_run_id"])
     op.create_index(
         "ix_github_pipeline_runs_workspace_id_revision_id",
         "github_pipeline_runs",
@@ -200,6 +202,8 @@ def downgrade() -> None:
     op.drop_table("github_pipeline_artifacts")
     op.drop_index("ix_github_pipeline_steps_pipeline_run_id", table_name="github_pipeline_steps")
     op.drop_table("github_pipeline_steps")
+    op.drop_index("ix_github_pipeline_runs_review_run_id", table_name="github_pipeline_runs")
+    op.drop_index("ix_github_pipeline_runs_index_job_id", table_name="github_pipeline_runs")
     op.drop_index("ix_github_pipeline_runs_created_at", table_name="github_pipeline_runs")
     op.drop_index(
         "ix_github_pipeline_runs_workspace_id_revision_id",

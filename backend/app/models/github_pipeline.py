@@ -20,7 +20,11 @@ from app.models.base import TimestampedModel
 
 class GitHubPipelineRunORM(TimestampedModel):
     __tablename__ = "github_pipeline_runs"
-    __table_args__ = (Index("ix_github_pipeline_runs_created_at", "created_at"),)
+    __table_args__ = (
+        Index("ix_github_pipeline_runs_created_at", "created_at"),
+        Index("ix_github_pipeline_runs_index_job_id", "index_job_id"),
+        Index("ix_github_pipeline_runs_review_run_id", "review_run_id"),
+    )
 
     workspace_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True),
