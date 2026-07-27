@@ -7,7 +7,10 @@ from uuid import UUID
 
 from app.core.database import get_db_context
 from app.core.logging import get_logger
-from app.services.github_finding_judge import record_review_run_judge_status
+from app.services.github_finding_judge import (
+    JudgeCandidateArtifact,
+    record_review_run_judge_status,
+)
 from app.services.github_finding_reconcile import reconcile_review_run
 from app.services.github_pipeline_trace import (
     finalize_pipeline_github_check_for_review_run,
@@ -34,7 +37,12 @@ def reconcile_review_run_task(self, review_run_id: str) -> None:
             started = time.monotonic()
             group_ids = await reconcile_review_run(session, review_run_id=UUID(review_run_id))
             reconcile_duration_ms = int((time.monotonic() - started) * 1000)
-            judged = await record_review_run_judge_status(session, review_run_id=UUID(review_run_id))
+            judge_artifacts: list[JudgeCandidateArtifact] = []
+            judged = await record_review_run_judge_status(
+                session,
+                review_run_id=UUID(review_run_id),
+                artifacts_out=judge_artifacts,
+            )
             judge_duration_ms = int((time.monotonic() - started) * 1000) - reconcile_duration_ms
 
             pipeline_run = await get_pipeline_run_for_review_run(
@@ -51,8 +59,9 @@ def reconcile_review_run_task(self, review_run_id: str) -> None:
                 await record_judge_pipeline_step(
                     session,
                     pipeline_run_id=pipeline_run.id,
-                    judged_count=len(judged),
+                    judged_count=judged,
                     duration_ms=max(judge_duration_ms, 0),
+                    candidates=judge_artifacts,
                 )
 
             await session.commit()

@@ -73,4 +73,4 @@ Next RQ
 - New index files per PR — extend `DOGFOOD_PR50.md` table or add `DOGFOOD_PR<n>.md` when needed
 - Skip Bugbot because Greptile will run later
 
-**Active program:** review-quality · [PR #50](https://github.com/raimondskrauklis/revy/pull/50) · RQ4 shipped · babysit RC-D16 · RQ5 next.
+**Active program:** review-quality · [PR #50](https://github.com/raimondskrauklis/revy/pull/50) · RQ5 shipped · RQ6 next.

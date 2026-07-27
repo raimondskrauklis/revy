@@ -57,18 +57,17 @@ ReviewAfterIndexOutcome: fail check on ServiceUnavailableError only, not draft/c
 
 ---
 
-## RQ5 — Evidence + judge *(next)*
+## RQ5 — Evidence + judge *(shipped)*
 
 ```text
 § RQ5. evidence_snippet at parse from diff hunk or top retrieval chunk.
 _build_judge_prompt grounding (E2); judge dismissed → resolved group state.
-Pipeline judge step artifacts per candidate (RQ3 hooks).
-Check: snippet not empty when file_path anchored; no judge without parse_report.
+Pipeline judge step manifest includes per-candidate prompt/raw/outcome.
 ```
 
 ---
 
-## RQ6 — Resolution metrics
+## RQ6 — Resolution metrics *(next)*
 
 ```text
 § RQ6. resolution_status on synchronize: judge_dismissed | addressed | still_open.

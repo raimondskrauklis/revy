@@ -504,6 +504,101 @@ async def test_run_review_run_happy_path_persists_findings():
 
 
 @pytest.mark.asyncio
+async def test_run_review_run_persists_evidence_snippet_from_diff():
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    repository_id = uuid.uuid4()
+
+    run = GitHubReviewRunORM(
+        revision_id=revision_id,
+        workspace_id=workspace_id,
+        status=GitHubReviewRunStatus.pending,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    run.id = review_run_id
+
+    from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
+
+    revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="abc",
+    )
+    revision.id = revision_id
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=repository_id,
+        workspace_id=workspace_id,
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=1,
+        title="Fix bug",
+        state=GitHubPullRequestState.open,
+        head_sha="abc",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=1,
+    )
+    pull_request.id = pull_request_id
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, revision, pull_request])
+    session.flush = AsyncMock()
+    session.execute = AsyncMock()
+
+    added: list = []
+    session.add = MagicMock(side_effect=lambda obj: added.append(obj))
+
+    patch_body = "@@ -1,1 +1,2 @@\n-old\n+new_line\n"
+    context_pack = github_review.ReviewContextPack(
+        prompt="review prompt",
+        manifest={"index_mode": "diff"},
+        patches_by_file={"app/main.py": patch_body},
+    )
+    llm_payload = json.dumps(
+        {
+            "findings": [
+                {
+                    "severity": "error",
+                    "category": "bug",
+                    "title": "Bug",
+                    "message": "Bad change",
+                    "file_path": "app/main.py",
+                    "start_line": 1,
+                },
+            ]
+        }
+    )
+
+    index_job = _completed_index_job(revision_id=revision_id, workspace_id=workspace_id)
+    with patch(
+        "app.services.github_review.get_latest_completed_index_job",
+        AsyncMock(return_value=index_job),
+    ):
+        with patch(
+            "app.services.github_review.prepare_review_context",
+            AsyncMock(return_value=context_pack),
+        ):
+            with patch(
+                "app.services.github_review.resolve_model",
+                AsyncMock(return_value=ModelRef(provider="moonshot", model_id="kimi-k2.7-code")),
+            ):
+                with patch(
+                    "app.services.github_review._call_llm",
+                    AsyncMock(return_value=llm_payload),
+                ):
+                    result = await github_review.run_review_run(session, review_run_id=review_run_id)
+
+    assert result.run.status == GitHubReviewRunStatus.completed
+    assert len(added) == 1
+    assert added[0].evidence_snippet is not None
+    assert "new_line" in added[0].evidence_snippet
+
+
+@pytest.mark.asyncio
 async def test_run_review_run_accepts_profile_string_from_db():
     review_run_id = uuid.uuid4()
     workspace_id = uuid.uuid4()
@@ -658,6 +753,101 @@ def test_build_unified_diff_truncates_largest_files_first():
     assert omitted == ["large.py"]
     assert "small.py" in diff
     assert "large.py" not in diff
+
+
+def test_extract_evidence_from_patch_around_line():
+    patch = """@@ -10,3 +10,4 @@
+ def foo():
+-    old()
++    new_call()
+     return x
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=12)
+    assert snippet is not None
+    assert "new_call" in snippet
+
+
+def test_resolve_evidence_snippet_prefers_diff_over_supplemental():
+    from app.schemas.github_indexing import GitHubChunkSearchResult
+
+    chunk = GitHubChunkSearchResult(
+        id=uuid.uuid4(),
+        file_path="app/main.py",
+        chunk_index=0,
+        content="retrieval fallback",
+        score=0.5,
+    )
+    supplemental = {
+        "app/main.py": github_review.ScopedChunkHit(
+            hit=chunk,
+            lens="logic bugs",
+            in_diff=True,
+            rank=1,
+        )
+    }
+    snippet = github_review.resolve_evidence_snippet(
+        file_path="app/main.py",
+        start_line=2,
+        patches_by_file={"app/main.py": "@@ -1,1 +1,2 @@\n-old\n+new_line\n"},
+        supplemental_top_by_file=supplemental,
+    )
+    assert snippet is not None
+    assert "new_line" in snippet
+    assert "retrieval fallback" not in snippet
+
+
+def test_resolve_evidence_snippet_uses_supplemental_when_hunk_misses():
+    from app.schemas.github_indexing import GitHubChunkSearchResult
+
+    chunk = GitHubChunkSearchResult(
+        id=uuid.uuid4(),
+        file_path="app/main.py",
+        chunk_index=0,
+        content="retrieval fallback",
+        score=0.5,
+    )
+    supplemental = {
+        "app/main.py": github_review.ScopedChunkHit(
+            hit=chunk,
+            lens="logic bugs",
+            in_diff=True,
+            rank=1,
+        )
+    }
+    snippet = github_review.resolve_evidence_snippet(
+        file_path="app/main.py",
+        start_line=99,
+        patches_by_file={"app/main.py": "@@ -1,1 +1,2 @@\n-old\n+new_line\n"},
+        supplemental_top_by_file=supplemental,
+    )
+    assert snippet == "retrieval fallback"
+
+
+def test_resolve_evidence_snippet_uses_supplemental_without_patch():
+    from app.schemas.github_indexing import GitHubChunkSearchResult
+
+    chunk = GitHubChunkSearchResult(
+        id=uuid.uuid4(),
+        file_path="app/other.py",
+        chunk_index=0,
+        content="chunk body",
+        score=0.5,
+    )
+    supplemental = {
+        "app/other.py": github_review.ScopedChunkHit(
+            hit=chunk,
+            lens="logic bugs",
+            in_diff=False,
+            rank=1,
+        )
+    }
+    snippet = github_review.resolve_evidence_snippet(
+        file_path="app/other.py",
+        start_line=10,
+        patches_by_file={},
+        supplemental_top_by_file=supplemental,
+    )
+    assert snippet == "chunk body"
 
 
 def test_build_review_prompt_orders_diff_before_supplemental():

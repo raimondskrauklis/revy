@@ -17,7 +17,11 @@ from app.core.exceptions import ServiceUnavailableError, ValidationError
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_review_run import GitHubReviewRunORM
-from app.services.github_finding_judge import is_judge_candidate, record_review_run_judge_status
+from app.services.github_finding_judge import (
+    _build_judge_prompt,
+    is_judge_candidate,
+    record_review_run_judge_status,
+)
 from app.services.model_policy import ModelRef
 
 
@@ -37,6 +41,44 @@ def test_is_judge_candidate_info_bug_false():
         severity=FindingSeverity.info,
         category=FindingCategory.bug,
     )
+
+
+def test_build_judge_prompt_includes_evidence_and_grounding():
+    group = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=uuid.uuid4(),
+        fingerprint="abc",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Null deref",
+        message="Possible null access",
+        file_path="app/handler.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+    prompt = _build_judge_prompt(group=group, evidence_snippet="if value is None:\n    raise")
+    assert "Evidence (code excerpt" in prompt
+    assert "if value is None" in prompt
+    assert "Grounding (E2)" in prompt
+    assert "entailed" in prompt
+
+
+def test_build_judge_prompt_without_evidence_uses_conservative_grounding():
+    group = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=uuid.uuid4(),
+        fingerprint="abc",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Null deref",
+        message="Possible null access",
+        file_path="app/handler.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+    prompt = _build_judge_prompt(group=group, evidence_snippet=None)
+    assert "Evidence" not in prompt
+    assert "Judge conservatively" in prompt
 
 
 @pytest.mark.asyncio

@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from uuid import UUID
 
 import httpx
@@ -63,6 +64,9 @@ DIFF_MAX_BYTES = 128 * 1024
 PR_BODY_MAX_BYTES = 4 * 1024
 FINDING_LIST_DEFAULT_LIMIT = 100
 FINDING_LIST_MAX_LIMIT = 500
+EVIDENCE_SNIPPET_MAX_CHARS = 2048
+EVIDENCE_CONTEXT_LINES = 5
+_HUNK_HEADER_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 _FULL_INDEX_PROFILES = frozenset({ReviewProfile.deep, ReviewProfile.critical})
 
 
@@ -78,6 +82,8 @@ class ScopedChunkHit:
 class ReviewContextPack:
     prompt: str
     manifest: dict
+    patches_by_file: dict[str, str] = field(default_factory=dict)
+    supplemental: tuple[ScopedChunkHit, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -207,6 +213,68 @@ def _build_review_prompt(
         ]
     )
     return "\n".join(parts)
+
+
+def extract_evidence_from_patch(
+    patch: str,
+    *,
+    start_line: int,
+    context: int = EVIDENCE_CONTEXT_LINES,
+    max_chars: int = EVIDENCE_SNIPPET_MAX_CHARS,
+) -> str | None:
+    """Extract new-file lines around start_line from a unified diff patch."""
+    target_start = max(1, start_line - context)
+    target_end = start_line + context
+    collected: list[str] = []
+    new_line = 0
+
+    for line in patch.splitlines():
+        hunk_match = _HUNK_HEADER_RE.match(line)
+        if hunk_match is not None:
+            new_line = int(hunk_match.group(1)) - 1
+            continue
+        if line.startswith("\\"):
+            continue
+        if line.startswith("+"):
+            new_line += 1
+            if target_start <= new_line <= target_end:
+                collected.append(line[1:])
+        elif line.startswith("-"):
+            continue
+        elif line.startswith(" "):
+            new_line += 1
+            if target_start <= new_line <= target_end:
+                collected.append(line[1:])
+
+    if not collected:
+        return None
+    return _truncate_utf8("\n".join(collected), max_chars)
+
+
+def resolve_evidence_snippet(
+    *,
+    file_path: str | None,
+    start_line: int | None,
+    patches_by_file: dict[str, str],
+    supplemental_top_by_file: dict[str, ScopedChunkHit],
+    max_chars: int = EVIDENCE_SNIPPET_MAX_CHARS,
+) -> str | None:
+    if not file_path:
+        return None
+
+    patch = patches_by_file.get(file_path)
+    if patch and start_line is not None:
+        snippet = extract_evidence_from_patch(patch, start_line=start_line, max_chars=max_chars)
+        if snippet:
+            return snippet
+
+    supplemental = supplemental_top_by_file.get(file_path)
+    if supplemental is not None:
+        return _truncate_utf8(supplemental.hit.content, max_chars)
+
+    if patch:
+        return _truncate_utf8(patch, max_chars)
+    return None
 
 
 def build_retrieval_manifest(
@@ -453,12 +521,16 @@ async def prepare_review_context(
     unified_diff = ""
     diff_truncated = False
     omitted_files: list[str] = []
+    patches_by_file: dict[str, str] = {}
     fallback_reason = compare_fallback or index_job.fallback_reason
     broaden_supplemental = False
 
     if compare is not None:
         changed_files = list(compare.paths_to_index)
         unified_diff, diff_truncated, omitted_files = build_unified_diff(compare.files)
+        for item in compare.files:
+            if item.patch:
+                patches_by_file[item.filename] = item.patch
     elif index_job.index_mode == GitHubIndexMode.diff:
         broaden_supplemental = True
 
@@ -493,7 +565,12 @@ async def prepare_review_context(
         fallback_reason=fallback_reason,
         supplemental=supplemental,
     )
-    return ReviewContextPack(prompt=prompt, manifest=manifest)
+    return ReviewContextPack(
+        prompt=prompt,
+        manifest=manifest,
+        patches_by_file=patches_by_file,
+        supplemental=tuple(supplemental),
+    )
 
 
 def _parse_finding_row(raw: dict) -> tuple[dict | None, str | None]:
@@ -675,15 +752,29 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> Revie
 
         parsed_rows, parse_report = parse_finding_rows(raw_findings)
 
+        supplemental_top_by_file: dict[str, ScopedChunkHit] = {}
+        if context_pack is not None:
+            for item in context_pack.supplemental:
+                if item.hit.file_path not in supplemental_top_by_file:
+                    supplemental_top_by_file[item.hit.file_path] = item
+
         await session.execute(
             delete(GitHubFindingORM).where(GitHubFindingORM.review_run_id == run.id)
         )
 
+        patches_by_file = context_pack.patches_by_file if context_pack is not None else {}
         for parsed in parsed_rows:
+            evidence_snippet = resolve_evidence_snippet(
+                file_path=parsed.get("file_path"),
+                start_line=parsed.get("start_line"),
+                patches_by_file=patches_by_file,
+                supplemental_top_by_file=supplemental_top_by_file,
+            )
             session.add(
                 GitHubFindingORM(
                     review_run_id=run.id,
                     workspace_id=run.workspace_id,
+                    evidence_snippet=evidence_snippet,
                     **parsed,
                 )
             )

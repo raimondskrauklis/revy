@@ -485,6 +485,7 @@ async def record_judge_pipeline_step(
     pipeline_run_id: UUID,
     judged_count: int,
     duration_ms: int,
+    candidates: list | None = None,
 ) -> None:
     step = await _create_completed_step(
         session,
@@ -492,11 +493,24 @@ async def record_judge_pipeline_step(
         step_type=PipelineStepType.judge,
         duration_ms=duration_ms,
     )
+    candidate_payload = [
+        {
+            "group_id": str(item.group_id),
+            "evidence_snippet": item.evidence_snippet,
+            "user_prompt": item.user_prompt,
+            "raw_response": item.raw_response,
+            "outcome": item.outcome,
+        }
+        for item in (candidates or [])
+    ]
     await add_step_artifact(
         session,
         step_id=step.id,
         kind=PipelineArtifactKind.manifest,
-        content_json={"judged_count": judged_count},
+        content_json={
+            "judged_count": judged_count,
+            "candidates": candidate_payload,
+        },
     )
 
 
