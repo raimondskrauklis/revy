@@ -280,4 +280,4 @@ After each LOOP commit on #50, add a row:
 |-------|----------|------|-------|
 | RQ0 | 6 threads, FK fixes; pass 2 `index_mode` | 4 findings, 1 error (RQ1) | Distillation notes; babysit `87c50d2` |
 | RQ1 code | **No new findings** on `bd4d084` after ~6× iterative local Bugbot | suspended | RC-D10 — Bugbot caught impl bugs Greptile missed; [§](#iterative-agent-review--rq1-local-bugbot); [chain_of_thoughts](../agents/chain_of_thoughts/) |
-| RQ1 docs | running | suspended | `854a8e1` learnings + archive — pending |
+| RQ2 | pending | suspended | Diff-first prompt + D10 fingerprint + SC3 manifest — RC-D11 |

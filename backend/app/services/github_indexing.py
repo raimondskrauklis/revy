@@ -561,6 +561,7 @@ async def search_revision_chunks(
     revision_id: UUID,
     query: str,
     top_k: int,
+    file_paths: frozenset[str] | None = None,
 ) -> list[GitHubChunkSearchResult]:
     if not settings.embeddings_enabled:
         raise ServiceUnavailableError(
@@ -580,13 +581,18 @@ async def search_revision_chunks(
         query_embedding = await embed_query(client, query)
 
     distance_expr = GitHubCodeChunkORM.embedding.cosine_distance(query_embedding)
+    filters = [
+        GitHubCodeChunkORM.workspace_id == workspace_id,
+        GitHubCodeChunkORM.revision_id == revision_id,
+        GitHubCodeChunkORM.embedding.is_not(None),
+    ]
+    if file_paths is not None:
+        if not file_paths:
+            return []
+        filters.append(GitHubCodeChunkORM.file_path.in_(file_paths))
     result = await session.execute(
         select(GitHubCodeChunkORM, distance_expr.label("distance"))
-        .where(
-            GitHubCodeChunkORM.workspace_id == workspace_id,
-            GitHubCodeChunkORM.revision_id == revision_id,
-            GitHubCodeChunkORM.embedding.is_not(None),
-        )
+        .where(*filters)
         .order_by(distance_expr)
         .limit(top_k)
     )
