@@ -2,7 +2,7 @@
 
 **PR:** [#50](https://github.com/raimondskrauklis/revy/pull/50) · **branch:** `feat/review-quality` · **phase:** RQ0  
 **Raw paste:** [actual_output_revy_greptile.txt](./actual_output_revy_greptile.txt) (GitHub copy, 2026-07-27)  
-**Strategy:** [REVIEW_QUALITY_REVIEW_CONTEXT.md](./REVIEW_QUALITY_REVIEW_CONTEXT.md) · **Lessons:** [CODE_REVIEW_LEARNINGS](../REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md)
+**Strategy:** [REVIEW_QUALITY_REVIEW_CONTEXT.md](./REVIEW_QUALITY_REVIEW_CONTEXT.md) · **Lessons:** [CODE_REVIEW_LEARNINGS](../REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md) · **Agents:** [REVIEW_QUALITY_AGENT_ORCHESTRATION.md](./REVIEW_QUALITY_AGENT_ORCHESTRATION.md)
 
 **Deploy context:** Revy autostart ran on **pre-RQ0 production/staging** — findings about `github_review.py` reflect **shipped** code, not this branch. Greptile/Bugbot reviewed **this PR diff** with RC0 wiring.
 

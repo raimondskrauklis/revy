@@ -143,6 +143,20 @@ pipenv run ruff check .
 
 ---
 
+## Local Bugbot (before every commit/push — hard gate)
+
+**Mandatory** before **each** LOOP commit and **every** `git push` on the feature branch — including after `babysit-pr` fixes.
+
+1. Invoke **`review-bugbot`** skill (Bugbot subagent, `run_in_background: false`).
+2. Default: `Diff: uncommitted changes` (or `branch changes` after staging).
+3. Point at active execution file + findings in **Custom Instructions** (see [REVIEW_QUALITY_AGENT_ORCHESTRATION.md](../../docs/review-pipeline/review-quality/REVIEW_QUALITY_AGENT_ORCHESTRATION.md)).
+4. Fix **blockers**; re-run **ruff** + **phase gate** if Python changed.
+5. **Do not commit or push** if Bugbot reports unresolved blockers (stop rule below).
+
+Greptile and Revy run **after** push — they never replace this step.
+
+---
+
 ## Ship (each LOOP iteration)
 
 Per **`ship-changes`**. LOOP extras:

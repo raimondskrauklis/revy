@@ -20,6 +20,7 @@ Post-R8 program: **diff-first review**, **pipeline explainability**, Greptile-sh
 | — | [REVIEW_QUALITY_STRUCTURAL_CONTEXT.md](./REVIEW_QUALITY_STRUCTURAL_CONTEXT.md) | **Post-v1 strategy** — LSP defer, RQ-STRUCT-1/2, Greptile parity |
 | — | [REVIEW_QUALITY_REVIEW_CONTEXT.md](./REVIEW_QUALITY_REVIEW_CONTEXT.md) | Greptile/Bugbot wiring; RQ-RC-1; dogfood log |
 | — | [REVIEW_QUALITY_DOGFOOD_PR50.md](./REVIEW_QUALITY_DOGFOOD_PR50.md) | **PR #50** — Greptile + Revy triage, babysit, wave backlog |
+| — | [REVIEW_QUALITY_AGENT_ORCHESTRATION.md](./REVIEW_QUALITY_AGENT_ORCHESTRATION.md) | **Agent LOOP** — local Bugbot before push, prompts, parent discipline |
 
 ---
 

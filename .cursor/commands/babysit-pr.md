@@ -9,7 +9,8 @@
 3. **Fetch open Greptile threads** — GitHub GraphQL `reviewThreads` (or REST `pulls/{n}/comments`) where `author.login` is `greptile-apps` or `greptile-apps[bot]` and `isResolved == false`. Read severity, path, line, description.
 4. **Triage** — Fix only valid findings; skip false positives (say why). Ignore resolved/outdated threads.
 5. **Checks** — if `backend/` Python touched: `pipenv run ruff check --fix .` then `pipenv run ruff check .` from `backend/`. Run targeted tests when obvious.
-6. **Commit + push** — only if fixes were made; branch must not be `main` / default prod branch.
+6. **Local Bugbot** — `review-bugbot` on fix diff; do not push if blockers remain.
+7. **Commit + push** — only if fixes were made; branch must not be `main` / default prod branch.
 
 ```bash
 git add <relevant files> && git commit -m "$(cat <<'EOF'
@@ -32,3 +33,4 @@ If nothing open: say so — no empty commit.
 - Change CI workflows to greenwash failures.
 - Merge conflicts / full CI babysit loop unless user asks.
 - Commit on `main`.
+- Push without **local Bugbot** after Greptile fixes.
