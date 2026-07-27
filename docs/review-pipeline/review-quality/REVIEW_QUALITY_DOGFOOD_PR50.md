@@ -207,6 +207,22 @@ After each fix, re-run Bugbot on the **same feature slice**. New passes found **
 
 **Economics (operator note):** local Bugbot subagent runs are bundled with Composer usage and can issue many tool calls per run — cheap R&D. Customer Revy = **intelligence + passes** as the SKU; no Cursor subsidy.
 
+### RQ1 gate outcome (validated on code push)
+
+```text
+  ~6× iterative local Bugbot on RQ1 code  →  fix  →  re-gate  →  clean
+           │
+           ▼
+  push bd4d084 (RQ1 code)
+           │
+           ▼
+  Greptile on that CODE push  →  no new findings
+```
+
+**Theory confirmed (RC-D10):** iterative pre-push Bugbot found **implementation** bugs (lifecycle, cross-file, API limits) that **Greptile did not** on the same RQ1 code slice — not a claim of completeness. Greptile’s earlier wins on this PR remain **contract/spec** (AS1, schema — RQ0 babysit). After Bugbot-hardened code landed, Greptile’s pass on `bd4d084` added nothing new.
+
+**Separate:** `854a8e1` (docs + `chain_of_thoughts`) — Greptile run in progress; not part of RC-D10.
+
 ---
 
 ## Revy — triage (old deploy)
@@ -263,4 +279,5 @@ After each LOOP commit on #50, add a row:
 | Phase | Greptile | Revy | Notes |
 |-------|----------|------|-------|
 | RQ0 | 6 threads, FK fixes; pass 2 `index_mode` | 4 findings, 1 error (RQ1) | Distillation notes; babysit `87c50d2` |
-| RQ1 | pending (post `bd4d084`) | suspended | Local Bugbot 6 iterative passes — [§](#iterative-agent-review--rq1-local-bugbot); gates in [chain_of_thoughts](../agents/chain_of_thoughts/) |
+| RQ1 code | **No new findings** on `bd4d084` after ~6× iterative local Bugbot | suspended | RC-D10 — Bugbot caught impl bugs Greptile missed; [§](#iterative-agent-review--rq1-local-bugbot); [chain_of_thoughts](../agents/chain_of_thoughts/) |
+| RQ1 docs | running | suspended | `854a8e1` learnings + archive — pending |
