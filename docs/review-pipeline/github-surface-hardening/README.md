@@ -1,6 +1,6 @@
 # GitHub surface hardening (post P0–P4)
 
-**Status:** Execution plan ready — `execution-peer-review` then `phase-execution`. **Branch:** `feat/github-surface-hardening` (local only).
+**Status:** Execution plan peer-reviewed — ready for `phase-execution`. **Branch:** `feat/github-surface-hardening` (local only).
 
 **Prerequisite:** [post-review-quality](../post-review-quality/README.md) P0–P4 merged ([#52](https://github.com/raimondskrauklis/revy/pull/52)).
 

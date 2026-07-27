@@ -19,7 +19,7 @@ Phase **P3** of [GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md](./GITHUB_SURFACE_HARD
 
 ## P3.1 — Same-SHA re-publish test
 
-**What:** Test `run_publish_job` when prior job completed same `head_sha`, `post_inline=False`, closed fingerprints — resolve runs once, map persisted, no duplicate GraphQL resolve calls (mock assert).
+**What:** Extend or replace `test_run_publish_job_resolves_superseded_threads_when_inline_already_posted` (~1254–1357): assert `summary_json["github_inline_threads"]` v2 persistence after resolve when `post_inline=False` and same `head_sha` re-publish — no duplicate GraphQL resolve calls (mock assert). Prior test mocks resolve; new/extended test must assert real map persistence path from P1 GH-1b.
 
 **Files:** `backend/tests/unit/test_github_publish.py`
 

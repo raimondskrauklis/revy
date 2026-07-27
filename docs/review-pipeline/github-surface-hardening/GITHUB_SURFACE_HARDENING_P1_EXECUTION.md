@@ -8,7 +8,9 @@ Phase **P1** of [GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md](./GITHUB_SURFACE_HARD
 
 - **Option A:** resolve fingerprint when ∈ `inline_threads` but ∉ current `review_run_id` publishable finding fingerprints (`inline_publish_findings_statement`).
 - Keep existing resolve for groups in `superseded` / `resolved` state.
-- After resolve loop: **always** assign `job.summary_json` (or `flag_modified`) — even when `post_inline=False`.
+- **Rename** `_resolve_superseded_inline_threads` → `_resolve_stale_inline_threads` (behavior expands; no sibling function).
+- **Dedupe:** collect fingerprints to resolve in one set — Option A (map − publishable) ∪ superseded/resolved groups; one GraphQL resolve per fingerprint per publish.
+- After resolve loop: **always** assign `job.summary_json` via `serialize_inline_thread_map` — even when `post_inline=False`.
 - Pop map entry **only after** successful `resolveReviewThread`.
 - Do **not** use `resolution_status.addressed` (GH-Q2).
 - Do **not** change reconcile.
@@ -23,7 +25,7 @@ Phase **P1** of [GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md](./GITHUB_SURFACE_HARD
 
 ## P1.1 — Current-run fingerprint set
 
-**What:** Add helper `_publishable_fingerprints_for_run(session, review_run_id)` — fingerprints of groups linked to publishable inline findings for this run. Use in resolve pass.
+**What:** Add helper `_publishable_fingerprints_for_run(session, review_run_id) -> set[str]` — fingerprints of groups linked to publishable inline findings for this run. Use in resolve pass.
 
 **Files:** `backend/app/services/github_publish.py`
 
@@ -33,21 +35,23 @@ Phase **P1** of [GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md](./GITHUB_SURFACE_HARD
 
 ## P1.2 — Option A resolve pass
 
-**What:** Extend `_resolve_superseded_inline_threads` (or sibling) to resolve when fingerprint in map but not in current-run fingerprint set; retain superseded/resolved group loop.
+**What:** Rename and extend `_resolve_superseded_inline_threads` → `_resolve_stale_inline_threads`: add `review_run_id: UUID` param; resolve when fingerprint in map but not in `_publishable_fingerprints_for_run`; retain superseded/resolved group loop; dedupe fingerprints before GraphQL calls.
+
+Update `run_publish_job` call site (~734–744) to pass `review_run_id=job.review_run_id`.
 
 **Files:** `backend/app/services/github_publish.py`
 
 **Deliverable:**
 
 ```bash
-cd backend && pipenv run pytest tests/unit/test_github_publish.py -k "resolve_superseded or auto_resolve" -q
+cd backend && pipenv run pytest tests/unit/test_github_publish.py -k "resolve_stale or auto_resolve" -q
 ```
 
 ---
 
 ## P1.3 — GH-1b persist summary_json
 
-**What:** After resolve completes, reassign `job.summary_json` with updated `github_inline_threads` before flush — unconditional of `post_inline`. Add test: `post_inline=False`, resolve pops entry, persisted `summary_json` reflects pop.
+**What:** After resolve completes, reassign `job.summary_json["github_inline_threads"]` using `serialize_inline_thread_map(inline_threads, prior_v2=…)` before flush — unconditional of `post_inline`. Add test: `post_inline=False`, resolve pops entry, persisted `summary_json` is v2 shape and reflects pop.
 
 **Files:** `backend/app/services/github_publish.py`, `backend/tests/unit/test_github_publish.py`
 
@@ -57,13 +61,13 @@ cd backend && pipenv run pytest tests/unit/test_github_publish.py -k "resolve_su
 cd backend && pipenv run pytest tests/unit/test_github_publish.py::test_run_publish_job_persists_thread_map_after_resolve_when_inline_skipped -q
 ```
 
-(Test name may vary — must assert persistence without inline post.)
+(Test name may vary — must assert v2 persistence without inline post.)
 
 ---
 
 ## P1.4 — Unmocked resolve tests + PRODUCT_PATTERNS
 
-**What:** At least one test calls `_resolve_superseded_inline_threads` **without** autouse mock (patch only `github_api` GraphQL). Update PRODUCT_PATTERNS “Resolve review threads when fixed” row to **shipped** with Option A wording.
+**What:** At least one test calls `_resolve_stale_inline_threads` **without** autouse mock (patch only `github_api` GraphQL). Update PRODUCT_PATTERNS “Resolve review threads when fixed” row (line ~64) to **shipped** with Option A wording.
 
 **Files:** `backend/tests/unit/test_github_publish.py`, `docs/review-pipeline/REVIEW_PIPELINE_PRODUCT_PATTERNS.md`
 

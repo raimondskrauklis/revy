@@ -23,7 +23,7 @@ each phase: implement → pytest gate → Bugbot → commit (no push until user/
 - **GH-1b:** Persist `summary_json` after every resolve (even `post_inline=False`).
 - **GH-Q7:** v1 collapses GitHub threads only — reconcile/check unchanged.
 - **GH-Q2:** No `resolution_status.addressed` trigger in v1.
-- **Thread map v2:** `{ fingerprint: { "comment_id": int, "thread_id"?: str } }` — migrate-on-read from `dict[str, int]`.
+- **Thread map v2:** `{ fingerprint: { "comment_id": int, "thread_id"?: str } }` — migrate-on-read from `dict[str, int]`; `serialize_inline_thread_map` / `deserialize_inline_thread_map` (P0).
 - **Migrations:** none expected; JSONB shape only.
 - **i18n:** GitHub markdown EN v1.
 
@@ -39,4 +39,4 @@ each phase: implement → pytest gate → Bugbot → commit (no push until user/
 
 **Dogfood log:** [GITHUB_SURFACE_HARDENING_DOGFOOD.md](./GITHUB_SURFACE_HARDENING_DOGFOOD.md)
 
-**Peer review:** run `execution-peer-review` on P0–P4 files before `phase-execution`.
+**Peer review:** `execution-peer-review` complete — P0/P1 serialize contract, P1 rename/dedupe, P2 cap constants, P4 PRODUCT_PATTERNS specificity applied. Ready for `phase-execution`.

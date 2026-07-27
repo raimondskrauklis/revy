@@ -7,7 +7,8 @@ Phase **P0** of [GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md](./GITHUB_SURFACE_HARD
 ## Decisions locked for P0
 
 - Thread map v2 entry: `{ "comment_id": int, "thread_id"?: str }` per fingerprint.
-- Legacy `dict[str, int]` migrates on read in `_load_inline_thread_map` / write helpers.
+- Legacy `dict[str, int]` migrates on read; **all writes** use `serialize_inline_thread_map` (v2 shape).
+- Internal working type stays `dict[str, int]` (comment ids only) until P2 adds `thread_id`.
 - No resolve behavior changes — **P1**.
 - First LOOP commit includes `.greptile/files.json` + `.cursor/BUGBOT.md`.
 
@@ -38,33 +39,46 @@ python -m json.tool .greptile/files.json > /dev/null
 
 ---
 
-## P0.2 — Thread map v2 helpers
+## P0.2 — Thread map v2 serialize / deserialize helpers
 
-**What:** Add `normalize_inline_thread_map` / `merge_inline_thread_entry` (or equivalent) in `github_publish.py`: read legacy `int` values and v2 dicts; write v2 on new inline posts (comment_id only until P2 adds thread_id).
+**What:** Add three helpers in `github_publish.py`:
+
+- `deserialize_inline_thread_map(raw) -> dict[str, int]` — accept legacy `int` or v2 `{comment_id, thread_id?}`; return comment-id map for callers.
+- `serialize_inline_thread_map(comment_map: dict[str, int], *, prior_v2?: dict) -> dict` — emit v2 `{ fingerprint: { "comment_id": int, "thread_id"?: str } }`; preserve existing `thread_id` when fingerprint unchanged.
+- `_load_inline_thread_map(jobs)` — delegate to `deserialize_inline_thread_map` per job summary.
+
+Wire **write** sites to `serialize_inline_thread_map` (not raw `dict[str, int]`):
+
+- `run_publish_job` initial `job.summary_json` (~596–598)
+- `run_publish_job` post-inline `job.summary_json` (~798–801)
 
 **Files:** `backend/app/services/github_publish.py`
 
-**Deliverable:** `_load_inline_thread_map` returns `dict[str, int]` comment ids via normalized read (unchanged caller contract until P2).
+**Deliverable:**
+
+```bash
+cd backend && pipenv run pytest tests/unit/test_github_publish.py -k "serialize_inline_thread_map or deserialize_inline_thread_map" -q
+```
 
 ---
 
 ## P0.3 — Thread map unit tests
 
-**What:** Tests: legacy `{ "fp": 100 }` reads as comment_id 100; v2 `{ "fp": { "comment_id": 200, "thread_id": "PRRT_x" } }` reads comment_id 200; newest job still wins per fingerprint.
+**What:** Tests: legacy `{ "fp": 100 }` deserializes to comment_id 100; v2 `{ "fp": { "comment_id": 200, "thread_id": "PRRT_x" } }` deserializes to 200; serialize round-trip emits v2 dict (not legacy int); newest job still wins per fingerprint in `_load_inline_thread_map`.
 
 **Files:** `backend/tests/unit/test_github_publish.py`
 
 **Deliverable:**
 
 ```bash
-cd backend && pipenv run pytest tests/unit/test_github_publish.py -k "inline_thread_map" -q
+cd backend && pipenv run pytest tests/unit/test_github_publish.py -k "inline_thread_map or serialize_inline_thread_map or deserialize_inline_thread_map or test_load_inline_thread_map" -q
 ```
 
 ---
 
 ## P0.4 — Dogfood template
 
-**What:** Ensure [GITHUB_SURFACE_HARDENING_DOGFOOD.md](./GITHUB_SURFACE_HARDENING_DOGFOOD.md) exists with row template (done in execution index pass if missing).
+**What:** Ensure [GITHUB_SURFACE_HARDENING_DOGFOOD.md](./GITHUB_SURFACE_HARDENING_DOGFOOD.md) exists with row template (verify-only — file shipped in execution index pass).
 
 **Files:** `docs/review-pipeline/github-surface-hardening/GITHUB_SURFACE_HARDENING_DOGFOOD.md`
 
@@ -75,7 +89,7 @@ cd backend && pipenv run pytest tests/unit/test_github_publish.py -k "inline_thr
 **Phase gate** (from `backend/`):
 
 ```bash
-pipenv run lint && pipenv run pytest tests/unit/test_github_publish.py -k "inline_thread_map or test_load_inline_thread_map" -q
+pipenv run lint && pipenv run pytest tests/unit/test_github_publish.py -k "inline_thread_map or serialize_inline_thread_map or deserialize_inline_thread_map or test_load_inline_thread_map" -q
 ```
 
 **Human gate:** none.

@@ -37,15 +37,15 @@ cd backend && pipenv run pytest tests/unit/test_github_publish.py -q
 
 | Doc | Change |
 |-----|--------|
-| `github-surface-hardening/README.md` | All phases Done |
+| `github-surface-hardening/README.md` | All phases Done + commit sha |
 | `GITHUB_SURFACE_HARDENING_EXECUTION.md` | Status column Done |
 | `waves/README.md` | Hardening phases Done |
-| `post-review-quality/README.md` | Link to hardening complete |
-| `REVIEW_PIPELINE_PRODUCT_PATTERNS.md` | GH-2/3 rows if needed |
+| `post-review-quality/README.md` | Status wording: hardening program complete (link already present) |
+| `REVIEW_PIPELINE_PRODUCT_PATTERNS.md` | **R6 appendix** “Inline thread map” row (~175): v2 shape `{comment_id, thread_id?}`; paginated `list_review_threads`; index-backed resolve; Option A auto-resolve (cross-ref P1 row ~64 if not already shipped in P1) |
 
 **Files:** paths in table
 
-**Deliverable:** Grep confirms no `pending` in hardening execution table.
+**Deliverable:** Grep confirms no `pending` in hardening execution table; PRODUCT_PATTERNS appendix row updated.
 
 ---
 
