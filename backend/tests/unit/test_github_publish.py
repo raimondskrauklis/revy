@@ -216,10 +216,16 @@ def test_serialize_inline_thread_map_emits_v2():
     assert result == {"fp": {"comment_id": 100}}
 
 
-def test_serialize_inline_thread_map_preserves_thread_id():
-    prior_v2 = {"fp": {"comment_id": 99, "thread_id": "PRRT_keep"}}
+def test_serialize_inline_thread_map_preserves_thread_id_when_comment_unchanged():
+    prior_v2 = {"fp": {"comment_id": 100, "thread_id": "PRRT_keep"}}
     result = github_publish.serialize_inline_thread_map({"fp": 100}, prior_v2=prior_v2)
     assert result == {"fp": {"comment_id": 100, "thread_id": "PRRT_keep"}}
+
+
+def test_serialize_inline_thread_map_drops_stale_thread_id_when_comment_changes():
+    prior_v2 = {"fp": {"comment_id": 99, "thread_id": "PRRT_stale"}}
+    result = github_publish.serialize_inline_thread_map({"fp": 100}, prior_v2=prior_v2)
+    assert result == {"fp": {"comment_id": 100}}
 
 
 def test_load_inline_thread_map_reads_v2_entries():
@@ -1980,7 +1986,7 @@ async def test_run_publish_job_reactivates_inline_same_publish():
     ):
         with patch(
             "app.services.github_publish.github_api.build_review_thread_comment_index",
-            AsyncMock(return_value={8002: "PRRT_new"}),
+            AsyncMock(return_value={8001: "PRRT_old"}),
         ):
             with patch(
                 "app.services.github_publish.github_api.resolve_review_thread",
@@ -2013,7 +2019,7 @@ async def test_run_publish_job_reactivates_inline_same_publish():
     inline_mock.assert_awaited_once()
     threads = result.summary_json["github_inline_threads"]
     assert threads["return-fp"]["comment_id"] == 8002
-    assert threads["return-fp"]["thread_id"] == "PRRT_new"
+    assert "thread_id" not in threads["return-fp"]
 
 
 def _publish_job_context():

@@ -467,35 +467,35 @@ async def list_review_threads(
     )
     threads: list[ReviewThreadNode] = []
     thread_cursor: str | None = None
-    thread_query = """
-    query($owner: String!, $repo: String!, $number: Int!, $threadCursor: String) {
-      repository(owner: $owner, name: $repo) {
-        pullRequest(number: $number) {
-          reviewThreads(first: 100, after: $threadCursor) {
-            pageInfo { hasNextPage endCursor }
-            nodes {
+    thread_query = f"""
+    query($owner: String!, $repo: String!, $number: Int!, $threadCursor: String) {{
+      repository(owner: $owner, name: $repo) {{
+        pullRequest(number: $number) {{
+          reviewThreads(first: {REVIEW_THREADS_PAGE_SIZE}, after: $threadCursor) {{
+            pageInfo {{ hasNextPage endCursor }}
+            nodes {{
               id
-              comments(first: 20) {
-                pageInfo { hasNextPage endCursor }
-                nodes { databaseId }
-              }
-            }
-          }
-        }
-      }
-    }
+              comments(first: {REVIEW_THREAD_COMMENTS_PAGE_SIZE}) {{
+                pageInfo {{ hasNextPage endCursor }}
+                nodes {{ databaseId }}
+              }}
+            }}
+          }}
+        }}
+      }}
+    }}
     """
-    comment_page_query = """
-    query($threadId: ID!, $commentCursor: String) {
-      node(id: $threadId) {
-        ... on PullRequestReviewThread {
-          comments(first: 20, after: $commentCursor) {
-            pageInfo { hasNextPage endCursor }
-            nodes { databaseId }
-          }
-        }
-      }
-    }
+    comment_page_query = f"""
+    query($threadId: ID!, $commentCursor: String) {{
+      node(id: $threadId) {{
+        ... on PullRequestReviewThread {{
+          comments(first: {REVIEW_THREAD_COMMENTS_PAGE_SIZE}, after: $commentCursor) {{
+            pageInfo {{ hasNextPage endCursor }}
+            nodes {{ databaseId }}
+          }}
+        }}
+      }}
+    }}
     """
 
     while True:
@@ -519,6 +519,10 @@ async def list_review_threads(
         response.raise_for_status()
         payload = response.json()
         if payload.get("errors"):
+            logger.warning(
+                "github_list_review_threads_graphql_error",
+                extra={"pull_number": pull_number, "errors": payload.get("errors")},
+            )
             break
         data = payload.get("data")
         if not isinstance(data, dict):
@@ -575,6 +579,13 @@ async def list_review_threads(
                         comment_response.raise_for_status()
                         comment_payload = comment_response.json()
                         if comment_payload.get("errors"):
+                            logger.warning(
+                                "github_list_review_threads_graphql_error",
+                                extra={
+                                    "pull_number": pull_number,
+                                    "errors": comment_payload.get("errors"),
+                                },
+                            )
                             break
                         node = comment_payload.get("data", {}).get("node")
                         if not isinstance(node, dict):

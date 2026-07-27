@@ -280,8 +280,13 @@ def serialize_inline_thread_map(
         else:
             prior_entry = prior.get(fingerprint)
             if isinstance(prior_entry, dict):
+                prior_comment_id = prior_entry.get("comment_id")
                 thread_id = prior_entry.get("thread_id")
-                if isinstance(thread_id, str) and thread_id:
+                if (
+                    prior_comment_id == comment_id
+                    and isinstance(thread_id, str)
+                    and thread_id
+                ):
                     entry["thread_id"] = thread_id
         result[fingerprint] = entry
     return result
@@ -862,14 +867,16 @@ async def run_publish_job(
                 job.github_comment_id = comment_id
                 await _checkpoint_publish_surface(session, persist=persist_github_surface)
 
-            thread_index = await github_api.build_review_thread_comment_index(
-                client,
-                github_installation_id=installation.github_installation_id,
-                owner=owner,
-                repo=repo_name,
-                pull_number=pull_request.number,
-                auth_headers=auth_headers,
-            )
+            thread_index: dict[int, str] = {}
+            if inline_threads:
+                thread_index = await github_api.build_review_thread_comment_index(
+                    client,
+                    github_installation_id=installation.github_installation_id,
+                    owner=owner,
+                    repo=repo_name,
+                    pull_number=pull_request.number,
+                    auth_headers=auth_headers,
+                )
 
             await _resolve_stale_inline_threads(
                 client,
@@ -906,7 +913,7 @@ async def run_publish_job(
                         )
                     )
                 )
-                inline_thread_ids = _fingerprint_thread_ids_from_index(inline_threads, thread_index)
+                inline_thread_ids: dict[str, str] = {}
                 for finding in inline_findings:
                     if finding.file_path is None or finding.start_line is None:
                         continue

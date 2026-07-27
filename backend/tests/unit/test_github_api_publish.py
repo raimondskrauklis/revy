@@ -381,3 +381,31 @@ async def test_build_review_thread_comment_index_maps_ids():
         )
 
     assert index == {10: "PRRT_a", 11: "PRRT_a", 20: "PRRT_b"}
+
+
+@pytest.mark.asyncio
+async def test_list_review_threads_logs_graphql_errors(caplog):
+    client = AsyncMock()
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = {
+        "errors": [{"message": "rate limit"}],
+        "data": None,
+    }
+    client.post = AsyncMock(return_value=response)
+
+    with patch(
+        "app.integrations.github_api._resolve_auth_headers",
+        AsyncMock(return_value={"Authorization": "Bearer t"}),
+    ):
+        with caplog.at_level("WARNING"):
+            threads = await github_api.list_review_threads(
+                client,
+                github_installation_id=1,
+                owner="acme",
+                repo="demo",
+                pull_number=3,
+            )
+
+    assert threads == []
+    assert "github_list_review_threads_graphql_error" in caplog.text
