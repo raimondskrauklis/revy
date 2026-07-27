@@ -160,14 +160,11 @@ async def resolve_publish_job_id_for_review_run(
 
 
 def compute_check_conclusion(groups: list[GitHubFindingGroupORM]) -> str:
+    """GitHub check conclusion — advisory like Greptile; CI owns merge gates."""
     active = [g for g in groups if g.state == GitHubFindingGroupState.active]
-    if any(g.severity in (FindingSeverity.error, FindingSeverity.critical) for g in active):
-        return "failure"
     if not active:
         return "success"
-    if all(g.severity in (FindingSeverity.warning, FindingSeverity.info) for g in active):
-        return "neutral"
-    return "success"
+    return "neutral"
 
 
 def _revy_ui_link(pull_request_id: UUID) -> str:

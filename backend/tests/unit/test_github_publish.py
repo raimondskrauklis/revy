@@ -55,7 +55,7 @@ def _publish_formatter_defaults():
                     yield
 
 
-def test_compute_check_conclusion_failure_on_critical():
+def test_compute_check_conclusion_neutral_on_critical():
     group = GitHubFindingGroupORM(
         workspace_id=uuid.uuid4(),
         pull_request_id=uuid.uuid4(),
@@ -68,7 +68,7 @@ def test_compute_check_conclusion_failure_on_critical():
         file_path="a.py",
         last_seen_revision_id=uuid.uuid4(),
     )
-    assert github_publish.compute_check_conclusion([group]) == "failure"
+    assert github_publish.compute_check_conclusion([group]) == "neutral"
 
 
 def test_compute_check_conclusion_neutral_on_warnings_only():
@@ -970,25 +970,40 @@ async def test_run_publish_job_posts_inline_when_prior_job_failed_before_inline(
     session.get = AsyncMock(
         side_effect=[job, run, revision, pull_request, repository, installation, group]
     )
-    session.scalars = AsyncMock(side_effect=[[], [revision_id], [finding]])
-    session.scalar = AsyncMock(return_value=existing)
+    session.scalars = AsyncMock(side_effect=[[], [finding]])
+    session.scalar = AsyncMock(return_value=None)
     session.flush = AsyncMock()
 
     inline_mock = AsyncMock(return_value=9002)
+    create_check_mock = AsyncMock()
     with patch(
-        "app.services.github_publish.github_api.installation_auth_headers",
-        AsyncMock(return_value={"Authorization": "Bearer t"}),
+        "app.services.github_publish.find_prior_issue_comment_id_for_pull_request",
+        AsyncMock(return_value=None),
     ):
-        with patch("app.services.github_publish.github_api.update_check_run", AsyncMock()):
-            with patch("app.services.github_publish.github_api.update_issue_comment", AsyncMock()):
-                with patch(
-                    "app.services.github_publish.github_api.create_pull_request_review_comment",
-                    inline_mock,
-                ):
-                    result = await github_publish.run_publish_job(
-                        session,
-                        publish_job_id=publish_job_id,
-                    )
+        with patch(
+            "app.services.github_publish.find_publish_job_for_head_sha",
+            AsyncMock(return_value=existing),
+        ):
+            with patch(
+                "app.services.github_publish.github_api.installation_auth_headers",
+                AsyncMock(return_value={"Authorization": "Bearer t"}),
+            ):
+                with patch("app.services.github_publish.github_api.update_check_run", AsyncMock()):
+                    with patch("app.services.github_publish.github_api.update_issue_comment", AsyncMock()):
+                        with patch(
+                            "app.services.github_publish.github_api.create_check_run",
+                            create_check_mock,
+                        ):
+                            with patch(
+                                "app.services.github_publish.github_api.create_pull_request_review_comment",
+                                inline_mock,
+                            ):
+                                result = await github_publish.run_publish_job(
+                                    session,
+                                    publish_job_id=publish_job_id,
+                                )
+
+    create_check_mock.assert_not_awaited()
 
     assert result.status == GitHubPublishJobStatus.completed
     assert result.github_check_run_id == 50
