@@ -1,6 +1,6 @@
 # Review quality program (post-R8)
 
-**Status:** findings + general plans + execution locked (2026-07-27). **Ship:** one PR `feat/review-quality` → tag `review-quality-v1`. **Pace:** outcomes distillation first — see [agents/](../agents/README.md#principles-pace--outcomes). **Next:** RQ0 shipped; migration pause until staging `0026`.
+**Status:** RQ0–RQ8 implemented on `feat/review-quality` (PR #50). **Tag after merge:** `review-quality-v1`. **Human gate:** staging AS2 + migration `0026` (RQ8).
 
 Post-R8 program: **diff-first review**, **pipeline explainability**, Greptile-shaped **GitHub publish**, incremental index (C1), evidence + grounding, resolution metrics. R0–R8 = core pipeline.
 

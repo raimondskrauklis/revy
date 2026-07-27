@@ -6,10 +6,10 @@ When reviewing **backend** changes on `feat/review-quality`, treat these docs as
 - [REVIEW_QUALITY_FINDINGS.md](../docs/review-pipeline/review-quality/REVIEW_QUALITY_FINDINGS.md) — locked Q# and storage model
 - [agents/prompts/](../docs/review-pipeline/agents/prompts/) — distilled Custom Instructions + **Pass 1/2 output format** (Deferred table on pass 2+)
 
-**Active phase:** RQ6 next (resolution metrics). RQ5 shipped — evidence snippets + grounding judge.
+**Active phase:** RQ8 complete — program shipped on branch; human gate AS2 + migration `0026` before tag `review-quality-v1`.
 
-**RQ6 check especially:**
+**RQ6–RQ8 shipped on PR #50:**
 
-- `resolution_status` on synchronize: `judge_dismissed` | `addressed` | `still_open`
-- Hook after `_append_revision` flush, before `maybe_enqueue_pipeline_for_revision`
-- `addressed` = compare touches file_path + line region from latest finding
+- RQ6: `resolution_status` on synchronize (`github_resolution_metrics.py`)
+- RQ7: G3 split bodies + G9 prose + `summary_json` (`github_publish_formatter.py`)
+- RQ8: doc sync; full unit gate green

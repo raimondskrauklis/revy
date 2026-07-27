@@ -32,6 +32,7 @@ from app.models.github_pull_request import (
 )
 from app.models.github_repository import GitHubRepositoryORM
 from app.schemas.github_pull_request import GitHubPullRequestResponse
+from app.services.github_resolution_metrics import apply_resolution_status_for_synchronize
 
 logger = get_logger(__name__)
 
@@ -340,7 +341,7 @@ async def apply_pull_request_webhook_event(
         )
 
     if action == "synchronize":
-        _pull_request, new_revision = await _upsert_pull_request(
+        pull_request, new_revision = await _upsert_pull_request(
             session,
             repository=repository,
             fields=fields,
@@ -348,6 +349,11 @@ async def apply_pull_request_webhook_event(
         )
         if new_revision is None:
             return None
+        await apply_resolution_status_for_synchronize(
+            session,
+            pull_request=pull_request,
+            new_revision=new_revision,
+        )
         return PullRequestWebhookResult(
             workspace_id=repository.workspace_id,
             revision_id=new_revision.id,

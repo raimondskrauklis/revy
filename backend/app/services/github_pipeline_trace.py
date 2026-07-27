@@ -521,6 +521,7 @@ async def record_publish_pipeline_step(
     job: GitHubPublishJobORM,
     summary_markdown: str,
     duration_ms: int,
+    issue_comment_markdown: str | None = None,
 ) -> None:
     step = await _create_completed_step(
         session,
@@ -542,6 +543,13 @@ async def record_publish_pipeline_step(
         kind=PipelineArtifactKind.summary_markdown,
         content_text=summary_markdown,
     )
+    if issue_comment_markdown:
+        await add_step_artifact(
+            session,
+            step_id=step.id,
+            kind=PipelineArtifactKind.manifest,
+            content_json={"issue_comment_markdown": issue_comment_markdown},
+        )
 
 
 async def get_pipeline_trace_for_review_run(

@@ -67,31 +67,28 @@ Pipeline judge step manifest includes per-candidate prompt/raw/outcome.
 
 ---
 
-## RQ6 — Resolution metrics *(next)*
+## RQ6 — Resolution metrics *(shipped)*
 
 ```text
 § RQ6. resolution_status on synchronize: judge_dismissed | addressed | still_open.
-Hook after _append_revision flush, before maybe_enqueue_pipeline_for_revision.
-addressed = compare touches file_path + line region from latest finding.
+Hook in apply_pull_request_webhook_event before pipeline enqueue; compare line-region heuristic.
 ```
 
 ---
 
-## RQ7 — Greptile publish
+## RQ7 — Greptile publish *(shipped)*
 
 ```text
-§ RQ7. G3 compact check vs full issue comment; G5 formatter LLM; G10 update_check_run finalize.
-G2 confidence 0–5 comment-only; G9 fixed-since-last-push from resolution_status.
-Inline error/critical only; D13-F footer for fallback_reason.
+§ RQ7. G3 split check vs issue comment; G2 confidence comment-only; G9 resolution prose;
+summary_json on publish job; D13-F footer; Moonshot formatter with table fallback.
 ```
 
 ---
 
-## RQ8 — Doc-sync + tag
+## RQ8 — Doc-sync + tag *(shipped — human gate AS2)*
 
 ```text
-§ RQ8. Program complete; tag review-quality-v1. Doc-sync only — no scope creep.
-Verify waves README status table; AGENTS.md row if needed.
+§ RQ8. Program complete on feat/review-quality; tag review-quality-v1 after merge + staging gate.
 ```
 
 ---

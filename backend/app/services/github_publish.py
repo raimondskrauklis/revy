@@ -31,13 +31,17 @@ from app.models.github_pull_request import (
 )
 from app.models.github_repository import GitHubRepositoryORM
 from app.models.github_review_run import GitHubReviewRunORM
-from app.services.github_indexing import ensure_revision_access
+from app.services.github_indexing import ensure_revision_access, get_latest_completed_index_job
 from app.services.github_pipeline_trace import (
     finalize_pipeline_github_check_failure,
     get_pipeline_run_for_review_run,
     link_publish_job_to_pipeline,
     record_publish_pipeline_step,
     resolve_pipeline_github_check_run_id,
+)
+from app.services.github_publish_formatter import (
+    PublishFormatContext,
+    build_publish_format_result_async,
 )
 from app.services.github_suggestion import is_publishable_suggestion
 
@@ -429,7 +433,25 @@ async def run_publish_job(
     )
 
     conclusion = compute_check_conclusion(groups)
-    summary = build_summary_markdown(pull_request_id=pull_request.id, groups=groups)
+    index_job = await get_latest_completed_index_job(
+        session,
+        workspace_id=job.workspace_id,
+        revision_id=job.revision_id,
+    )
+    formatted = await build_publish_format_result_async(
+        PublishFormatContext(
+            pull_request_id=pull_request.id,
+            pull_request_number=pull_request.number,
+            head_sha=job.head_sha,
+            revision_number=revision.revision_number,
+            groups=groups,
+            index_mode=index_job.index_mode if index_job is not None else None,
+            fallback_reason=index_job.fallback_reason if index_job is not None else None,
+        )
+    )
+    check_summary = formatted.check_summary
+    issue_comment = formatted.issue_comment
+    job.summary_json = formatted.summary_json
     owner, repo_name = repository.full_name.split("/", 1)
     external_id = github_api.build_check_run_external_id(
         github_installation_id=installation.github_installation_id,
@@ -468,7 +490,7 @@ async def run_publish_job(
                     repo=repo_name,
                     check_run_id=job.github_check_run_id,
                     conclusion=conclusion,
-                    summary=summary,
+                    summary=check_summary,
                     auth_headers=auth_headers,
                 )
                 if job.github_comment_id is not None:
@@ -478,7 +500,7 @@ async def run_publish_job(
                         owner=owner,
                         repo=repo_name,
                         comment_id=job.github_comment_id,
-                        body=summary,
+                        body=issue_comment,
                         auth_headers=auth_headers,
                     )
                 else:
@@ -488,7 +510,7 @@ async def run_publish_job(
                         owner=owner,
                         repo=repo_name,
                         issue_number=pull_request.number,
-                        body=summary,
+                        body=issue_comment,
                         auth_headers=auth_headers,
                     )
                     job.github_comment_id = comment_id
@@ -502,7 +524,7 @@ async def run_publish_job(
                     repo=repo_name,
                     check_run_id=existing.github_check_run_id,
                     conclusion=conclusion,
-                    summary=summary,
+                    summary=check_summary,
                     auth_headers=auth_headers,
                 )
                 if existing.github_comment_id is not None:
@@ -513,7 +535,7 @@ async def run_publish_job(
                         owner=owner,
                         repo=repo_name,
                         comment_id=existing.github_comment_id,
-                        body=summary,
+                        body=issue_comment,
                         auth_headers=auth_headers,
                     )
                 else:
@@ -523,7 +545,7 @@ async def run_publish_job(
                         owner=owner,
                         repo=repo_name,
                         issue_number=pull_request.number,
-                        body=summary,
+                        body=issue_comment,
                         auth_headers=auth_headers,
                     )
                     job.github_comment_id = comment_id
@@ -537,7 +559,7 @@ async def run_publish_job(
                     head_sha=job.head_sha,
                     external_id=external_id,
                     conclusion=conclusion,
-                    summary=summary,
+                    summary=check_summary,
                     auth_headers=auth_headers,
                 )
                 job.github_check_run_id = check_run_id
@@ -549,7 +571,7 @@ async def run_publish_job(
                     owner=owner,
                     repo=repo_name,
                     issue_number=pull_request.number,
-                    body=summary,
+                    body=issue_comment,
                     auth_headers=auth_headers,
                 )
                 job.github_comment_id = comment_id
@@ -610,7 +632,8 @@ async def run_publish_job(
                 session,
                 pipeline_run_id=pipeline_run.id,
                 job=job,
-                summary_markdown=summary,
+                summary_markdown=check_summary,
+                issue_comment_markdown=issue_comment,
                 duration_ms=int((time.monotonic() - started) * 1000),
             )
         return job

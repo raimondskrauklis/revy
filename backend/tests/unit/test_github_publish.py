@@ -24,6 +24,27 @@ from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullReque
 from app.models.github_repository import GitHubRepositoryORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.services import github_publish
+from app.services.github_publish_formatter import PublishFormatResult
+
+
+@pytest.fixture(autouse=True)
+def _publish_formatter_defaults():
+    with patch(
+        "app.services.github_publish.get_latest_completed_index_job",
+        AsyncMock(return_value=None),
+    ):
+        with patch(
+            "app.services.github_publish.build_publish_format_result_async",
+            AsyncMock(
+                return_value=PublishFormatResult(
+                    check_summary="## Revy review\n\n**Confidence:** 5/5",
+                    issue_comment="## Revy code review\n\nfull narrative",
+                    confidence=5,
+                    summary_json={"confidence": 5, "active_count": 0, "resolution": {}},
+                )
+            ),
+        ):
+            yield
 
 
 def test_compute_check_conclusion_failure_on_critical():

@@ -449,3 +449,4 @@ After each LOOP commit on #50, add a row:
 | RQ4 pass 2 | — | — | RC-D14 closure trace + 2 deferred fixes before RQ5 — [§](#rq4-bugbot-pass-2--closure-vs-thinking-trace-rc-d14) |
 | prompts | — | — | RC-D15 — `agents/prompts/` distill directory — [§](#prompt-handling--rc-d15) |
 | babysit | 2 P1 (G10 TX, D10 supersede) | — | RC-D16 — shallow Greptile fix + deep Bugbot; [§](#greptile-babysit-vs-bugbot-depth-rc-d16) |
+| RQ5–RQ8 | — | — | LOOP complete on branch — evidence/judge, resolution, Greptile publish, doc-sync |
