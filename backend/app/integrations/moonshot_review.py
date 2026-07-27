@@ -73,17 +73,48 @@ def _chat_completion_body(
         "model": model,
         "messages": messages,
         "response_format": {"type": "json_object"},
-        "max_completion_tokens": settings.revy_moonshot_max_completion_tokens,
     }
     if _uses_k3_params(model):
         body["reasoning_effort"] = _reasoning_effort_for_profile(profile)
+        body["max_completion_tokens"] = settings.revy_moonshot_max_completion_tokens
         return body
     if _uses_k2_thinking_params(model):
-        # kimi-k2.7-code/k2.6/k2.5 reject non-default sampling params (temperature≠1.0 → 400).
-        body["thinking"] = {"type": "enabled"}
+        # K2 thinking models share the completion budget between reasoning_content and
+        # content; a low cap can return HTTP 200 with empty content (finish_reason=length).
         return body
+    body["max_completion_tokens"] = settings.revy_moonshot_max_completion_tokens
     body["temperature"] = 0.2
     return body
+
+
+def _extract_message_content(choice: dict, *, model: str) -> str:
+    message = choice.get("message")
+    if not isinstance(message, dict):
+        raise ServiceUnavailableError(
+            message="Moonshot review response invalid",
+            error_code="llm_error",
+        )
+    content = message.get("content")
+    if isinstance(content, str) and content.strip():
+        return content
+    finish_reason = choice.get("finish_reason")
+    logger.error(
+        "moonshot_review_empty_content",
+        extra={
+            "model": model,
+            "finish_reason": finish_reason,
+            "has_reasoning_content": bool(message.get("reasoning_content")),
+        },
+    )
+    if finish_reason == "length":
+        raise ServiceUnavailableError(
+            message="Moonshot review response truncated",
+            error_code="llm_error",
+        )
+    raise ServiceUnavailableError(
+        message="Moonshot review response invalid",
+        error_code="llm_error",
+    )
 
 
 def _log_moonshot_error(response: httpx.Response, *, model: str) -> None:
@@ -144,19 +175,7 @@ async def complete_review(
             message="Moonshot review response invalid",
             error_code="llm_error",
         )
-    message = first.get("message")
-    if not isinstance(message, dict):
-        raise ServiceUnavailableError(
-            message="Moonshot review response invalid",
-            error_code="llm_error",
-        )
-    content = message.get("content")
-    if not isinstance(content, str) or not content.strip():
-        raise ServiceUnavailableError(
-            message="Moonshot review response invalid",
-            error_code="llm_error",
-        )
-    return content
+    return _extract_message_content(first, model=model)
 
 
 def parse_review_json(raw: str) -> list[dict]:
