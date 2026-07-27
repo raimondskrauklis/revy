@@ -557,7 +557,7 @@ async def test_run_publish_job_posts_inline_for_warning_finding():
         side_effect=[job, run, revision, pull_request, repository, installation, group]
     )
     session.scalars = AsyncMock(side_effect=[[], [], [finding]])
-    session.scalar = AsyncMock(return_value=job)
+    session.scalar = AsyncMock(return_value=None)
     session.flush = AsyncMock()
     session.commit = AsyncMock()
 
@@ -571,20 +571,24 @@ async def test_run_publish_job_posts_inline_for_warning_finding():
             AsyncMock(),
         ):
             with patch(
-                "app.services.github_publish.github_api.installation_auth_headers",
-                AsyncMock(return_value={"Authorization": "Bearer t"}),
+                "app.services.github_publish.get_pipeline_run_for_review_run",
+                AsyncMock(return_value=None),
             ):
-                with patch("app.services.github_publish.github_api.update_check_run", AsyncMock()):
-                    with patch("app.services.github_publish.github_api.update_issue_comment", AsyncMock()):
-                        with patch(
-                            "app.services.github_publish.github_api.create_pull_request_review_comment",
-                            inline_mock,
-                        ):
-                            result = await github_publish.run_publish_job(
-                                session,
-                                publish_job_id=publish_job_id,
-                                persist_github_surface=True,
-                            )
+                with patch(
+                    "app.services.github_publish.github_api.installation_auth_headers",
+                    AsyncMock(return_value={"Authorization": "Bearer t"}),
+                ):
+                    with patch("app.services.github_publish.github_api.update_check_run", AsyncMock()):
+                        with patch("app.services.github_publish.github_api.update_issue_comment", AsyncMock()):
+                            with patch(
+                                "app.services.github_publish.github_api.create_pull_request_review_comment",
+                                inline_mock,
+                            ):
+                                result = await github_publish.run_publish_job(
+                                    session,
+                                    publish_job_id=publish_job_id,
+                                    persist_github_surface=True,
+                                )
 
     assert result.status == GitHubPublishJobStatus.completed
     assert result.inline_comments_posted is True
@@ -1086,26 +1090,30 @@ async def test_run_publish_job_posts_inline_after_surface_checkpoint():
         side_effect=[job, run, revision, pull_request, repository, installation, group]
     )
     session.scalars = AsyncMock(side_effect=[[], [revision_id], [finding]])
-    session.scalar = AsyncMock(return_value=job)
+    session.scalar = AsyncMock(return_value=None)
     session.flush = AsyncMock()
     session.commit = AsyncMock()
 
     inline_mock = AsyncMock(return_value=9003)
     with patch(
-        "app.services.github_publish.github_api.installation_auth_headers",
-        AsyncMock(return_value={"Authorization": "Bearer t"}),
+        "app.services.github_publish.get_pipeline_run_for_review_run",
+        AsyncMock(return_value=None),
     ):
-        with patch("app.services.github_publish.github_api.update_check_run", AsyncMock()):
-            with patch("app.services.github_publish.github_api.update_issue_comment", AsyncMock()):
-                with patch(
-                    "app.services.github_publish.github_api.create_pull_request_review_comment",
-                    inline_mock,
-                ):
-                    result = await github_publish.run_publish_job(
-                        session,
-                        publish_job_id=publish_job_id,
-                        persist_github_surface=True,
-                    )
+        with patch(
+            "app.services.github_publish.github_api.installation_auth_headers",
+            AsyncMock(return_value={"Authorization": "Bearer t"}),
+        ):
+            with patch("app.services.github_publish.github_api.update_check_run", AsyncMock()):
+                with patch("app.services.github_publish.github_api.update_issue_comment", AsyncMock()):
+                    with patch(
+                        "app.services.github_publish.github_api.create_pull_request_review_comment",
+                        inline_mock,
+                    ):
+                        result = await github_publish.run_publish_job(
+                            session,
+                            publish_job_id=publish_job_id,
+                            persist_github_surface=True,
+                        )
 
     assert result.status == GitHubPublishJobStatus.completed
     assert result.inline_comments_posted is True

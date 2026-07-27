@@ -476,13 +476,23 @@ async def find_review_thread_id_for_comment(
     )
     response.raise_for_status()
     payload = response.json()
-    threads = (
-        payload.get("data", {})
-        .get("repository", {})
-        .get("pullRequest", {})
-        .get("reviewThreads", {})
-        .get("nodes", [])
-    )
+    if payload.get("errors"):
+        return None
+    data = payload.get("data")
+    if not isinstance(data, dict):
+        return None
+    repository = data.get("repository")
+    if not isinstance(repository, dict):
+        return None
+    pull_request = repository.get("pullRequest")
+    if not isinstance(pull_request, dict):
+        return None
+    review_threads = pull_request.get("reviewThreads")
+    if not isinstance(review_threads, dict):
+        return None
+    threads = review_threads.get("nodes", [])
+    if not isinstance(threads, list):
+        return None
     for thread in threads:
         if not isinstance(thread, dict):
             continue

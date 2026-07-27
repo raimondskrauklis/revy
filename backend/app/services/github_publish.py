@@ -319,7 +319,7 @@ async def _resolve_superseded_inline_threads(
         )
     )
     for group in closed_groups:
-        comment_id = inline_threads.pop(group.fingerprint, None)
+        comment_id = inline_threads.get(group.fingerprint)
         if comment_id is None:
             continue
         try:
@@ -332,13 +332,15 @@ async def _resolve_superseded_inline_threads(
                 comment_database_id=comment_id,
                 auth_headers=auth_headers,
             )
-            if thread_id is not None:
-                await github_api.resolve_review_thread(
-                    client,
-                    github_installation_id=github_installation_id,
-                    thread_id=thread_id,
-                    auth_headers=auth_headers,
-                )
+            if thread_id is None:
+                continue
+            await github_api.resolve_review_thread(
+                client,
+                github_installation_id=github_installation_id,
+                thread_id=thread_id,
+                auth_headers=auth_headers,
+            )
+            inline_threads.pop(group.fingerprint, None)
         except (httpx.HTTPError, ServiceUnavailableError) as exc:
             logger.warning(
                 "github_publish_resolve_inline_thread_skipped",

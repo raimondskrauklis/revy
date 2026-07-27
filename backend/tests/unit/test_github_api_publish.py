@@ -163,3 +163,27 @@ def test_format_inline_comment_body_with_suggestion():
     )
     assert "```suggestion" in body
     assert "safe_query()" in body
+
+
+@pytest.mark.asyncio
+async def test_find_review_thread_id_for_comment_returns_none_on_null_graphql_data():
+    client = AsyncMock()
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = {"data": None}
+    client.post = AsyncMock(return_value=response)
+
+    with patch(
+        "app.integrations.github_api._resolve_auth_headers",
+        AsyncMock(return_value={"Authorization": "Bearer t"}),
+    ):
+        thread_id = await github_api.find_review_thread_id_for_comment(
+            client,
+            github_installation_id=1,
+            owner="acme",
+            repo="demo",
+            pull_number=3,
+            comment_database_id=42,
+        )
+
+    assert thread_id is None
