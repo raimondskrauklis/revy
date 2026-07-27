@@ -2,7 +2,7 @@
 
 **Index:** [prompts/README.md](./README.md) · **Output shape:** [OUTPUT_FORMAT.md](./OUTPUT_FORMAT.md)
 
-Copy the active **§ RQn** block into Bugbot Custom Instructions. Keep `.cursor/BUGBOT.md` in sync (active phase line + file hints).
+Copy the active **§ RQn** block into Bugbot Custom Instructions. `.cursor/BUGBOT.md` points at contract docs + [CURSOR_AGENT_WORKFLOW.md](../../../utils/CURSOR_AGENT_WORKFLOW.md).
 
 ---
 
@@ -88,7 +88,16 @@ summary_json on publish job; D13-F footer; Moonshot formatter with table fallbac
 ## RQ8 — Doc-sync + tag *(shipped — human gate AS2)*
 
 ```text
-§ RQ8. Program complete on feat/review-quality; tag review-quality-v1 after merge + staging gate.
+§ RQ8. Merged to main (PR #50). Human gate: staging 0026 + AS2 → tag review-quality-v1.
+```
+
+---
+
+## RQ9 — Post-merge hardening *(active)*
+
+```text
+§ RQ9. G10 neutral finalize for draft/closed PR (no orphan in_progress).
+Split get_db_context in index_tasks — test TX boundary. Greptile scope: CURSOR_AGENT_WORKFLOW + ROLES.
 ```
 
 ---
@@ -96,6 +105,6 @@ summary_json on publish job; D13-F footer; Moonshot formatter with table fallbac
 ## Generic tail (any phase)
 
 ```text
-Read .cursor/BUGBOT.md active phase. Backend scope only unless diff touches frontend.
+Read .cursor/BUGBOT.md + docs/utils/CURSOR_AGENT_WORKFLOW.md. Backend scope only unless diff touches frontend.
 Fix blockers in implementer session; do not commit from Bugbot subagent.
 ```

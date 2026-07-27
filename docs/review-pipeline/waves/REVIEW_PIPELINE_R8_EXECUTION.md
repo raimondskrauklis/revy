@@ -125,4 +125,4 @@ npm run lint && npm test -- src/features/reviewer/ && npm run build
 
 **Tag on `main`:** `review-r8-v1`
 
-**Next:** none — R9 general plan when incremental index scoped.
+**Next:** [review-quality program](../review-quality/README.md) — merged PR #50; RQ9 hardening active. Post-v1 tracks: [waves/README.md](./README.md) § Post-v1.

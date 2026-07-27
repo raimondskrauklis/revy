@@ -12,7 +12,7 @@
 |-------|------|-------|------------------|
 | **1. Contract** | Locked Q#, schema, routes, RQ scope | [FINDINGS](../review-quality/REVIEW_QUALITY_FINDINGS.md) + [EXECUTION](../waves/REVIEW_QUALITY_EXECUTION.md) § RQn | Implementing RQn |
 | **2. Process** | LOOP, gates, prompts | **This folder** + [prompts/](./prompts/) + [skills](../../../.cursor/skills/) | Every push / phase-execution |
-| **3. Wiring** | Greptile + Bugbot see the contract | `.greptile/files.json`, `.cursor/BUGBOT.md` | RQ0 + update active phase line |
+| **3. Wiring** | Greptile + Bugbot see the contract | `.greptile/files.json`, `.cursor/BUGBOT.md`, [CURSOR_AGENT_WORKFLOW.md](../../utils/CURSOR_AGENT_WORKFLOW.md) | RC0 shipped |
 | **4. Evidence** | What we learned on a real PR | [DOGFOOD_PR50](../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md), [CODE_REVIEW_LEARNINGS](../REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md), [`chain_of_thoughts/`](./chain_of_thoughts/) (raw exports) | After push; before next RQ |
 
 **Post-v1 strategy** (read only when relevant): [STRUCTURAL_CONTEXT](../review-quality/REVIEW_QUALITY_STRUCTURAL_CONTEXT.md) (code graph), [REVIEW_CONTEXT](../review-quality/REVIEW_QUALITY_REVIEW_CONTEXT.md) (bot wiring roadmap).
@@ -74,4 +74,4 @@ Next RQ
 - New index files per PR — extend `DOGFOOD_PR50.md` table or add `DOGFOOD_PR<n>.md` when needed
 - Skip Bugbot because Greptile will run later
 
-**Active program:** review-quality · [PR #50](https://github.com/raimondskrauklis/revy/pull/50) · **RQ0–RQ8 shipped** — human gate AS2, then tag `review-quality-v1`.
+**Active program:** review-quality **merged** — [PR #50](https://github.com/raimondskrauklis/revy/pull/50) · **Next:** human gate AS2 + `0026` on staging → tag `review-quality-v1` · **Quick ref:** [CURSOR_AGENT_WORKFLOW.md](../../utils/CURSOR_AGENT_WORKFLOW.md)

@@ -1,6 +1,6 @@
 # Review quality — dogfood PR #50 (Greptile + Revy)
 
-**PR:** [#50](https://github.com/raimondskrauklis/revy/pull/50) · **branch:** `feat/review-quality` · **phase:** RQ0  
+**PR:** [#50](https://github.com/raimondskrauklis/revy/pull/50) · **merged to `main`** · **phase:** RQ0–RQ8 complete
 **Raw paste:** [actual_output_revy_greptile.txt](./actual_output_revy_greptile.txt) (GitHub copy, 2026-07-27)  
 **Strategy:** [REVIEW_QUALITY_REVIEW_CONTEXT.md](./REVIEW_QUALITY_REVIEW_CONTEXT.md) · **Lessons:** [CODE_REVIEW_LEARNINGS](../REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md) · **Agents:** [agents/](../agents/README.md)
 
@@ -317,7 +317,7 @@ The thinking trace explores **many** hypotheses (deletion-only sync, `paths_to_i
 | medium | Embed fails after copy-forward → partial chunks **committed** (`get_db_context` commits on normal return) | 179–183 | `_fail_index_job_after_chunk_work` → `session.rollback()` then mark job failed |
 | medium | Index succeeds, `ServiceUnavailableError` on `create_review_run` → G10 check stuck `in_progress` | 133–135 | `ReviewAfterIndexOutcome.fail_pipeline_check`; `index_tasks` finalizes failure for transient enqueue errors only (draft/closed/pending review stay benign) |
 
-**Still open (parking):** draft/closed PR leaves check `in_progress` after index — needs G10 `neutral` finalize (RQ7/G10 polish), not failure.
+**Still open (parking):** ~~draft/closed PR leaves check `in_progress` after index~~ → **RQ9** ships `neutral_finalize_check` + `finalize_pipeline_github_check_neutral`.
 
 **Archive:** commit `local_bugbot_from_ui_1.txt` under `agents/chain_of_thoughts/` when useful; thin exports (`cursor_bugbot_rq4_pass_6.md`) are not sufficient for dogfood.
 
@@ -382,7 +382,7 @@ OUT OF SCOPE: other threads, pre-existing, parking
 | medium | Migration supersede → publish before next reconcile shows green check | One-shot deploy; D10-M accepted; narrow rolling window |
 | low | Duplicate Celery task → second GitHub check | Pre-existing; `external_id` may upsert; not introduced by TX split |
 | low | Re-dispatch index task on completed job → orphan `in_progress` check | Pre-existing; TX split does not worsen |
-| low | Draft/closed PR leaves G10 `in_progress` | Parking — RQ7/G10 `neutral` finalize |
+| low | Draft/closed PR leaves G10 `in_progress` | **RQ9** — `neutral` finalize on `docs/agent-work` |
 | low | Massive `UPDATE` locks `github_finding_groups` | One-shot migration; acceptable for v1 scale |
 
 **Real fixes (Greptile was right):** G10 check stranded on same-session rollback → split `get_db_context`; D10 fingerprint orphans active groups → supersede pass in `0026`.

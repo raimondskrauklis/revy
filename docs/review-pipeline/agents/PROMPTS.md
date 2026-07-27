@@ -57,7 +57,7 @@ Greptile is post-push. **VALIDATE** (pass 1) → fix → **CLOSE** (pass 2); re-
 - Babysit: VALIDATE → fix → CLOSE; re-CLOSE until clean → push.
 - Phase LOOP: FIND → fix → CLOSE; re-CLOSE until clean → push.
 - Read only current RQ execution section.
-- Update .cursor/BUGBOT.md active phase line each RQ.
+- Update `.cursor/BUGBOT.md` when starting a **new** program slice
 ```
 
 Legacy per-phase blocks below are **superseded by prompts/PHASES.md** — kept for grep only.

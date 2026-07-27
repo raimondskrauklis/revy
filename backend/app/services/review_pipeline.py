@@ -42,6 +42,7 @@ _PIPELINE_TRIGGERS = frozenset({
 class ReviewAfterIndexOutcome:
     review_run_id: UUID | None = None
     fail_pipeline_check: bool = False
+    neutral_finalize_check: bool = False
     pipeline_check_summary: str | None = None
 
 
@@ -251,7 +252,10 @@ async def prepare_review_after_index(
                 "state": stored_enum_value(pull_request.state),
             },
         )
-        return ReviewAfterIndexOutcome()
+        return ReviewAfterIndexOutcome(
+            neutral_finalize_check=True,
+            pipeline_check_summary="Review skipped — pull request is draft or not open",
+        )
 
     try:
         run = await create_review_run(

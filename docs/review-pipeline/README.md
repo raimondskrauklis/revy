@@ -50,7 +50,7 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 | **Findings** | Retroactive update in [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) | Must be baseline-ready **before** execution |
 | **General plan** | Retroactive — [R0](./REVIEW_PIPELINE_R0_WEBHOOKS_GENERAL_PLAN.md), [R1](./REVIEW_PIPELINE_R1_REPO_SYNC_GENERAL_PLAN.md) | One file per phase — **all R0–R7 now exist** |
 | **Execution** | [R0](./waves/REVIEW_PIPELINE_R0_EXECUTION.md), [R1](./waves/REVIEW_PIPELINE_R1_EXECUTION.md) shipped | Create after general plan; **manual peer-review** (separate agent) before `phase-execution` |
-| **Code** | R0–R8 on `main`; polish + hotfixes through #48; optional tags `review-r4-v1` … `review-r8-v1` | **Review quality** `phase-execution` on `feat/review-quality` |
+| **Code** | R0–R8 + review-quality on `main` | Findings → general plan → execution → code |
 | **GitHub App** | [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) · [GITHUB_APP_TARGET_CONFIG.md](../utils/GITHUB_APP_TARGET_CONFIG.md) | Configure per phase map in target config |
 
 **No corners cut from R2 onward:** findings locked → general plan → execution plan → peer-review → implement → phase gate → tag.
@@ -98,8 +98,8 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 | **R5** | [waves/R5](./waves/REVIEW_PIPELINE_R5_EXECUTION.md) | shipped on `main` ([#29](https://github.com/raimondskrauklis/revy/pull/29)) |
 | **R6** | [waves/R6](./waves/REVIEW_PIPELINE_R6_EXECUTION.md) | shipped on `main` ([#29](https://github.com/raimondskrauklis/revy/pull/29)) |
 | **R7** | [waves/R7](./waves/REVIEW_PIPELINE_R7_EXECUTION.md) | shipped on `main` ([#29](https://github.com/raimondskrauklis/revy/pull/29)) |
-| **R8** | [waves/R8](./waves/REVIEW_PIPELINE_R8_EXECUTION.md) | in PR [#31](https://github.com/raimondskrauklis/revy/pull/31) — tag `review-r8-v1` after merge |
-| **Review quality** | [review-quality/](./review-quality/README.md) | findings baseline — diff-first + explainability + GitHub surface (post-R8) |
+| **R8** | [waves/R8](./waves/REVIEW_PIPELINE_R8_EXECUTION.md) | shipped on `main` ([#31](https://github.com/raimondskrauklis/revy/pull/31)) |
+| **Review quality** | [review-quality/](./review-quality/README.md) | shipped on `main` ([#50](https://github.com/raimondskrauklis/revy/pull/50)) — tag `review-quality-v1` after human gate |
 
 [waves/README.md](./waves/README.md) — full execution table.
 
@@ -122,6 +122,6 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 
 ## Next (strict order)
 
-1. **Review quality** — `phase-execution` on `feat/review-quality` starting at RQ0 — [execution](./waves/REVIEW_QUALITY_EXECUTION.md) (peer-reviewed 2026-07-27).
-2. **Ops** — Track F in [recovery checklist](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md): migrations through `0026` after review-quality merge; env keys; worker `-Q` + **Celery beat** for O8 purge.
-3. **Tags (optional)** — `review-r4-v1` … `review-r8-v1`, then `review-quality-v1` after review-quality merge.
+1. **Human gate** — staging `0026` + AS2 e2e — [REVIEW_QUALITY_EXECUTION.md § RQ8](./waves/REVIEW_QUALITY_EXECUTION.md); then tag `review-quality-v1`.
+2. **Ops** — Track F in [recovery checklist](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md): migrations through `0026`; env keys; worker `-Q` + Celery beat (O8 purge).
+3. **Post-v1** — RQ-STRUCT-1 / RQ-RC-1 when ready — [review-quality/README.md](./review-quality/README.md).

@@ -118,4 +118,4 @@ npm run lint && npm test -- src/features/reviewer/ && npm run build
 
 **Tag on `main` (optional):** `review-polish-v1`
 
-**Next:** none — R9 general plan when incremental index scoped.
+**Next:** [review-quality program](../review-quality/README.md) — merged PR #50; RQ9 hardening active.

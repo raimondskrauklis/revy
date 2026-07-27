@@ -3,7 +3,7 @@
 **Purpose:** Single handoff for agents when context is limited. Work **top to bottom** on active tracks; mark `[x]` as done.  
 **Rules:** No direct pushes to `main`. One concern per PR. **Peer review = separate agent session** (human-invoked); never self-certified by the implementing agent.
 
-**Last updated:** 2026-07-27 — R8 merged (#31); **active: review-quality** (`feat/review-quality`)
+**Last updated:** 2026-07-27 — review-quality **merged to `main`** (PR #50); **active: RQ9 hardening + human gate**
 
 ---
 
@@ -11,12 +11,11 @@
 
 | Item | Value |
 |------|--------|
-| `main` | R0–R8 shipped; polish wave (#43); post-R8 hotfixes through #48 |
-| `feat/review-quality` | Review quality RQ0–RQ8 — [execution](./waves/REVIEW_QUALITY_EXECUTION.md) peer-reviewed |
-| Tags | `review-r0-v1` … `review-r3-v1` on `main`; `review-r4-v1` … `review-r8-v1` optional; **`review-quality-v1`** after review-quality merge |
-| Migrations on `main` | `0001`–`0025` (through polish `0025`); **`0026`** on review-quality branch |
+| `main` | R0–R8 + review-quality RQ0–RQ8 shipped |
+| Tags | `review-r0-v1` … `review-r3-v1`; optional `review-r4-v1` … `review-r8-v1`; **`review-quality-v1`** after human gate |
+| Migrations on `main` | `0001`–`0026` (review-quality) |
 | Worker deploy | `deploy.yml` worker `-Q` includes `reconciliation`, `judge`, `github_publish`, `maintenance` |
-| Next program slice | **`phase-execution`** review-quality on `feat/review-quality` |
+| Next | RQ9 hardening (`docs/agent-work`) → staging `0026` + AS2 e2e → tag `review-quality-v1` |
 
 ---
 
@@ -36,7 +35,7 @@
 
 ### Track F — Post-merge ops (staging / prod)
 
-- [ ] `alembic upgrade head` on staging/prod (through `0025` on `main`; `0026` after review-quality merge)
+- [ ] `alembic upgrade head` on staging/prod (through **`0026`** on `main`)
 - [ ] GitHub App: **Install App** on target account → register **installation ID** in Revy (pro plan) — see [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) § App ID vs installation ID
 - [ ] PEM: `/mnt/revy_volume/secrets/github-app.pem` readable by container (`chown 1000:deploy`, `chmod 640`); `token mint: 201` verify script in setup doc
 - [ ] Env: `MOONSHOT_API_KEY`, `VOYAGE_API_KEY` (`REVY_EMBEDDING_MODEL=voyage-code-3`, `REVY_EMBEDDING_DIMENSIONS=1024`), `REVY_BOT_LOGIN=<slug>[bot]`; optional `ANTHROPIC_API_KEY` + `REVY_ANTHROPIC_MODEL=claude-sonnet-5`
@@ -54,15 +53,23 @@
 - [x] Merge PR [#31](https://github.com/raimondskrauklis/revy/pull/31) → `main`; GitHub App subscribe **Issue comments**
 - [ ] Tag `review-r8-v1` (optional)
 
-### Track H — Review quality — **active**
+### Track H — Review quality — **merged** (PR #50)
 
 - [x] Findings + general plans R1–R5 locked — [review-quality/findings](./review-quality/REVIEW_QUALITY_FINDINGS.md)
 - [x] Architecture peer review — [REVIEW_QUALITY_PEER_REVIEW.md](./review-quality/REVIEW_QUALITY_PEER_REVIEW.md)
 - [x] Execution plan — [REVIEW_QUALITY_EXECUTION.md](./waves/REVIEW_QUALITY_EXECUTION.md)
 - [x] `execution-peer-review` (2026-07-27, two passes)
-- [ ] `phase-execution` RQ0–RQ8 on `feat/review-quality`
-- [ ] Human gate S4 + AS2 — [execution](./waves/REVIEW_QUALITY_EXECUTION.md) RQ8
+- [x] `phase-execution` RQ0–RQ8 → merged to `main`
+- [ ] Human gate S4 + AS2 — [execution](./waves/REVIEW_QUALITY_EXECUTION.md) RQ8 + RQ9
 - [ ] Tag `review-quality-v1` on `main`
+
+### Track I — RQ9 hardening — **active** (`docs/agent-work`)
+
+- [ ] G10 `neutral` finalize when PR becomes draft/closed after index (no orphan `in_progress`)
+- [ ] Unit test: split `get_db_context` in `index_tasks` (check survives index TX)
+- [ ] Expand `.greptile/files.json` + `.cursor/BUGBOT.md` orchestration scope
+- [ ] Staging smoke § post–review-quality re-run after deploy
+- [ ] Merge `docs/agent-work` → `main` (with doc sync bundle)
 
 ---
 
@@ -178,8 +185,7 @@ Historical babysit detail: [REVIEW_PIPELINE_MERGE_CHECKLIST.md](./REVIEW_PIPELIN
 ## Agent resume command
 
 ```text
-Read docs/review-pipeline/REVIEW_PIPELINE_RECOVERY_CHECKLIST.md (Track H — review-quality).
-Read docs/review-pipeline/waves/REVIEW_QUALITY_EXECUTION.md — start at RQ0.
-Read docs/review-pipeline/review-quality/REVIEW_QUALITY_FINDINGS.md for locked Q#.
-phase-execution on feat/review-quality. Do not push to main directly.
+Read docs/review-pipeline/REVIEW_PIPELINE_RECOVERY_CHECKLIST.md (Track F ops + Track H human gate).
+Read docs/utils/CURSOR_AGENT_WORKFLOW.md for agent roles.
+Human gate: staging 0026 + AS2 → tag review-quality-v1. Do not push to main directly.
 ```

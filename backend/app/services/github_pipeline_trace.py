@@ -701,6 +701,35 @@ async def finalize_pipeline_github_check_failure(
     pipeline_run_id: UUID,
     summary: str,
 ) -> None:
+    await _finalize_pipeline_github_check(
+        session,
+        pipeline_run_id=pipeline_run_id,
+        summary=summary,
+        conclusion="failure",
+    )
+
+
+async def finalize_pipeline_github_check_neutral(
+    session: AsyncSession,
+    *,
+    pipeline_run_id: UUID,
+    summary: str,
+) -> None:
+    await _finalize_pipeline_github_check(
+        session,
+        pipeline_run_id=pipeline_run_id,
+        summary=summary,
+        conclusion="neutral",
+    )
+
+
+async def _finalize_pipeline_github_check(
+    session: AsyncSession,
+    *,
+    pipeline_run_id: UUID,
+    summary: str,
+    conclusion: str,
+) -> None:
     check_run_id = await resolve_pipeline_github_check_run_id(session, pipeline_run_id=pipeline_run_id)
     if check_run_id is None or not settings.github_api_enabled:
         return
@@ -728,7 +757,7 @@ async def finalize_pipeline_github_check_failure(
                 owner=owner,
                 repo=repo_name,
                 check_run_id=check_run_id,
-                conclusion="failure",
+                conclusion=conclusion,
                 summary=summary,
             )
     except httpx.HTTPError as exc:
