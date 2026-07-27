@@ -656,3 +656,66 @@ async def test_run_index_job_copy_forwards_on_deletion_only_synchronize():
     assert result.index_manifest_stats["new_count"] == 0
     added_chunk = session.add.call_args.args[0]
     assert added_chunk.file_path == "stable.py"
+
+
+@pytest.mark.asyncio
+async def test_run_index_job_rolls_back_chunks_when_embed_fails_after_copy_forward():
+    session, job, revision = _index_job_fixture()
+    revision.revision_number = 2
+    revision.base_sha = "base"
+    job.index_incremental = True
+    job.index_mode = GitHubIndexMode.diff
+
+    parent_chunk = GitHubCodeChunkORM(
+        index_job_id=uuid.uuid4(),
+        revision_id=uuid.uuid4(),
+        workspace_id=job.workspace_id,
+        file_path="stable.py",
+        chunk_index=0,
+        content="stable",
+        content_hash="abc",
+        embedding=[0.5],
+    )
+    parent_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=revision.pull_request_id,
+        revision_number=1,
+        head_sha="old",
+    )
+    parent_revision.id = uuid.uuid4()
+
+    compare_result = MagicMock()
+    compare_result.paths_to_index = {"changed.py"}
+    compare_result.paths_to_remove = []
+
+    session.rollback = AsyncMock()
+
+    with patch("app.services.github_indexing.settings") as mock_settings:
+        mock_settings.revy_worktrees_path = "/tmp/revy-worktrees"
+        with patch("app.services.github_indexing._get_parent_revision", AsyncMock(return_value=parent_revision)):
+            with patch(
+                "app.services.github_indexing._load_parent_chunks",
+                AsyncMock(return_value={(parent_chunk.file_path, parent_chunk.chunk_index): parent_chunk}),
+            ):
+                with patch("app.services.github_indexing.compare_commits", AsyncMock(return_value=compare_result)):
+                    with patch("app.services.github_indexing.download_repository_tarball", AsyncMock(return_value=b"archive")):
+                        with patch(
+                            "app.services.github_indexing.extract_tarball",
+                            return_value=Path("/tmp/revy-worktrees") / str(revision.id),
+                        ):
+                            with patch(
+                                "app.services.github_indexing.iter_indexable_files",
+                                return_value=[("changed.py", "new")],
+                            ):
+                                with patch(
+                                    "app.services.github_indexing.chunk_file_content",
+                                    return_value=[MagicMock(file_path="changed.py", chunk_index=0, content="new")],
+                                ):
+                                    with patch(
+                                        "app.services.github_indexing.embed_texts",
+                                        AsyncMock(side_effect=httpx.HTTPError("embed failed")),
+                                    ):
+                                        with patch("pathlib.Path.exists", return_value=False):
+                                            result = await run_index_job(session, index_job_id=job.id)
+
+    assert result.status == GitHubIndexJobStatus.failed
+    session.rollback.assert_awaited_once()

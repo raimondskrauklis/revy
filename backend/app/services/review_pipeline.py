@@ -2,6 +2,7 @@
 """Review pipeline orchestration — R8 autostart and @revy review."""
 from __future__ import annotations
 
+from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy import select
@@ -35,6 +36,13 @@ _PIPELINE_TRIGGERS = frozenset({
     GitHubIndexJobTriggerSource.autostart,
     GitHubIndexJobTriggerSource.command,
 })
+
+
+@dataclass(frozen=True)
+class ReviewAfterIndexOutcome:
+    review_run_id: UUID | None = None
+    fail_pipeline_check: bool = False
+    pipeline_check_summary: str | None = None
 
 
 async def resolve_pending_index_job_id(
@@ -197,11 +205,11 @@ async def maybe_enqueue_pipeline_for_revision(
 async def prepare_review_after_index(
     session: AsyncSession,
     job: GitHubIndexJobORM,
-) -> UUID | None:
+) -> ReviewAfterIndexOutcome:
     if job.status != GitHubIndexJobStatus.completed:
-        return None
+        return ReviewAfterIndexOutcome()
     if job.trigger_source not in _PIPELINE_TRIGGERS:
-        return None
+        return ReviewAfterIndexOutcome()
 
     pending_review_id = await resolve_pending_review_run_id(
         session,
@@ -217,15 +225,21 @@ async def prepare_review_after_index(
                 "review_run_id": str(pending_review_id),
             },
         )
-        return None
+        return ReviewAfterIndexOutcome()
 
     revision = await session.get(GitHubPullRequestRevisionORM, job.revision_id)
     if revision is None:
-        return None
+        return ReviewAfterIndexOutcome(
+            fail_pipeline_check=True,
+            pipeline_check_summary="revision_not_found",
+        )
 
     pull_request = await session.get(GitHubPullRequestORM, revision.pull_request_id)
     if pull_request is None:
-        return None
+        return ReviewAfterIndexOutcome(
+            fail_pipeline_check=True,
+            pipeline_check_summary="pull_request_not_found",
+        )
 
     if pull_request.is_draft or pull_request.state != GitHubPullRequestState.open:
         logger.info(
@@ -237,7 +251,7 @@ async def prepare_review_after_index(
                 "state": stored_enum_value(pull_request.state),
             },
         )
-        return None
+        return ReviewAfterIndexOutcome()
 
     try:
         run = await create_review_run(
@@ -247,7 +261,7 @@ async def prepare_review_after_index(
             pull_request_id=pull_request.id,
             revision_id=job.revision_id,
         )
-    except (ConflictError, ServiceUnavailableError) as exc:
+    except ConflictError as exc:
         logger.info(
             "pipeline_review_enqueue_skipped",
             extra={
@@ -256,7 +270,20 @@ async def prepare_review_after_index(
                 "reason": getattr(exc, "error_code", type(exc).__name__),
             },
         )
-        return None
+        return ReviewAfterIndexOutcome()
+    except ServiceUnavailableError as exc:
+        logger.warning(
+            "pipeline_review_enqueue_failed",
+            extra={
+                "index_job_id": str(job.id),
+                "revision_id": str(job.revision_id),
+                "reason": getattr(exc, "error_code", type(exc).__name__),
+            },
+        )
+        return ReviewAfterIndexOutcome(
+            fail_pipeline_check=True,
+            pipeline_check_summary=str(getattr(exc, "error_code", exc))[:2000],
+        )
 
     pipeline_run = await get_pipeline_run_for_index_job(session, index_job_id=job.id)
     if pipeline_run is not None:
@@ -266,4 +293,4 @@ async def prepare_review_after_index(
             review_run_id=run.id,
         )
 
-    return run.id
+    return ReviewAfterIndexOutcome(review_run_id=run.id)

@@ -318,6 +318,22 @@ def _parent_chunk_hash(chunk: GitHubCodeChunkORM) -> str:
     return chunk.content_hash or _hash_chunk_content(chunk.content)
 
 
+async def _fail_index_job_after_chunk_work(
+    session: AsyncSession,
+    *,
+    index_job_id: UUID,
+    error_message: str,
+) -> GitHubIndexJobORM:
+    await session.rollback()
+    job = await session.get(GitHubIndexJobORM, index_job_id)
+    if job is None:
+        raise NotFoundError("Index job not found")
+    job.status = GitHubIndexJobStatus.failed
+    job.error_message = error_message[:2000]
+    await session.flush()
+    return job
+
+
 def _collect_chunks_for_paths(
     root_dir: Path,
     paths: set[str] | None,
@@ -576,25 +592,28 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
                 "status_code": exc.response.status_code,
             },
         )
-        job.status = GitHubIndexJobStatus.failed
-        job.error_message = str(exc)[:2000]
-        await session.flush()
-        return job
+        return await _fail_index_job_after_chunk_work(
+            session,
+            index_job_id=index_job_id,
+            error_message=str(exc),
+        )
     except httpx.TimeoutException as exc:
         logger.error(
             "github_index_job_failed",
             extra={"index_job_id": str(index_job_id), "error": str(exc)},
         )
-        job.status = GitHubIndexJobStatus.failed
-        job.error_message = str(exc)[:2000]
-        await session.flush()
-        return job
+        return await _fail_index_job_after_chunk_work(
+            session,
+            index_job_id=index_job_id,
+            error_message=str(exc),
+        )
     except (OSError, RuntimeError, httpx.HTTPError, ServiceUnavailableError) as exc:
         logger.error("github_index_job_failed", extra={"index_job_id": str(index_job_id), "error": str(exc)})
-        job.status = GitHubIndexJobStatus.failed
-        job.error_message = str(exc)[:2000]
-        await session.flush()
-        return job
+        return await _fail_index_job_after_chunk_work(
+            session,
+            index_job_id=index_job_id,
+            error_message=str(exc),
+        )
     finally:
         if work_dir.exists():
             shutil.rmtree(work_dir, ignore_errors=True)

@@ -99,9 +99,19 @@ def index_pull_request_revision(self, index_job_id: str) -> None:
                 logger.error("github_index_job_finished", extra=log_extra)
             else:
                 logger.info("github_index_job_complete", extra=log_extra)
-            review_run_id = await prepare_review_after_index(session, job)
-            if review_run_id is not None:
-                review_run_ids.append(review_run_id)
+            review_outcome = await prepare_review_after_index(session, job)
+            if review_outcome.review_run_id is not None:
+                review_run_ids.append(review_outcome.review_run_id)
+            elif (
+                pipeline_run is not None
+                and job.status == GitHubIndexJobStatus.completed
+                and review_outcome.fail_pipeline_check
+            ):
+                await finalize_pipeline_github_check_failure(
+                    session,
+                    pipeline_run_id=pipeline_run.id,
+                    summary=review_outcome.pipeline_check_summary or "Review was not enqueued",
+                )
 
     async def _mark_failed(error_message: str) -> None:
         async with get_db_context() as session:

@@ -12,7 +12,7 @@ from app.constants.enums import (
     GitHubPullRequestState,
     WorkspaceStatus,
 )
-from app.core.exceptions import ConflictError
+from app.core.exceptions import ConflictError, ServiceUnavailableError
 from app.models.github_index_job import GitHubIndexJobORM
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
 from app.models.workspaces import WorkspaceORM
@@ -210,7 +210,8 @@ async def test_prepare_review_after_index_skips_when_review_pending(create_revie
 
     result = await prepare_review_after_index(session, job)
 
-    assert result is None
+    assert result.review_run_id is None
+    assert result.fail_pipeline_check is False
     create_review_run_mock.assert_not_awaited()
 
 
@@ -235,7 +236,7 @@ async def test_prepare_review_after_index_for_autostart(create_review_run_mock: 
 
     result = await prepare_review_after_index(session, job)
 
-    assert result == review_run_id
+    assert result.review_run_id == review_run_id
     create_review_run_mock.assert_awaited_once()
 
 
@@ -256,7 +257,7 @@ async def test_prepare_review_after_index_skips_draft_pull_request(create_review
     session.get = AsyncMock(side_effect=[revision, pull_request])
     session.scalar = AsyncMock(return_value=None)
 
-    assert await prepare_review_after_index(session, job) is None
+    assert (await prepare_review_after_index(session, job)).review_run_id is None
     create_review_run_mock.assert_not_awaited()
 
 
@@ -280,7 +281,7 @@ async def test_prepare_review_after_index_skips_closed_pull_request(create_revie
     session.get = AsyncMock(side_effect=[revision, pull_request])
     session.scalar = AsyncMock(return_value=None)
 
-    assert await prepare_review_after_index(session, job) is None
+    assert (await prepare_review_after_index(session, job)).review_run_id is None
     create_review_run_mock.assert_not_awaited()
 
 
@@ -294,7 +295,37 @@ async def test_prepare_review_after_index_skips_manual_trigger():
     )
     session = AsyncMock()
 
-    assert await prepare_review_after_index(session, job) is None
+    assert (await prepare_review_after_index(session, job)).review_run_id is None
+
+
+@pytest.mark.asyncio
+@patch("app.services.review_pipeline.create_review_run", new_callable=AsyncMock)
+async def test_prepare_review_after_index_fails_check_on_llm_unavailable(
+    create_review_run_mock: AsyncMock,
+):
+    workspace_id = uuid.uuid4()
+    revision, pull_request = _revision_chain(workspace_id)
+    job = GitHubIndexJobORM(
+        revision_id=revision.id,
+        workspace_id=workspace_id,
+        status=GitHubIndexJobStatus.completed,
+        trigger_source=GitHubIndexJobTriggerSource.autostart,
+    )
+    job.id = uuid.uuid4()
+    create_review_run_mock.side_effect = ServiceUnavailableError(
+        message="LLM API is not configured",
+        error_code="llm_disabled",
+    )
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[revision, pull_request])
+    session.scalar = AsyncMock(return_value=None)
+
+    result = await prepare_review_after_index(session, job)
+
+    assert result.review_run_id is None
+    assert result.fail_pipeline_check is True
+    assert result.pipeline_check_summary == "llm_disabled"
 
 
 @pytest.mark.asyncio

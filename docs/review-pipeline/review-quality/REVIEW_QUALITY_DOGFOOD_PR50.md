@@ -287,6 +287,42 @@ Greptile likely combines **PR diff** + **codebase graph** (signup index) for cro
 
 ---
 
+## RQ4 Bugbot pass 2 — closure vs thinking trace (RC-D14)
+
+**Source:** [local_bugbot_from_ui_1.txt](../agents/chain_of_thoughts/local_bugbot_from_ui_1.txt) (full UI thinking export, ~200 lines).
+
+### What pass 2 was asked to do
+
+```text
+verify pass 1 findings closed → report NEW bugs only
+```
+
+Pass 1 had **3 real bugs** (copy-forward gate, false G10 failure, retry duplicates). Pass 2 correctly verified all three fixed in `ec85d7e` and returned **“no bugs.”** That answer was **correct for closure scope** — not “found 3, reported 0.”
+
+### Why it felt wrong
+
+The thinking trace explores **many** hypotheses (deletion-only sync, `paths_to_index is None`, embed-after-copy-forward commit, orphan `in_progress` checks, duplicate chunks, …) and self-dismisses most. Final output is only the last line — **no “considered but deferred” section**. Operator sees 199 lines of worry → 1 line “clean.”
+
+### Pass 2 rule addition (dogfood)
+
+| Pass | Report |
+|------|--------|
+| **Pass 1** | All actionable bugs in diff |
+| **Pass 2+** | New bugs **or** explicit table: pass 1 items closed + **deferred** pre-existing / out-of-scope items with severity |
+
+### Deferred items from pass 2 thinking (fixed before RQ5)
+
+| Sev | Issue | Thinking lines | Fix |
+|-----|-------|----------------|-----|
+| medium | Embed fails after copy-forward → partial chunks **committed** (`get_db_context` commits on normal return) | 179–183 | `_fail_index_job_after_chunk_work` → `session.rollback()` then mark job failed |
+| medium | Index succeeds, `ServiceUnavailableError` on `create_review_run` → G10 check stuck `in_progress` | 133–135 | `ReviewAfterIndexOutcome.fail_pipeline_check`; `index_tasks` finalizes failure for transient enqueue errors only (draft/closed/pending review stay benign) |
+
+**Still open (parking):** draft/closed PR leaves check `in_progress` after index — needs G10 `neutral` finalize (RQ7/G10 polish), not failure.
+
+**Archive:** commit `local_bugbot_from_ui_1.txt` under `agents/chain_of_thoughts/` when useful; thin exports (`cursor_bugbot_rq4_pass_6.md`) are not sufficient for dogfood.
+
+---
+
 ## Revy — triage (old deploy)
 
 | Sev | Location | Finding | Action |
@@ -344,3 +380,4 @@ After each LOOP commit on #50, add a row:
 | RQ1 code | **No new findings** on `bd4d084` after ~6× iterative local Bugbot | suspended | RC-D10 — Bugbot caught impl bugs Greptile missed; [§](#iterative-agent-review--rq1-local-bugbot); [chain_of_thoughts](../agents/chain_of_thoughts/) |
 | RQ2 | pending | suspended | Bugbot 2-pass: D13-F + compare supplemental; pass 2 closure — [§](#rq2-bugbot--focus-vs-bias) RC-D12 |
 | RQ4 | pending | suspended | RC-D13 — initial push skipped Bugbot; retro pass 1 → 3 bugs; pass 2 clean — [§](#loop-discipline-failure--rq3rq4-rc-d13) |
+| RQ4 pass 2 | — | — | RC-D14 closure trace + 2 deferred fixes before RQ5 — [§](#rq4-bugbot-pass-2--closure-vs-thinking-trace-rc-d14) |
