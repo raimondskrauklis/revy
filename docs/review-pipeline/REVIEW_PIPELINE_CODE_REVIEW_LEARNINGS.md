@@ -311,12 +311,23 @@ When shipping **large program PRs** (code + planning docs), wire bots to the **e
 | **RC-D4** | **Parallel dogfood, not layered product** — on #50: Greptile (GitHub) + local Bugbot + Revy. GitHub Bugbot **not** on repo; operator/arch reference for deeper bar. Distill → Revy. [dogfood §](./review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#reference-reviewers--distill-for-revy-pr-50). |
 | **RC-D5** | GitHub Bugbot (reference) / Greptile likely **agent loops** for hard cases; local Bugbot same class, lighter — distill into RQ4+ trace/judge. |
 | **RC-D6** | **Visual/context gap** — Revy check = table + app link; Greptile/Bugbot = narrative + P-badge inline + resolve threads. **Target: RQ7 G track** — [dogfood visual §](./review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#visual--context-ux--greptile--bugbot-vs-revy-target-bar). |
+| **RC-D7** | **Cursor + local Bugbot complement (dogfood)** — building Revy **alongside** Cursor/Composer + pre-push Bugbot is intentional. Customers will run **Revy on the repo**, not Cursor Bugbot. Dogfood = pattern lab. [iterative agents §](./review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#iterative-agent-review--rq1-local-bugbot). |
+| **RC-D8** | **Explicitly iterative** — best workflows are multi-pass: fix → re-review → new findings. Same diff family can surface orthogonal bugs on each pass (RQ1: chunk delete order, `get_latest_*` guards, compare cap). Not a failed gate — **design Revy for iteration**, not one-shot. |
+| **RC-D9** | **Local Bugbot mechanics** — diff seeds review; subagent expands via **Read/Grep** across repo + execution docs (no vector embed). `.BUGBOT.md` active phase steers without overload. Parent should **skim subagent transcript** after each spin. Distill → RQ4 trace agents. |
 
 Full log: [REVIEW_QUALITY_DOGFOOD_PR50.md](./review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md).
 
 **Babysit (RQ0):** Greptile P1/P2 migration fixes applied — SET NULL FKs, `created_at` index, `index_mode` backfill `full`, revision CASCADE, artifact CHECK. Pass 2: `index_mode` at job create + `full` default (`87c50d2`).
 
 **Distillation (RQ0):** Greptile + local Bugbot + Revy outputs → findings (RC-D4). GitHub Bugbot informs design via operator experience, not #50 runs.
+
+**Distillation (RQ1):** Six pre-push Bugbot passes on same change set — each pass after fixes found **new** logic bugs (RC-D8). Greptile AS1 still unique on first pass; local Bugbot caught implementation regressions once contract wired (RC-D9).
+
+### Iterative review (industry + dogfood)
+
+Greptile documents [multiple passes per PR](https://www.greptile.com/docs/code-review/first-pr-review) as normal. PR #50 confirms the same for **local Bugbot**: one pass is hygiene; **explicit iteration** (fix → Bugbot → fix → push) is where cross-file and lifecycle bugs appear.
+
+**Product implication:** Revy pipeline should assume **re-review on push** and **resolution tracking** (RQ5/RQ6) — not “find everything in one LLM call.” Intelligence cost scales with passes; that is the business model customers pay for when they do not have Cursor subsidy.
 
 ### Agent orchestration (LOOP + prompts)
 

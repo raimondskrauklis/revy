@@ -13,7 +13,7 @@
 | **1. Contract** | Locked Q#, schema, routes, RQ scope | [FINDINGS](../review-quality/REVIEW_QUALITY_FINDINGS.md) + [EXECUTION](../waves/REVIEW_QUALITY_EXECUTION.md) § RQn | Implementing RQn |
 | **2. Process** | LOOP, gates, prompts | **This folder** + [skills](../../../.cursor/skills/) | Every push / phase-execution |
 | **3. Wiring** | Greptile + Bugbot see the contract | `.greptile/files.json`, `.cursor/BUGBOT.md` | RQ0 + update active phase line |
-| **4. Evidence** | What we learned on a real PR | [DOGFOOD_PR50](../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md), [CODE_REVIEW_LEARNINGS](../REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md) | After push; before next RQ |
+| **4. Evidence** | What we learned on a real PR | [DOGFOOD_PR50](../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md), [CODE_REVIEW_LEARNINGS](../REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md), [`chain_of_thoughts/`](./chain_of_thoughts/) (raw exports) | After push; before next RQ |
 
 **Post-v1 strategy** (read only when relevant): [STRUCTURAL_CONTEXT](../review-quality/REVIEW_QUALITY_STRUCTURAL_CONTEXT.md) (code graph), [REVIEW_CONTEXT](../review-quality/REVIEW_QUALITY_REVIEW_CONTEXT.md) (bot wiring roadmap).
 
@@ -37,7 +37,7 @@ Human gate if execution says stop (e.g. migration pause)
 Next RQ
 ```
 
-**Parallel dogfood on #50:** Greptile (GitHub) · local Bugbot (Cursor). Revy app **suspended** — no new runs. Distill → Revy.
+**Parallel dogfood on #50:** Greptile (GitHub) · local Bugbot (Cursor) · distill → Revy. Revy app **suspended**. Cursor+Bugbot = **complement while building**; customers get Revy-on-repo (RC-D7).
 
 ---
 
@@ -45,7 +45,8 @@ Next RQ
 
 | | |
 |-|-|
-| **Distill** | Parallel Greptile/Bugbot runs → findings → Revy features; code without a dogfood note = incomplete phase |
+| **Distill** | Parallel Greptile/Bugbot runs → findings → Revy features; **skim Bugbot transcripts** after each spin; durable rows in learnings — raw exports in `chain_of_thoughts/` when worth keeping |
+| **Iterate** | Fix → re-Bugbot → push; multi-pass is normal (RC-D8), not one-shot |
 | **Pause** | Migration / staging gates are features |
 | **Awesome for us** | Greptile-shaped GitHub UX (RQ7) is the bar — see PR #50 visual gap |
 | **Thin routers** | [AGENTS.md](../../../AGENTS.md) = pointer; detail stays here |
@@ -58,6 +59,7 @@ Next RQ
 |------|------|
 | [ORCHESTRATION.md](./ORCHESTRATION.md) | LOOP detail, anti-patterns, reference reviewer distillation |
 | [PROMPTS.md](./PROMPTS.md) | Copy-paste Bugbot / invoke per RQ |
+| [chain_of_thoughts/](./chain_of_thoughts/) | Committed Bugbot gate + Cursor chat exports (evidence archive; add selectively) |
 
 **Skills (gates):** [phase-execution](../../../.cursor/skills/phase-execution/SKILL.md) · [ship-changes](../../../.cursor/skills/ship-changes/SKILL.md) · [babysit-pr](../../../.cursor/skills/babysit-pr/SKILL.md)
 
@@ -70,4 +72,4 @@ Next RQ
 - New index files per PR — extend `DOGFOOD_PR50.md` table or add `DOGFOOD_PR<n>.md` when needed
 - Skip Bugbot because Greptile will run later
 
-**Active program:** review-quality · [PR #50](https://github.com/raimondskrauklis/revy/pull/50) · RQ0 done · migration pause.
+**Active program:** review-quality · [PR #50](https://github.com/raimondskrauklis/revy/pull/50) · RQ1 shipped (`bd4d084`) · Greptile pass pending before next push.

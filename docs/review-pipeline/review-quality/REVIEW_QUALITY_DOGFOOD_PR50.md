@@ -158,6 +158,57 @@ Greptile (and **GitHub Bugbot where available**) are probably **agent-shaped** f
 
 ---
 
+## Iterative agent review — RQ1 local Bugbot
+
+**Context:** Revy is built **in complement** with Cursor (Composer) + local Bugbot during dogfood (RC-D7). End users run **Revy on the repo**; we use Cursor today to explore agent patterns we must ship.
+
+### Mechanism (observed on RQ1 subagent transcripts)
+
+```text
+  INPUT: git diff + .cursor/BUGBOT.md (active RQ phase)
+           │
+           ▼
+  SEED: changed files in diff
+           │
+           ├── Read (callers, workers, tests)
+           ├── Grep (index_mode, get_latest_*, create_index_job, …)
+           ├── Read (REVIEW_QUALITY_EXECUTION.md when steered)
+           └── (optional) prior run notes / chain-of-thought saves
+           │
+           ▼
+  OUTPUT: 0–N findings table (severity, file:line)
+```
+
+Not embedding / RAG — **plaintext repo + agentic trace**. Same class as Cursor Bugbot blog and target RQ4+ Revy trace.
+
+### Explicitly iterative (RQ1 pre-push passes)
+
+After each fix, re-run Bugbot on the **same feature slice**. New passes found **different** bugs — expected (RC-D8):
+
+| Pass theme | Example finding | Fixed in RQ1 |
+|------------|-----------------|--------------|
+| Lifecycle / DB | Chunk `DELETE` before embed succeeds → data loss on failed job | Yes |
+| Diff edge | Empty `raw_chunks` left stale chunks for changed paths | Yes |
+| Job selection | `get_latest_index_job` vs `get_latest_completed` vs `index_in_progress` | Yes |
+| Wiring | Missing `index_job_in_progress` import | Yes |
+| API limits | GitHub compare 300-file cap → fallback | Yes |
+| Tenancy | p50 duration query not workspace-scoped | Yes |
+
+**Workflow:** fix blockers → Bugbot again → push. Do not treat first “no bugs” as ship-ready when the change is large.
+
+### Parent agent discipline
+
+| Do | Why |
+|----|-----|
+| **Skim subagent transcript** after each Bugbot spin | Findings table hides the grep/read path; transcript shows what Revy must replicate |
+| Save gate exports when useful | `agents/chain_of_thoughts/` — committed evidence archive; add selectively, not every run |
+| Narrow `BUGBOT.md` to active RQ | Steers without overwhelming; subagent still explores |
+| Expect Greptile **post-push** on different axis | Contract/spec (AS1) vs implementation lifecycle |
+
+**Economics (operator note):** local Bugbot subagent runs are bundled with Composer usage and can issue many tool calls per run — cheap R&D. Customer Revy = **intelligence + passes** as the SKU; no Cursor subsidy.
+
+---
+
 ## Revy — triage (old deploy)
 
 | Sev | Location | Finding | Action |
@@ -212,4 +263,4 @@ After each LOOP commit on #50, add a row:
 | Phase | Greptile | Revy | Notes |
 |-------|----------|------|-------|
 | RQ0 | 6 threads, FK fixes; pass 2 `index_mode` | 4 findings, 1 error (RQ1) | Distillation notes; babysit `87c50d2` |
-| RQ1 | — | — | Diff-first deploy target |
+| RQ1 | pending (post `bd4d084`) | suspended | Local Bugbot 6 iterative passes — [§](#iterative-agent-review--rq1-local-bugbot); gates in [chain_of_thoughts](../agents/chain_of_thoughts/) |

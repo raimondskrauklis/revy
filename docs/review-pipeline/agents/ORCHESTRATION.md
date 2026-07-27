@@ -78,10 +78,17 @@ Patterns that worked on PR #50 (Composer-class parent):
 | Use subagent | Use parent direct tools |
 |--------------|-------------------------|
 | **Bugbot** — pre-push review (`review-bugbot`, `run_in_background: false`) | Implementation, pytest, ruff, migration authoring |
+| **After Bugbot** — skim subagent transcript; save gate exports when useful | Distill durable patterns into learnings/dogfood (not full transcript paste) |
 | **execution-peer-review** — read-only, separate session | Babysit fixes (parent implements) |
 | **explore** — broad codebase unknowns | Single-file grep/read when path known |
 
-**Do not** spawn Bugbot in parallel with implementation — **sequential:** code complete → Bugbot → fix → push.
+**Evidence archive:** [`chain_of_thoughts/`](./chain_of_thoughts/) holds committed Bugbot gate exports and long Cursor chats — **primary evidence**, not optional fluff. Add files **when a run is worth keeping** (not every spin). Day-to-day context: read transcripts on demand; **learnings** hold distilled rows (RC-D7–D9, dogfood tables).
+
+**Do not** spawn Bugbot in parallel with implementation — **sequential:** code complete → Bugbot → fix → **re-Bugbot if blockers** → push.
+
+**Iterative expectation:** each Bugbot pass after fixes may surface **new** bugs on the same diff (lifecycle, cross-file). That is correct behavior — same as Greptile multi-pass on PRs. See [RQ1 local Bugbot §](../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#iterative-agent-review--rq1-local-bugbot) and RC-D8 in [learnings](../REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md).
+
+**Dogfood stance:** Cursor + local Bugbot complement Revy while we build (RC-D7). Product north star: **Revy on repo** replaces external review for customers.
 
 ### Parallelism (safe)
 
@@ -133,6 +140,7 @@ Copy-paste prompts: [PROMPTS.md](./PROMPTS.md).
 | **Rely** on Greptile/GitHub Bugbot as permanent product stack | We distill their strengths into Revy; parallel runs are research |
 | Push without local Bugbot | Cheap pre-push gate while building (Cursor) |
 | Treat Greptile findings as “done” without dogfood row | Distillation is the deliverable — update DOGFOOD / learnings |
+| Copy full Bugbot transcripts into learnings | Archive in `chain_of_thoughts/`; distill one row per pattern |
 | Expect local Bugbot = GitHub Bugbot | Same class (agents), different depth/passes — both inform Revy design |
 | Treat Greptile as pre-push gate | Runs after push only |
 | Full findings edit every commit | Blows Bugbot/Greptile context budget |

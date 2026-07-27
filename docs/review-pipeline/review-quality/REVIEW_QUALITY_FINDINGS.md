@@ -39,7 +39,7 @@ Baseline for post-R8 work: **diff-first review**, **pipeline explainability**, *
 - **GitHub = triage + action** — Greptile-shaped PR comment + check run; `/reviewer` secondary until signal is good.
 - **See before tune** — ship diff scope **with** observability (Track D + O); no blind prompt tweaks.
 - **Single PR** — R1–R5 doc phases are implementation sections; one branch `feat/review-quality`.
-- **Iterative review is normal** — summary and confidence update per `head_sha` (Greptile [#35](https://github.com/raimondskrauklis/revy/pull/35)).
+- **Iterative review is normal** — summary and confidence update per `head_sha` (Greptile [#35](https://github.com/raimondskrauklis/revy/pull/35)). **RQ1 dogfood:** local Bugbot on same slice needed **multiple passes** after fixes — each pass found new bugs ([RC-D8](../REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md), [dogfood §](./REVIEW_QUALITY_DOGFOOD_PR50.md#iterative-agent-review--rq1-local-bugbot)).
 - **Generators exploratory; precision downstream** — reconcile + judge + publish filter; do not over-tighten R4 primary prompt.
 - **Workspace-tenanted artifacts** — prompts contain customer code; admin API read; retention policy (not infinite by default).
 - **Additive** — hand-written Alembic; unit tests; EN+LV only when user-facing strings added.
@@ -316,6 +316,8 @@ Same PR: `evidence_snippet` on findings; judge checks claim vs snippet. Depends 
 ### Track A — Multi-agent (defer)
 
 Parallel category generators, devil’s advocate — after trace + diff-first stable.
+
+**Dogfood signal (RQ1):** local Bugbot subagent = diff seed + Read/Grep trace (no embed) — prototype of RQ4 agents. Cursor+Bugbot complements Revy during build; **repo-native Revy** is customer path (RC-D7). Inspect subagent transcripts when distilling.
 
 ---
 
