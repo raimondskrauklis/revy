@@ -22,4 +22,5 @@
 
 | PR | Push / SHA | L1 | L2 | L3 | Greptile delta | Notes |
 |----|------------|----|----|-----|----------------|-------|
-| — | — | — | — | — | — | *First row after worker deploy + PR push* |
+| [#52](https://github.com/raimondskrauklis/revy/pull/52) | `fec6ff3` (final) | Y | Y* | Y | Greptile Successful; Revy **neutral** (advisory) — parity | Self-dogfood on surface PR. *L2: JSON unwrap + single summary comment fixed mid-PR. L3: inline threads on later pushes. **Gap:** Revybot threads do not auto-resolve (manual resolve on #52). Check renamed **Revy Review**. |
+| — | — | — | — | — | — | *Post-merge: deploy staging → next PR row* |

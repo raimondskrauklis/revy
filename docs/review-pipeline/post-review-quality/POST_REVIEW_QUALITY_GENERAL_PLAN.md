@@ -160,6 +160,7 @@ Use on the **first post-deploy PR** and whenever something looks wrong.
 | G3 split bodies | Check compact; full narrative on issue comment |
 | GitHub-first | `/reviewer` secondary |
 | Confidence 0–5 | Comment/check prose — not check `conclusion` (G2) |
+| Check conclusion | **Advisory** — `neutral` for active findings; not merge gate (Greptile parity, #52) |
 | L2 minimum | Deterministic fallback — Moonshot optional |
 
 ---
@@ -168,11 +169,17 @@ Use on the **first post-deploy PR** and whenever something looks wrong.
 
 | ID | Question | Resolved by |
 |----|----------|-------------|
-| **PQ-1** | Surface vs recall? | Dogfood rows; H3 on code PR → track B |
-| **PQ-2** | Formatter sufficient? | First post-deploy real PR |
+| **PQ-1** | Surface vs recall? | Partial — #52 surface OK; H3 → track B |
+| **PQ-2** | Formatter sufficient? | **Yes** — #52 dogfood |
+
+---
+
+## Program complete — follow-ups
+
+P0–P4 execution **done** ([PR #52](https://github.com/raimondskrauklis/revy/pull/52)). Next wave seed: [POST_REVIEW_QUALITY_FOLLOWUPS.md](./POST_REVIEW_QUALITY_FOLLOWUPS.md).
 
 ---
 
 ## Next step
 
-**`phase-execution`** → [GITHUB_SURFACE_EXECUTION.md](./GITHUB_SURFACE_EXECUTION.md) — LOOP P0 → P4.
+**After merge:** deploy staging → dogfood row → `create-findings` on follow-ups doc → general plan for P5+.

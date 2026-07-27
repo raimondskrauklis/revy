@@ -6,6 +6,8 @@
 
 **Goal:** Ship L1–L3 GitHub presentation (Greptile-comparable surface). Track B (recall/STRUCT) is out of scope.
 
+**Status:** P0–P4 **merged** [PR #52](https://github.com/raimondskrauklis/revy/pull/52). **Next:** [POST_REVIEW_QUALITY_FOLLOWUPS.md](./POST_REVIEW_QUALITY_FOLLOWUPS.md).
+
 ## How we work (locked)
 
 ```text
@@ -22,6 +24,10 @@ Dogfood row → GITHUB_SURFACE_DOGFOOD.md per push
 - **G3:** Compact check `output.summary`; full triage on issue comment.
 - **L2 v1 bar:** `build_pr_review_comment_fallback` — Moonshot narrative optional (H2).
 - **L3 v1:** Table shows all severities; inline includes error/critical/warning/info when line-accurate (P3).
+- **Check conclusion:** Advisory — `neutral` when any active findings; `success` when clean; `failure` only on pipeline/publish errors (Greptile parity, post-#52).
+- **Check name:** `Revy Review` (display name on GitHub).
+- **Issue comment idempotency:** Reuse latest `github_comment_id` **per PR** across pushes (`find_prior_issue_comment_id_for_pull_request`).
+- **Inline thread lifecycle:** `github_inline_threads` in `summary_json`; resolve superseded via GraphQL; newest comment id wins per fingerprint.
 - **H3:** Empty Revy vs Greptile on code → investigate track B later — do not block L2/L3 polish.
 - **i18n:** GitHub markdown English v1; EN+LV only for new app / ack strings.
 - **Migrations:** None expected; hand-written only if schema required.
@@ -44,11 +50,13 @@ Per-phase commits: code + README status row — not full findings rewrite each p
 
 | Phase | Focus | Execution | Status |
 |-------|--------|-----------|--------|
-| P0 — Worker + first dogfood | Ops checklist, publish path, first row | [GITHUB_SURFACE_P0_EXECUTION.md](./GITHUB_SURFACE_P0_EXECUTION.md) | code done · dogfood pending |
-| P1 — L2 triage | Issue comment + G3 split | [GITHUB_SURFACE_P1_EXECUTION.md](./GITHUB_SURFACE_P1_EXECUTION.md) | code done · dogfood pending |
-| P2 — L1 presence | G10 lifecycle + optional ack | [GITHUB_SURFACE_P2_EXECUTION.md](./GITHUB_SURFACE_P2_EXECUTION.md) | code done · dogfood pending |
-| P3 — L3 inline | Warnings on diff | [GITHUB_SURFACE_P3_EXECUTION.md](./GITHUB_SURFACE_P3_EXECUTION.md) | code done · dogfood pending |
-| P4 — Doc sync | PRODUCT_PATTERNS, dogfood, README | [GITHUB_SURFACE_P4_EXECUTION.md](./GITHUB_SURFACE_P4_EXECUTION.md) | done |
+| P0 — Worker + first dogfood | Ops checklist, publish path, first row | [GITHUB_SURFACE_P0_EXECUTION.md](./GITHUB_SURFACE_P0_EXECUTION.md) | **merged** (#52) |
+| P1 — L2 triage | Issue comment + G3 split | [GITHUB_SURFACE_P1_EXECUTION.md](./GITHUB_SURFACE_P1_EXECUTION.md) | **merged** (#52) |
+| P2 — L1 presence | G10 lifecycle + optional ack | [GITHUB_SURFACE_P2_EXECUTION.md](./GITHUB_SURFACE_P2_EXECUTION.md) | **merged** (#52) |
+| P3 — L3 inline | Warnings on diff | [GITHUB_SURFACE_P3_EXECUTION.md](./GITHUB_SURFACE_P3_EXECUTION.md) | **merged** (#52) |
+| P4 — Doc sync | PRODUCT_PATTERNS, dogfood, README | [GITHUB_SURFACE_P4_EXECUTION.md](./GITHUB_SURFACE_P4_EXECUTION.md) | **done** |
+
+**Follow-ups:** [POST_REVIEW_QUALITY_FOLLOWUPS.md](./POST_REVIEW_QUALITY_FOLLOWUPS.md)
 
 **Peer review:** `execution-peer-review` on P0–P4 (2026-07-27) — medium findings addressed (named tests, PRODUCT_PATTERNS row map, human vs pytest gates). Re-review after edits if desired.
 

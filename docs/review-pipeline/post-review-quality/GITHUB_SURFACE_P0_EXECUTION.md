@@ -4,7 +4,7 @@ Phase **P0** of [POST_REVIEW_QUALITY_GENERAL_PLAN.md](./POST_REVIEW_QUALITY_GENE
 
 **Goal:** Staging workers run post-merge publisher code; first PR branch push produces a dogfood row and answers PQ-2 (formatter on GitHub).
 
-**Authority:** [GITHUB_WEBHOOK_DEV.md](../GITHUB_WEBHOOK_DEV.md) · [GITHUB_SURFACE_EXECUTION.md](./GITHUB_SURFACE_EXECUTION.md)
+**Status:** **Merged** [PR #52](https://github.com/raimondskrauklis/revy/pull/52). Human gates P0.4/P0.5: deploy + post-merge dogfood row.
 
 ## Decisions locked for P0
 

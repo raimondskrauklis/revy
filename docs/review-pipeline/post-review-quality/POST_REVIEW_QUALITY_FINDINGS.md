@@ -2,10 +2,10 @@
 
 **Purpose:** Baseline for the **next program** after review-quality (RQ0–RQ9). Platform research — not an execution plan.
 
-**Date:** 2026-07-27 (revised after peer review)  
-**Code:** RQ0–RQ9 + PR [#51](https://github.com/raimondskrauklis/revy/pull/51) merged to `main`. **Worker image** on staging may lag one `main` deploy — not “wrong branch reviewed.” We learn by pushing PR branches and watching GitHub **before merge**.
+**Date:** 2026-07-27 (revised after PR #52 ship)  
+**Code:** RQ0–RQ9 on `main`; **GitHub surface P0–P4** on [PR #52](https://github.com/raimondskrauklis/revy/pull/52) (ready to merge). Staging worker deploy after merge validates L1–L3 on next PRs.
 
-**Evidence:** PR [#50](https://github.com/raimondskrauklis/revy/pull/50), PR [#51](https://github.com/raimondskrauklis/revy/pull/51), staging [#44](../REVIEW_PIPELINE_STAGING_SMOKE_VALIDATION.md) (infra only — pre-RQ), [PRODUCT_PATTERNS](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md), Greptile on every Revy repo PR.
+**Evidence:** PR [#50](https://github.com/raimondskrauklis/revy/pull/50), PR [#51](https://github.com/raimondskrauklis/revy/pull/51), PR [#52](https://github.com/raimondskrauklis/revy/pull/52) (surface dogfood), staging [#44](../REVIEW_PIPELINE_STAGING_SMOKE_VALIDATION.md) (infra only — pre-RQ), [PRODUCT_PATTERNS](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md), Greptile on every Revy repo PR.
 
 ---
 
@@ -53,9 +53,9 @@ Users evaluate four layers. Revy after review-quality on `main` (**code**; deplo
 
 | Layer | What the user perceives | Category bar (Greptile class) | Revy today (`main` code) |
 |-------|-------------------------|-------------------------------|---------------------------|
-| **L1 — Presence** | Something is reviewing my PR now | Check `in_progress`; bot visible early | **G10 shipped** (RQ3/RQ9); not seen on post-merge deploy yet |
-| **L2 — Triage** | One comment tells me what matters | Summary, confidence, files list, narrative | **`github_publish_formatter` shipped** (RQ7): deterministic fallback + optional Moonshot; G3 split check vs comment |
-| **L3 — Action** | I can fix from the PR | Inline threads, suggestions on lines | **Partial**: inline error/critical only; suggestions exist (R6); no P-badge on warnings |
+| **L1 — Presence** | Something is reviewing my PR now | Check `in_progress`; bot visible early | **Shipped** (#52): G10 + **Revy Review** check; advisory `neutral`/`success` |
+| **L2 — Triage** | One comment tells me what matters | Summary, confidence, files list, narrative | **Shipped** (#52): formatter + JSON unwrap; **one issue comment per PR** |
+| **L3 — Action** | I can fix from the PR | Inline threads, suggestions on lines | **Shipped** (#52): inline all severities with line; GraphQL thread resolve; map in `summary_json` |
 | **L4 — Memory** | Same nit doesn’t respam every push | Dedupe, “fixed since last review” | **Strong**: D10 fingerprint, `resolution_status` (RQ6), judge dismiss |
 
 **Insight:** Review-quality invested in **L4** and pipeline internals. **L2 exists in code**; PRODUCT_PATTERNS still marks G10 / confidence as “defer” / “in flight” — doc drift. This program owns **L1–L3 on GitHub**; L4 stays closed.
@@ -202,8 +202,8 @@ Scaffold programs used git tags (`saas-base-v1`, `review-r*-v*`) as **deploy anc
 
 | Q# | Question | Status |
 |----|----------|--------|
-| **PQ-1** | Surface or recall bottleneck? | **open** — per dogfood row; H3 on code PR → recall |
-| **PQ-2** | Is formatter on `main` enough for L2? | **open** — code yes; first post-deploy PR decides |
+| **PQ-1** | Surface or recall bottleneck? | **partial** — #52 L2/L3 presentation OK; recall (H3) still track B |
+| **PQ-2** | Is formatter on `main` enough for L2? | **yes** on #52 dogfood (after JSON unwrap + comment reuse fixes) |
 | **PQ-4** | Greptile role in Revy repo? | **locked** | Benchmark + distill only |
 | **PQ-5** | Build graph to match Greptile? | **locked** | **No** now — STRUCT later (track B) |
 | **PQ-6** | Dedicated smoke PRs? | **locked** | **No** — dogfood on real pushes |
@@ -213,6 +213,6 @@ Scaffold programs used git tags (`saas-base-v1`, `review-r*-v*`) as **deploy anc
 
 ## 14. Next doc step
 
-1. [POST_REVIEW_QUALITY_GENERAL_PLAN.md](./POST_REVIEW_QUALITY_GENERAL_PLAN.md) — phases P0–P4 (**done**).
-2. [GITHUB_SURFACE_EXECUTION.md](./GITHUB_SURFACE_EXECUTION.md) + `GITHUB_SURFACE_P*_EXECUTION.md` — execution (**done**).
-3. Append [GITHUB_SURFACE_DOGFOOD.md](./GITHUB_SURFACE_DOGFOOD.md) rows per PR push; update PRODUCT_PATTERNS when a layer is validated.
+1. Merge [PR #52](https://github.com/raimondskrauklis/revy/pull/52) → deploy staging workers.
+2. Append [GITHUB_SURFACE_DOGFOOD.md](./GITHUB_SURFACE_DOGFOOD.md) on next real PR after deploy.
+3. **`create-findings`** → general plan from [POST_REVIEW_QUALITY_FOLLOWUPS.md](./POST_REVIEW_QUALITY_FOLLOWUPS.md) (P5+: auto-resolve threads, GraphQL hardening, deploy gate).

@@ -4,7 +4,7 @@ Phase **P4** of [POST_REVIEW_QUALITY_GENERAL_PLAN.md](./POST_REVIEW_QUALITY_GENE
 
 **Goal:** Docs reflect shipped L1–L3 evidence; dogfood log and product map consistent.
 
-**Authority:** [REVIEW_PIPELINE_PRODUCT_PATTERNS.md](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md) · [GITHUB_SURFACE_DOGFOOD.md](./GITHUB_SURFACE_DOGFOOD.md)
+**Status:** **Done** (2026-07-27, PR #52 doc pass).
 
 ## Decisions locked for P4
 

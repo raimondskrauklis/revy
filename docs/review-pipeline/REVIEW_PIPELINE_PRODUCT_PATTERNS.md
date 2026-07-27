@@ -60,7 +60,8 @@
 | Pattern | Greptile-style reference | Revy approach | Status |
 |---------|-------------------------|---------------|--------|
 | Same issue every re-review | Learning + dedupe over time | R5 fingerprints + supersede / resolve | **shipped** |
-| Idempotent GitHub surface | Known pain: new summary comment each push | R6-Q1: update check run + summary **in place** per revision | **shipped** |
+| Idempotent GitHub surface | Known pain: new summary comment each push | R6-Q1: update check run + summary **in place**; **per-PR** issue comment reuse across pushes (#52) | **shipped** |
+| Resolve review threads when fixed | Greptile auto-resolves inline threads | Finding supersede via GraphQL; **Revybot own threads — manual** (GS-F1 follow-up) | **partial** |
 | Check run **in progress** on PR | Greptile/Bugbot show spinner while reviewing | **G10:** `in_progress` at pipeline start (`start_pipeline_github_check`); `completed` at publish; reuses same check run id | **shipped** |
 | Human dismiss / ack | Resolve threads, 👍/👎 | R7 execution **deferred** dismiss/ack → **R7.6**; judge `resolved` exists | **defer** — [review-quality peer review](./review-quality/REVIEW_QUALITY_PEER_REVIEW.md) M2 |
 | Learn from team comments | Memory from PR comments, reactions, commits | Post-R7 analytics + optional rule suggestions | **future** (R8+) |
@@ -150,7 +151,7 @@ Use while building Revy; optional external review on our PRs (Greptile today) fo
 | False positives / generic advice | R5 cross-family judge; actionable-only R4 | R4–R5 |
 | No tenant / audit story | Workspace-scoped findings + audit | R4/R7 |
 | Vendor-owned rules file | DB-backed `workspace_review_policy` | R8+ |
-| Opaque merge readiness | Severity-derived check conclusion + UI badge | R6–R7 |
+| Opaque merge readiness | Severity-derived check conclusion + UI badge | **Advisory** check (`neutral`/`success`); UI `deriveMergeConclusion` mirrors (#52) | **shipped** |
 
 ---
 
@@ -166,8 +167,10 @@ Use while building Revy; optional external review on our PRs (Greptile today) fo
 
 | Topic | Resolution |
 |-------|------------|
-| Check run name | `revy/review` |
+| Check run name | **`Revy Review`** (was `revy/review`) |
+| Check conclusion | **Advisory** — `neutral` if any active findings; `success` if clean; `failure` only on pipeline errors |
 | `external_id` | `revy:{github_installation_id}:{github_pr_number}:{head_sha}` on first create (`github_installation_id` = GitHub numeric id); reuse GitHub check run id on update |
-| Inline v1 subset | `error` + `critical` with valid line range; remainder in check `output.summary` markdown |
-| Summary PR comment | Update existing bot comment via stored `github_comment_id` on `publish_job` |
+| Inline v1 subset | `error` + `critical` + `warning` + `info` with valid line range; table for all severities |
+| Summary PR comment | Update **one issue comment per PR** (`find_prior_issue_comment_id_for_pull_request`) |
+| Inline thread map | `github_inline_threads` in `summary_json`; newest comment id per fingerprint; resolve superseded via GraphQL |
 | New revision | New check run for new `head_sha`; do not mutate prior SHA’s check |

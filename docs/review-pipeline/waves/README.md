@@ -71,14 +71,14 @@ Baseline: [REVIEW_QUALITY_FINDINGS.md](../review-quality/REVIEW_QUALITY_FINDINGS
 
 ## GitHub surface (post review-quality)
 
-Baseline: [post-review-quality/](../post-review-quality/README.md) · **LOOP:** P0 → P1 → P2 → P3 → P4
+Baseline: [post-review-quality/](../post-review-quality/README.md) · **LOOP:** P0 → P1 → P2 → P3 → P4 · **PR:** [#52](https://github.com/raimondskrauklis/revy/pull/52) (ready to merge)
 
 | Phase | Focus | Execution | Status |
 |-------|--------|-----------|--------|
-| P0 — Worker + dogfood | Publish path + first row | [GITHUB_SURFACE_P0_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_P0_EXECUTION.md) | code done · dogfood pending |
-| P1 — L2 triage | Issue comment + G3 | [GITHUB_SURFACE_P1_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_P1_EXECUTION.md) | code done · dogfood pending |
-| P2 — L1 presence | G10 lifecycle | [GITHUB_SURFACE_P2_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_P2_EXECUTION.md) | code done · dogfood pending |
-| P3 — L3 inline | Warning threads | [GITHUB_SURFACE_P3_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_P3_EXECUTION.md) | code done · dogfood pending |
+| P0 — Worker + dogfood | Publish path + first row | [GITHUB_SURFACE_P0_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_P0_EXECUTION.md) | **merged** (#52) |
+| P1 — L2 triage | Issue comment + G3 | [GITHUB_SURFACE_P1_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_P1_EXECUTION.md) | **merged** (#52) |
+| P2 — L1 presence | G10 lifecycle | [GITHUB_SURFACE_P2_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_P2_EXECUTION.md) | **merged** (#52) |
+| P3 — L3 inline | Warning threads | [GITHUB_SURFACE_P3_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_P3_EXECUTION.md) | **merged** (#52) |
 | P4 — Doc sync | PRODUCT_PATTERNS | [GITHUB_SURFACE_P4_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_P4_EXECUTION.md) | done |
 
-Index: [GITHUB_SURFACE_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_EXECUTION.md)
+**Next:** [POST_REVIEW_QUALITY_FOLLOWUPS.md](../post-review-quality/POST_REVIEW_QUALITY_FOLLOWUPS.md) · Index: [GITHUB_SURFACE_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_EXECUTION.md)
