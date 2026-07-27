@@ -223,7 +223,7 @@ async def compare_commits(
     return CompareCommitsResult(files=tuple(files))
 
 
-CHECK_RUN_NAME = "Revy Review"
+CHECK_RUN_NAME = "Revy"
 
 
 def build_check_run_external_id(
