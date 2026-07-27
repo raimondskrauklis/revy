@@ -50,17 +50,21 @@ def _publish_formatter_defaults(request):
         ):
             with resolve_ctx:
                 with patch(
-                    "app.services.github_publish.build_publish_format_result_async",
-                    AsyncMock(
-                        return_value=PublishFormatResult(
-                            check_summary="## Revy review\n\n**Confidence:** 5/5",
-                            issue_comment="## Revy code review\n\nfull narrative",
-                            confidence=5,
-                            summary_json={"confidence": 5, "active_count": 0, "resolution": {}},
-                        )
-                    ),
+                    "app.services.github_publish.github_api.build_review_thread_comment_index",
+                    AsyncMock(return_value={}),
                 ):
-                    yield
+                    with patch(
+                        "app.services.github_publish.build_publish_format_result_async",
+                        AsyncMock(
+                            return_value=PublishFormatResult(
+                                check_summary="## Revy review\n\n**Confidence:** 5/5",
+                                issue_comment="## Revy code review\n\nfull narrative",
+                                confidence=5,
+                                summary_json={"confidence": 5, "active_count": 0, "resolution": {}},
+                            )
+                        ),
+                    ):
+                        yield
 
 
 def test_compute_check_conclusion_neutral_on_critical():
@@ -232,6 +236,63 @@ async def test_publishable_fingerprints_for_run():
     assert result == {"fp-a", "fp-b"}
 
 
+def test_fingerprint_thread_ids_from_index():
+    index = {100: "PRRT_a", 200: "PRRT_b"}
+    comment_map = {"fp1": 100, "fp2": 300}
+    assert github_publish._fingerprint_thread_ids_from_index(comment_map, index) == {
+        "fp1": "PRRT_a",
+    }
+
+
+def test_serialize_inline_thread_map_with_thread_ids():
+    result = github_publish.serialize_inline_thread_map(
+        {"fp": 100},
+        thread_ids={"fp": "PRRT_new"},
+    )
+    assert result == {"fp": {"comment_id": 100, "thread_id": "PRRT_new"}}
+
+
+@pytest.mark.resolve_unmocked
+@pytest.mark.asyncio
+async def test_resolve_stale_inline_threads_uses_thread_index():
+    review_run_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    inline_threads = {"stale-fp": 1001}
+    session = AsyncMock()
+    session.scalars = AsyncMock(side_effect=[[], []])
+    client = AsyncMock()
+    list_mock = AsyncMock()
+    with patch(
+        "app.services.github_publish.github_api.build_review_thread_comment_index",
+        list_mock,
+    ):
+        with patch(
+            "app.services.github_publish.github_api.find_review_thread_id_for_comment",
+            AsyncMock(),
+        ) as find_mock:
+            with patch(
+                "app.services.github_publish.github_api.resolve_review_thread",
+                AsyncMock(),
+            ) as resolve_mock:
+                await github_publish._resolve_stale_inline_threads(
+                    client,
+                    session=session,
+                    review_run_id=review_run_id,
+                    github_installation_id=12345,
+                    owner="acme",
+                    repo_name="demo",
+                    pull_request_id=pull_request_id,
+                    pull_number=7,
+                    inline_threads=inline_threads,
+                    auth_headers={"Authorization": "Bearer t"},
+                    thread_index={1001: "PRRT_stale"},
+                )
+    list_mock.assert_not_awaited()
+    find_mock.assert_not_awaited()
+    resolve_mock.assert_awaited_once()
+    assert inline_threads == {}
+
+
 @pytest.mark.resolve_unmocked
 @pytest.mark.asyncio
 async def test_resolve_stale_inline_threads_option_a():
@@ -274,6 +335,7 @@ async def test_resolve_stale_inline_threads_option_a():
         pull_number=7,
         comment_database_id=1001,
         auth_headers={"Authorization": "Bearer t"},
+        thread_index=None,
     )
     resolve_mock.assert_awaited_once()
     assert inline_threads == {"active-fp": 1002}
@@ -368,21 +430,21 @@ async def test_run_publish_job_persists_thread_map_after_resolve_when_inline_ski
         AsyncMock(return_value=[prior_job]),
     ):
         with patch(
-            "app.services.github_publish.get_pipeline_run_for_review_run",
-            AsyncMock(return_value=None),
+            "app.services.github_publish.github_api.build_review_thread_comment_index",
+            AsyncMock(return_value={9001: "PRRT_stale"}),
         ):
             with patch(
-                "app.services.github_publish.github_api.installation_auth_headers",
-                AsyncMock(return_value={"Authorization": "Bearer t"}),
+                "app.services.github_publish.get_pipeline_run_for_review_run",
+                AsyncMock(return_value=None),
             ):
-                with patch("app.services.github_publish.github_api.update_check_run", AsyncMock()):
-                    with patch(
-                        "app.services.github_publish.github_api.update_issue_comment",
-                        AsyncMock(),
-                    ):
+                with patch(
+                    "app.services.github_publish.github_api.installation_auth_headers",
+                    AsyncMock(return_value={"Authorization": "Bearer t"}),
+                ):
+                    with patch("app.services.github_publish.github_api.update_check_run", AsyncMock()):
                         with patch(
-                            "app.services.github_publish.github_api.find_review_thread_id_for_comment",
-                            AsyncMock(return_value="PRRT_stale"),
+                            "app.services.github_publish.github_api.update_issue_comment",
+                            AsyncMock(),
                         ):
                             with patch(
                                 "app.services.github_publish.github_api.resolve_review_thread",

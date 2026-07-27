@@ -155,12 +155,16 @@ async def test_find_review_thread_id_for_comment_skips_null_comment_nodes():
             "repository": {
                 "pullRequest": {
                     "reviewThreads": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
                         "nodes": [
                             {
                                 "id": "PRRT_1",
-                                "comments": {"nodes": [None, {"databaseId": 42}]},
+                                "comments": {
+                                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                                    "nodes": [None, {"databaseId": 42}],
+                                },
                             }
-                        ]
+                        ],
                     }
                 }
             }
@@ -253,3 +257,127 @@ async def test_find_review_thread_id_for_comment_returns_none_on_null_graphql_da
         )
 
     assert thread_id is None
+
+
+def _thread_page(nodes: list, *, has_next: bool = False, end_cursor: str | None = None) -> dict:
+    return {
+        "pageInfo": {"hasNextPage": has_next, "endCursor": end_cursor},
+        "nodes": nodes,
+    }
+
+
+def _thread_node(thread_id: str, comment_ids: list[int], *, comments_has_next: bool = False) -> dict:
+    return {
+        "id": thread_id,
+        "comments": {
+            "pageInfo": {"hasNextPage": comments_has_next, "endCursor": "cmt-cursor" if comments_has_next else None},
+            "nodes": [{"databaseId": cid} for cid in comment_ids],
+        },
+    }
+
+
+@pytest.mark.asyncio
+async def test_list_review_threads_pagination():
+    client = AsyncMock()
+    page_one = MagicMock()
+    page_one.raise_for_status = MagicMock()
+    page_one.json.return_value = {
+        "data": {
+            "repository": {
+                "pullRequest": {
+                    "reviewThreads": _thread_page(
+                        [_thread_node("PRRT_1", [41])],
+                        has_next=True,
+                        end_cursor="thread-cursor-1",
+                    )
+                }
+            }
+        }
+    }
+    page_two = MagicMock()
+    page_two.raise_for_status = MagicMock()
+    page_two.json.return_value = {
+        "data": {
+            "repository": {
+                "pullRequest": {
+                    "reviewThreads": _thread_page(
+                        [_thread_node("PRRT_2", [42])],
+                    )
+                }
+            }
+        }
+    }
+    client.post = AsyncMock(side_effect=[page_one, page_two])
+
+    with patch(
+        "app.integrations.github_api._resolve_auth_headers",
+        AsyncMock(return_value={"Authorization": "Bearer t"}),
+    ):
+        threads = await github_api.list_review_threads(
+            client,
+            github_installation_id=1,
+            owner="acme",
+            repo="demo",
+            pull_number=3,
+        )
+
+    assert len(threads) == 2
+    assert threads[0].thread_id == "PRRT_1"
+    assert threads[1].comment_database_ids == (42,)
+    assert client.post.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_list_review_threads_cap_hit(caplog):
+    client = AsyncMock()
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    nodes = [_thread_node(f"PRRT_{i}", [i]) for i in range(github_api.MAX_REVIEW_THREADS_PER_PUBLISH)]
+    response.json.return_value = {
+        "data": {
+            "repository": {
+                "pullRequest": {
+                    "reviewThreads": _thread_page(nodes, has_next=True, end_cursor="more"),
+                }
+            }
+        }
+    }
+    client.post = AsyncMock(return_value=response)
+
+    with patch(
+        "app.integrations.github_api._resolve_auth_headers",
+        AsyncMock(return_value={"Authorization": "Bearer t"}),
+    ):
+        with caplog.at_level("WARNING"):
+            threads = await github_api.list_review_threads(
+                client,
+                github_installation_id=1,
+                owner="acme",
+                repo="demo",
+                pull_number=3,
+            )
+
+    assert len(threads) == github_api.MAX_REVIEW_THREADS_PER_PUBLISH
+    assert "github_list_review_threads_cap_hit" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_build_review_thread_comment_index_maps_ids():
+    with patch(
+        "app.integrations.github_api.list_review_threads",
+        AsyncMock(
+            return_value=[
+                github_api.ReviewThreadNode(thread_id="PRRT_a", comment_database_ids=(10, 11)),
+                github_api.ReviewThreadNode(thread_id="PRRT_b", comment_database_ids=(20,)),
+            ]
+        ),
+    ):
+        index = await github_api.build_review_thread_comment_index(
+            AsyncMock(),
+            github_installation_id=1,
+            owner="acme",
+            repo="demo",
+            pull_number=3,
+        )
+
+    assert index == {10: "PRRT_a", 11: "PRRT_a", 20: "PRRT_b"}
