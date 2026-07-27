@@ -1,6 +1,6 @@
 # Post review-quality — GitHub surface
 
-**Status:** **Complete** — merged [PR #52](https://github.com/raimondskrauklis/revy/pull/52). Follow-up program: [github-surface-hardening/](../github-surface-hardening/README.md).
+**Status:** **Complete** — merged [PR #52](https://github.com/raimondskrauklis/revy/pull/52). Hardening program: [github-surface-hardening/](../github-surface-hardening/README.md) ([#53](https://github.com/raimondskrauklis/revy/pull/53)).
 
 **Next:** ~~POST_REVIEW_QUALITY_FOLLOWUPS~~ → [GITHUB_SURFACE_HARDENING_FINDINGS.md](../github-surface-hardening/GITHUB_SURFACE_HARDENING_FINDINGS.md).
 

@@ -6,7 +6,7 @@
 
 **Goal:** GH-1 thread auto-resolve (Option A) + GraphQL scale + publish test harness. Track B out.
 
-**Branch:** `feat/github-surface-hardening` — docs + code same PR per phase; first push opens ONE PR.
+**Branch:** `feat/github-surface-hardening` · **PR:** [#53](https://github.com/raimondskrauklis/revy/pull/53)
 
 ## How we work (locked)
 
@@ -31,12 +31,12 @@ each phase: implement → pytest gate → Bugbot → commit (no push until user/
 
 | Phase | Focus | Execution | Status |
 |-------|--------|-----------|--------|
-| P0 — Foundations | Thread map v2 + Greptile/Bugbot | [GITHUB_SURFACE_HARDENING_P0_EXECUTION.md](./GITHUB_SURFACE_HARDENING_P0_EXECUTION.md) | Done (d61f4ed) |
-| P1 — Auto-resolve | GH-1, GH-1b | [GITHUB_SURFACE_HARDENING_P1_EXECUTION.md](./GITHUB_SURFACE_HARDENING_P1_EXECUTION.md) | pending |
-| P2 — GraphQL scale | GH-2, GH-3 | [GITHUB_SURFACE_HARDENING_P2_EXECUTION.md](./GITHUB_SURFACE_HARDENING_P2_EXECUTION.md) | pending |
-| P3 — Edge cases | GH-4, GH-5 | [GITHUB_SURFACE_HARDENING_P3_EXECUTION.md](./GITHUB_SURFACE_HARDENING_P3_EXECUTION.md) | pending |
-| P4 — Harness + sign-off | GH-6, GH-7, doc sync | [GITHUB_SURFACE_HARDENING_P4_EXECUTION.md](./GITHUB_SURFACE_HARDENING_P4_EXECUTION.md) | pending |
+| P0 — Foundations | Thread map v2 + Greptile/Bugbot | [GITHUB_SURFACE_HARDENING_P0_EXECUTION.md](./GITHUB_SURFACE_HARDENING_P0_EXECUTION.md) | Done (1211b76) |
+| P1 — Auto-resolve | GH-1, GH-1b | [GITHUB_SURFACE_HARDENING_P1_EXECUTION.md](./GITHUB_SURFACE_HARDENING_P1_EXECUTION.md) | Done (1b3a33f) |
+| P2 — GraphQL scale | GH-2, GH-3 | [GITHUB_SURFACE_HARDENING_P2_EXECUTION.md](./GITHUB_SURFACE_HARDENING_P2_EXECUTION.md) | Done (a8cd206) |
+| P3 — Edge cases | GH-4, GH-5 | [GITHUB_SURFACE_HARDENING_P3_EXECUTION.md](./GITHUB_SURFACE_HARDENING_P3_EXECUTION.md) | Done (c807b88) |
+| P4 — Harness + sign-off | GH-6, GH-7, doc sync | [GITHUB_SURFACE_HARDENING_P4_EXECUTION.md](./GITHUB_SURFACE_HARDENING_P4_EXECUTION.md) | Done (723c05d) |
 
-**Dogfood log:** [GITHUB_SURFACE_HARDENING_DOGFOOD.md](./GITHUB_SURFACE_HARDENING_DOGFOOD.md)
+**Dogfood log:** [GITHUB_SURFACE_HARDENING_DOGFOOD.md](./GITHUB_SURFACE_HARDENING_DOGFOOD.md) — **GH-7 human gate pending** staging deploy.
 
-**Peer review:** `execution-peer-review` complete — P0/P1 serialize contract, P1 rename/dedupe, P2 cap constants, P4 PRODUCT_PATTERNS specificity applied. Ready for `phase-execution`.
+**Peer review:** execution-peer-review applied before LOOP.

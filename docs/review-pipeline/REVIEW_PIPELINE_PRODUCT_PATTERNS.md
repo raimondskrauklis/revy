@@ -172,5 +172,5 @@ Use while building Revy; optional external review on our PRs (Greptile today) fo
 | `external_id` | `revy:{github_installation_id}:{github_pr_number}:{head_sha}` on first create (`github_installation_id` = GitHub numeric id); reuse GitHub check run id on update |
 | Inline v1 subset | `error` + `critical` + `warning` + `info` with valid line range; table for all severities |
 | Summary PR comment | Update **one issue comment per PR** (`find_prior_issue_comment_id_for_pull_request`) |
-| Inline thread map | `github_inline_threads` in `summary_json`; newest comment id per fingerprint; resolve superseded via GraphQL |
+| Inline thread map | `github_inline_threads` v2 `{comment_id, thread_id?}` in `summary_json`; paginated `list_review_threads` + index-backed resolve; Option A auto-resolve when fingerprint ∉ current-run publishable set |
 | New revision | New check run for new `head_sha`; do not mutate prior SHA’s check |
