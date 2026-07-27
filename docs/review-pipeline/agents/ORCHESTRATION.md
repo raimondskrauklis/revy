@@ -6,17 +6,21 @@ Distill how to run **phase-execution** on large program PRs: ship **Revy**, run 
 
 **North star:** tune Revy to do what Greptile (and GitHub Bugbot-class depth, from operator/arch reference) do well. External tools = **reference + dogfood**, not product architecture.
 
-**Audience:** Humans + parent agents (Composer) orchestrating subagents.
+**Audience:** Humans + master agent (Composer) orchestrating reviewer subagents.
+
+**Roles:** [prompts/ROLES.md](./prompts/ROLES.md) — human talks to master only; master compiles briefs for Bugbot.
 
 ---
 
 ## Golden rule: local Bugbot before **every** push
 
+Master **blocks run** until gate green. Skipping Bugbot to save time is when corners get cut.
+
 | When | Gate | Skippable? |
 |------|------|------------|
 | Before **first** push on a branch | Local Bugbot on `uncommitted changes` or `branch changes` | **No** |
 | Before **each phase** commit (LOOP) | Same | **No** |
-| After fixing Greptile (`babysit-pr`) | Re-run Bugbot, then push | **No** |
+| After fixing Greptile (`babysit-pr`) | VALIDATE → CLOSE (re-CLOSE until clean) | **No** |
 | After `ruff`/test fixes only | Re-run Bugbot if Python changed | **No** |
 
 **Greptile on PR is post-push** dogfood — distill into findings. **Local Bugbot** stays (Cursor, pre-push). **Revy GitHub App suspended** for #50 (2026-07-27) — no webhook/autostart/token burn; re-enable at deploy milestones. **GitHub Bugbot** not on #50; operator/arch reference for RQ4+ bar.
@@ -29,7 +33,7 @@ implement → pytest → ruff → phase gate → LOCAL BUGBOT → commit → pus
             Greptile (PR review)                              Revy — suspended on GitHub for #50 dogfood (no new runs)
             babysit-pr fixes valid threads                    (may lag branch — note in dogfood)
                     │
-                    └── fix → ruff → LOCAL BUGBOT again → push
+                    └── fix → ruff → VALIDATE → CLOSE (until clean) → push
 ```
 
 ---
@@ -142,6 +146,8 @@ Copy-paste prompts: [PROMPTS.md](./PROMPTS.md) · Distilled: [prompts/](./prompt
 |--------------|-----|
 | **Rely** on Greptile/GitHub Bugbot as permanent product stack | We distill their strengths into Revy; parallel runs are research |
 | Push without local Bugbot | Cheap pre-push gate while building (Cursor) |
+| Parent paraphrases Greptile; Bugbot never gets VALIDATE hook | Anchors on wrong minimum fix (RC-D17) |
+| Master reports "Bugbot clean" without synthesis | Human must hear *why*, not subagent transcript |
 | Treat Greptile findings as “done” without dogfood row | Distillation is the deliverable — update DOGFOOD / learnings |
 | Copy full Bugbot transcripts into learnings | Archive in `chain_of_thoughts/`; distill one row per pattern |
 | Expect local Bugbot = GitHub Bugbot | Same class (agents), different depth/passes — both inform Revy design |

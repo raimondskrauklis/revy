@@ -6,9 +6,11 @@ Smart reviewer + good context needs **shape**, not length. Prevents “199 lines
 
 ---
 
-## Pass 1 — FIND
+## Pass 1 — FIND or VALIDATE
 
-Append to Custom Instructions:
+Append to Custom Instructions.
+
+**FIND** (phase gate):
 
 ```text
 PASS: 1 (find)
@@ -20,11 +22,23 @@ If findings are empty after deep review: REQUIRED "Deferred" table (same columns
 Do not answer only "no bugs" without Findings (or empty) + Deferred tables.
 ```
 
-**Expected sections:**
+**VALIDATE** (babysit pass 1):
+
+```text
+PASS: 1 (validate)
+Prove Greptile's proposed fix — trace the VALIDATE path; read/grep as needed.
+Challenge the mechanism; do not rubber-stamp the thread.
+Format findings: severity · file:line · title · why (same as FIND).
+Deferred table required if findings empty; do not answer only "confirmed" without Findings/Deferred.
+```
+
+**Expected sections (FIND):**
 
 1. **Findings** — table or bullets (empty allowed if truly none)
 2. **Deferred** — **required when findings empty** — hypotheses considered but not filed (RC-D16)
 3. **Scope note** — one line: which EXECUTION § RQn reviewed
+
+**Expected sections (VALIDATE):** Findings + Deferred; scope note = Greptile thread + VALIDATE path (no RQn).
 
 ---
 
@@ -81,10 +95,14 @@ Source: [local_bugbot_from_ui_2](../chain_of_thoughts/local_bugbot_from_ui_2) ·
 ```text
 Full Repository Path: /Users/…/revy
 Diff: uncommitted changes | branch changes
-Change Description: <optional 5–10 bullets>
 Custom Instructions:
-  <PHASES.md § RQn block>
-  <OUTPUT_FORMAT Pass 1 or Pass 2 block>
+  VERB: FIND | VALIDATE | CLOSE
+  SCOPE: <files>
+  VALIDATE: <fn → path>   # VALIDATE only
+  OUT OF SCOPE: <one line>
+  <PHASES § RQn — FIND only>
+  <Greptile verbatim — VALIDATE only>
+  <OUTPUT_FORMAT tail>
 ```
 
 ---

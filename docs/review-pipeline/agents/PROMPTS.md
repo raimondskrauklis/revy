@@ -7,21 +7,26 @@ Response shape (pass 1 vs pass 2 + **Deferred** table): **[prompts/OUTPUT_FORMAT
 
 ---
 
-## Local Bugbot — template
+## Subagent brief (master compiles — keep short)
+
+Smart reviewer needs **verb + scope + one hook**, not volume.
 
 ```text
 Full Repository Path: /Users/raimonds.krauklis/projects/revy
 Diff: uncommitted changes
-Change Description:
-  <5–10 bullets on what changed — optional but helps pass 2>
 
 Custom Instructions:
-  <paste PHASES.md § RQn block>
-  <paste OUTPUT_FORMAT.md Pass 1 or Pass 2 block>
+VERB: FIND | VALIDATE | CLOSE
+SCOPE: <files>
+VALIDATE: <fn → failure path>   # VALIDATE only — stops Greptile anchoring (RC-D17)
+OUT OF SCOPE: <one line>
+<PHASES § RQn — FIND only>
+<Greptile verbatim — VALIDATE only>
+<OUTPUT_FORMAT tail>
 ```
 
-**Pass 1:** after implement, before first commit on slice.  
-**Pass 2+:** after fixes; must include Deferred table even if clean (RC-D14).
+**VALIDATE** must name a failure path to trace — not "protect diagnostics."  
+Roles: [prompts/ROLES.md](./prompts/ROLES.md).
 
 ---
 
@@ -41,7 +46,7 @@ Migration pause: stop after RQ0 until staging `alembic upgrade head`.
 /babysit-pr 50
 ```
 
-Greptile is post-push. Re-run **Pass 1** Bugbot on fixes before push.
+Greptile is post-push. **VALIDATE** (pass 1) → fix → **CLOSE** (pass 2); re-CLOSE until clean before push. Authoritative flow: [babysit-pr skill](../../../.cursor/skills/babysit-pr/SKILL.md). See [ROLES.md](./prompts/ROLES.md).
 
 ---
 
@@ -49,7 +54,8 @@ Greptile is post-push. Re-run **Pass 1** Bugbot on fixes before push.
 
 ```text
 - Implementer ≠ reviewer — same model, different task (prompts/TWO_AGENTS.md).
-- Local Bugbot Pass 1 → fix → Pass 2 (with Deferred table) → push.
+- Babysit: VALIDATE → fix → CLOSE; re-CLOSE until clean → push.
+- Phase LOOP: FIND → fix → CLOSE; re-CLOSE until clean → push.
 - Read only current RQ execution section.
 - Update .cursor/BUGBOT.md active phase line each RQ.
 ```

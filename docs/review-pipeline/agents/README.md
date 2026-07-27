@@ -57,8 +57,9 @@ Next RQ
 
 | File | Role |
 |------|------|
-| [ORCHESTRATION.md](./ORCHESTRATION.md) | LOOP detail, anti-patterns, reference reviewer distillation |
-| [prompts/](./prompts/) | **Distilled** implement vs review, output format, per-RQ Custom Instructions |
+| [ORCHESTRATION.md](./ORCHESTRATION.md) | LOOP detail, gates, anti-patterns |
+| [prompts/ROLES.md](./prompts/ROLES.md) | Human / master / reviewer — who talks, who gates |
+| [prompts/](./prompts/) | Distilled implement vs review, output format, per-RQ blocks |
 | [PROMPTS.md](./PROMPTS.md) | Copy-paste Bugbot shells (points at `prompts/`) |
 | [chain_of_thoughts/](./chain_of_thoughts/) | Committed Bugbot gate + Cursor chat exports (evidence archive; add selectively) |
 

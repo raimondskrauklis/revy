@@ -21,8 +21,9 @@ User says *babysit pr*, *fix greptile*, `/babysit-pr`, or gives a PR number/URL.
 3. Fetch unresolved review threads / PR comments where `author.login` is `greptile-apps` or `greptile-apps[bot]`.
 4. Validate each finding; fix valid ones only.
 5. Ruff + targeted tests if backend Python changed.
-6. **Local Bugbot** — `review-bugbot` on fix diff; do not push if blockers remain ([agents/ORCHESTRATION.md](../../docs/review-pipeline/agents/ORCHESTRATION.md)).
-7. Commit + push on feature branch if anything changed.
+6. **Bugbot pass 1 (VALIDATE)** — brief per [ROLES.md](../../docs/review-pipeline/agents/prompts/ROLES.md) + [OUTPUT_FORMAT VALIDATE](../../docs/review-pipeline/agents/prompts/OUTPUT_FORMAT.md). Do not push if blockers remain.
+7. Fix blockers → **Bugbot pass 2 (CLOSE)**; re-CLOSE until clean before push.
+8. Commit + push on feature branch if anything changed.
 
 ## Fetch (reference)
 

@@ -353,23 +353,25 @@ The thinking trace explores **many** hypotheses (deletion-only sync, `paths_to_i
 
 **Babysit must not substitute for Bugbot.** Greptile says *where*; Bugbot asks *what breaks under failure*. On this slice Greptile found 2 real P1s; Bugbot explored ~15 hypotheses, dismissed most, confirmed the fix — **correct outcome, wrong output shape** (RC-D14 again: 273 lines → `no bugs` with no Deferred table).
 
-### Babysit agent rule (distilled)
+### Babysit roles (master vs reviewer)
+
+| Role | Depth | Job |
+|------|-------|-----|
+| **Master** (you talk to) | Shallow | Fix open threads only; triage skip |
+| **Bugbot pass 1** | Deep | **VALIDATE** — prove Greptile's fix (TX, rollback, callers) |
+| **Bugbot pass 2** | Deep | **CLOSE** |
+
+Master compiles brief: [ROLES.md](../agents/prompts/ROLES.md) · [PROMPTS.md](../agents/PROMPTS.md).
+
+### Pre-Bugbot feed (babysit — VALIDATE pass 1)
 
 ```text
-Scope: open Greptile threads only — verify fix vs locked Q# / D10-M.
-Do NOT deep-review (that is Bugbot's job).
-After fixes: pytest + ruff → local Bugbot with babysit pre-feed (below) → commit → push.
-```
-
-### Pre-Bugbot feed (babysit fixes)
-
-Paste into Custom Instructions **before** OUTPUT_FORMAT Pass 1:
-
-```text
-Context: Greptile babysit fixes on PR #50.
-Locked: D10-M one-shot supersede in migration 0026 (no fingerprint backfill).
-Ignore unless diff worsens: pre-existing Celery duplicate delivery, missing unique on
-  pipeline_runs.index_job_id, narrow deploy reconcile→publish window, draft-PR G10 parking (RQ7).
+VERB: VALIDATE
+SCOPE: <files from Greptile thread>
+VALIDATE: <function → failure path — e.g. tarball fail → _fail_index_job_after_chunk_work → rollback>
+OUT OF SCOPE: other threads, pre-existing, parking
+<Greptile thread verbatim>
+<OUTPUT_FORMAT VALIDATE block>
 ```
 
 ### Deferred from Bugbot thinking (babysit slice — not filed as bugs)
@@ -385,7 +387,23 @@ Ignore unless diff worsens: pre-existing Celery duplicate delivery, missing uniq
 
 **Real fixes (Greptile was right):** G10 check stranded on same-session rollback → split `get_db_context`; D10 fingerprint orphans active groups → supersede pass in `0026`.
 
-**Archive:** commit `local_bugbot_from_ui_2` under `agents/chain_of_thoughts/`; distill rows above → OUTPUT_FORMAT example + [prompts/README § Babysit](../agents/prompts/README.md#greptile-babysit-shallow-fix--bugbot-deep-gate).
+**Archive:** commit `local_bugbot_from_ui_2` under `agents/chain_of_thoughts/`; distill rows above → OUTPUT_FORMAT example + [prompts/README § Babysit](../agents/prompts/README.md#greptile-babysit-master-shallow--bugbot-validate).
+
+---
+
+## Greptile minimum fix ≠ production fix (RC-D17)
+
+**Source:** [local_bugbot_from_ui_3](../agents/chain_of_thoughts/local_bugbot_from_ui_3.txt) · fix `227d0be` (compare-fallback preserve across rollback).
+
+Greptile diagnosed symptom correctly (D13-F diagnostics lost on tarball fail) but proposed `flush()` before download — **insufficient**: same-transaction `rollback()` undoes flush. Master implemented Greptile minimum; Bugbot VALIDATE (with named path) caught it; shipped fix preserves fields across rollback.
+
+| Layer | Job |
+|-------|-----|
+| Greptile | Symptom + minimum fix (may be wrong mechanism) |
+| Master | Implement + brief with **VALIDATE hook** (not paraphrase alone) |
+| Bugbot | Specialized reviewer — prove or break the mechanism |
+
+**Anti-pattern:** brief says "protect diagnostics" → anchors on Greptile's flush. **Fix:** `VALIDATE: tarball fail → _fail_index_job_after_chunk_work → rollback`.
 
 ---
 
@@ -449,4 +467,5 @@ After each LOOP commit on #50, add a row:
 | RQ4 pass 2 | — | — | RC-D14 closure trace + 2 deferred fixes before RQ5 — [§](#rq4-bugbot-pass-2--closure-vs-thinking-trace-rc-d14) |
 | prompts | — | — | RC-D15 — `agents/prompts/` distill directory — [§](#prompt-handling--rc-d15) |
 | babysit | 2 P1 (G10 TX, D10 supersede) | — | RC-D16 — shallow Greptile fix + deep Bugbot; [§](#greptile-babysit-vs-bugbot-depth-rc-d16) |
+| babysit | 1 P1 (compare-fallback flush) | — | RC-D17 — Greptile minimum fix ≠ production; [§](#greptile-minimum-fix--production-fix-rc-d17) |
 | RQ5–RQ8 | — | — | LOOP complete on branch — evidence/judge, resolution, Greptile publish, doc-sync |
