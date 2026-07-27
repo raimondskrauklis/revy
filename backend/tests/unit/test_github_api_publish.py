@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from app.core.exceptions import ServiceUnavailableError
 from app.integrations import github_api
 
 
@@ -95,13 +96,14 @@ async def test_create_pull_request_review_comment_posts():
     client = AsyncMock()
     response = MagicMock()
     response.raise_for_status = MagicMock()
+    response.json.return_value = {"id": 999}
     client.post = AsyncMock(return_value=response)
 
     with patch(
-        "app.integrations.github_api._installation_headers",
+        "app.integrations.github_api._resolve_auth_headers",
         AsyncMock(return_value={"Authorization": "Bearer t"}),
     ):
-        await github_api.create_pull_request_review_comment(
+        comment_id = await github_api.create_pull_request_review_comment(
             client,
             github_installation_id=1,
             owner="acme",
@@ -113,7 +115,73 @@ async def test_create_pull_request_review_comment_posts():
             body="issue",
         )
 
+    assert comment_id == 999
     client.post.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_create_pull_request_review_comment_rejects_zero_id():
+    client = AsyncMock()
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = {"id": 0}
+    client.post = AsyncMock(return_value=response)
+
+    with patch(
+        "app.integrations.github_api._resolve_auth_headers",
+        AsyncMock(return_value={"Authorization": "Bearer t"}),
+    ):
+        with pytest.raises(ServiceUnavailableError):
+            await github_api.create_pull_request_review_comment(
+                client,
+                github_installation_id=1,
+                owner="acme",
+                repo="demo",
+                pull_number=3,
+                commit_id="sha",
+                path="app/main.py",
+                line=10,
+                body="issue",
+            )
+
+
+@pytest.mark.asyncio
+async def test_find_review_thread_id_for_comment_skips_null_comment_nodes():
+    client = AsyncMock()
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = {
+        "data": {
+            "repository": {
+                "pullRequest": {
+                    "reviewThreads": {
+                        "nodes": [
+                            {
+                                "id": "PRRT_1",
+                                "comments": {"nodes": [None, {"databaseId": 42}]},
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    }
+    client.post = AsyncMock(return_value=response)
+
+    with patch(
+        "app.integrations.github_api._resolve_auth_headers",
+        AsyncMock(return_value={"Authorization": "Bearer t"}),
+    ):
+        thread_id = await github_api.find_review_thread_id_for_comment(
+            client,
+            github_installation_id=1,
+            owner="acme",
+            repo="demo",
+            pull_number=3,
+            comment_database_id=42,
+        )
+
+    assert thread_id == "PRRT_1"
 
 
 @pytest.mark.asyncio
@@ -161,3 +229,27 @@ def test_format_inline_comment_body_with_suggestion():
     )
     assert "```suggestion" in body
     assert "safe_query()" in body
+
+
+@pytest.mark.asyncio
+async def test_find_review_thread_id_for_comment_returns_none_on_null_graphql_data():
+    client = AsyncMock()
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = {"data": None}
+    client.post = AsyncMock(return_value=response)
+
+    with patch(
+        "app.integrations.github_api._resolve_auth_headers",
+        AsyncMock(return_value={"Authorization": "Bearer t"}),
+    ):
+        thread_id = await github_api.find_review_thread_id_for_comment(
+            client,
+            github_installation_id=1,
+            owner="acme",
+            repo="demo",
+            pull_number=3,
+            comment_database_id=42,
+        )
+
+    assert thread_id is None

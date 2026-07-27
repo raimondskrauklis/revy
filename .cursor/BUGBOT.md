@@ -1,15 +1,22 @@
 # Bugbot — review pipeline contract
 
-When reviewing **backend** changes that touch review-quality code, treat these as authoritative (not generic advice):
+When reviewing **backend** changes that touch publish / formatter / pipeline code, treat these as authoritative:
 
-- [REVIEW_QUALITY_EXECUTION.md](../docs/review-pipeline/waves/REVIEW_QUALITY_EXECUTION.md) — RQ0–RQ9 scope, routes, gates
+**GitHub surface (active program):**
+
+- [GITHUB_SURFACE_EXECUTION.md](../docs/review-pipeline/post-review-quality/GITHUB_SURFACE_EXECUTION.md) — P0–P4 scope, gates, dogfood rubric
+- [POST_REVIEW_QUALITY_FINDINGS.md](../docs/review-pipeline/post-review-quality/POST_REVIEW_QUALITY_FINDINGS.md) — platform baseline, track A/B
+- [POST_REVIEW_QUALITY_GENERAL_PLAN.md](../docs/review-pipeline/post-review-quality/POST_REVIEW_QUALITY_GENERAL_PLAN.md) — phase goals
+
+**Review-quality engine (shipped on `main`):**
+
+- [REVIEW_QUALITY_EXECUTION.md](../docs/review-pipeline/waves/REVIEW_QUALITY_EXECUTION.md) — RQ0–RQ9 routes, schema
 - [REVIEW_QUALITY_FINDINGS.md](../docs/review-pipeline/review-quality/REVIEW_QUALITY_FINDINGS.md) — locked Q# and storage model
-- [agents/prompts/](../docs/review-pipeline/agents/prompts/) — VERB + OUTPUT_FORMAT (Deferred on pass 2+)
+
+**Agent workflow:**
+
+- [agents/prompts/](../docs/review-pipeline/agents/prompts/) — VERB + OUTPUT_FORMAT
 - [CURSOR_AGENT_WORKFLOW.md](../docs/utils/CURSOR_AGENT_WORKFLOW.md) — roles + verbs quick ref
 - [agents/prompts/ROLES.md](../docs/review-pipeline/agents/prompts/ROLES.md) — master/reviewer boundaries
 
-**Program:** review-quality **merged to `main`** (PR [#50](https://github.com/raimondskrauklis/revy/pull/50)); **RQ9 hardening** active on `docs/agent-work`.
-
-**Human gate (before tag `review-quality-v1`):** staging `alembic upgrade head` through `0026`; AS2 autostart e2e — [REVIEW_QUALITY_EXECUTION.md § RQ8](../docs/review-pipeline/waves/REVIEW_QUALITY_EXECUTION.md).
-
-**Agent workflow quick ref:** [CURSOR_AGENT_WORKFLOW.md](../docs/utils/CURSOR_AGENT_WORKFLOW.md)
+**Program:** GitHub surface on feature branch `feat/revy-github` — Greptile-comparable L1–L3 on PR branch pushes (pre-merge autostart). **Status:** P0–P4 code + doc sync shipped; dogfood rows pending on real PR push.

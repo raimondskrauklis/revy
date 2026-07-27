@@ -21,10 +21,10 @@ function finding(
 }
 
 describe('deriveMergeConclusion', () => {
-  it('returns failure when active critical finding exists', () => {
+  it('returns neutral when active critical finding exists', () => {
     expect(
       deriveMergeConclusion([finding({ severity: 'critical', state: 'active' })]),
-    ).toBe('failure');
+    ).toBe('neutral');
   });
 
   it('returns neutral when only warnings remain active', () => {
@@ -39,12 +39,12 @@ describe('deriveMergeConclusion', () => {
     ).toBe('success');
   });
 
-  it('returns failure for unknown active severity', () => {
+  it('returns neutral for unknown active severity', () => {
     expect(
       deriveMergeConclusion([
         finding({ severity: 'bogus' as ReconciledFinding['severity'], state: 'active' }),
       ]),
-    ).toBe('failure');
+    ).toBe('neutral');
   });
 });
 

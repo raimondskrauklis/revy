@@ -7,8 +7,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.constants.enums import (
+    GitHubAccountType,
     GitHubIndexJobStatus,
     GitHubIndexMode,
+    GitHubPullRequestState,
+    GitHubRepositoryStatus,
     GitHubReviewRunStatus,
     PipelineArtifactKind,
     PipelineStepStatus,
@@ -17,11 +20,14 @@ from app.constants.enums import (
 )
 from app.core.config import settings
 from app.models.github_index_job import GitHubIndexJobORM
+from app.models.github_installation import GitHubInstallationORM
 from app.models.github_pipeline import (
     GitHubPipelineArtifactORM,
     GitHubPipelineRunORM,
     GitHubPipelineStepORM,
 )
+from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
+from app.models.github_repository import GitHubRepositoryORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.services.github_pipeline_trace import (
     ensure_pipeline_run_for_index_job,
@@ -30,6 +36,7 @@ from app.services.github_pipeline_trace import (
     purge_old_pipeline_artifacts,
     record_index_pipeline_step,
     record_review_pipeline_step,
+    start_pipeline_github_check,
 )
 
 
@@ -257,3 +264,81 @@ async def test_finalize_pipeline_github_check_neutral_updates_check():
     update_mock.assert_awaited_once()
     assert update_mock.await_args.kwargs["conclusion"] == "neutral"
     assert update_mock.await_args.kwargs["check_run_id"] == 42
+
+
+@pytest.mark.asyncio
+async def test_start_pipeline_github_check_creates_in_progress_run():
+    workspace_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    repository_id = uuid.uuid4()
+    installation_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+
+    pipeline_run = GitHubPipelineRunORM(
+        workspace_id=workspace_id,
+        revision_id=revision_id,
+        head_sha="abc123",
+        index_mode=GitHubIndexMode.diff,
+    )
+    pipeline_run.id = uuid.uuid4()
+
+    revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="abc123",
+    )
+    revision.id = revision_id
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=repository_id,
+        workspace_id=workspace_id,
+        installation_id=installation_id,
+        github_pull_request_id=1,
+        number=7,
+        title="PR",
+        state=GitHubPullRequestState.open,
+        head_sha="abc123",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=1,
+    )
+
+    repository = GitHubRepositoryORM(
+        installation_id=installation_id,
+        workspace_id=workspace_id,
+        github_repository_id=10,
+        name="demo",
+        full_name="acme/demo",
+        private=False,
+        status=GitHubRepositoryStatus.active,
+    )
+
+    installation = GitHubInstallationORM(
+        workspace_id=workspace_id,
+        github_installation_id=12345,
+        account_login="acme",
+        account_type=GitHubAccountType.organization,
+        account_id=1,
+    )
+
+    session = AsyncMock()
+    session.get = AsyncMock(
+        side_effect=[revision, pull_request, repository, installation]
+    )
+
+    create_mock = AsyncMock(return_value=77)
+    with patch("app.services.github_pipeline_trace.settings") as mock_settings:
+        mock_settings.github_api_enabled = True
+        with patch(
+            "app.services.github_pipeline_trace.github_api.create_check_run",
+            create_mock,
+        ):
+            check_run_id = await start_pipeline_github_check(
+                session,
+                pipeline_run=pipeline_run,
+            )
+
+    assert check_run_id == 77
+    create_mock.assert_awaited_once()
+    assert create_mock.await_args.kwargs["status"] == "in_progress"
+    assert "Revy review in progress" in create_mock.await_args.kwargs["summary"]

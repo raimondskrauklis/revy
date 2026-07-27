@@ -44,12 +44,12 @@
 | High-signal findings | `commentTypes`: logic default; style optional | R4-Q5: logic/security/behavior only; CI owns lint | **shipped** |
 | Severity / strictness | `strictness` 1–3 | `ReviewProfile` standard / deep / critical + Kimi tier | **shipped** |
 | P0–P2 on PRs (dev process) | Inline severity badges | Map to `FindingSeverity`; use in our PR workflow | **shipped** schema · process now |
-| PR summary narrative | Top-level review comment | R6 check run `output.summary` + optional summary comment | **shipped** |
-| Inline file+line comments | Review comments on diff | R6 v1 subset from finding `file_path` + line range | **shipped** |
+| PR summary narrative | Top-level review comment | G3: compact check `output.summary`; Greptile-shaped issue comment (`build_pr_review_comment_fallback` / optional Moonshot) | **shipped** |
+| Inline file+line comments | Review comments on diff | R6 inline for error/critical/warning/info when `file_path` + line; table for all severities | **shipped** |
 | Suggested fix / patch | Copy-prompt, suggestion blocks | Optional `suggestion` on finding; GitHub suggestion when line-accurate | **shipped** (`R6-Q3` polish) |
 | Issues table in review | `includeIssuesTable` | R7 findings table + R6 summary markdown | **shipped** |
 | Sequence / ER diagrams | `includeSequenceDiagram` | Summary markdown diagrams | **future** |
-| Numeric confidence 0–5 | `includeConfidenceScore` | Not v1 — severity-derived conclusion instead | **defer** |
+| Numeric confidence 0–5 | `includeConfidenceScore` | `compute_confidence` on issue comment + check summary (0–5) | **shipped** |
 | Merge readiness | Check state + optional score | Check run `conclusion` + R7 badge (R6-Q2) | **shipped** |
 | Email digest on review | GitHub notification with summary + confidence | In-app + GitHub surface only v1; email **defer** | **defer** post-R7 |
 
@@ -60,8 +60,9 @@
 | Pattern | Greptile-style reference | Revy approach | Status |
 |---------|-------------------------|---------------|--------|
 | Same issue every re-review | Learning + dedupe over time | R5 fingerprints + supersede / resolve | **shipped** |
-| Idempotent GitHub surface | Known pain: new summary comment each push | R6-Q1: update check run + summary **in place** per revision | **shipped** |
-| Check run **in progress** on PR | Greptile/Bugbot show spinner while reviewing | **G10:** `in_progress` at pipeline start; `completed` at publish (RQ3/RQ7) | **in flight** |
+| Idempotent GitHub surface | Known pain: new summary comment each push | R6-Q1: update check run + summary **in place**; **per-PR** issue comment reuse across pushes (#52) | **shipped** |
+| Resolve review threads when fixed | Greptile auto-resolves inline threads | Finding supersede via GraphQL; **Revybot own threads — manual** (GS-F1 follow-up) | **partial** |
+| Check run **in progress** on PR | Greptile/Bugbot show spinner while reviewing | **G10:** `in_progress` at pipeline start (`start_pipeline_github_check`); `completed` at publish; reuses same check run id | **shipped** |
 | Human dismiss / ack | Resolve threads, 👍/👎 | R7 execution **deferred** dismiss/ack → **R7.6**; judge `resolved` exists | **defer** — [review-quality peer review](./review-quality/REVIEW_QUALITY_PEER_REVIEW.md) M2 |
 | Learn from team comments | Memory from PR comments, reactions, commits | Post-R7 analytics + optional rule suggestions | **future** (R8+) |
 | Inferred custom rules | AI-generated rules from behavior | `workspace_review_policy` suggestions | **future** (R8+) |
@@ -150,7 +151,7 @@ Use while building Revy; optional external review on our PRs (Greptile today) fo
 | False positives / generic advice | R5 cross-family judge; actionable-only R4 | R4–R5 |
 | No tenant / audit story | Workspace-scoped findings + audit | R4/R7 |
 | Vendor-owned rules file | DB-backed `workspace_review_policy` | R8+ |
-| Opaque merge readiness | Severity-derived check conclusion + UI badge | R6–R7 |
+| Opaque merge readiness | Severity-derived check conclusion + UI badge | **Advisory** check (`neutral`/`success`); UI `deriveMergeConclusion` mirrors (#52) | **shipped** |
 
 ---
 
@@ -166,8 +167,10 @@ Use while building Revy; optional external review on our PRs (Greptile today) fo
 
 | Topic | Resolution |
 |-------|------------|
-| Check run name | `revy/review` |
+| Check run name | **`Revy Review`** (was `revy/review`) |
+| Check conclusion | **Advisory** — `neutral` if any active findings; `success` if clean; `failure` only on pipeline errors |
 | `external_id` | `revy:{github_installation_id}:{github_pr_number}:{head_sha}` on first create (`github_installation_id` = GitHub numeric id); reuse GitHub check run id on update |
-| Inline v1 subset | `error` + `critical` with valid line range; remainder in check `output.summary` markdown |
-| Summary PR comment | Update existing bot comment via stored `github_comment_id` on `publish_job` |
+| Inline v1 subset | `error` + `critical` + `warning` + `info` with valid line range; table for all severities |
+| Summary PR comment | Update **one issue comment per PR** (`find_prior_issue_comment_id_for_pull_request`) |
+| Inline thread map | `github_inline_threads` in `summary_json`; newest comment id per fingerprint; resolve superseded via GraphQL |
 | New revision | New check run for new `head_sha`; do not mutate prior SHA’s check |
