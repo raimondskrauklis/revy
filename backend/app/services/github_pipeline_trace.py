@@ -365,6 +365,11 @@ async def record_index_pipeline_step(
             "duration_ms": duration_ms,
         }
     )
+    index_manifest_stats = getattr(job, "index_manifest_stats", None)
+    if isinstance(index_manifest_stats, dict):
+        for key in ("reused_count", "new_count", "embed_batches"):
+            if key in index_manifest_stats:
+                manifest[key] = index_manifest_stats[key]
     if github_check_run_id is not None:
         manifest["github_check_run_id"] = github_check_run_id
     if manifest_artifact is not None:
