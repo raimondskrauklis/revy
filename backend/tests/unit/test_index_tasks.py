@@ -113,3 +113,4 @@ def test_index_pull_request_revision_finalizes_check_when_review_enqueue_fails()
                                         index_tasks.index_pull_request_revision.run(str(job.id))
 
     finalize_mock.assert_awaited_once()
+    assert db_context.__aenter__.await_count == 2

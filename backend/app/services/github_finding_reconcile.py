@@ -50,6 +50,7 @@ def compute_fingerprint(
     title: str,
     start_line: int | None,
 ) -> str:
+    """D10 identity key (message excluded). Deploy supersede pass in 0026 per D10-M."""
     normalized_title = title.strip()
     payload = _FINGERPRINT_SEP.join(
         [

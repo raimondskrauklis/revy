@@ -185,6 +185,15 @@ def upgrade() -> None:
         ["step_id"],
     )
 
+    # D10-M: D10 fingerprint no longer includes message. Supersede active groups so the
+    # next reconcile creates fresh fingerprint-keyed rows without duplicate active groups
+    # (no per-row fingerprint backfill).
+    op.execute(
+        sa.text(
+            "UPDATE github_finding_groups SET state = 'superseded' WHERE state = 'active'"
+        )
+    )
+
 
 def downgrade() -> None:
     op.drop_index("ix_github_pipeline_artifacts_step_id", table_name="github_pipeline_artifacts")

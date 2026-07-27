@@ -43,13 +43,15 @@ def index_pull_request_revision(self, index_job_id: str) -> None:
 
     async def _run() -> None:
         nonlocal review_run_ids
+        index_job_uuid = UUID(index_job_id)
+        pipeline_run_id: UUID | None = None
+        github_check_run_id: int | None = None
+
         async with get_db_context() as session:
-            pending_job = await session.get(GitHubIndexJobORM, UUID(index_job_id))
+            pending_job = await session.get(GitHubIndexJobORM, index_job_uuid)
             if pending_job is None:
                 return
 
-            pipeline_run = None
-            github_check_run_id = None
             if pending_job.trigger_source in _PIPELINE_TRIGGERS:
                 revision = await session.get(GitHubPullRequestRevisionORM, pending_job.revision_id)
                 if revision is not None:
@@ -68,16 +70,17 @@ def index_pull_request_revision(self, index_job_id: str) -> None:
                             pipeline_run_id=pipeline_run.id,
                             github_check_run_id=github_check_run_id,
                         )
-                    await session.flush()
+                    pipeline_run_id = pipeline_run.id
 
+        async with get_db_context() as session:
             started = time.monotonic()
-            job = await run_index_job(session, index_job_id=UUID(index_job_id))
+            job = await run_index_job(session, index_job_id=index_job_uuid)
             duration_ms = int((time.monotonic() - started) * 1000)
 
-            if pipeline_run is not None:
+            if pipeline_run_id is not None:
                 await record_index_pipeline_step(
                     session,
-                    pipeline_run_id=pipeline_run.id,
+                    pipeline_run_id=pipeline_run_id,
                     job=job,
                     duration_ms=duration_ms,
                     github_check_run_id=github_check_run_id,
@@ -85,7 +88,7 @@ def index_pull_request_revision(self, index_job_id: str) -> None:
                 if job.status == GitHubIndexJobStatus.failed:
                     await finalize_pipeline_github_check_failure(
                         session,
-                        pipeline_run_id=pipeline_run.id,
+                        pipeline_run_id=pipeline_run_id,
                         summary=job.error_message or "Index job failed",
                     )
 
@@ -103,13 +106,13 @@ def index_pull_request_revision(self, index_job_id: str) -> None:
             if review_outcome.review_run_id is not None:
                 review_run_ids.append(review_outcome.review_run_id)
             elif (
-                pipeline_run is not None
+                pipeline_run_id is not None
                 and job.status == GitHubIndexJobStatus.completed
                 and review_outcome.fail_pipeline_check
             ):
                 await finalize_pipeline_github_check_failure(
                     session,
-                    pipeline_run_id=pipeline_run.id,
+                    pipeline_run_id=pipeline_run_id,
                     summary=review_outcome.pipeline_check_summary or "Review was not enqueued",
                 )
 
