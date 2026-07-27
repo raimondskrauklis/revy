@@ -10,7 +10,12 @@ import httpx
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.constants.enums import GitHubIndexJobStatus, GitHubIndexJobTriggerSource, stored_enum_value
+from app.constants.enums import (
+    GitHubIndexJobStatus,
+    GitHubIndexJobTriggerSource,
+    GitHubIndexMode,
+    stored_enum_value,
+)
 from app.core.config import settings
 from app.core.exceptions import ConflictError, NotFoundError, ServiceUnavailableError
 from app.core.logging import get_logger
@@ -134,6 +139,7 @@ async def create_index_job(
         workspace_id=workspace_id,
         status=GitHubIndexJobStatus.pending,
         trigger_source=GitHubIndexJobTriggerSource.manual,
+        index_mode=GitHubIndexMode.full,
     )
     session.add(job)
     await session.flush()

@@ -8,6 +8,7 @@ import pytest
 from app.constants.enums import (
     GitHubIndexJobStatus,
     GitHubIndexJobTriggerSource,
+    GitHubIndexMode,
     GitHubPullRequestState,
     WorkspaceStatus,
 )
@@ -125,6 +126,7 @@ async def test_maybe_enqueue_pipeline_creates_index_job():
     session.add.assert_called_once()
     added = session.add.call_args.args[0]
     assert added.trigger_source == GitHubIndexJobTriggerSource.autostart
+    assert added.index_mode == GitHubIndexMode.diff
 
 
 @pytest.mark.asyncio

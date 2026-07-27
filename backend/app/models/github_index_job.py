@@ -45,8 +45,8 @@ class GitHubIndexJobORM(TimestampedModel):
     index_mode: Mapped[GitHubIndexMode] = mapped_column(
         String(length=32),
         nullable=False,
-        default=GitHubIndexMode.diff,
-        server_default=GitHubIndexMode.diff.value,
+        default=GitHubIndexMode.full,
+        server_default=GitHubIndexMode.full.value,
     )
     fallback_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     warning_message: Mapped[str | None] = mapped_column(Text, nullable=True)

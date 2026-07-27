@@ -25,7 +25,7 @@ def upgrade() -> None:
         "github_index_jobs",
         "index_mode",
         nullable=False,
-        server_default="diff",
+        server_default="full",
     )
     op.add_column("github_index_jobs", sa.Column("fallback_reason", sa.Text(), nullable=True))
     op.add_column("github_index_jobs", sa.Column("warning_message", sa.Text(), nullable=True))

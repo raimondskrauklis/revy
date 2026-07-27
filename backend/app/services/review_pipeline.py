@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.constants.enums import (
     GitHubIndexJobStatus,
     GitHubIndexJobTriggerSource,
+    GitHubIndexMode,
     GitHubPullRequestState,
     GitHubReviewRunStatus,
     stored_enum_value,
@@ -182,6 +183,7 @@ async def maybe_enqueue_pipeline_for_revision(
         workspace_id=workspace_id,
         status=GitHubIndexJobStatus.pending,
         trigger_source=trigger,
+        index_mode=GitHubIndexMode.diff,
     )
     session.add(job)
     await session.flush()
