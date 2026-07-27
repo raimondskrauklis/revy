@@ -3,6 +3,7 @@
 import uuid
 from unittest.mock import AsyncMock, patch
 
+import httpx
 import pytest
 
 from app.constants.enums import (
@@ -655,3 +656,130 @@ async def test_run_publish_job_posts_inline_after_surface_checkpoint():
     assert result.status == GitHubPublishJobStatus.completed
     assert result.inline_comments_posted is True
     inline_mock.assert_awaited_once()
+
+
+def _publish_job_context():
+    publish_job_id = uuid.uuid4()
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    repository_id = uuid.uuid4()
+    installation_id = uuid.uuid4()
+    head_sha = "abc123"
+
+    job = GitHubPublishJobORM(
+        review_run_id=review_run_id,
+        revision_id=revision_id,
+        workspace_id=workspace_id,
+        head_sha=head_sha,
+        status=GitHubPublishJobStatus.pending,
+    )
+    job.id = publish_job_id
+
+    run = GitHubReviewRunORM(
+        revision_id=revision_id,
+        workspace_id=workspace_id,
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+
+    revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha=head_sha,
+    )
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=repository_id,
+        workspace_id=workspace_id,
+        installation_id=installation_id,
+        github_pull_request_id=1,
+        number=7,
+        title="PR",
+        state=GitHubPullRequestState.open,
+        head_sha=head_sha,
+        head_ref="feature",
+        base_ref="main",
+        revision_count=1,
+    )
+
+    repository = GitHubRepositoryORM(
+        installation_id=installation_id,
+        workspace_id=workspace_id,
+        github_repository_id=10,
+        name="demo",
+        full_name="acme/demo",
+        private=False,
+        status=GitHubRepositoryStatus.active,
+    )
+
+    installation = GitHubInstallationORM(
+        workspace_id=workspace_id,
+        github_installation_id=12345,
+        account_login="acme",
+        account_type=GitHubAccountType.organization,
+        account_id=1,
+    )
+
+    session = AsyncMock()
+    session.get = AsyncMock(
+        side_effect=[job, run, revision, pull_request, repository, installation]
+    )
+    session.scalars = AsyncMock(return_value=[])
+    session.scalar = AsyncMock(return_value=None)
+    session.flush = AsyncMock()
+
+    return publish_job_id, session, job
+
+
+@pytest.mark.asyncio
+async def test_run_publish_job_marks_failed_on_permanent_error_when_persisting():
+    publish_job_id, session, job = _publish_job_context()
+    request = httpx.Request("POST", "https://api.github.com/check-runs")
+    response = httpx.Response(400, request=request)
+    error = httpx.HTTPStatusError("bad request", request=request, response=response)
+
+    with patch(
+        "app.services.github_publish.github_api.installation_auth_headers",
+        AsyncMock(return_value={"Authorization": "Bearer t"}),
+    ):
+        with patch(
+            "app.services.github_publish.github_api.create_check_run",
+            AsyncMock(side_effect=error),
+        ):
+            result = await github_publish.run_publish_job(
+                session,
+                publish_job_id=publish_job_id,
+                persist_github_surface=True,
+            )
+
+    assert result is job
+    assert result.status == GitHubPublishJobStatus.failed
+    assert result.error_message == "bad request"
+
+
+@pytest.mark.asyncio
+async def test_run_publish_job_raises_retryable_error_when_persisting():
+    publish_job_id, session, job = _publish_job_context()
+    request = httpx.Request("POST", "https://api.github.com/check-runs")
+    response = httpx.Response(503, request=request)
+    error = httpx.HTTPStatusError("unavailable", request=request, response=response)
+
+    with patch(
+        "app.services.github_publish.github_api.installation_auth_headers",
+        AsyncMock(return_value={"Authorization": "Bearer t"}),
+    ):
+        with patch(
+            "app.services.github_publish.github_api.create_check_run",
+            AsyncMock(side_effect=error),
+        ):
+            with pytest.raises(github_publish.PublishJobRetryableError):
+                await github_publish.run_publish_job(
+                    session,
+                    publish_job_id=publish_job_id,
+                    persist_github_surface=True,
+                )
+
+    assert job.status == GitHubPublishJobStatus.processing

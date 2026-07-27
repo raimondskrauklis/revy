@@ -581,15 +581,18 @@ async def run_publish_job(
         await session.flush()
         return job
     except (httpx.HTTPError, ServiceUnavailableError) as exc:
+        retryable = classify_transient_error(exc)
+        if retryable is not None:
+            logger.warning(
+                "github_publish_job_transient_failure",
+                extra={"publish_job_id": str(publish_job_id), "error": str(exc)},
+            )
+            raise PublishJobRetryableError(str(exc)) from exc
         logger.error(
             "github_publish_job_failed",
             extra={"publish_job_id": str(publish_job_id), "error": str(exc)},
         )
-        if not persist_github_surface:
-            job.status = GitHubPublishJobStatus.failed
-            job.error_message = str(exc)[:2000]
-            await session.flush()
-        retryable = classify_transient_error(exc)
-        if retryable is not None:
-            raise PublishJobRetryableError(str(exc)) from exc
+        job.status = GitHubPublishJobStatus.failed
+        job.error_message = str(exc)[:2000]
+        await session.flush()
         return job
