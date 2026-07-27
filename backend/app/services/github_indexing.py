@@ -324,12 +324,19 @@ async def _fail_index_job_after_chunk_work(
     index_job_id: UUID,
     error_message: str,
 ) -> GitHubIndexJobORM:
+    job_before_rollback = await session.get(GitHubIndexJobORM, index_job_id)
+    preserved_index_mode = job_before_rollback.index_mode if job_before_rollback else None
+    preserved_fallback_reason = job_before_rollback.fallback_reason if job_before_rollback else None
+
     await session.rollback()
     job = await session.get(GitHubIndexJobORM, index_job_id)
     if job is None:
         raise NotFoundError("Index job not found")
     job.status = GitHubIndexJobStatus.failed
     job.error_message = error_message[:2000]
+    if preserved_fallback_reason is not None:
+        job.index_mode = preserved_index_mode or job.index_mode
+        job.fallback_reason = preserved_fallback_reason
     await session.flush()
     return job
 
@@ -394,12 +401,14 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
         paths_to_remove: list[str] = []
         use_diff = job.index_mode == GitHubIndexMode.diff
 
+        compare_fallback_applied = False
         async with httpx.AsyncClient(timeout=120.0) as client:
             if use_diff:
                 if not revision.base_sha:
                     job.index_mode = GitHubIndexMode.full
                     job.fallback_reason = "missing_base_sha"
                     use_diff = False
+                    compare_fallback_applied = True
                 else:
                     try:
                         compare = await compare_commits(
@@ -416,10 +425,15 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
                         job.index_mode = GitHubIndexMode.full
                         job.fallback_reason = exc.error_code
                         use_diff = False
+                        compare_fallback_applied = True
                     except httpx.HTTPStatusError as exc:
                         job.index_mode = GitHubIndexMode.full
                         job.fallback_reason = f"compare_http_{exc.response.status_code}"
                         use_diff = False
+                        compare_fallback_applied = True
+
+            if compare_fallback_applied:
+                await session.flush()
 
             archive_bytes = await download_repository_tarball(
                 client,

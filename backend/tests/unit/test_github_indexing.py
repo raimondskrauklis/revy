@@ -719,3 +719,48 @@ async def test_run_index_job_rolls_back_chunks_when_embed_fails_after_copy_forwa
 
     assert result.status == GitHubIndexJobStatus.failed
     session.rollback.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_run_index_job_persists_compare_fallback_before_tarball_failure():
+    session, job, revision = _index_job_fixture()
+    job.index_mode = GitHubIndexMode.diff
+    revision.base_sha = None
+
+    fixture_get = session.get.side_effect
+    reload_after_rollback = False
+
+    async def _get(model, pk):
+        result = await fixture_get(model, pk)
+        if result is job and reload_after_rollback:
+            job.index_mode = GitHubIndexMode.diff
+            job.fallback_reason = None
+        return result
+
+    async def _rollback():
+        nonlocal reload_after_rollback
+        reload_after_rollback = True
+
+    session.get = AsyncMock(side_effect=_get)
+    session.rollback = AsyncMock(side_effect=_rollback)
+
+    response = MagicMock()
+    response.status_code = 500
+    tarball_error = httpx.HTTPStatusError(
+        "Server Error",
+        request=MagicMock(),
+        response=response,
+    )
+
+    with patch("app.services.github_indexing.settings") as mock_settings:
+        mock_settings.revy_worktrees_path = "/tmp/revy-worktrees"
+        with patch(
+            "app.services.github_indexing.download_repository_tarball",
+            AsyncMock(side_effect=tarball_error),
+        ):
+            with patch("pathlib.Path.exists", return_value=False):
+                result = await run_index_job(session, index_job_id=job.id)
+
+    assert result.status == GitHubIndexJobStatus.failed
+    assert result.index_mode == GitHubIndexMode.full
+    assert result.fallback_reason == "missing_base_sha"
