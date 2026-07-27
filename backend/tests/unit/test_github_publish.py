@@ -759,6 +759,113 @@ async def test_run_publish_job_updates_existing_sha():
 
 
 @pytest.mark.asyncio
+async def test_run_publish_job_updates_prior_issue_comment_on_new_push():
+    """R6-Q1: new head_sha reuses PR issue comment id from prior completed publish."""
+    publish_job_id = uuid.uuid4()
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    repository_id = uuid.uuid4()
+    installation_id = uuid.uuid4()
+    head_sha = "def456"
+
+    job = GitHubPublishJobORM(
+        review_run_id=review_run_id,
+        revision_id=revision_id,
+        workspace_id=workspace_id,
+        head_sha=head_sha,
+        status=GitHubPublishJobStatus.pending,
+        github_check_run_id=100,
+    )
+    job.id = publish_job_id
+
+    run = GitHubReviewRunORM(
+        revision_id=revision_id,
+        workspace_id=workspace_id,
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+
+    revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=2,
+        head_sha=head_sha,
+    )
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=repository_id,
+        workspace_id=workspace_id,
+        installation_id=installation_id,
+        github_pull_request_id=1,
+        number=7,
+        title="PR",
+        state=GitHubPullRequestState.open,
+        head_sha=head_sha,
+        head_ref="feature",
+        base_ref="main",
+        revision_count=2,
+    )
+
+    repository = GitHubRepositoryORM(
+        installation_id=installation_id,
+        workspace_id=workspace_id,
+        github_repository_id=10,
+        name="demo",
+        full_name="acme/demo",
+        private=False,
+        status=GitHubRepositoryStatus.active,
+    )
+
+    installation = GitHubInstallationORM(
+        workspace_id=workspace_id,
+        github_installation_id=12345,
+        account_login="acme",
+        account_type=GitHubAccountType.organization,
+        account_id=1,
+    )
+
+    session = AsyncMock()
+    session.get = AsyncMock(
+        side_effect=[job, run, revision, pull_request, repository, installation]
+    )
+    session.scalars = AsyncMock(return_value=[])
+    session.scalar = AsyncMock(return_value=None)
+    session.flush = AsyncMock()
+
+    comment_update_mock = AsyncMock()
+    comment_create_mock = AsyncMock()
+    with patch(
+        "app.services.github_publish.find_prior_issue_comment_id_for_pull_request",
+        AsyncMock(return_value=777),
+    ):
+        with patch(
+            "app.services.github_publish.github_api.installation_auth_headers",
+            AsyncMock(return_value={"Authorization": "Bearer t"}),
+        ):
+            with patch("app.services.github_publish.github_api.update_check_run", AsyncMock()):
+                with patch(
+                    "app.services.github_publish.github_api.update_issue_comment",
+                    comment_update_mock,
+                ):
+                    with patch(
+                        "app.services.github_publish.github_api.create_issue_comment",
+                        comment_create_mock,
+                    ):
+                        result = await github_publish.run_publish_job(
+                            session,
+                            publish_job_id=publish_job_id,
+                        )
+
+    assert result.status == GitHubPublishJobStatus.completed
+    assert result.github_comment_id == 777
+    comment_update_mock.assert_awaited_once()
+    assert comment_update_mock.await_args.kwargs["comment_id"] == 777
+    comment_create_mock.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_run_publish_job_posts_inline_when_prior_job_failed_before_inline():
     """R6-DEFER-01: Job B reuses Job A check run but posts inline when A never did."""
     publish_job_id = uuid.uuid4()

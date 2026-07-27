@@ -380,6 +380,38 @@ async def find_publish_job_for_head_sha(
     )
 
 
+async def find_prior_issue_comment_id_for_pull_request(
+    session: AsyncSession,
+    *,
+    pull_request_id: UUID,
+    exclude_job_id: UUID | None = None,
+) -> int | None:
+    """Latest issue comment id on this PR — reuse across pushes (R6-Q1 idempotent surface)."""
+    revision_ids = list(
+        await session.scalars(
+            select(GitHubPullRequestRevisionORM.id).where(
+                GitHubPullRequestRevisionORM.pull_request_id == pull_request_id,
+            )
+        )
+    )
+    if not revision_ids:
+        return None
+    stmt = (
+        select(GitHubPublishJobORM.github_comment_id)
+        .where(
+            GitHubPublishJobORM.revision_id.in_(revision_ids),
+            GitHubPublishJobORM.github_comment_id.is_not(None),
+            GitHubPublishJobORM.status == GitHubPublishJobStatus.completed,
+        )
+        .order_by(GitHubPublishJobORM.created_at.desc())
+        .limit(1)
+    )
+    if exclude_job_id is not None:
+        stmt = stmt.where(GitHubPublishJobORM.id != exclude_job_id)
+    comment_id = await session.scalar(stmt)
+    return comment_id if isinstance(comment_id, int) else None
+
+
 async def create_publish_job(
     session: AsyncSession,
     *,
@@ -591,6 +623,15 @@ async def run_publish_job(
         or existing is None
         or not existing.inline_comments_posted
     )
+
+    if job.github_comment_id is None:
+        prior_comment_id = await find_prior_issue_comment_id_for_pull_request(
+            session,
+            pull_request_id=pull_request.id,
+            exclude_job_id=job.id,
+        )
+        if prior_comment_id is not None:
+            job.github_comment_id = prior_comment_id
 
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
