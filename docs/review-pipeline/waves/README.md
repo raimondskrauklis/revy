@@ -93,6 +93,6 @@ Baseline: [github-surface-hardening/](../github-surface-hardening/README.md) · 
 |-------|-----|
 | Findings | [GITHUB_SURFACE_HARDENING_FINDINGS.md](../github-surface-hardening/GITHUB_SURFACE_HARDENING_FINDINGS.md) |
 | General plan | [GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md](../github-surface-hardening/GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md) |
-| Execution | *pending* (`create-execution-plan`) |
+| Execution | [GITHUB_SURFACE_HARDENING_EXECUTION.md](../github-surface-hardening/GITHUB_SURFACE_HARDENING_EXECUTION.md) |
 
 **Top priority:** GH-1 — auto-resolve Revy inline threads when findings close (Greptile parity).

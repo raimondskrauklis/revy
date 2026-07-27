@@ -275,4 +275,5 @@ Architecture peer-review cross-checked findings + plan against publish, reconcil
 ## Next step
 
 1. ~~`create-general-plan`~~ → [GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md](./GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md).
-2. `create-execution-plan` → `GITHUB_SURFACE_HARDENING_EXECUTION.md` + P0–P4 execution files.
+2. ~~`create-execution-plan`~~ → [GITHUB_SURFACE_HARDENING_EXECUTION.md](./GITHUB_SURFACE_HARDENING_EXECUTION.md) + P0–P4 files.
+3. `execution-peer-review` → then `phase-execution` on `feat/github-surface-hardening`.
