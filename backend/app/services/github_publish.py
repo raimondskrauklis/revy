@@ -219,7 +219,12 @@ def inline_publish_findings_statement(*, review_run_id: UUID):
             GitHubFindingORM.review_run_id == review_run_id,
             GitHubFindingGroupORM.state == GitHubFindingGroupState.active,
             GitHubFindingORM.severity.in_(
-                (FindingSeverity.error, FindingSeverity.critical),
+                (
+                    FindingSeverity.error,
+                    FindingSeverity.critical,
+                    FindingSeverity.warning,
+                    FindingSeverity.info,
+                ),
             ),
             GitHubFindingORM.file_path.is_not(None),
             GitHubFindingORM.start_line.is_not(None),

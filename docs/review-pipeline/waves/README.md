@@ -66,3 +66,19 @@ Baseline: [REVIEW_QUALITY_FINDINGS.md](../review-quality/REVIEW_QUALITY_FINDINGS
 | **RQ-STRUCT-1** | Cross-file grep/import bridge | After tag — [structural context](../review-quality/REVIEW_QUALITY_STRUCTURAL_CONTEXT.md) |
 | **RQ-RC-1** | Greptile/Bugbot planning-doc improvements | After tag — [review context](../review-quality/REVIEW_QUALITY_REVIEW_CONTEXT.md) |
 | **RQ9** | Post-merge hardening (G10 parking, TX tests) | **active** — [R9 general plan](../review-quality/REVIEW_QUALITY_R9_HARDENING_GENERAL_PLAN.md) |
+
+---
+
+## GitHub surface (post review-quality)
+
+Baseline: [post-review-quality/](../post-review-quality/README.md) · **LOOP:** P0 → P1 → P2 → P3 → P4
+
+| Phase | Focus | Execution | Status |
+|-------|--------|-----------|--------|
+| P0 — Worker + dogfood | Publish path + first row | [GITHUB_SURFACE_P0_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_P0_EXECUTION.md) | pending |
+| P1 — L2 triage | Issue comment + G3 | [GITHUB_SURFACE_P1_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_P1_EXECUTION.md) | pending |
+| P2 — L1 presence | G10 lifecycle | [GITHUB_SURFACE_P2_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_P2_EXECUTION.md) | pending |
+| P3 — L3 inline | Warning threads | [GITHUB_SURFACE_P3_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_P3_EXECUTION.md) | pending |
+| P4 — Doc sync | PRODUCT_PATTERNS | [GITHUB_SURFACE_P4_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_P4_EXECUTION.md) | pending |
+
+Index: [GITHUB_SURFACE_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_EXECUTION.md)

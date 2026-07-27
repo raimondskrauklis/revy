@@ -1,13 +1,23 @@
 {
   "files": [
     {
-      "path": "docs/review-pipeline/waves/REVIEW_QUALITY_EXECUTION.md",
-      "description": "Active execution contract — locked schema, routes, and phase gates (RQ0–RQ9)",
+      "path": "docs/review-pipeline/post-review-quality/GITHUB_SURFACE_EXECUTION.md",
+      "description": "GitHub surface program — LOOP order, locked decisions, phase gates (P0–P4)",
       "scope": ["backend/**"]
     },
     {
-      "path": "docs/review-pipeline/review-quality/REVIEW_QUALITY_FINDINGS.md",
-      "description": "Locked Q# registry and storage model for review-quality",
+      "path": "docs/review-pipeline/post-review-quality/POST_REVIEW_QUALITY_FINDINGS.md",
+      "description": "Platform findings — L1–L3 vs Greptile, dogfood method, track A/B",
+      "scope": ["backend/**"]
+    },
+    {
+      "path": "docs/review-pipeline/post-review-quality/POST_REVIEW_QUALITY_GENERAL_PLAN.md",
+      "description": "General plan — GitHub surface phases P0–P4",
+      "scope": ["backend/**"]
+    },
+    {
+      "path": "docs/review-pipeline/waves/REVIEW_QUALITY_EXECUTION.md",
+      "description": "Review-quality engine contract (RQ0–RQ9) — baseline for publish pipeline",
       "scope": ["backend/**"]
     },
     {

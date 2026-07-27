@@ -60,14 +60,14 @@ Inline comments **exist** (`inline_publish_findings_statement` — error/critica
 
 Same **class** as Greptile for UX: severity table, file:line, explanation in review output — not on GitHub Checks unless Cursor posts to PR. Use as **pre-push** gate; Greptile as **post-push** gate; Revy must match **both** on GitHub after RQ7.
 
-### Gap → wave map (not landed yet)
+### Gap → wave map (landed — verify on dogfood PR)
 
 | UX gap | ID | Ships in | Notes |
 |--------|-----|----------|-------|
-| In-progress check on PR | **G10** | RQ3 + RQ7 | `create_check_run(in_progress)` → `update_check_run(completed)` |
-| Narrative + confidence 0–5 | **G2**, **G5** | RQ7 | Formatter LLM; deterministic score prose |
-| Split check vs issue comment | **G3** | RQ7 | Check = compact; comment = Greptile-shaped sections |
-| P1/P2 inline badges + explanation | **G6/G7** | RQ7 (+ R6 suggestion) | Warnings in table today → should be inline optional |
+| In-progress check on PR | **G10** | RQ3 + github-surface P2 | `create_check_run(in_progress)` → `update_check_run(completed)` — [GITHUB_SURFACE_DOGFOOD.md](../post-review-quality/GITHUB_SURFACE_DOGFOOD.md) |
+| Narrative + confidence 0–5 | **G2**, **G5** | RQ7 + github-surface P1 | Formatter LLM; deterministic score prose |
+| Split check vs issue comment | **G3** | RQ7 + github-surface P1 | Check = compact; comment = Greptile-shaped sections |
+| P1/P2 inline badges + explanation | **G6/G7** | RQ7 + github-surface P3 | Warnings/info inline when line-accurate |
 | “Fixed since last review” | **G9** | RQ6 + RQ7 | Reads `resolution_status` |
 | Execution-doc-aware findings | **RC0** | Done | Greptile; Revy prompts not wired to planning docs |
 | Pipeline trace in GitHub | **O9 GET** | RQ3 | Until then: paste / Revy UI only |
