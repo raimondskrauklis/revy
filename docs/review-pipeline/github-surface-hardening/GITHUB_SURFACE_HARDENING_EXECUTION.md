@@ -35,7 +35,7 @@ each phase: implement → pytest gate → Bugbot → commit (no push until user/
 | P1 — Auto-resolve | GH-1, GH-1b | [GITHUB_SURFACE_HARDENING_P1_EXECUTION.md](./GITHUB_SURFACE_HARDENING_P1_EXECUTION.md) | Done (1b3a33f) |
 | P2 — GraphQL scale | GH-2, GH-3 | [GITHUB_SURFACE_HARDENING_P2_EXECUTION.md](./GITHUB_SURFACE_HARDENING_P2_EXECUTION.md) | Done (a8cd206) |
 | P3 — Edge cases | GH-4, GH-5 | [GITHUB_SURFACE_HARDENING_P3_EXECUTION.md](./GITHUB_SURFACE_HARDENING_P3_EXECUTION.md) | Done (c807b88) |
-| P4 — Harness + sign-off | GH-6, GH-7, doc sync | [GITHUB_SURFACE_HARDENING_P4_EXECUTION.md](./GITHUB_SURFACE_HARDENING_P4_EXECUTION.md) | Done (723c05d) |
+| P4 — Harness + sign-off | GH-6, GH-7, doc sync | [GITHUB_SURFACE_HARDENING_P4_EXECUTION.md](./GITHUB_SURFACE_HARDENING_P4_EXECUTION.md) | Done (11061af) |
 
 **Dogfood log:** [GITHUB_SURFACE_HARDENING_DOGFOOD.md](./GITHUB_SURFACE_HARDENING_DOGFOOD.md) — **GH-7 human gate pending** staging deploy.
 
