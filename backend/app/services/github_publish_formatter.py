@@ -47,7 +47,7 @@ def _looks_like_json_wrapper(text: str) -> bool:
         payload = json.loads(stripped)
     except json.JSONDecodeError:
         return False
-    return isinstance(payload, dict)
+    return isinstance(payload, dict) and any(k in payload for k in _LLM_ISSUE_COMMENT_JSON_KEYS)
 
 
 def normalize_llm_issue_comment(raw: str) -> str | None:

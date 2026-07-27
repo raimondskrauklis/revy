@@ -1,6 +1,6 @@
 # Review generation lifecycle
 
-**Status:** Execution plan peer-reviewed (2026-07-28); ready for `phase-execution` from [P0](./REVIEW_GENERATION_LIFECYCLE_P0_EXECUTION.md).
+**Status:** P0–P1 on PR [#54](https://github.com/raimondskrauklis/revy/pull/54) (`f055f4a`); P2+ not started. Dogfood: [REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md](./REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md).
 
 **North star:** Greptile / Bugbot-class **snapshot semantics** — work targets **latest HEAD**, supersede in-flight generation when a newer commit arrives, **publish to GitHub only after the pass completes** (no spill on check, summary, or inline).
 
@@ -12,6 +12,6 @@
 | [REVIEW_GENERATION_LIFECYCLE_GENERAL_PLAN.md](./REVIEW_GENERATION_LIFECYCLE_GENERAL_PLAN.md) | Phased program P0–P5 |
 | [REVIEW_GENERATION_LIFECYCLE_EXECUTION.md](./REVIEW_GENERATION_LIFECYCLE_EXECUTION.md) | LOOP index + locked execution decisions |
 | [../github-surface-hardening/](../github-surface-hardening/) | Prerequisite — Option A resolve, GraphQL scale (merged) |
-| [../REVIEW_PIPELINE_PRODUCT_PATTERNS.md](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md) | Generation row — in flight P2, shipped P5 |
+| [REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md](./REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md) | PR #54 dogfood — Revy vs Greptile, Moonshot format |
 
 **Branch:** `feat/review-generation-lifecycle`

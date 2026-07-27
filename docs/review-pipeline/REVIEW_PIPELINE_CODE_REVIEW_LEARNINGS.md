@@ -228,7 +228,7 @@ Not shipped — naming for planning and findings doc. Maps to Celery tasks or su
 | Check run + summary table | **shipped** R6 | — |
 | Inline error/critical + suggestion | **shipped** R6 | — |
 | Update check/summary in place per `head_sha` | **shipped** R6-Q1 | — |
-| Narrative PR summary | **gap** | R9 / publish polish |
+| Narrative PR summary | **partial** — Moonshot `complete_issue_comment_markdown` on issue comment (PR #54); deterministic fallback | RQ7 **G5** |
 | Confidence 0–5 + merge verdict prose | **gap** | R9 |
 | Files needing attention list | **gap** | R9 |
 | Important files changed table | **gap** | R9 |
@@ -328,6 +328,23 @@ Full log: [REVIEW_QUALITY_DOGFOOD_PR50.md](./review-quality/REVIEW_QUALITY_DOGFO
 
 **Distillation (RQ2):** Bugbot pass 1 cited **D13-F** from findings (manifest must carry index `fallback_reason`); pass 2 confirmed fixes + clean gate (RC-D12). Uses wired docs — same RC0 pattern as Greptile on contract rows.
 
+### Dogfood log — PR #54 (generation lifecycle + Moonshot format)
+
+**PR:** [#54](https://github.com/raimondskrauklis/revy/pull/54) · **branch only** (`feat/review-generation-lifecycle`, HEAD `f055f4a` at capture) · Full log: [REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md](./review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md).
+
+| ID | Finding |
+|----|---------|
+| **RC-D13** | **Moonshot wrong completion mode for issue comments** — `build_pr_review_comment` called `complete_review()` (`response_format: json_object` + findings system prompt). Moonshot returned `{"review_comment":"## …"}`; `normalize_llm_issue_comment` did not unwrap `review_comment` → **raw JSON posted** on GitHub ([#54 rev 1–2](https://github.com/raimondskrauklis/revy/pull/54#issuecomment-5097044642)). **Fix (f055f4a):** `complete_issue_comment_markdown()` — markdown system prompt, no `json_object`; shared `_complete_chat` base. |
+| **RC-D14** | **Revy vs Greptile on same PR** — Greptile **5/5** (additive P0+P1, gates tested, understands Moonshot split). Revy **3/5** (stricter, cross-file). Greptile: dead `is_review_run_superseded` in `create_publish_job` (removed — superseded ≠ completed). Revy: Moonshot glitch (RC-D13), JSON-wrapper breadth (RC-D16), stale supersede ERROR (RC-D15). **Pattern:** Greptile merge-readiness + doc wiring; Revy implementation + cross-layer traps. |
+| **RC-D15** | **Stale inline threads after fix** — Revy ERROR on supersede still cites `id != keep_revision_id` on `f055f4a` though `revision_number < keep` landed in `2e84978`. Issue comment narrative also said “previously flagged issue remains open.” **Product gap:** re-review should re-validate fixed hunks or mark prior findings **addressed** (RQ5 resolution prose exists for publish; inline bot does not). |
+| **RC-D16** | **`_looks_like_json_wrapper` too broad** — returns true for any dict-shaped string; Revy WARNING valid. After normalize extracts markdown, downstream guard should only treat **known wrapper keys** (`_LLM_ISSUE_COMMENT_JSON_KEYS`) as failure — Revy suggestion matches intent. |
+| **RC-D17** | **One LLM completion shape per output** — findings JSON (`complete_review`) vs issue markdown (`complete_issue_comment_markdown`) must not share system prompt or `json_object` flag. Defense in depth: unwrap keys + fallback when unparsed JSON remains. **Generalize:** publisher formatter, check summary LLM (if added), inline title polish — separate prompts/modes. |
+| **RC-D18** | **Revy false positive — null guard** — ERROR on `run_publish_job` “missing null guard before supersede check”; code checks `run is None` at 711–715 before `is_review_run_superseded(run)`. Triage: structural read miss; not a production bug. |
+
+**Moonshot format regression test:** rev 3 Revy summary is proper markdown (narrative + confidence + table + metadata). Confirms RC-D13 fix on dogfood surface.
+
+**Open for P2+ dogfood:** supersede on `synchronize`, coalesce, full surface flush — current PR does not activate lifecycle on webhooks yet.
+
 ### Iterative review (industry + dogfood)
 
 Greptile documents [multiple passes per PR](https://www.greptile.com/docs/code-review/first-pr-review) as normal. PR #50 confirms the same for **local Bugbot**: one pass is hygiene; **explicit iteration** (fix → Bugbot → fix → push) is where cross-file and lifecycle bugs appear.
@@ -354,4 +371,5 @@ Full patterns (parent agent discipline, prompt shapes, parallelism): [agents/ORC
 | [REVIEW_PIPELINE_STAGING_SMOKE_VALIDATION.md](./REVIEW_PIPELINE_STAGING_SMOKE_VALIDATION.md) | Staging e2e + infra learnings |
 | [code-review-arch_perplexity_searcj_advice_only.md](./code-review-arch_perplexity_searcj_advice_only.md) | External architecture notes |
 | [REVIEW_PIPELINE_GREPTILE_PR26_EMAIL.md](./REVIEW_PIPELINE_GREPTILE_PR26_EMAIL.md) | Archived Greptile email artifact |
+| [review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md](./review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md) | PR #54 lifecycle + Moonshot format dogfood |
 | [Greptile first PR review docs](https://www.greptile.com/docs/code-review/first-pr-review) | Public anatomy of summary + confidence + inline |

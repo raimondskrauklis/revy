@@ -127,6 +127,14 @@ def test_normalize_llm_issue_comment_unknown_json_returns_none():
     assert normalize_llm_issue_comment('{"findings":[]}') is None
 
 
+def test_looks_like_json_wrapper_only_known_keys():
+    from app.services.github_publish_formatter import _looks_like_json_wrapper
+
+    assert _looks_like_json_wrapper('{"review_comment":"## Hi"}') is True
+    assert _looks_like_json_wrapper('{"findings":[]}') is False
+    assert _looks_like_json_wrapper("## plain markdown") is False
+
+
 def test_normalize_llm_issue_comment_passes_through_markdown():
     markdown = "## Revy code review\n\nplain markdown"
     assert normalize_llm_issue_comment(markdown) == markdown
