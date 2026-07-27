@@ -2,6 +2,7 @@
 """GitHub publish pipeline — R6."""
 from __future__ import annotations
 
+import time
 from uuid import UUID
 
 import httpx
@@ -31,6 +32,13 @@ from app.models.github_pull_request import (
 from app.models.github_repository import GitHubRepositoryORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.services.github_indexing import ensure_revision_access
+from app.services.github_pipeline_trace import (
+    finalize_pipeline_github_check_failure,
+    get_pipeline_run_for_review_run,
+    link_publish_job_to_pipeline,
+    record_publish_pipeline_step,
+    resolve_pipeline_github_check_run_id,
+)
 from app.services.github_suggestion import is_publishable_suggestion
 
 logger = get_logger(__name__)
@@ -104,6 +112,21 @@ async def create_publish_job_for_review_run(
     )
     session.add(job)
     await session.flush()
+
+    pipeline_run = await get_pipeline_run_for_review_run(session, review_run_id=run.id)
+    if pipeline_run is not None:
+        await link_publish_job_to_pipeline(
+            session,
+            pipeline_run=pipeline_run,
+            publish_job_id=job.id,
+        )
+        pipeline_check_id = await resolve_pipeline_github_check_run_id(
+            session,
+            pipeline_run_id=pipeline_run.id,
+        )
+        if pipeline_check_id is not None:
+            job.github_check_run_id = pipeline_check_id
+
     return job.id
 
 
@@ -361,6 +384,7 @@ async def run_publish_job(
     publish_job_id: UUID,
     persist_github_surface: bool = False,
 ) -> GitHubPublishJobORM:
+    started = time.monotonic()
     job = await session.get(GitHubPublishJobORM, publish_job_id)
     if job is None:
         raise NotFoundError("Publish job not found")
@@ -580,6 +604,15 @@ async def run_publish_job(
 
         job.status = GitHubPublishJobStatus.completed
         await session.flush()
+        pipeline_run = await get_pipeline_run_for_review_run(session, review_run_id=job.review_run_id)
+        if pipeline_run is not None:
+            await record_publish_pipeline_step(
+                session,
+                pipeline_run_id=pipeline_run.id,
+                job=job,
+                summary_markdown=summary,
+                duration_ms=int((time.monotonic() - started) * 1000),
+            )
         return job
     except (httpx.HTTPError, ServiceUnavailableError) as exc:
         retryable = classify_transient_error(exc)
@@ -596,4 +629,18 @@ async def run_publish_job(
         job.status = GitHubPublishJobStatus.failed
         job.error_message = str(exc)[:2000]
         await session.flush()
+        pipeline_run = await get_pipeline_run_for_review_run(session, review_run_id=job.review_run_id)
+        if pipeline_run is not None:
+            await record_publish_pipeline_step(
+                session,
+                pipeline_run_id=pipeline_run.id,
+                job=job,
+                summary_markdown=job.error_message or "Publish failed",
+                duration_ms=int((time.monotonic() - started) * 1000),
+            )
+            await finalize_pipeline_github_check_failure(
+                session,
+                pipeline_run_id=pipeline_run.id,
+                summary=job.error_message,
+            )
         return job

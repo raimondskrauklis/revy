@@ -136,6 +136,9 @@ class Settings(BaseSettings):
     export_storage_path: str = "/tmp/revy/exports"
     export_ttl_days: int = 7
 
+    # Pipeline trace retention — review-quality O8
+    pipeline_retention_days: int = 90
+
     # Review policy
     revy_default_review_profile: str = "standard"
     revy_revision_timeout_standard_seconds: int = 900

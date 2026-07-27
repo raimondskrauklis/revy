@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from collections import defaultdict
 from dataclasses import dataclass
 from uuid import UUID
@@ -77,6 +78,16 @@ class ScopedChunkHit:
 class ReviewContextPack:
     prompt: str
     manifest: dict
+
+
+@dataclass(frozen=True)
+class ReviewRunOutcome:
+    run: GitHubReviewRunORM
+    context_pack: ReviewContextPack | None = None
+    raw_response: str | None = None
+    parse_report: dict | None = None
+    retrieve_duration_ms: int = 0
+    review_duration_ms: int = 0
 
 
 def _review_profile_str(profile: ReviewProfile | str) -> str:
@@ -569,7 +580,7 @@ async def _call_llm(*, model_ref: ModelRef, profile: str, prompt: str) -> str:
         )
 
 
-async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> GitHubReviewRunORM:
+async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> ReviewRunOutcome:
     run = await session.get(GitHubReviewRunORM, review_run_id)
     if run is None:
         raise NotFoundError("Review run not found")
@@ -579,7 +590,7 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> GitHu
             "github_review_run_skip_non_pending",
             extra={"review_run_id": str(review_run_id), "status": str(run.status)},
         )
-        return run
+        return ReviewRunOutcome(run=run)
 
     run.status = GitHubReviewRunStatus.processing
     run.error_message = None
@@ -590,14 +601,14 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> GitHu
         run.status = GitHubReviewRunStatus.failed
         run.error_message = "revision_not_found"
         await session.flush()
-        return run
+        return ReviewRunOutcome(run=run)
 
     pull_request = await session.get(GitHubPullRequestORM, revision.pull_request_id)
     if pull_request is None:
         run.status = GitHubReviewRunStatus.failed
         run.error_message = "pull_request_not_found"
         await session.flush()
-        return run
+        return ReviewRunOutcome(run=run)
 
     repository_id = pull_request.repository_id
     pull_request_id = pull_request.id
@@ -611,9 +622,17 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> GitHu
         run.status = GitHubReviewRunStatus.failed
         run.error_message = "index_required"
         await session.flush()
-        return run
+        return ReviewRunOutcome(run=run)
+
+    context_pack: ReviewContextPack | None = None
+    raw_json: str | None = None
+    parse_report: dict | None = None
+    retrieve_duration_ms = 0
+    review_duration_ms = 0
+    review_started_at: float | None = None
 
     try:
+        retrieve_started = time.monotonic()
         context_pack = await prepare_review_context(
             session,
             workspace_id=run.workspace_id,
@@ -623,6 +642,7 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> GitHu
             pull_request=pull_request,
             index_job=index_job,
         )
+        retrieve_duration_ms = int((time.monotonic() - retrieve_started) * 1000)
         prompt = context_pack.prompt
         model_role = review_profile_to_model_role(_review_profile_str(run.profile))
         model_ref = await resolve_model(session, run.workspace_id, model_role)
@@ -630,11 +650,13 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> GitHu
         run.model_id = model_ref.model_id
         await session.flush()
 
+        review_started_at = time.monotonic()
         raw_json = await _call_llm(
             model_ref=model_ref,
             profile=_review_profile_str(run.profile),
             prompt=prompt,
         )
+        review_duration_ms = int((time.monotonic() - review_started_at) * 1000)
 
         try:
             raw_findings = moonshot_review.parse_review_json(raw_json)
@@ -642,9 +664,16 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> GitHu
             run.status = GitHubReviewRunStatus.failed
             run.error_message = str(exc)[:2000]
             await session.flush()
-            return run
+            return ReviewRunOutcome(
+                run=run,
+                context_pack=context_pack,
+                raw_response=raw_json,
+                parse_report={"parsed_count": 0, "dropped_count": 0, "drop_reasons": {}},
+                retrieve_duration_ms=retrieve_duration_ms,
+                review_duration_ms=review_duration_ms,
+            )
 
-        parsed_rows, _parse_report = parse_finding_rows(raw_findings)
+        parsed_rows, parse_report = parse_finding_rows(raw_findings)
 
         await session.execute(
             delete(GitHubFindingORM).where(GitHubFindingORM.review_run_id == run.id)
@@ -661,7 +690,14 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> GitHu
 
         run.status = GitHubReviewRunStatus.completed
         await session.flush()
-        return run
+        return ReviewRunOutcome(
+            run=run,
+            context_pack=context_pack,
+            raw_response=raw_json,
+            parse_report=parse_report,
+            retrieve_duration_ms=retrieve_duration_ms,
+            review_duration_ms=review_duration_ms,
+        )
     except ValidationError as exc:
         logger.error(
             "github_review_run_failed",
@@ -670,7 +706,14 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> GitHu
         run.status = GitHubReviewRunStatus.failed
         run.error_message = str(exc)[:2000]
         await session.flush()
-        return run
+        return ReviewRunOutcome(
+            run=run,
+            context_pack=context_pack,
+            raw_response=raw_json,
+            parse_report=parse_report,
+            retrieve_duration_ms=retrieve_duration_ms,
+            review_duration_ms=review_duration_ms,
+        )
     except (httpx.HTTPError, ServiceUnavailableError) as exc:
         retryable = classify_transient_error(exc)
         if retryable is not None:
@@ -686,7 +729,16 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> GitHu
         run.status = GitHubReviewRunStatus.failed
         run.error_message = str(exc)[:2000]
         await session.flush()
-        return run
+        if review_started_at is not None:
+            review_duration_ms = int((time.monotonic() - review_started_at) * 1000)
+        return ReviewRunOutcome(
+            run=run,
+            context_pack=context_pack,
+            raw_response=raw_json,
+            parse_report=parse_report,
+            retrieve_duration_ms=retrieve_duration_ms,
+            review_duration_ms=review_duration_ms,
+        )
 
 
 async def get_latest_review_run(

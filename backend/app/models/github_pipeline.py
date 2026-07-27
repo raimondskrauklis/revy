@@ -7,7 +7,7 @@ from typing import Any
 
 from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.constants.enums import (
     GitHubIndexMode,
@@ -50,6 +50,11 @@ class GitHubPipelineRunORM(TimestampedModel):
         nullable=True,
     )
 
+    steps: Mapped[list[GitHubPipelineStepORM]] = relationship(
+        back_populates="pipeline_run",
+        cascade="all, delete-orphan",
+    )
+
 
 class GitHubPipelineStepORM(TimestampedModel):
     __tablename__ = "github_pipeline_steps"
@@ -73,6 +78,12 @@ class GitHubPipelineStepORM(TimestampedModel):
     output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    pipeline_run: Mapped[GitHubPipelineRunORM] = relationship(back_populates="steps")
+    artifacts: Mapped[list[GitHubPipelineArtifactORM]] = relationship(
+        back_populates="step",
+        cascade="all, delete-orphan",
+    )
+
 
 class GitHubPipelineArtifactORM(TimestampedModel):
     __tablename__ = "github_pipeline_artifacts"
@@ -92,3 +103,5 @@ class GitHubPipelineArtifactORM(TimestampedModel):
     content_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     content_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     content_hash: Mapped[str | None] = mapped_column(String(length=64), nullable=True)
+
+    step: Mapped[GitHubPipelineStepORM] = relationship(back_populates="artifacts")

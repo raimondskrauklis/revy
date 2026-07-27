@@ -272,7 +272,7 @@ async def test_run_review_run_skips_non_pending_status():
     with patch("app.services.github_review.prepare_review_context", AsyncMock()) as context_mock:
         result = await github_review.run_review_run(session, review_run_id=review_run_id)
 
-    assert result.status == GitHubReviewRunStatus.processing
+    assert result.run.status == GitHubReviewRunStatus.processing
     context_mock.assert_not_awaited()
 
 
@@ -341,8 +341,8 @@ async def test_run_review_run_stale_model_policy_marks_failed():
             ):
                 result = await github_review.run_review_run(session, review_run_id=review_run_id)
 
-    assert result.status == GitHubReviewRunStatus.failed
-    assert "no longer valid" in (result.error_message or "")
+    assert result.run.status == GitHubReviewRunStatus.failed
+    assert "no longer valid" in (result.run.error_message or "")
 
 
 @pytest.mark.asyncio
@@ -410,8 +410,8 @@ async def test_run_review_run_invalid_json_marks_failed():
                 ):
                     result = await github_review.run_review_run(session, review_run_id=review_run_id)
 
-    assert result.status == GitHubReviewRunStatus.failed
-    assert result.error_message is not None
+    assert result.run.status == GitHubReviewRunStatus.failed
+    assert result.run.error_message is not None
 
 
 @pytest.mark.asyncio
@@ -499,7 +499,7 @@ async def test_run_review_run_happy_path_persists_findings():
                 ):
                     result = await github_review.run_review_run(session, review_run_id=review_run_id)
 
-    assert result.status == GitHubReviewRunStatus.completed
+    assert result.run.status == GitHubReviewRunStatus.completed
     assert session.add.call_count == 1
 
 
@@ -569,7 +569,7 @@ async def test_run_review_run_accepts_profile_string_from_db():
                 ) as llm_mock:
                     result = await github_review.run_review_run(session, review_run_id=review_run_id)
 
-    assert result.status == GitHubReviewRunStatus.completed
+    assert result.run.status == GitHubReviewRunStatus.completed
     assert llm_mock.await_args.kwargs["profile"] == "standard"
 
 

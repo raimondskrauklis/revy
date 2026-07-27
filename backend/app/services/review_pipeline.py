@@ -23,6 +23,10 @@ from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullReque
 from app.models.github_review_run import GitHubReviewRunORM
 from app.models.workspaces import WorkspaceORM
 from app.services.github_indexing import index_job_in_progress
+from app.services.github_pipeline_trace import (
+    get_pipeline_run_for_index_job,
+    link_review_run_to_pipeline,
+)
 from app.services.github_review import create_review_run
 
 logger = get_logger(__name__)
@@ -253,5 +257,13 @@ async def prepare_review_after_index(
             },
         )
         return None
+
+    pipeline_run = await get_pipeline_run_for_index_job(session, index_job_id=job.id)
+    if pipeline_run is not None:
+        await link_review_run_to_pipeline(
+            session,
+            pipeline_run=pipeline_run,
+            review_run_id=run.id,
+        )
 
     return run.id

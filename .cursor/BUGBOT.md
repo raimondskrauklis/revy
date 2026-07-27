@@ -5,13 +5,13 @@ When reviewing **backend** changes on `feat/review-quality`, treat these docs as
 - [REVIEW_QUALITY_EXECUTION.md](../docs/review-pipeline/waves/REVIEW_QUALITY_EXECUTION.md) — active RQ phase, locked schema, routes, gates
 - [REVIEW_QUALITY_FINDINGS.md](../docs/review-pipeline/review-quality/REVIEW_QUALITY_FINDINGS.md) — locked Q# and storage model
 
-**Active phase:** RQ2 (diff-first review prompt + scoped retrieval + D10 fingerprint + parse_report).
+**Active phase:** RQ3 (pipeline trace + read API + purge + G10 in-progress check).
 
 **Check especially:**
 
-- `_build_review_prompt` — metadata → changed files → unified diff (128KB D5) → supplemental (D6 caps)
-- `compare_commits` re-called in review worker (not index job row for patches)
-- D5 truncate: `diff_truncated`, `omitted_files[]` in retrieval manifest
-- Scoped retrieval: changed-file chunks only in diff mode; D7 test exclusion
-- `compute_fingerprint` — D10: `title` + `start_line_key`, message excluded
-- `parse_finding_rows` — `parse_report` with drop reasons (persisted RQ3)
+- `github_pipeline_trace.py` — runs link index/review/publish; steps + artifacts per O2/O3
+- Worker hooks: index, review (retrieve + review), reconcile, judge, publish
+- Review artifacts: `prompt`, `raw_response` (always), `parse_report`, retrieval `manifest`
+- `GET …/review-runs/{id}/pipeline` — `items_view`, `ensure_revision_access`
+- G10: `create_check_run` `in_progress` at pipeline start; finalize on publish/failure
+- O8: `pipeline_purge_tasks` + `PIPELINE_RETENTION_DAYS=90` + Celery beat

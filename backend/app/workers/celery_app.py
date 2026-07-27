@@ -1,6 +1,7 @@
 # backend/app/workers/celery_app.py
 """Celery app — broker/backend from app.core.config (no localhost fallbacks)."""
 from celery import Celery
+from celery.schedules import crontab
 from celery.signals import worker_process_init
 
 from app.core.config import settings
@@ -33,8 +34,15 @@ celery_app.conf.task_routes = {
     "app.workers.publish_tasks.*": {"queue": "github_publish"},
     "app.workers.maintenance_tasks.*": {"queue": "maintenance"},
     "app.workers.export_tasks.*": {"queue": "maintenance"},
+    "app.workers.pipeline_purge_tasks.*": {"queue": "maintenance"},
 }
 celery_app.conf.task_default_queue = "default"
+celery_app.conf.beat_schedule = {
+    "purge-old-pipeline-artifacts": {
+        "task": "app.workers.pipeline_purge_tasks.purge_old_pipeline_artifacts",
+        "schedule": crontab(hour=3, minute=0),
+    },
+}
 
 # Register task modules
 from app.workers import email_tasks as _email_tasks  # noqa: F401
@@ -42,6 +50,7 @@ from app.workers import export_tasks as _export_tasks  # noqa: F401
 from app.workers import github_tasks as _github_tasks  # noqa: F401
 from app.workers import index_tasks as _index_tasks  # noqa: F401
 from app.workers import judge_tasks as _judge_tasks  # noqa: F401
+from app.workers import pipeline_purge_tasks as _pipeline_purge_tasks  # noqa: F401
 from app.workers import publish_tasks as _publish_tasks  # noqa: F401
 from app.workers import reconcile_tasks as _reconcile_tasks  # noqa: F401
 from app.workers import repo_tasks as _repo_tasks  # noqa: F401

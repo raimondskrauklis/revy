@@ -278,8 +278,9 @@ async def create_check_run(
     repo: str,
     head_sha: str,
     external_id: str,
-    conclusion: str,
-    summary: str,
+    status: str = "completed",
+    conclusion: str | None = "neutral",
+    summary: str = "",
     title: str = "Revy code review",
     auth_headers: dict[str, str] | None = None,
 ) -> int:
@@ -288,17 +289,19 @@ async def create_check_run(
         github_installation_id=github_installation_id,
         auth_headers=auth_headers,
     )
+    payload: dict[str, Any] = {
+        "name": CHECK_RUN_NAME,
+        "head_sha": head_sha,
+        "external_id": external_id,
+        "status": status,
+        "output": {"title": title, "summary": summary},
+    }
+    if status == "completed":
+        payload["conclusion"] = conclusion or "neutral"
     response = await client.post(
         f"{GITHUB_API_BASE}/repos/{owner}/{repo}/check-runs",
         headers=headers,
-        json={
-            "name": CHECK_RUN_NAME,
-            "head_sha": head_sha,
-            "external_id": external_id,
-            "status": "completed",
-            "conclusion": conclusion,
-            "output": {"title": title, "summary": summary},
-        },
+        json=payload,
     )
     response.raise_for_status()
     data = response.json()
