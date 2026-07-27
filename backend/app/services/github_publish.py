@@ -116,6 +116,32 @@ async def _skip_publish_job_at_gate(
     return job
 
 
+async def _recheck_publish_authority_before_flush(
+    session: AsyncSession,
+    job: GitHubPublishJobORM,
+    run: GitHubReviewRunORM,
+    pull_request: GitHubPullRequestORM,
+) -> GitHubPublishJobORM | None:
+    """Re-read authority after build — HEAD may advance during slow format/build."""
+    await session.refresh(run)
+    await session.refresh(pull_request)
+    if is_review_run_superseded(run):
+        return await _skip_publish_job_at_gate(
+            session,
+            job,
+            skip_status=GitHubPublishJobStatus.skipped_superseded,
+            log_event="publish_skipped_superseded",
+        )
+    if job.head_sha != pull_request.head_sha:
+        return await _skip_publish_job_at_gate(
+            session,
+            job,
+            skip_status=GitHubPublishJobStatus.skipped_not_head,
+            log_event="publish_skipped_not_head",
+        )
+    return None
+
+
 async def mark_publish_job_failed(
     session: AsyncSession,
     *,
@@ -958,8 +984,10 @@ async def _flush_publish_surface(
     pull_request: GitHubPullRequestORM,
     installation: GitHubInstallationORM,
     persist_github_surface: bool,
+    retry_posted_inline: dict[str, int] | None = None,
 ) -> None:
     inline_threads = dict(build.inline_threads)
+    retry_posted = retry_posted_inline or {}
 
     async with httpx.AsyncClient(timeout=120.0) as client:
         auth_headers = await github_api.installation_auth_headers(
@@ -1075,6 +1103,9 @@ async def _flush_publish_surface(
         inline_thread_ids: dict[str, str] = {}
         if build.post_inline:
             for spec in build.inline_posts:
+                if spec.group_fingerprint in retry_posted:
+                    inline_threads[spec.group_fingerprint] = retry_posted[spec.group_fingerprint]
+                    continue
                 try:
                     comment_id = await github_api.create_pull_request_review_comment(
                         client,
@@ -1097,6 +1128,17 @@ async def _flush_publish_surface(
                     thread_id = thread_index.get(comment_id)
                     if isinstance(thread_id, str) and thread_id:
                         inline_thread_ids[spec.group_fingerprint] = thread_id
+                    job.summary_json = {
+                        **(job.summary_json or {}),
+                        "github_inline_threads": serialize_inline_thread_map(
+                            inline_threads,
+                            prior_v2=(job.summary_json or {}).get("github_inline_threads")
+                            if isinstance((job.summary_json or {}).get("github_inline_threads"), dict)
+                            else build.prior_v2_inline,
+                            thread_ids=inline_thread_ids,
+                        ),
+                    }
+                    await session.flush()
                 except httpx.HTTPStatusError as exc:
                     if exc.response.status_code in (404, 422):
                         logger.warning(
@@ -1110,17 +1152,20 @@ async def _flush_publish_surface(
                         )
                         continue
                     raise
-            job.inline_comments_posted = True
-            job.summary_json = {
-                **(job.summary_json or {}),
-                "github_inline_threads": serialize_inline_thread_map(
-                    inline_threads,
-                    prior_v2=(job.summary_json or {}).get("github_inline_threads")
-                    if isinstance((job.summary_json or {}).get("github_inline_threads"), dict)
-                    else build.prior_v2_inline,
-                    thread_ids=inline_thread_ids,
-                ),
-            }
+            job.inline_comments_posted = all(
+                spec.group_fingerprint in inline_threads for spec in build.inline_posts
+            )
+            if inline_thread_ids:
+                job.summary_json = {
+                    **(job.summary_json or {}),
+                    "github_inline_threads": serialize_inline_thread_map(
+                        inline_threads,
+                        prior_v2=(job.summary_json or {}).get("github_inline_threads")
+                        if isinstance((job.summary_json or {}).get("github_inline_threads"), dict)
+                        else build.prior_v2_inline,
+                        thread_ids=inline_thread_ids,
+                    ),
+                }
 
         await _checkpoint_publish_surface(session, persist=persist_github_surface)
 
@@ -1190,6 +1235,10 @@ async def run_publish_job(
     job.error_message = None
     await session.flush()
 
+    retry_posted_inline = deserialize_inline_thread_map(
+        (job.summary_json or {}).get("github_inline_threads")
+    )
+
     try:
         build = await _build_publish_surface(
             session,
@@ -1201,6 +1250,15 @@ async def run_publish_job(
         )
         job.summary_json = build.summary_json
 
+        skipped = await _recheck_publish_authority_before_flush(
+            session,
+            job,
+            run,
+            pull_request,
+        )
+        if skipped is not None:
+            return skipped
+
         await _flush_publish_surface(
             session,
             job=job,
@@ -1209,6 +1267,7 @@ async def run_publish_job(
             pull_request=pull_request,
             installation=installation,
             persist_github_surface=persist_github_surface,
+            retry_posted_inline=retry_posted_inline,
         )
 
         job.status = GitHubPublishJobStatus.completed
