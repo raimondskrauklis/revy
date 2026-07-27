@@ -81,6 +81,32 @@ async def test_embed_texts_raises_on_malformed_embedding_item():
 
 
 @pytest.mark.asyncio
+async def test_embed_texts_retries_rate_limited_response():
+    client = AsyncMock()
+    rate_limited = MagicMock()
+    rate_limited.status_code = 429
+    rate_limited.headers = {"Retry-After": "2"}
+    rate_limited.text = "Too Many Requests"
+    success = MagicMock()
+    success.status_code = 200
+    success.raise_for_status = MagicMock()
+    success.json = MagicMock(return_value={"data": [{"embedding": [0.1, 0.2]}]})
+    client.post = AsyncMock(side_effect=[rate_limited, success])
+
+    with patch("app.integrations.voyage_embeddings.settings") as mock_settings:
+        mock_settings.embeddings_enabled = True
+        mock_settings.voyage_api_key = "key"
+        mock_settings.revy_embedding_model = "voyage-code-3"
+        mock_settings.revy_embedding_dimensions = 1024
+        with patch("app.integrations.voyage_embeddings.asyncio.sleep", AsyncMock()) as sleep_mock:
+            vectors = await voyage_embeddings.embed_texts(client, ["hello"])
+
+    assert vectors == [[0.1, 0.2]]
+    sleep_mock.assert_awaited_once_with(2.0)
+    assert client.post.await_count == 2
+
+
+@pytest.mark.asyncio
 async def test_embed_texts_logs_voyage_error_body():
     client = AsyncMock()
     response = MagicMock()

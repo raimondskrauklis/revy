@@ -318,6 +318,42 @@ async def test_run_index_job_preserves_chunks_when_embed_fails():
 
 
 @pytest.mark.asyncio
+async def test_run_index_job_resets_pending_on_rate_limit():
+    session, job, revision = _index_job_fixture()
+    response = MagicMock()
+    response.status_code = 429
+    rate_limit_error = httpx.HTTPStatusError(
+        "Too Many Requests",
+        request=MagicMock(),
+        response=response,
+    )
+
+    with patch("app.services.github_indexing.settings") as mock_settings:
+        mock_settings.revy_worktrees_path = "/tmp/revy-worktrees"
+        with patch("app.services.github_indexing.download_repository_tarball", AsyncMock(return_value=b"archive")):
+            with patch("app.services.github_indexing.extract_tarball", return_value=Path("/tmp/revy-worktrees") / str(revision.id)):
+                with patch(
+                    "app.services.github_indexing.iter_indexable_files",
+                    return_value=[("main.py", "print('hi')")],
+                ):
+                    with patch(
+                        "app.services.github_indexing.chunk_file_content",
+                        return_value=[MagicMock(file_path="main.py", chunk_index=0, content="print('hi')")],
+                    ):
+                        with patch(
+                            "app.services.github_indexing.embed_texts",
+                            AsyncMock(side_effect=rate_limit_error),
+                        ):
+                            with patch("pathlib.Path.exists", return_value=False):
+                                with pytest.raises(httpx.HTTPStatusError):
+                                    await run_index_job(session, index_job_id=job.id)
+
+    assert job.status == GitHubIndexJobStatus.pending
+    assert job.error_message is None
+    session.execute.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_run_index_job_deletes_chunks_after_embed_success():
     session, job, revision = _index_job_fixture()
 
