@@ -471,7 +471,7 @@ After each LOOP commit on #50, add a row:
 | babysit | 2 P1 (G10 TX, D10 supersede) | — | RC-D16 — shallow Greptile fix + deep Bugbot; [§](#greptile-babysit-vs-bugbot-depth-rc-d16) |
 | babysit | 1 P1 (compare-fallback flush) | — | RC-D17 — Greptile minimum fix ≠ production; [§](#greptile-minimum-fix--production-fix-rc-d17) |
 | RQ5–RQ8 | — | — | LOOP complete on branch — evidence/judge, resolution, Greptile publish, doc-sync |
-| RQ9 | *fill on first comment* | suspended | PR [#51](https://github.com/raimondskrauklis/revy/pull/51) `docs/agent-work` — [§](#dogfood-pr-51--docsagent-work-rq9) |
+| RQ9 | 2 P2 inline; summary 4/5 | neutral ~6m JSON blob | PR [#51](https://github.com/raimondskrauklis/revy/pull/51) — [§](#dogfood-pr-51--docsagent-work-rq9) · [post-v1 findings](../post-review-quality/POST_REVIEW_QUALITY_FINDINGS.md) |
 
 ---
 
@@ -481,23 +481,24 @@ After each LOOP commit on #50, add a row:
 
 **RC0 wiring (this PR):** `.greptile/files.json` adds `CURSOR_AGENT_WORKFLOW.md` + `ROLES.md` (4 files total).
 
-### Greptile first-comment log (fill when comment lands)
+### Greptile first-comment log
 
 | Field | Value |
 |-------|--------|
-| **When** | *pending* |
-| **👀 reaction** | Yes on PR open — queued ack, not comprehension (RC-D20) |
-| **Cited execution § RQ9?** | *pending — yes/no + quote* |
-| **Cited wired docs (ROLES, workflow)?** | *pending* |
-| **Diff-only review?** | *pending* |
-| **Inline severity** | *pending — count P0/P1/P2* |
-| **Paste / link** | *optional — `actual_output_greptile_pr51.txt`* |
+| **When** | 2026-07-27 ~16:34 UTC |
+| **👀 reaction** | Yes on PR open — queued ack (RC-D20) |
+| **Cited execution § RQ9?** | **Yes** — summary names neutral finalize, `_finalize_pipeline_github_check`, split DB context, `ReviewAfterIndexOutcome` |
+| **Cited wired docs (ROLES, workflow)?** | No explicit cite — mechanism from diff + RC0 `files.json` |
+| **Diff-only review?** | **No** — behavioral + test coverage review |
+| **Confidence** | 4/5 — safe to merge |
+| **Inline** | 2× P2 (Literal `conclusion`; closed-PR test assertion) |
+| **Distill** | [post-v1 findings](../post-review-quality/POST_REVIEW_QUALITY_FINDINGS.md) |
 
-**Master checklist after Greptile comments:**
+**Master checklist:**
 
-1. Did inline cite **AS1 / G10 / RQ9** from execution, or only local code smell?
-2. Did top comment reference **draft-after-index** vs misleading draft-autostart?
-3. Log row in table above → distill RC-D# if pattern repeats.
+1. ✅ Inline cites **G10 / RQ9 mechanism** — not random style nits only
+2. ✅ Summary matches **draft/closed at review time** (not draft autostart trap)
+3. **Revy bot** — weak JSON comment vs Greptile narrative → **PQ-UX-1** (RC-D22)
 
 ### Local Bugbot (pre-push)
 

@@ -289,6 +289,7 @@ async def test_prepare_review_after_index_skips_closed_pull_request(create_revie
 
     assert result.review_run_id is None
     assert result.neutral_finalize_check is True
+    assert "not open" in (result.pipeline_check_summary or "").lower()
     create_review_run_mock.assert_not_awaited()
 
 

@@ -7,7 +7,7 @@ import json
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 import httpx
@@ -728,7 +728,7 @@ async def _finalize_pipeline_github_check(
     *,
     pipeline_run_id: UUID,
     summary: str,
-    conclusion: str,
+    conclusion: Literal["failure", "neutral"],
 ) -> None:
     check_run_id = await resolve_pipeline_github_check_run_id(session, pipeline_run_id=pipeline_run_id)
     if check_run_id is None or not settings.github_api_enabled:

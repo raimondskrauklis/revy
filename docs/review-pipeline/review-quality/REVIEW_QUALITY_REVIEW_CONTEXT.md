@@ -117,6 +117,8 @@ Evaluate during **`feat/review-quality` PR** dogfood; ship improvements in **RQ-
 | **RC-D5** | 2026-07-27 | Local Bugbot pre-push | **No findings** | — |
 | **RC-D19** | 2026-07-27 | Bugbot FIND output shape (ui_7) | **Gap** — no Deferred/Scope in final output; platform XML over table | OUTPUT_FORMAT always-require Deferred; master reads thinking |
 | **RC-D20** | 2026-07-27 | Greptile 👀 on PR open | **Signal** — queued ack, not comprehension | Log first comment — [DOGFOOD § PR #51](./REVIEW_QUALITY_DOGFOOD_PR50.md#dogfood-pr-51--docsagent-work-rq9) |
+| **RC-D21** | 2026-07-27 | Greptile PR #51 summary cites RQ9 | **Pass** — RC0 `files.json` + diff > PR prose | RC2-lite PR body optional |
+| **RC-D22** | 2026-07-27 | Revy bot JSON comment vs Greptile narrative | **Gap** — PQ-UX-1 | [post-v1 findings](../post-review-quality/POST_REVIEW_QUALITY_FINDINGS.md) |
 
 **G10 target behavior (parity with Greptile/Bugbot):**
 

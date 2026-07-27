@@ -29,6 +29,9 @@ docs/review-pipeline/
     REVIEW_QUALITY_FINDINGS.md             ← ① baseline
     REVIEW_QUALITY_PEER_REVIEW.md          ← architecture peer review + pre-execution locks
     REVIEW_QUALITY_STRUCTURAL_CONTEXT.md   ← LSP defer; cross-file roadmap (SC8)
+  post-review-quality/                     ← v1.1+ gaps from PR #51 dogfood
+    README.md
+    POST_REVIEW_QUALITY_FINDINGS.md        ← ① next-wave baseline
   REVIEW_PIPELINE_GREPTILE_PR26_EMAIL.md   ← archived Greptile PR #26 email (triage reference)
   REVIEW_PIPELINE_PRODUCT_PATTERNS.md      ← Greptile-style patterns → Revy phases (defer/future map)
   code-review-arch_perplexity_searcj_advice_only.md  ← external architecture notes (advice only)
