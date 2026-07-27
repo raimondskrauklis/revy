@@ -102,12 +102,6 @@ def index_pull_request_revision(self, index_job_id: str) -> None:
             review_run_id = await prepare_review_after_index(session, job)
             if review_run_id is not None:
                 review_run_ids.append(review_run_id)
-            elif pipeline_run is not None and job.status == GitHubIndexJobStatus.completed:
-                await finalize_pipeline_github_check_failure(
-                    session,
-                    pipeline_run_id=pipeline_run.id,
-                    summary="Review was not enqueued for this revision",
-                )
 
     async def _mark_failed(error_message: str) -> None:
         async with get_db_context() as session:

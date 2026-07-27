@@ -262,6 +262,31 @@ Greptile likely combines **PR diff** + **codebase graph** (signup index) for cro
 
 ---
 
+## LOOP discipline failure — RQ3/RQ4 (RC-D13)
+
+**What went wrong (operator + agent):** RQ3 and RQ4 were **pushed without completing the mandatory local Bugbot loop** from [phase-execution](../../../.cursor/skills/phase-execution/SKILL.md) § Local Bugbot:
+
+| Phase | Expected | What happened |
+|-------|----------|---------------|
+| **RQ3** | Pass 1 → fix → **pass 2 clean** → commit/push | Pass 1 ran; fixes landed; **no pass 2** before push (`c03a8ba`) |
+| **RQ4** | Full loop before first push | **No Bugbot** before push (`6abe242`) |
+
+**Why it matters:** pytest + ruff are necessary but not sufficient. RQ4 retroactive pass 1 (on `c03a8ba..6abe242`) found **3 bugs** pytest missed:
+
+| Sev | Finding | Fix (pass 2) |
+|-----|---------|--------------|
+| high | Copy-forward skipped when `paths_to_index` empty (deletion-only sync) | Gate on `use_diff and paths_to_index is not None`, not truthy `changed_paths` |
+| medium | Incremental retry duplicated chunks (no revision wipe before copy-forward) | Delete all revision chunks before incremental rebuild when parent exists |
+| medium | G10 check marked **failure** when review skipped for benign reasons (draft, pending review) | Remove `finalize_pipeline_github_check_failure` on benign `prepare_review_after_index` `None` |
+
+**Pass 2 outcome:** clean — fixes committed after re-gate (not amend of `6abe242`; follow-up commit on same branch).
+
+**Hard rule (repeat):** `implement → pytest → ruff → Bugbot pass N → fix → Bugbot pass N+1 until clean → commit → push → Greptile`. **Never** treat pass 1 fixes as ship-ready. **Never** skip Bugbot because “tests are green.”
+
+**RQ3:** already on remote — **no retroactive re-gate** unless a targeted bug is found; pass 1 findings were fixed pre-push but pass 2 was not recorded.
+
+---
+
 ## Revy — triage (old deploy)
 
 | Sev | Location | Finding | Action |
@@ -318,3 +343,4 @@ After each LOOP commit on #50, add a row:
 | RQ0 | 6 threads, FK fixes; pass 2 `index_mode` | 4 findings, 1 error (RQ1) | Distillation notes; babysit `87c50d2` |
 | RQ1 code | **No new findings** on `bd4d084` after ~6× iterative local Bugbot | suspended | RC-D10 — Bugbot caught impl bugs Greptile missed; [§](#iterative-agent-review--rq1-local-bugbot); [chain_of_thoughts](../agents/chain_of_thoughts/) |
 | RQ2 | pending | suspended | Bugbot 2-pass: D13-F + compare supplemental; pass 2 closure — [§](#rq2-bugbot--focus-vs-bias) RC-D12 |
+| RQ4 | pending | suspended | RC-D13 — initial push skipped Bugbot; retro pass 1 → 3 bugs; pass 2 clean — [§](#loop-discipline-failure--rq3rq4-rc-d13) |

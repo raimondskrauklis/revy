@@ -439,7 +439,11 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
         new_count = 0
         embed_batches = 0
 
-        if use_diff and paths_to_remove:
+        if job.index_incremental and parent_chunks:
+            await session.execute(
+                delete(GitHubCodeChunkORM).where(GitHubCodeChunkORM.revision_id == job.revision_id)
+            )
+        elif use_diff and paths_to_remove:
             await session.execute(
                 delete(GitHubCodeChunkORM).where(
                     GitHubCodeChunkORM.revision_id == job.revision_id,
@@ -447,20 +451,21 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
                 )
             )
 
-        if use_diff and paths_to_index is not None:
-            if paths_to_index:
-                await session.execute(
-                    delete(GitHubCodeChunkORM).where(
-                        GitHubCodeChunkORM.revision_id == job.revision_id,
-                        GitHubCodeChunkORM.file_path.in_(paths_to_index),
+        if not (job.index_incremental and parent_chunks):
+            if use_diff and paths_to_index is not None:
+                if paths_to_index:
+                    await session.execute(
+                        delete(GitHubCodeChunkORM).where(
+                            GitHubCodeChunkORM.revision_id == job.revision_id,
+                            GitHubCodeChunkORM.file_path.in_(paths_to_index),
+                        )
                     )
+            else:
+                await session.execute(
+                    delete(GitHubCodeChunkORM).where(GitHubCodeChunkORM.revision_id == job.revision_id)
                 )
-        elif not job.index_incremental or not parent_chunks:
-            await session.execute(
-                delete(GitHubCodeChunkORM).where(GitHubCodeChunkORM.revision_id == job.revision_id)
-            )
 
-        if job.index_incremental and parent_chunks and changed_paths:
+        if job.index_incremental and parent_chunks and use_diff and paths_to_index is not None:
             for (file_path, chunk_index), parent_chunk in parent_chunks.items():
                 if file_path in changed_paths or file_path in removed_paths:
                     continue
