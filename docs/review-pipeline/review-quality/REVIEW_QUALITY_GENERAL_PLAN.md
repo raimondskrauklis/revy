@@ -4,7 +4,7 @@ Per-phase goals in **separate files** — same discipline as [REVIEW_PIPELINE_GE
 
 **Baseline:** [REVIEW_QUALITY_FINDINGS.md](./REVIEW_QUALITY_FINDINGS.md) — devil's-advocate pass resolved (2026-07-27).
 
-**Ship model:** **One PR** (`feat/review-quality`) — R1–R5 are **documentation slices**, not merge order. One execution file: `waves/REVIEW_QUALITY_EXECUTION.md`. Tag: `review-quality-v1`.
+**Ship model:** Merged to `main` (PR #50). **RQ9** hardening on `docs/agent-work`. Tag: `review-quality-v1` after human gate (+ RQ9).
 
 **Prerequisite:** R0–R8 on `main`; AS2 staging e2e gate in RQ8 (fix code only if gate fails).
 
@@ -35,7 +35,8 @@ Per-phase goals in **separate files** — same discipline as [REVIEW_PIPELINE_GE
 
 | File | Status |
 |------|--------|
-| `waves/REVIEW_QUALITY_EXECUTION.md` | **next** — all slices, 3–6 subphases per slice |
+| `waves/REVIEW_QUALITY_EXECUTION.md` | RQ0–RQ8 **shipped**; **RQ9 active** |
+| `review-quality/REVIEW_QUALITY_R9_HARDENING_GENERAL_PLAN.md` | **next** |
 
 Execution lives under [../waves/](../waves/) (same as R0–R8).
 
@@ -62,4 +63,5 @@ D4=0, D5=128KB, D7=test retrieval exclusion (not CI), D10=fingerprint shape, C1=
 ## Next
 
 1. **[Peer review](./REVIEW_QUALITY_PEER_REVIEW.md)** — pre-execution locks applied.
-2. **`phase-execution`** on `feat/review-quality` starting at RQ0.
+2. **`phase-execution`** — RQ0–RQ8 complete; merged PR #50.
+3. **RQ9 hardening** — [R9 general plan](./REVIEW_QUALITY_R9_HARDENING_GENERAL_PLAN.md) on `docs/agent-work`.

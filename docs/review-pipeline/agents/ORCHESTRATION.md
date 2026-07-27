@@ -66,7 +66,7 @@ Patterns that worked on PR #50 (Composer-class parent):
 | Read **only** the current phase execution file + findings locks it cites | Re-read entire findings corpus every subphase |
 | One **active** execution contract per LOOP iteration | Merge RQn+1 work into RQn commit |
 | **Docs baseline** commit, then phase commits | 20 MD files + code in every push |
-| Update `BUGBOT.md` **active phase** line each RQ | Stale phase pointer |
+| Update `BUGBOT.md` when a **new** program starts | Stale contract pointer |
 
 ### LOOP control
 

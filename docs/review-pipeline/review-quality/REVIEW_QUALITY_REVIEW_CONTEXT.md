@@ -60,6 +60,8 @@ Shipped in **RQ0** (same commit as migration `0026`):
 
 **Per-phase commit pattern** (LOOP): phase code + **minimal** doc touch (README status / execution table row). Do **not** re-edit full findings + peer-review corpus every push — context budget.
 
+**PR body (RC2-lite):** Short scope + mechanism + contract § + test plan — template in [OUTPUT_FORMAT § Greptile + PR body](../agents/prompts/OUTPUT_FORMAT.md#greptile--pr-body-rc2-lite). Greptile 👀 = ack only (RC-D20).
+
 **Skills:** `phase-execution` and `create-execution-plan` require this wiring on first LOOP iteration for code+docs programs.
 
 ---
@@ -74,6 +76,7 @@ Evaluate during **`feat/review-quality` PR** dogfood; ship improvements in **RQ-
 | **v1** | **G10** | **`revy/review` check `in_progress` → `completed`** (Greptile/Bugbot parity) | **RQ3** start + **RQ7** finalize — [dogfood log](#dogfood-log-pr-50) |
 | **v1.1** | RC1 | **Path-scoped** doc sets — e.g. `backend/**` → execution RQn section + findings D/O locks only | Greptile noise from irrelevant Q# |
 | **v1.1** | RC2 | **Active slice pointer** — README or `BUGBOT.md` names current RQ phase; update each LOOP commit | Bugbot cites wrong subphase |
+| **v1.1** | RC2b | **PR body template** — scope + mechanism + § RQn (RC2-lite) | [OUTPUT_FORMAT §](../prompts/OUTPUT_FORMAT.md#greptile--pr-body-rc2-lite) |
 | **v1.2** | RC3 | **Greptile cascading rules** — `.greptile/rules` per directory (mirror vendor pattern) for monorepo areas | Frontend-heavy phases |
 | **v2** | RC4 | **`.revy/rules` in DB** — workspace `review_policy` EN+LV; publish + reviewer prompts | Post-G product row |
 | **v2** | RC5 | **Auto-wiring from pipeline** — on review run, inject locked Q# from workspace findings registry | Customer repos, not just Revy dogfood |
@@ -112,6 +115,10 @@ Evaluate during **`feat/review-quality` PR** dogfood; ship improvements in **RQ-
 | **RC-D6** | 2026-07-27 | Visual/context vs Greptile/Bugbot | **Gap** — Revy table-only check; target RQ7 G | [visual UX §](./REVIEW_QUALITY_DOGFOOD_PR50.md#visual--context-ux--greptile--bugbot-vs-revy-target-bar) |
 | **RC-D4** | 2026-07-27 | CI on RQ0 migration | **Pass** | — |
 | **RC-D5** | 2026-07-27 | Local Bugbot pre-push | **No findings** | — |
+| **RC-D19** | 2026-07-27 | Bugbot FIND output shape (ui_7) | **Gap** — no Deferred/Scope in final output; platform XML over table | OUTPUT_FORMAT always-require Deferred; master reads thinking |
+| **RC-D20** | 2026-07-27 | Greptile 👀 on PR open | **Signal** — queued ack, not comprehension | Log first comment — [DOGFOOD § PR #51](./REVIEW_QUALITY_DOGFOOD_PR50.md#dogfood-pr-51--docsagent-work-rq9) |
+| **RC-D21** | 2026-07-27 | Greptile PR #51 summary cites RQ9 | **Pass** — RC0 `files.json` + diff > PR prose | RC2-lite PR body optional |
+| **RC-D22** | 2026-07-27 | Revy bot JSON comment vs Greptile narrative | **Gap** — PQ-UX-1 | [post-v1 findings](../post-review-quality/POST_REVIEW_QUALITY_FINDINGS.md) |
 
 **G10 target behavior (parity with Greptile/Bugbot):**
 

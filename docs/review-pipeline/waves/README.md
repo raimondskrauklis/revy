@@ -50,13 +50,14 @@ Baseline: [REVIEW_PIPELINE_POLISH_FINDINGS.md](../REVIEW_PIPELINE_POLISH_FINDING
 
 Baseline: [REVIEW_QUALITY_FINDINGS.md](../review-quality/REVIEW_QUALITY_FINDINGS.md) · Peer review: [REVIEW_QUALITY_PEER_REVIEW.md](../review-quality/REVIEW_QUALITY_PEER_REVIEW.md) · General plans: [index](../review-quality/REVIEW_QUALITY_GENERAL_PLAN.md).
 
-**Branch:** `feat/review-quality` · **LOOP order:** RQ0 → RQ1 → … → RQ8 (single PR).
+**Branch:** merged to `main` (PR [#50](https://github.com/raimondskrauklis/revy/pull/50)) · **LOOP:** RQ0 → … → RQ8 ✓ · **Active:** RQ9 on `docs/agent-work`
 
 | Phase | Focus | Execution | Status |
 |-------|--------|-----------|--------|
-| **Review quality** | Diff-first + trace + Greptile publish + evidence + metrics | [REVIEW_QUALITY_EXECUTION.md](./REVIEW_QUALITY_EXECUTION.md) | **done** on `feat/review-quality` (PR #50) — human gate AS2 |
+| **Review quality** | Diff-first + trace + Greptile publish + evidence + metrics | [REVIEW_QUALITY_EXECUTION.md](./REVIEW_QUALITY_EXECUTION.md) | **merged** — RQ9 hardening before human gate |
+| **RQ9 — Hardening** | G10 neutral finalize, TX tests, agent doc wiring | [REVIEW_QUALITY_EXECUTION.md](./REVIEW_QUALITY_EXECUTION.md) § RQ9 | **active** — `docs/agent-work` |
 
-**Tag after merge:** `review-quality-v1`
+**Tag after human gate:** `review-quality-v1`
 
 **Post-v1 (same program folder):**
 
@@ -64,3 +65,4 @@ Baseline: [REVIEW_QUALITY_FINDINGS.md](../review-quality/REVIEW_QUALITY_FINDINGS
 |-------|--------|------|
 | **RQ-STRUCT-1** | Cross-file grep/import bridge | After tag — [structural context](../review-quality/REVIEW_QUALITY_STRUCTURAL_CONTEXT.md) |
 | **RQ-RC-1** | Greptile/Bugbot planning-doc improvements | After tag — [review context](../review-quality/REVIEW_QUALITY_REVIEW_CONTEXT.md) |
+| **RQ9** | Post-merge hardening (G10 parking, TX tests) | **active** — [R9 general plan](../review-quality/REVIEW_QUALITY_R9_HARDENING_GENERAL_PLAN.md) |

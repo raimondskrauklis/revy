@@ -157,11 +157,31 @@ assert job_id is not None or session.add.called
 
 ---
 
+## Post–review-quality re-smoke (2026-07-27+)
+
+**When:** After PR #50 + RQ9 merge and `alembic upgrade head` through `0026` on staging.
+
+**Differs from § Outcome above:** index uses **compare + diff-scoped tarball** (D13), not full-repo tarball. Check run should show **`in_progress`** during review (G10), then `completed`.
+
+| Gate | Check |
+|------|--------|
+| Index mode | `github_index_jobs.index_mode = diff` on autostart job |
+| Pipeline trace | `GET …/pipeline` returns `retrieve` → `review` → … steps |
+| D10 | Re-push same PR — no duplicate active groups |
+| RQ6 | Deletion-only sync sets `resolution_status` on prior groups |
+| G3 | Compact check body; Greptile narrative in issue comment |
+| G10 RQ9 | Open PR indexed → convert to draft before review enqueue → check `neutral` (not stuck `in_progress`) |
+| O8 | Celery beat running; `pipeline_purge_tasks` registered |
+
+**Test PR:** [#44](https://github.com/raimondskrauklis/revy/pull/44) or new tiny diff PR.
+
+---
+
 ## Follow-ups (product / engineering)
 
 | Priority | Item | Track |
 |----------|------|-------|
-| High | Diff-scoped / incremental indexing (index PR changed files only) | R9 (planned) |
+| High | Diff-scoped / incremental indexing (index PR changed files only) | **review-quality** (merged #50) + RQ9 hardening |
 | Medium | Deprioritize or exclude `**/tests/**` in standard profile unless PR touches tests | Prompt / index policy |
 | Medium | Reconcile Celery retry → same transient classification as review/publish | Hardening |
 | Low | Dedupe paraphrase duplicates (fingerprint includes full `message`) | R5 fingerprint policy |

@@ -15,6 +15,7 @@ from app.services.github_pipeline_trace import (
     ensure_pipeline_run_for_index_job,
     finalize_pipeline_github_check_failure,
     finalize_pipeline_github_check_for_index_job,
+    finalize_pipeline_github_check_neutral,
     record_index_pipeline_step,
     start_pipeline_github_check,
     stash_pipeline_github_check_run_id,
@@ -105,6 +106,16 @@ def index_pull_request_revision(self, index_job_id: str) -> None:
             review_outcome = await prepare_review_after_index(session, job)
             if review_outcome.review_run_id is not None:
                 review_run_ids.append(review_outcome.review_run_id)
+            elif (
+                pipeline_run_id is not None
+                and job.status == GitHubIndexJobStatus.completed
+                and review_outcome.neutral_finalize_check
+            ):
+                await finalize_pipeline_github_check_neutral(
+                    session,
+                    pipeline_run_id=pipeline_run_id,
+                    summary=review_outcome.pipeline_check_summary or "Review skipped",
+                )
             elif (
                 pipeline_run_id is not None
                 and job.status == GitHubIndexJobStatus.completed

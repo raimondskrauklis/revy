@@ -2,7 +2,7 @@
 
 Baseline for post-R8 work: **diff-first review**, **pipeline explainability**, **Greptile-shaped GitHub publish**, incremental indexing, evidence + grounding, and resolution metrics. **No execution steps.**
 
-**Date:** 2026-07-27 · **Status:** baseline-ready — devil's-advocate pass resolved; **single PR** ship (`feat/review-quality`).
+**Date:** 2026-07-27 · **Status:** shipped — merged to `main` (PR #50). Human gate: AS2 + `0026` on staging.
 
 **Program:** [review-quality/README.md](./README.md) · **Parent:** [REVIEW_PIPELINE_FINDINGS.md](../REVIEW_PIPELINE_FINDINGS.md) · **Greptile target:** [REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md](../REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md) · **Staging pain:** [REVIEW_PIPELINE_STAGING_SMOKE_VALIDATION.md](../REVIEW_PIPELINE_STAGING_SMOKE_VALIDATION.md).
 
@@ -534,4 +534,4 @@ Full strategy: [REVIEW_QUALITY_REVIEW_CONTEXT.md](./REVIEW_QUALITY_REVIEW_CONTEX
 | [REVIEW_PIPELINE_STAGING_SMOKE_VALIDATION.md](../REVIEW_PIPELINE_STAGING_SMOKE_VALIDATION.md) | Why diff-first |
 | [REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md](../REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md) | Greptile + iterative review |
 
-**Next:** `phase-execution` on `feat/review-quality` starting at RQ0 — [execution](../waves/REVIEW_QUALITY_EXECUTION.md) peer-reviewed (2026-07-27).
+**Next:** Human gate AS2 + staging `0026` → tag `review-quality-v1`. Post-v1: RQ-STRUCT-1, RQ-RC-1.

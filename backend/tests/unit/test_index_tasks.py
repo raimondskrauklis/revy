@@ -114,3 +114,159 @@ def test_index_pull_request_revision_finalizes_check_when_review_enqueue_fails()
 
     finalize_mock.assert_awaited_once()
     assert db_context.__aenter__.await_count == 2
+
+
+def test_index_pull_request_revision_finalizes_neutral_check_for_draft_pull_request():
+    revision_id = uuid.uuid4()
+    job = GitHubIndexJobORM(
+        revision_id=revision_id,
+        workspace_id=uuid.uuid4(),
+        status=GitHubIndexJobStatus.pending,
+        trigger_source=GitHubIndexJobTriggerSource.autostart,
+        chunk_count=3,
+    )
+    job.id = uuid.uuid4()
+    pipeline_run_id = uuid.uuid4()
+
+    revision = MagicMock()
+    revision.head_sha = "abc"
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[job, revision])
+    session.flush = AsyncMock()
+
+    db_context = MagicMock()
+    db_context.__aenter__ = AsyncMock(return_value=session)
+    db_context.__aexit__ = AsyncMock(return_value=None)
+
+    pipeline_run = MagicMock()
+    pipeline_run.id = pipeline_run_id
+    completed_job = GitHubIndexJobORM(
+        revision_id=revision_id,
+        workspace_id=job.workspace_id,
+        status=GitHubIndexJobStatus.completed,
+        trigger_source=GitHubIndexJobTriggerSource.autostart,
+        chunk_count=3,
+    )
+    completed_job.id = job.id
+
+    with patch("app.workers.index_tasks.get_db_context", return_value=db_context):
+        with patch(
+            "app.workers.index_tasks.run_index_job",
+            AsyncMock(return_value=completed_job),
+        ):
+            with patch(
+                "app.workers.index_tasks.ensure_pipeline_run_for_index_job",
+                AsyncMock(return_value=pipeline_run),
+            ):
+                with patch(
+                    "app.workers.index_tasks.start_pipeline_github_check",
+                    AsyncMock(return_value=99),
+                ):
+                    with patch(
+                        "app.workers.index_tasks.stash_pipeline_github_check_run_id",
+                        AsyncMock(),
+                    ):
+                        with patch(
+                            "app.workers.index_tasks.record_index_pipeline_step",
+                            AsyncMock(),
+                        ):
+                            with patch(
+                                "app.workers.index_tasks.prepare_review_after_index",
+                                AsyncMock(
+                                    return_value=ReviewAfterIndexOutcome(
+                                        neutral_finalize_check=True,
+                                        pipeline_check_summary="Review skipped — pull request is draft or not open",
+                                    )
+                                ),
+                            ):
+                                with patch(
+                                    "app.workers.index_tasks.finalize_pipeline_github_check_neutral",
+                                    AsyncMock(),
+                                ) as neutral_mock:
+                                    with patch("app.workers.index_tasks.enqueue_review_run"):
+                                        index_tasks.index_pull_request_revision.run(str(job.id))
+
+    neutral_mock.assert_awaited_once()
+    assert db_context.__aenter__.await_count == 2
+
+
+def test_index_pull_request_revision_uses_split_db_context_when_index_fails():
+    revision_id = uuid.uuid4()
+    job = GitHubIndexJobORM(
+        revision_id=revision_id,
+        workspace_id=uuid.uuid4(),
+        status=GitHubIndexJobStatus.pending,
+        trigger_source=GitHubIndexJobTriggerSource.autostart,
+        chunk_count=0,
+    )
+    job.id = uuid.uuid4()
+    pipeline_run_id = uuid.uuid4()
+
+    revision = MagicMock()
+    revision.head_sha = "abc"
+
+    setup_session = AsyncMock()
+    setup_session.get = AsyncMock(side_effect=[job, revision])
+    setup_session.flush = AsyncMock()
+
+    index_session = AsyncMock()
+
+    db_contexts: list[MagicMock] = []
+
+    def make_db_context() -> MagicMock:
+        ctx = MagicMock()
+        if not db_contexts:
+            ctx.__aenter__ = AsyncMock(return_value=setup_session)
+        else:
+            ctx.__aenter__ = AsyncMock(return_value=index_session)
+        ctx.__aexit__ = AsyncMock(return_value=None)
+        db_contexts.append(ctx)
+        return ctx
+
+    pipeline_run = MagicMock()
+    pipeline_run.id = pipeline_run_id
+    failed_job = GitHubIndexJobORM(
+        revision_id=revision_id,
+        workspace_id=job.workspace_id,
+        status=GitHubIndexJobStatus.failed,
+        trigger_source=GitHubIndexJobTriggerSource.autostart,
+        chunk_count=0,
+        error_message="tarball failed",
+    )
+    failed_job.id = job.id
+
+    with patch("app.workers.index_tasks.get_db_context", side_effect=make_db_context):
+        with patch(
+            "app.workers.index_tasks.run_index_job",
+            AsyncMock(return_value=failed_job),
+        ):
+            with patch(
+                "app.workers.index_tasks.ensure_pipeline_run_for_index_job",
+                AsyncMock(return_value=pipeline_run),
+            ):
+                with patch(
+                    "app.workers.index_tasks.start_pipeline_github_check",
+                    AsyncMock(return_value=99),
+                ):
+                    with patch(
+                        "app.workers.index_tasks.stash_pipeline_github_check_run_id",
+                        AsyncMock(),
+                    ):
+                        with patch(
+                            "app.workers.index_tasks.record_index_pipeline_step",
+                            AsyncMock(),
+                        ):
+                            with patch(
+                                "app.workers.index_tasks.prepare_review_after_index",
+                                AsyncMock(return_value=ReviewAfterIndexOutcome()),
+                            ):
+                                with patch(
+                                    "app.workers.index_tasks.finalize_pipeline_github_check_failure",
+                                    AsyncMock(),
+                                ) as finalize_mock:
+                                    with patch("app.workers.index_tasks.enqueue_review_run"):
+                                        index_tasks.index_pull_request_revision.run(str(job.id))
+
+    assert len(db_contexts) == 2
+    finalize_mock.assert_awaited_once()

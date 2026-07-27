@@ -257,7 +257,11 @@ async def test_prepare_review_after_index_skips_draft_pull_request(create_review
     session.get = AsyncMock(side_effect=[revision, pull_request])
     session.scalar = AsyncMock(return_value=None)
 
-    assert (await prepare_review_after_index(session, job)).review_run_id is None
+    result = await prepare_review_after_index(session, job)
+
+    assert result.review_run_id is None
+    assert result.neutral_finalize_check is True
+    assert "draft" in (result.pipeline_check_summary or "").lower()
     create_review_run_mock.assert_not_awaited()
 
 
@@ -281,7 +285,11 @@ async def test_prepare_review_after_index_skips_closed_pull_request(create_revie
     session.get = AsyncMock(side_effect=[revision, pull_request])
     session.scalar = AsyncMock(return_value=None)
 
-    assert (await prepare_review_after_index(session, job)).review_run_id is None
+    result = await prepare_review_after_index(session, job)
+
+    assert result.review_run_id is None
+    assert result.neutral_finalize_check is True
+    assert "not open" in (result.pipeline_check_summary or "").lower()
     create_review_run_mock.assert_not_awaited()
 
 

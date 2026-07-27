@@ -2,12 +2,22 @@
   "files": [
     {
       "path": "docs/review-pipeline/waves/REVIEW_QUALITY_EXECUTION.md",
-      "description": "Active execution contract — locked schema, routes, and phase gates (RQ0–RQ8)",
+      "description": "Active execution contract — locked schema, routes, and phase gates (RQ0–RQ9)",
       "scope": ["backend/**"]
     },
     {
       "path": "docs/review-pipeline/review-quality/REVIEW_QUALITY_FINDINGS.md",
       "description": "Locked Q# registry and storage model for review-quality",
+      "scope": ["backend/**"]
+    },
+    {
+      "path": "docs/utils/CURSOR_AGENT_WORKFLOW.md",
+      "description": "Agent workflow quick ref — roles, verbs, gates",
+      "scope": ["backend/**"]
+    },
+    {
+      "path": "docs/review-pipeline/agents/prompts/ROLES.md",
+      "description": "Master/reviewer boundaries and FIND/VALIDATE/CLOSE verbs",
       "scope": ["backend/**"]
     }
   ]

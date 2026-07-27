@@ -25,6 +25,7 @@ from app.models.github_pipeline import (
 from app.models.github_review_run import GitHubReviewRunORM
 from app.services.github_pipeline_trace import (
     ensure_pipeline_run_for_index_job,
+    finalize_pipeline_github_check_neutral,
     get_pipeline_trace_for_review_run,
     purge_old_pipeline_artifacts,
     record_index_pipeline_step,
@@ -200,3 +201,59 @@ async def test_purge_old_pipeline_artifacts_deletes_rows():
 
     assert deleted == 3
     assert settings.pipeline_retention_days == 90
+
+
+@pytest.mark.asyncio
+async def test_finalize_pipeline_github_check_neutral_updates_check():
+    pipeline_run_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    repository_id = uuid.uuid4()
+    installation_id = uuid.uuid4()
+
+    pipeline_run = MagicMock()
+    pipeline_run.revision_id = revision_id
+
+    revision = MagicMock()
+    revision.pull_request_id = pull_request_id
+
+    pull_request = MagicMock()
+    pull_request.repository_id = repository_id
+    pull_request.installation_id = installation_id
+
+    repository = MagicMock()
+    repository.full_name = "owner/repo"
+
+    installation = MagicMock()
+    installation.github_installation_id = 12345
+
+    session = AsyncMock()
+    session.get = AsyncMock(
+        side_effect=[pipeline_run, revision, pull_request, repository, installation]
+    )
+
+    with patch(
+        "app.services.github_pipeline_trace.resolve_pipeline_github_check_run_id",
+        AsyncMock(return_value=42),
+    ):
+        with patch("app.services.github_pipeline_trace.settings") as mock_settings:
+            mock_settings.github_api_enabled = True
+            with patch(
+                "app.services.github_pipeline_trace.github_api.update_check_run",
+                AsyncMock(),
+            ) as update_mock:
+                with patch("app.services.github_pipeline_trace.httpx.AsyncClient") as client_mock:
+                    client = AsyncMock()
+                    client.__aenter__ = AsyncMock(return_value=client)
+                    client.__aexit__ = AsyncMock(return_value=None)
+                    client_mock.return_value = client
+
+                    await finalize_pipeline_github_check_neutral(
+                        session,
+                        pipeline_run_id=pipeline_run_id,
+                        summary="Review skipped — pull request is draft or not open",
+                    )
+
+    update_mock.assert_awaited_once()
+    assert update_mock.await_args.kwargs["conclusion"] == "neutral"
+    assert update_mock.await_args.kwargs["check_run_id"] == 42

@@ -54,5 +54,5 @@ Workspace tenancy; audit on mutating routes; EN+LV for UI; unit tests; hand-writ
 
 ## Next
 
-1. **Review quality** — [findings](./review-quality/REVIEW_QUALITY_FINDINGS.md) + [execution](./waves/REVIEW_QUALITY_EXECUTION.md) → `phase-execution` on `feat/review-quality`.
-2. **Post-merge ops** — staging e2e per [GITHUB_WEBHOOK_DEV.md](./GITHUB_WEBHOOK_DEV.md) and review-quality RQ8 human gate.
+1. **Human gate** — staging `0026` + AS2 → tag `review-quality-v1` — [review-quality/](./review-quality/README.md).
+2. **Post-merge ops** — staging e2e per [GITHUB_WEBHOOK_DEV.md](./GITHUB_WEBHOOK_DEV.md).

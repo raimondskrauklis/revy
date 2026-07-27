@@ -15,7 +15,7 @@ Thin routers for **smart agents with good context**. Verbose prompts are not the
 | Re-pasting long Custom Instructions every gate | [PHASES.md](./PHASES.md) — one distilled block per RQn |
 | Thinking trace is gold, final line is not | [chain_of_thoughts/](../chain_of_thoughts/) — archive UI exports; distill rows in [DOGFOOD](../../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md) |
 
-**Wiring (unchanged):** `.cursor/BUGBOT.md` → active phase + links to EXECUTION/FINDINGS. Greptile → `.greptile/files.json`. This folder is **how to invoke and what to ask for**, not the locked contract.
+**Wiring:** `.cursor/BUGBOT.md` → contract docs + [CURSOR_AGENT_WORKFLOW.md](../../../utils/CURSOR_AGENT_WORKFLOW.md). Greptile → `.greptile/files.json`.
 
 ---
 
@@ -49,7 +49,7 @@ Agent won't infer the track — master must set VERB in the brief. Wrong verb = 
 ## Gate sequence (phase LOOP)
 
 ```text
-Pass 1 — FIND     Custom Instructions: PHASES § RQn + “report all actionable bugs”
+Pass 1 — FIND     Custom Instructions: PHASES § RQn + OUTPUT_FORMAT (Findings + Deferred + Scope note always)
 Fix blockers
 Pass 2 — CLOSE    “Verify pass 1 closed; NEW bugs only; REQUIRED deferred table”
 Fix blockers (if any)
@@ -80,6 +80,7 @@ Greptile = post-push contract. Bugbot = pre-push adversarial. Never skip Bugbot 
 | File | Use when |
 |------|----------|
 | [ROLES.md](./ROLES.md) | Human / master / reviewer — who talks to whom |
+| [../../../utils/CURSOR_AGENT_WORKFLOW.md](../../../utils/CURSOR_AGENT_WORKFLOW.md) | **Quick ref** — attach first in new chats |
 | [TWO_AGENTS.md](./TWO_AGENTS.md) | Onboarding; why implementer misses what reviewer catches |
 | [OUTPUT_FORMAT.md](./OUTPUT_FORMAT.md) | Every Bugbot invoke — paste tail into Custom Instructions |
 | [PHASES.md](./PHASES.md) | Per-RQ Custom Instructions body |

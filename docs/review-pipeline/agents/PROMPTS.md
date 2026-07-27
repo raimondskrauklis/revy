@@ -20,6 +20,7 @@ VERB: FIND | VALIDATE | CLOSE
 SCOPE: <files>
 VALIDATE: <fn → failure path>   # VALIDATE only — stops Greptile anchoring (RC-D17)
 OUT OF SCOPE: <one line>
+OUTPUT: Findings + Deferred + Scope note (always) — see OUTPUT_FORMAT.md
 <PHASES § RQn — FIND only>
 <Greptile verbatim — VALIDATE only>
 <OUTPUT_FORMAT tail>
@@ -57,7 +58,7 @@ Greptile is post-push. **VALIDATE** (pass 1) → fix → **CLOSE** (pass 2); re-
 - Babysit: VALIDATE → fix → CLOSE; re-CLOSE until clean → push.
 - Phase LOOP: FIND → fix → CLOSE; re-CLOSE until clean → push.
 - Read only current RQ execution section.
-- Update .cursor/BUGBOT.md active phase line each RQ.
+- Update `.cursor/BUGBOT.md` when starting a **new** program slice
 ```
 
 Legacy per-phase blocks below are **superseded by prompts/PHASES.md** — kept for grep only.

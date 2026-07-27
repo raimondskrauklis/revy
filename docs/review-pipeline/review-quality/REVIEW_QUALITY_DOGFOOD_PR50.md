@@ -1,6 +1,6 @@
 # Review quality — dogfood PR #50 (Greptile + Revy)
 
-**PR:** [#50](https://github.com/raimondskrauklis/revy/pull/50) · **branch:** `feat/review-quality` · **phase:** RQ0  
+**PR:** [#50](https://github.com/raimondskrauklis/revy/pull/50) · **merged to `main`** · **phase:** RQ0–RQ8 complete
 **Raw paste:** [actual_output_revy_greptile.txt](./actual_output_revy_greptile.txt) (GitHub copy, 2026-07-27)  
 **Strategy:** [REVIEW_QUALITY_REVIEW_CONTEXT.md](./REVIEW_QUALITY_REVIEW_CONTEXT.md) · **Lessons:** [CODE_REVIEW_LEARNINGS](../REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md) · **Agents:** [agents/](../agents/README.md)
 
@@ -24,6 +24,7 @@
 | **Context depth** | Cites **AS1**, execution contract, behavioral regression (“RQ0→RQ1 window”) | Table row: title + file — **message lives in Revy UI** | **G5** narrative + execution-aware prompts when wired |
 | **Actionability** | `suggestion` fenced blocks on some threads | Table is read-only; action in app | Inline `suggestion` + check footer `@revy review` |
 | **Planning docs** | Low noise on `.md` when scoped to `backend/**` | Flags doc inconsistencies in table | RC1 slice scoping if needed |
+| **Lightweight ack** | 👀 on PR open; “read your summary” affordance | Check `in_progress` only (G10) — no emoji/ack comment | **G-UX+** — post-v1; not blocking `review-quality-v1` |
 
 ### What Greptile does well (copy the pattern, not the vendor)
 
@@ -317,7 +318,7 @@ The thinking trace explores **many** hypotheses (deletion-only sync, `paths_to_i
 | medium | Embed fails after copy-forward → partial chunks **committed** (`get_db_context` commits on normal return) | 179–183 | `_fail_index_job_after_chunk_work` → `session.rollback()` then mark job failed |
 | medium | Index succeeds, `ServiceUnavailableError` on `create_review_run` → G10 check stuck `in_progress` | 133–135 | `ReviewAfterIndexOutcome.fail_pipeline_check`; `index_tasks` finalizes failure for transient enqueue errors only (draft/closed/pending review stay benign) |
 
-**Still open (parking):** draft/closed PR leaves check `in_progress` after index — needs G10 `neutral` finalize (RQ7/G10 polish), not failure.
+**Still open (parking):** ~~draft/closed PR leaves check `in_progress` after index~~ → **RQ9** ships `neutral_finalize_check` + `finalize_pipeline_github_check_neutral`.
 
 **Archive:** commit `local_bugbot_from_ui_1.txt` under `agents/chain_of_thoughts/` when useful; thin exports (`cursor_bugbot_rq4_pass_6.md`) are not sufficient for dogfood.
 
@@ -382,7 +383,7 @@ OUT OF SCOPE: other threads, pre-existing, parking
 | medium | Migration supersede → publish before next reconcile shows green check | One-shot deploy; D10-M accepted; narrow rolling window |
 | low | Duplicate Celery task → second GitHub check | Pre-existing; `external_id` may upsert; not introduced by TX split |
 | low | Re-dispatch index task on completed job → orphan `in_progress` check | Pre-existing; TX split does not worsen |
-| low | Draft/closed PR leaves G10 `in_progress` | Parking — RQ7/G10 `neutral` finalize |
+| low | Draft/closed PR leaves G10 `in_progress` | **RQ9** — `neutral` finalize on `docs/agent-work` |
 | low | Massive `UPDATE` locks `github_finding_groups` | One-shot migration; acceptable for v1 scale |
 
 **Real fixes (Greptile was right):** G10 check stranded on same-session rollback → split `get_db_context`; D10 fingerprint orphans active groups → supersede pass in `0026`.
@@ -438,6 +439,7 @@ Greptile diagnosed symptom correctly (D13-F diagnostics lost on tarball fail) bu
 | ID | Wave | Item |
 |----|------|------|
 | **G-UX** | RQ7 | Greptile-shaped **issue comment** + P-badge inline + G3 split bodies — see [visual UX §](./REVIEW_QUALITY_DOGFOOD_PR50.md#visual--context-ux--greptile--bugbot-vs-revy-target-bar) |
+| **G-UX+** | Post-v1 | **Ack affordances** — lightweight “noticed you” UX: webhook/`@revy` ack, short status on issue comment, optional reaction-style signal. Functional review unchanged; users expect interaction (Greptile 👀). **Not** blocking `review-quality-v1`. |
 | **RQ1** | RQ1 | Diff-first retrieval — fixes Revy error on deploy |
 | **RQ3** | RQ3 | Pipeline GET — agents can read trace without UI paste |
 | **RC1** | RQ-RC-1 | Scope Greptile files to active RQ slice if noise grows |
@@ -469,3 +471,50 @@ After each LOOP commit on #50, add a row:
 | babysit | 2 P1 (G10 TX, D10 supersede) | — | RC-D16 — shallow Greptile fix + deep Bugbot; [§](#greptile-babysit-vs-bugbot-depth-rc-d16) |
 | babysit | 1 P1 (compare-fallback flush) | — | RC-D17 — Greptile minimum fix ≠ production; [§](#greptile-minimum-fix--production-fix-rc-d17) |
 | RQ5–RQ8 | — | — | LOOP complete on branch — evidence/judge, resolution, Greptile publish, doc-sync |
+| RQ9 | 2 P2 inline; summary 4/5 | neutral ~6m JSON blob | PR [#51](https://github.com/raimondskrauklis/revy/pull/51) — [§](#dogfood-pr-51--docsagent-work-rq9) · [post-v1 findings](../post-review-quality/POST_REVIEW_QUALITY_FINDINGS.md) |
+
+---
+
+## Dogfood PR #51 — `docs/agent-work` (RQ9)
+
+**PR:** [#51](https://github.com/raimondskrauklis/revy/pull/51) · **branch:** `docs/agent-work` · **commit:** `8cd8e03`
+
+**RC0 wiring (this PR):** `.greptile/files.json` adds `CURSOR_AGENT_WORKFLOW.md` + `ROLES.md` (4 files total).
+
+### Greptile first-comment log
+
+| Field | Value |
+|-------|--------|
+| **When** | 2026-07-27 ~16:34 UTC |
+| **👀 reaction** | Yes on PR open — queued ack (RC-D20) |
+| **Cited execution § RQ9?** | **Yes** — summary names neutral finalize, `_finalize_pipeline_github_check`, split DB context, `ReviewAfterIndexOutcome` |
+| **Cited wired docs (ROLES, workflow)?** | No explicit cite — mechanism from diff + RC0 `files.json` |
+| **Diff-only review?** | **No** — behavioral + test coverage review |
+| **Confidence** | 4/5 — safe to merge |
+| **Inline** | 2× P2 (Literal `conclusion`; closed-PR test assertion) |
+| **Distill** | [post-v1 findings](../post-review-quality/POST_REVIEW_QUALITY_FINDINGS.md) |
+
+**Master checklist:**
+
+1. ✅ Inline cites **G10 / RQ9 mechanism** — not random style nits only
+2. ✅ Summary matches **draft/closed at review time** (not draft autostart trap)
+3. **Revy bot** — weak JSON comment vs Greptile narrative → **PQ-UX-1** (RC-D22)
+
+### Local Bugbot (pre-push)
+
+| Field | Value |
+|-------|--------|
+| **Run** | FIND · `docs/agent-work` vs `main` |
+| **Thinking** | [cursor_bugbot_form_ui_7.txt](../agents/chain_of_thoughts/cursor_bugbot_form_ui_7.txt) |
+| **Findings** | 4 (medium: draft smoke; low: links, my-commands, trace test) — all fixed pre-push |
+| **RC-D19** | No Deferred table in output; platform XML over table — [OUTPUT_FORMAT § RC-D19](../agents/prompts/OUTPUT_FORMAT.md#bugbot-pass-1--format-compliance-rc-d19) |
+
+### RC-D20 — Greptile 👀 ≠ comprehension
+
+| Signal | Meaning |
+|--------|---------|
+| 👀 on PR open | Bot subscribed; review queued |
+| Check running (orange dot) | CI/Greptile in progress — same class as Revy G10 `in_progress` |
+| First comment | First real engineering-context signal — log in table above |
+
+**Product:** **G-UX+** — optional ack layer on top of functional G10 (not blocking v1).
