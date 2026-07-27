@@ -342,3 +342,75 @@ async def test_start_pipeline_github_check_creates_in_progress_run():
     create_mock.assert_awaited_once()
     assert create_mock.await_args.kwargs["status"] == "in_progress"
     assert "Revy review in progress" in create_mock.await_args.kwargs["summary"]
+
+
+@pytest.mark.asyncio
+async def test_record_generation_superseded_on_pipeline_writes_index_manifest():
+    pipeline_run_id = uuid.uuid4()
+    review_run_id = uuid.uuid4()
+    step_id = uuid.uuid4()
+
+    pipeline_run = GitHubPipelineRunORM(
+        workspace_id=uuid.uuid4(),
+        revision_id=uuid.uuid4(),
+        head_sha="abc",
+        review_run_id=review_run_id,
+    )
+    pipeline_run.id = pipeline_run_id
+
+    step = GitHubPipelineStepORM(
+        pipeline_run_id=pipeline_run_id,
+        step_type=PipelineStepType.index,
+        status=PipelineStepStatus.completed,
+        duration_ms=100,
+    )
+    step.id = step_id
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[pipeline_run, step, None])
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    from app.services.github_pipeline_trace import record_generation_superseded_on_pipeline
+
+    await record_generation_superseded_on_pipeline(session, review_run_id=review_run_id)
+
+    assert session.add.call_count == 1
+    artifact = session.add.call_args.args[0]
+    assert artifact.kind == PipelineArtifactKind.manifest
+    assert "generation_superseded_at" in artifact.content_json
+
+
+@pytest.mark.asyncio
+async def test_record_publish_skip_on_pipeline_writes_manifest_flag():
+    pipeline_run_id = uuid.uuid4()
+    review_run_id = uuid.uuid4()
+
+    pipeline_run = GitHubPipelineRunORM(
+        workspace_id=uuid.uuid4(),
+        revision_id=uuid.uuid4(),
+        head_sha="abc",
+        review_run_id=review_run_id,
+    )
+    pipeline_run.id = pipeline_run_id
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[pipeline_run, None, None])
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    from app.services.github_pipeline_trace import record_publish_skip_on_pipeline
+
+    await record_publish_skip_on_pipeline(
+        session,
+        review_run_id=review_run_id,
+        manifest_key="publish_skipped_not_head",
+    )
+
+    assert session.add.call_count >= 2
+    manifest_artifact = next(
+        call.args[0]
+        for call in session.add.call_args_list
+        if getattr(call.args[0], "kind", None) == PipelineArtifactKind.manifest
+    )
+    assert manifest_artifact.content_json["publish_skipped_not_head"] is True

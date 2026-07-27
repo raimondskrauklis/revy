@@ -217,6 +217,26 @@ async def _review_run_has_judge_outcomes(session: AsyncSession, *, review_run_id
     return existing is not None
 
 
+async def _judge_candidates_missing_outcome(
+    session: AsyncSession,
+    *,
+    review_run_id: UUID,
+    candidates: list[tuple[GitHubFindingORM, GitHubFindingGroupORM]],
+) -> bool:
+    for _finding, group in candidates:
+        if group.state == GitHubFindingGroupState.resolved:
+            continue
+        existing = await session.scalar(
+            select(GitHubFindingJudgeOutcomeORM.id).where(
+                GitHubFindingJudgeOutcomeORM.review_run_id == review_run_id,
+                GitHubFindingJudgeOutcomeORM.group_id == group.id,
+            )
+        )
+        if existing is None:
+            return True
+    return False
+
+
 async def record_review_run_judge_status(
     session: AsyncSession,
     *,
@@ -271,7 +291,15 @@ async def record_review_run_judge_status(
         model_ref=model_ref,
         artifacts_out=artifacts_out,
     )
-    run.judge_status = GitHubReviewJudgeStatus.completed
+    await session.flush()
+    if await _judge_candidates_missing_outcome(
+        session,
+        review_run_id=review_run_id,
+        candidates=candidates,
+    ):
+        run.judge_status = GitHubReviewJudgeStatus.skipped_unavailable
+    else:
+        run.judge_status = GitHubReviewJudgeStatus.completed
     await session.flush()
     return judged
 

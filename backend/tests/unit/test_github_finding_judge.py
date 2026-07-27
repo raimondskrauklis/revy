@@ -363,7 +363,7 @@ async def test_run_judge_bedrock_provider_without_anthropic_key():
     session = AsyncMock()
     session.get = AsyncMock(side_effect=[run, group])
     session.scalars = AsyncMock(return_value=[finding])
-    session.scalar = AsyncMock(return_value=None)
+    session.scalar = AsyncMock(side_effect=[None, uuid.uuid4()])
     session.add = MagicMock()
     session.flush = AsyncMock()
 
@@ -456,7 +456,7 @@ async def test_run_judge_service_unavailable_continues():
                 count = await record_review_run_judge_status(session, review_run_id=review_run_id)
 
     assert count == 0
-    assert run.judge_status == GitHubReviewJudgeStatus.completed
+    assert run.judge_status == GitHubReviewJudgeStatus.skipped_unavailable
     assert group.state == GitHubFindingGroupState.active
     session.add.assert_not_called()
 

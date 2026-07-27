@@ -1,6 +1,6 @@
 # Review generation lifecycle
 
-**Status:** P0–P1 on PR [#54](https://github.com/raimondskrauklis/revy/pull/54) (`f055f4a`); P2+ not started. Dogfood: [REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md](./REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md).
+**Status:** P0–P5 **done** on branch `feat/review-generation-lifecycle` (PR [#54](https://github.com/raimondskrauklis/revy/pull/54); HEAD `e0203d8` + P5). Dogfood: [REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md](./REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md).
 
 **North star:** Greptile / Bugbot-class **snapshot semantics** — work targets **latest HEAD**, supersede in-flight generation when a newer commit arrives, **publish to GitHub only after the pass completes** (no spill on check, summary, or inline).
 

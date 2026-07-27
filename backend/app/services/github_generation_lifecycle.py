@@ -25,6 +25,7 @@ from app.models.github_review_run import GitHubReviewRunORM
 from app.services.github_pipeline_trace import (
     finalize_pipeline_github_check_neutral,
     get_pipeline_run_for_review_run,
+    record_generation_superseded_on_pipeline,
 )
 
 logger = get_logger(__name__)
@@ -143,6 +144,7 @@ async def finalize_pipeline_checks_for_superseded_review_runs(
     review_run_ids: list[UUID],
 ) -> None:
     for review_run_id in review_run_ids:
+        await record_generation_superseded_on_pipeline(session, review_run_id=review_run_id)
         pipeline_run = await get_pipeline_run_for_review_run(session, review_run_id=review_run_id)
         if pipeline_run is not None:
             await finalize_pipeline_github_check_neutral(

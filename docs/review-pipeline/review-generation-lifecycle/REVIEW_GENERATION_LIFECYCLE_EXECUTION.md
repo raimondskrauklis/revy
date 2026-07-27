@@ -35,11 +35,11 @@ each phase: implement → pytest gate → Bugbot → commit (push when user/LOOP
 | Phase | Focus | Execution | Status |
 |-------|--------|-----------|--------|
 | P0 — Foundations | Enums + authority helpers + settings | [REVIEW_GENERATION_LIFECYCLE_P0_EXECUTION.md](./REVIEW_GENERATION_LIFECYCLE_P0_EXECUTION.md) | **done** |
-| P1 — HEAD gate | Skip publish when not HEAD / superseded | [REVIEW_GENERATION_LIFECYCLE_P1_EXECUTION.md](./REVIEW_GENERATION_LIFECYCLE_P1_EXECUTION.md) | **done** (local) |
-| P2 — Supersede | Stage-entry guards + G10 neutral | [REVIEW_GENERATION_LIFECYCLE_P2_EXECUTION.md](./REVIEW_GENERATION_LIFECYCLE_P2_EXECUTION.md) | **done** (local) |
-| P3 — Surface flush | No spill on any channel | [REVIEW_GENERATION_LIFECYCLE_P3_EXECUTION.md](./REVIEW_GENERATION_LIFECYCLE_P3_EXECUTION.md) | pending |
-| P4 — Coalesce | Autostart debounce ≤10 s | [REVIEW_GENERATION_LIFECYCLE_P4_EXECUTION.md](./REVIEW_GENERATION_LIFECYCLE_P4_EXECUTION.md) | pending |
-| P5 — Judge + dogfood | RG-6 filter, trace, doc sync | [REVIEW_GENERATION_LIFECYCLE_P5_EXECUTION.md](./REVIEW_GENERATION_LIFECYCLE_P5_EXECUTION.md) | pending |
+| P1 — HEAD gate | Skip publish when not HEAD / superseded | [REVIEW_GENERATION_LIFECYCLE_P1_EXECUTION.md](./REVIEW_GENERATION_LIFECYCLE_P1_EXECUTION.md) | **done** |
+| P2 — Supersede | Stage-entry guards + G10 neutral | [REVIEW_GENERATION_LIFECYCLE_P2_EXECUTION.md](./REVIEW_GENERATION_LIFECYCLE_P2_EXECUTION.md) | **done** |
+| P3 — Surface flush | No spill on any channel | [REVIEW_GENERATION_LIFECYCLE_P3_EXECUTION.md](./REVIEW_GENERATION_LIFECYCLE_P3_EXECUTION.md) | **done** |
+| P4 — Coalesce | Autostart debounce ≤10 s | [REVIEW_GENERATION_LIFECYCLE_P4_EXECUTION.md](./REVIEW_GENERATION_LIFECYCLE_P4_EXECUTION.md) | **done** |
+| P5 — Judge + dogfood | RG-6 filter, trace, doc sync | [REVIEW_GENERATION_LIFECYCLE_P5_EXECUTION.md](./REVIEW_GENERATION_LIFECYCLE_P5_EXECUTION.md) | **done** |
 
 **Dogfood log:** create `REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md` in **P5** (two pushes ~8 s apart; inline thread count metric).
 

@@ -42,6 +42,7 @@ from app.services.github_pipeline_trace import (
     get_pipeline_run_for_review_run,
     link_publish_job_to_pipeline,
     record_publish_pipeline_step,
+    record_publish_skip_on_pipeline,
     resolve_pipeline_github_check_run_id,
 )
 from app.services.github_publish_formatter import (
@@ -86,6 +87,16 @@ async def _skip_publish_job_at_gate(
     job.status = skip_status
     job.error_message = None
     await session.flush()
+    skip_manifest_key = {
+        GitHubPublishJobStatus.skipped_not_head: "publish_skipped_not_head",
+        GitHubPublishJobStatus.skipped_superseded: "publish_skipped_superseded",
+    }.get(skip_status)
+    if skip_manifest_key is not None:
+        await record_publish_skip_on_pipeline(
+            session,
+            review_run_id=job.review_run_id,
+            manifest_key=skip_manifest_key,
+        )
     pipeline_run = await get_pipeline_run_for_review_run(session, review_run_id=job.review_run_id)
     if pipeline_run is not None:
         await finalize_pipeline_github_check_neutral(
@@ -799,20 +810,10 @@ async def _build_publish_surface(
     repository: GitHubRepositoryORM,
     installation: GitHubInstallationORM,
 ) -> PublishSurfaceBuild:
-    groups = list(
-        await session.scalars(
-            select(GitHubFindingGroupORM)
-            .where(
-                GitHubFindingGroupORM.pull_request_id == pull_request.id,
-                GitHubFindingGroupORM.state != GitHubFindingGroupState.superseded,
-            )
-            .order_by(
-                _PUBLISH_GROUP_SEVERITY_ORDER,
-                GitHubFindingGroupORM.file_path.asc().nulls_last(),
-                GitHubFindingGroupORM.title,
-                GitHubFindingGroupORM.id,
-            )
-        )
+    groups = await publishable_groups_for_review_run(
+        session,
+        review_run_id=job.review_run_id,
+        pull_request_id=pull_request.id,
     )
     conclusion = compute_check_conclusion(groups)
     index_job = await get_latest_completed_index_job(
@@ -899,6 +900,15 @@ async def _build_publish_surface(
                     },
                 )
                 continue
+            if is_judge_candidate(severity=finding.severity, category=finding.category):
+                outcome = await session.scalar(
+                    select(GitHubFindingJudgeOutcomeORM.id).where(
+                        GitHubFindingJudgeOutcomeORM.review_run_id == job.review_run_id,
+                        GitHubFindingJudgeOutcomeORM.group_id == group.id,
+                    )
+                )
+                if outcome is None and group.state != GitHubFindingGroupState.resolved:
+                    continue
             inline_posts.append(
                 InlinePostSpec(
                     finding_id=finding.id,
