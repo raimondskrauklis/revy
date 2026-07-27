@@ -353,10 +353,39 @@ async def _load_prior_inline_thread_map(
     return _load_inline_thread_map(jobs)
 
 
-async def _resolve_superseded_inline_threads(
+async def _publishable_fingerprints_for_run(
+    session: AsyncSession,
+    *,
+    review_run_id: UUID,
+) -> set[str]:
+    """Fingerprints of groups with publishable inline findings for this review run."""
+    rows = await session.scalars(
+        select(GitHubFindingGroupORM.fingerprint)
+        .join(GitHubFindingORM, GitHubFindingORM.group_id == GitHubFindingGroupORM.id)
+        .where(
+            GitHubFindingORM.review_run_id == review_run_id,
+            GitHubFindingGroupORM.state == GitHubFindingGroupState.active,
+            GitHubFindingORM.severity.in_(
+                (
+                    FindingSeverity.error,
+                    FindingSeverity.critical,
+                    FindingSeverity.warning,
+                    FindingSeverity.info,
+                ),
+            ),
+            GitHubFindingORM.file_path.is_not(None),
+            GitHubFindingORM.start_line.is_not(None),
+        )
+        .distinct()
+    )
+    return set(rows)
+
+
+async def _resolve_stale_inline_threads(
     client: httpx.AsyncClient,
     *,
     session: AsyncSession,
+    review_run_id: UUID,
     github_installation_id: int,
     owner: str,
     repo_name: str,
@@ -367,6 +396,11 @@ async def _resolve_superseded_inline_threads(
 ) -> None:
     if not inline_threads:
         return
+
+    publishable = await _publishable_fingerprints_for_run(session, review_run_id=review_run_id)
+    fingerprints_to_resolve: set[str] = {
+        fingerprint for fingerprint in inline_threads if fingerprint not in publishable
+    }
 
     closed_groups = list(
         await session.scalars(
@@ -382,7 +416,11 @@ async def _resolve_superseded_inline_threads(
         )
     )
     for group in closed_groups:
-        comment_id = inline_threads.get(group.fingerprint)
+        if group.fingerprint in inline_threads:
+            fingerprints_to_resolve.add(group.fingerprint)
+
+    for fingerprint in fingerprints_to_resolve:
+        comment_id = inline_threads.get(fingerprint)
         if comment_id is None:
             continue
         try:
@@ -403,13 +441,13 @@ async def _resolve_superseded_inline_threads(
                 thread_id=thread_id,
                 auth_headers=auth_headers,
             )
-            inline_threads.pop(group.fingerprint, None)
+            inline_threads.pop(fingerprint, None)
         except (httpx.HTTPError, ServiceUnavailableError) as exc:
             logger.warning(
                 "github_publish_resolve_inline_thread_skipped",
                 extra={
                     "pull_request_id": str(pull_request_id),
-                    "fingerprint": group.fingerprint,
+                    "fingerprint": fingerprint,
                     "comment_id": comment_id,
                     "error": str(exc),
                 },
@@ -802,9 +840,10 @@ async def run_publish_job(
                 job.github_comment_id = comment_id
                 await _checkpoint_publish_surface(session, persist=persist_github_surface)
 
-            await _resolve_superseded_inline_threads(
+            await _resolve_stale_inline_threads(
                 client,
                 session=session,
+                review_run_id=job.review_run_id,
                 github_installation_id=installation.github_installation_id,
                 owner=owner,
                 repo_name=repo_name,
@@ -813,6 +852,15 @@ async def run_publish_job(
                 inline_threads=inline_threads,
                 auth_headers=auth_headers,
             )
+
+            prior_v2 = (job.summary_json or {}).get("github_inline_threads")
+            job.summary_json = {
+                **(job.summary_json or {}),
+                "github_inline_threads": serialize_inline_thread_map(
+                    inline_threads,
+                    prior_v2=prior_v2 if isinstance(prior_v2, dict) else None,
+                ),
+            }
 
             if post_inline:
                 inline_findings = list(
@@ -875,6 +923,8 @@ async def run_publish_job(
                     ),
                 }
                 job.inline_comments_posted = True
+                await _checkpoint_publish_surface(session, persist=persist_github_surface)
+            elif persist_github_surface:
                 await _checkpoint_publish_surface(session, persist=persist_github_surface)
 
         job.status = GitHubPublishJobStatus.completed
