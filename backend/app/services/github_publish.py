@@ -249,6 +249,108 @@ async def get_latest_publish_job_for_revision(
     )
 
 
+def _load_inline_thread_map(jobs: list[GitHubPublishJobORM]) -> dict[str, int]:
+    merged: dict[str, int] = {}
+    for prior in reversed(jobs):
+        summary = prior.summary_json
+        if not isinstance(summary, dict):
+            continue
+        inline = summary.get("github_inline_threads")
+        if isinstance(inline, dict):
+            for fingerprint, comment_id in inline.items():
+                if isinstance(fingerprint, str) and isinstance(comment_id, int):
+                    merged[fingerprint] = comment_id
+    return merged
+
+
+async def _load_prior_inline_thread_map(
+    session: AsyncSession,
+    *,
+    pull_request_id: UUID,
+) -> dict[str, int]:
+    revision_ids = list(
+        await session.scalars(
+            select(GitHubPullRequestRevisionORM.id).where(
+                GitHubPullRequestRevisionORM.pull_request_id == pull_request_id,
+            )
+        )
+    )
+    if not revision_ids:
+        return {}
+    jobs = list(
+        await session.scalars(
+            select(GitHubPublishJobORM)
+            .where(
+                GitHubPublishJobORM.revision_id.in_(revision_ids),
+                GitHubPublishJobORM.status == GitHubPublishJobStatus.completed,
+            )
+            .order_by(GitHubPublishJobORM.created_at.asc())
+        )
+    )
+    return _load_inline_thread_map(jobs)
+
+
+async def _resolve_superseded_inline_threads(
+    client: httpx.AsyncClient,
+    *,
+    session: AsyncSession,
+    github_installation_id: int,
+    owner: str,
+    repo_name: str,
+    pull_request_id: UUID,
+    pull_number: int,
+    inline_threads: dict[str, int],
+    auth_headers: dict[str, str],
+) -> None:
+    if not inline_threads:
+        return
+
+    closed_groups = list(
+        await session.scalars(
+            select(GitHubFindingGroupORM).where(
+                GitHubFindingGroupORM.pull_request_id == pull_request_id,
+                GitHubFindingGroupORM.state.in_(
+                    (
+                        GitHubFindingGroupState.superseded,
+                        GitHubFindingGroupState.resolved,
+                    )
+                ),
+            )
+        )
+    )
+    for group in closed_groups:
+        comment_id = inline_threads.pop(group.fingerprint, None)
+        if comment_id is None:
+            continue
+        try:
+            thread_id = await github_api.find_review_thread_id_for_comment(
+                client,
+                github_installation_id=github_installation_id,
+                owner=owner,
+                repo=repo_name,
+                pull_number=pull_number,
+                comment_database_id=comment_id,
+                auth_headers=auth_headers,
+            )
+            if thread_id is not None:
+                await github_api.resolve_review_thread(
+                    client,
+                    github_installation_id=github_installation_id,
+                    thread_id=thread_id,
+                    auth_headers=auth_headers,
+                )
+        except (httpx.HTTPError, ServiceUnavailableError) as exc:
+            logger.warning(
+                "github_publish_resolve_inline_thread_skipped",
+                extra={
+                    "pull_request_id": str(pull_request_id),
+                    "fingerprint": group.fingerprint,
+                    "comment_id": comment_id,
+                    "error": str(exc),
+                },
+            )
+
+
 async def find_publish_job_for_head_sha(
     session: AsyncSession,
     *,
@@ -456,7 +558,14 @@ async def run_publish_job(
     )
     check_summary = formatted.check_summary
     issue_comment = formatted.issue_comment
-    job.summary_json = formatted.summary_json
+    inline_threads = await _load_prior_inline_thread_map(
+        session,
+        pull_request_id=pull_request.id,
+    )
+    job.summary_json = {
+        **formatted.summary_json,
+        "github_inline_threads": inline_threads,
+    }
     owner, repo_name = repository.full_name.split("/", 1)
     external_id = github_api.build_check_run_external_id(
         github_installation_id=installation.github_installation_id,
@@ -583,6 +692,17 @@ async def run_publish_job(
                 await _checkpoint_publish_surface(session, persist=persist_github_surface)
 
             if post_inline:
+                await _resolve_superseded_inline_threads(
+                    client,
+                    session=session,
+                    github_installation_id=installation.github_installation_id,
+                    owner=owner,
+                    repo_name=repo_name,
+                    pull_request_id=pull_request.id,
+                    pull_number=pull_request.number,
+                    inline_threads=inline_threads,
+                    auth_headers=auth_headers,
+                )
                 inline_findings = list(
                     await session.scalars(
                         inline_publish_findings_statement(review_run_id=job.review_run_id).order_by(
@@ -595,8 +715,15 @@ async def run_publish_job(
                 for finding in inline_findings:
                     if finding.file_path is None or finding.start_line is None:
                         continue
+                    group = (
+                        await session.get(GitHubFindingGroupORM, finding.group_id)
+                        if finding.group_id is not None
+                        else None
+                    )
+                    if group is None:
+                        continue
                     try:
-                        await github_api.create_pull_request_review_comment(
+                        comment_id = await github_api.create_pull_request_review_comment(
                             client,
                             github_installation_id=installation.github_installation_id,
                             owner=owner,
@@ -613,6 +740,7 @@ async def run_publish_job(
                             ),
                             auth_headers=auth_headers,
                         )
+                        inline_threads[group.fingerprint] = comment_id
                     except httpx.HTTPStatusError as exc:
                         if exc.response.status_code in (404, 422):
                             logger.warning(
@@ -626,6 +754,10 @@ async def run_publish_job(
                             )
                             continue
                         raise
+                job.summary_json = {
+                    **(job.summary_json or {}),
+                    "github_inline_threads": inline_threads,
+                }
                 job.inline_comments_posted = True
                 await _checkpoint_publish_surface(session, persist=persist_github_surface)
 

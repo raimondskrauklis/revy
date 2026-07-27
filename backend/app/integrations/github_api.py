@@ -409,7 +409,7 @@ async def create_pull_request_review_comment(
     line: int,
     body: str,
     auth_headers: dict[str, str] | None = None,
-) -> None:
+) -> int:
     headers = await _resolve_auth_headers(
         client,
         github_installation_id=github_installation_id,
@@ -427,6 +427,105 @@ async def create_pull_request_review_comment(
         },
     )
     response.raise_for_status()
+    data = response.json()
+    comment_id = data.get("id")
+    if not isinstance(comment_id, int):
+        raise ServiceUnavailableError(
+            message="GitHub pull request review comment response invalid",
+            error_code="github_api_error",
+        )
+    return comment_id
+
+
+async def find_review_thread_id_for_comment(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+    owner: str,
+    repo: str,
+    pull_number: int,
+    comment_database_id: int,
+    auth_headers: dict[str, str] | None = None,
+) -> str | None:
+    """GraphQL lookup: REST comment id → review thread node id (PRRT_…)."""
+    headers = await _resolve_auth_headers(
+        client,
+        github_installation_id=github_installation_id,
+        auth_headers=auth_headers,
+    )
+    query = """
+    query($owner: String!, $repo: String!, $number: Int!) {
+      repository(owner: $owner, name: $repo) {
+        pullRequest(number: $number) {
+          reviewThreads(first: 100) {
+            nodes {
+              id
+              comments(first: 20) {
+                nodes { databaseId }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    response = await client.post(
+        f"{GITHUB_API_BASE}/graphql",
+        headers=headers,
+        json={"query": query, "variables": {"owner": owner, "repo": repo, "number": pull_number}},
+    )
+    response.raise_for_status()
+    payload = response.json()
+    threads = (
+        payload.get("data", {})
+        .get("repository", {})
+        .get("pullRequest", {})
+        .get("reviewThreads", {})
+        .get("nodes", [])
+    )
+    for thread in threads:
+        if not isinstance(thread, dict):
+            continue
+        thread_id = thread.get("id")
+        comments = thread.get("comments", {}).get("nodes", [])
+        for comment in comments:
+            if comment.get("databaseId") == comment_database_id:
+                return thread_id if isinstance(thread_id, str) else None
+    return None
+
+
+async def resolve_review_thread(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+    thread_id: str,
+    auth_headers: dict[str, str] | None = None,
+) -> None:
+    """Collapse a PR review thread on Files changed (GraphQL only)."""
+    headers = await _resolve_auth_headers(
+        client,
+        github_installation_id=github_installation_id,
+        auth_headers=auth_headers,
+    )
+    mutation = """
+    mutation($threadId: ID!) {
+      resolveReviewThread(input: {threadId: $threadId}) {
+        thread { isResolved }
+      }
+    }
+    """
+    response = await client.post(
+        f"{GITHUB_API_BASE}/graphql",
+        headers=headers,
+        json={"query": mutation, "variables": {"threadId": thread_id}},
+    )
+    response.raise_for_status()
+    errors = response.json().get("errors")
+    if errors:
+        raise ServiceUnavailableError(
+            message="GitHub resolveReviewThread failed",
+            error_code="github_api_error",
+        )
 
 
 def format_inline_comment_body(

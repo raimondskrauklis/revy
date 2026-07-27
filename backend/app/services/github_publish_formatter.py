@@ -2,6 +2,8 @@
 """Greptile-shaped GitHub publish formatting — RQ7."""
 from __future__ import annotations
 
+import json
+import re
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -24,6 +26,32 @@ logger = get_logger(__name__)
 
 FILES_NEEDING_ATTENTION_CAP = 20
 SUMMARY_ROW_CAP = 50
+
+_JSON_FENCE_RE = re.compile(r"^```(?:json)?\s*\n?(.*?)\n?```\s*$", re.DOTALL | re.IGNORECASE)
+
+
+def normalize_llm_issue_comment(raw: str) -> str:
+    """Strip JSON wrappers Moonshot sometimes returns instead of raw markdown."""
+    text = raw.strip()
+    if not text:
+        return text
+
+    fence_match = _JSON_FENCE_RE.match(text)
+    if fence_match:
+        text = fence_match.group(1).strip()
+
+    if text.startswith("{") and text.endswith("}"):
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError:
+            return raw.strip()
+        if isinstance(payload, dict):
+            for key in ("body", "comment", "markdown", "content"):
+                value = payload.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+
+    return raw.strip()
 
 
 def _revy_ui_link(pull_request_id: UUID) -> str:
@@ -240,6 +268,7 @@ async def build_pr_review_comment(ctx: PublishFormatContext) -> str:
     active = _active_groups(ctx.groups)
     prompt = (
         "Format a GitHub pull request review comment in markdown. "
+        "Return ONLY raw GitHub-flavored markdown — no JSON, no code fences, no {\"body\": ...} wrapper. "
         "Sections: short narrative, confidence score, files needing attention (bullets), "
         "findings severity table (no message column), metadata footer. "
         "Do not use mermaid. Keep under 12000 characters.\n\n"
@@ -260,7 +289,7 @@ async def build_pr_review_comment(ctx: PublishFormatContext) -> str:
                 user_prompt=prompt,
                 model_id=settings.revy_moonshot_model_for_profile("standard"),
             )
-        text = raw.strip()
+        text = normalize_llm_issue_comment(raw)
         if text:
             footer = _index_footer(ctx)
             if footer and footer not in text:

@@ -95,13 +95,14 @@ async def test_create_pull_request_review_comment_posts():
     client = AsyncMock()
     response = MagicMock()
     response.raise_for_status = MagicMock()
+    response.json.return_value = {"id": 999}
     client.post = AsyncMock(return_value=response)
 
     with patch(
-        "app.integrations.github_api._installation_headers",
+        "app.integrations.github_api._resolve_auth_headers",
         AsyncMock(return_value={"Authorization": "Bearer t"}),
     ):
-        await github_api.create_pull_request_review_comment(
+        comment_id = await github_api.create_pull_request_review_comment(
             client,
             github_installation_id=1,
             owner="acme",
@@ -113,6 +114,7 @@ async def test_create_pull_request_review_comment_posts():
             body="issue",
         )
 
+    assert comment_id == 999
     client.post.assert_awaited_once()
 
 

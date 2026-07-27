@@ -34,17 +34,25 @@ def _publish_formatter_defaults():
         AsyncMock(return_value=None),
     ):
         with patch(
-            "app.services.github_publish.build_publish_format_result_async",
-            AsyncMock(
-                return_value=PublishFormatResult(
-                    check_summary="## Revy review\n\n**Confidence:** 5/5",
-                    issue_comment="## Revy code review\n\nfull narrative",
-                    confidence=5,
-                    summary_json={"confidence": 5, "active_count": 0, "resolution": {}},
-                )
-            ),
+            "app.services.github_publish._load_prior_inline_thread_map",
+            AsyncMock(return_value={}),
         ):
-            yield
+            with patch(
+                "app.services.github_publish._resolve_superseded_inline_threads",
+                AsyncMock(),
+            ):
+                with patch(
+                    "app.services.github_publish.build_publish_format_result_async",
+                    AsyncMock(
+                        return_value=PublishFormatResult(
+                            check_summary="## Revy review\n\n**Confidence:** 5/5",
+                            issue_comment="## Revy code review\n\nfull narrative",
+                            confidence=5,
+                            summary_json={"confidence": 5, "active_count": 0, "resolution": {}},
+                        )
+                    ),
+                ):
+                    yield
 
 
 def test_compute_check_conclusion_failure_on_critical():
@@ -528,32 +536,55 @@ async def test_run_publish_job_posts_inline_for_warning_finding():
     finding.message = "Prefer explicit return"
     finding.severity = FindingSeverity.warning
     finding.suggestion = "return True"
+    finding.group_id = uuid.uuid4()
+
+    group = GitHubFindingGroupORM(
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="fp-warning",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Style",
+        message="Prefer explicit return",
+        file_path="app/main.py",
+        last_seen_revision_id=revision_id,
+    )
+    group.id = finding.group_id
 
     session = AsyncMock()
     session.get = AsyncMock(
-        side_effect=[job, run, revision, pull_request, repository, installation]
+        side_effect=[job, run, revision, pull_request, repository, installation, group]
     )
-    session.scalars = AsyncMock(side_effect=[[], [revision_id], [finding]])
+    session.scalars = AsyncMock(side_effect=[[], [], [finding]])
     session.scalar = AsyncMock(return_value=job)
     session.flush = AsyncMock()
     session.commit = AsyncMock()
 
-    inline_mock = AsyncMock()
+    inline_mock = AsyncMock(return_value=9001)
     with patch(
-        "app.services.github_publish.github_api.installation_auth_headers",
-        AsyncMock(return_value={"Authorization": "Bearer t"}),
+        "app.services.github_publish._load_prior_inline_thread_map",
+        AsyncMock(return_value={}),
     ):
-        with patch("app.services.github_publish.github_api.update_check_run", AsyncMock()):
-            with patch("app.services.github_publish.github_api.update_issue_comment", AsyncMock()):
-                with patch(
-                    "app.services.github_publish.github_api.create_pull_request_review_comment",
-                    inline_mock,
-                ):
-                    result = await github_publish.run_publish_job(
-                        session,
-                        publish_job_id=publish_job_id,
-                        persist_github_surface=True,
-                    )
+        with patch(
+            "app.services.github_publish._resolve_superseded_inline_threads",
+            AsyncMock(),
+        ):
+            with patch(
+                "app.services.github_publish.github_api.installation_auth_headers",
+                AsyncMock(return_value={"Authorization": "Bearer t"}),
+            ):
+                with patch("app.services.github_publish.github_api.update_check_run", AsyncMock()):
+                    with patch("app.services.github_publish.github_api.update_issue_comment", AsyncMock()):
+                        with patch(
+                            "app.services.github_publish.github_api.create_pull_request_review_comment",
+                            inline_mock,
+                        ):
+                            result = await github_publish.run_publish_job(
+                                session,
+                                publish_job_id=publish_job_id,
+                                persist_github_surface=True,
+                            )
 
     assert result.status == GitHubPublishJobStatus.completed
     assert result.inline_comments_posted is True
@@ -802,22 +833,37 @@ async def test_run_publish_job_posts_inline_when_prior_job_failed_before_inline(
         account_id=1,
     )
 
-    finding = AsyncMock()
+    finding = MagicMock()
     finding.file_path = "app/main.py"
     finding.start_line = 10
     finding.title = "Bug"
     finding.message = "Fix me"
     finding.severity = FindingSeverity.error
+    finding.group_id = uuid.uuid4()
+
+    group = GitHubFindingGroupORM(
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="fp-error",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Bug",
+        message="Fix me",
+        file_path="app/main.py",
+        last_seen_revision_id=revision_id,
+    )
+    group.id = finding.group_id
 
     session = AsyncMock()
     session.get = AsyncMock(
-        side_effect=[job, run, revision, pull_request, repository, installation]
+        side_effect=[job, run, revision, pull_request, repository, installation, group]
     )
     session.scalars = AsyncMock(side_effect=[[], [revision_id], [finding]])
     session.scalar = AsyncMock(return_value=existing)
     session.flush = AsyncMock()
 
-    inline_mock = AsyncMock()
+    inline_mock = AsyncMock(return_value=9002)
     with patch(
         "app.services.github_publish.github_api.installation_auth_headers",
         AsyncMock(return_value={"Authorization": "Bearer t"}),
@@ -1013,23 +1059,38 @@ async def test_run_publish_job_posts_inline_after_surface_checkpoint():
         account_id=1,
     )
 
-    finding = AsyncMock()
+    finding = MagicMock()
     finding.file_path = "app/main.py"
     finding.start_line = 10
     finding.title = "Bug"
     finding.message = "Fix me"
     finding.severity = FindingSeverity.error
+    finding.group_id = uuid.uuid4()
+
+    group = GitHubFindingGroupORM(
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="fp-error-2",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Bug",
+        message="Fix me",
+        file_path="app/main.py",
+        last_seen_revision_id=revision_id,
+    )
+    group.id = finding.group_id
 
     session = AsyncMock()
     session.get = AsyncMock(
-        side_effect=[job, run, revision, pull_request, repository, installation]
+        side_effect=[job, run, revision, pull_request, repository, installation, group]
     )
     session.scalars = AsyncMock(side_effect=[[], [revision_id], [finding]])
     session.scalar = AsyncMock(return_value=job)
     session.flush = AsyncMock()
     session.commit = AsyncMock()
 
-    inline_mock = AsyncMock()
+    inline_mock = AsyncMock(return_value=9003)
     with patch(
         "app.services.github_publish.github_api.installation_auth_headers",
         AsyncMock(return_value={"Authorization": "Bearer t"}),
