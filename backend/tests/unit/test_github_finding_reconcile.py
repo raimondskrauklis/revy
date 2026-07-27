@@ -39,6 +39,26 @@ def test_compute_fingerprint_stable():
     assert fp1 == fp2
 
 
+def test_compute_fingerprint_accepts_string_category():
+    workspace_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    fp_enum = compute_fingerprint(
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        file_path="app/main.py",
+        category=FindingCategory.bug,
+        message="Possible null",
+    )
+    fp_str = compute_fingerprint(
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        file_path="app/main.py",
+        category="bug",
+        message="Possible null",
+    )
+    assert fp_enum == fp_str
+
+
 @pytest.mark.asyncio
 async def test_reconcile_creates_new_group():
     review_run_id = uuid.uuid4()
@@ -88,6 +108,56 @@ async def test_reconcile_creates_new_group():
 
     assert len(group_ids) == 1
     assert finding.group_id == group_ids[0]
+
+
+@pytest.mark.asyncio
+async def test_reconcile_accepts_string_category_on_finding():
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+
+    run = GitHubReviewRunORM(
+        revision_id=revision_id,
+        workspace_id=workspace_id,
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    run.id = review_run_id
+
+    revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="abc",
+    )
+    revision.id = revision_id
+
+    finding = GitHubFindingORM(
+        review_run_id=review_run_id,
+        workspace_id=workspace_id,
+        severity="error",
+        category="security",
+        title="SQLi",
+        message="Unsanitized input",
+        file_path="app/db.py",
+    )
+    finding.id = uuid.uuid4()
+
+    def _add(obj: object) -> None:
+        if isinstance(obj, GitHubFindingGroupORM) and obj.id is None:
+            obj.id = uuid.uuid4()
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, revision])
+    session.scalars = AsyncMock(side_effect=[[finding], []])
+    session.scalar = AsyncMock(return_value=None)
+    session.add = MagicMock(side_effect=_add)
+    session.flush = AsyncMock()
+
+    group_ids = await reconcile_review_run(session, review_run_id=review_run_id)
+
+    assert len(group_ids) == 1
 
 
 @pytest.mark.asyncio

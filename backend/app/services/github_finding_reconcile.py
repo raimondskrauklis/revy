@@ -14,6 +14,7 @@ from app.constants.enums import (
     FindingSeverity,
     GitHubFindingGroupState,
     GitHubReviewRunStatus,
+    stored_enum_value,
 )
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.logging import get_logger
@@ -47,7 +48,7 @@ def compute_fingerprint(
     workspace_id: UUID,
     pull_request_id: UUID,
     file_path: str | None,
-    category: FindingCategory,
+    category: FindingCategory | str,
     message: str,
 ) -> str:
     normalized = normalize_message(message)[:500]
@@ -56,7 +57,7 @@ def compute_fingerprint(
             str(workspace_id),
             str(pull_request_id),
             file_path or "",
-            category.value,
+            stored_enum_value(category),
             normalized,
         ]
     )
@@ -177,13 +178,15 @@ async def reconcile_review_run(session: AsyncSession, *, review_run_id: UUID) ->
     return linked_group_ids
 
 
-def severity_rank(severity: FindingSeverity) -> int:
+def severity_rank(severity: FindingSeverity | str) -> int:
     order = {
         FindingSeverity.info: 0,
         FindingSeverity.warning: 1,
         FindingSeverity.error: 2,
         FindingSeverity.critical: 3,
     }
+    if isinstance(severity, str):
+        severity = FindingSeverity(severity)
     return order[severity]
 
 

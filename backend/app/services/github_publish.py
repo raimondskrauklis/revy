@@ -13,6 +13,7 @@ from app.constants.enums import (
     GitHubFindingGroupState,
     GitHubPublishJobStatus,
     GitHubReviewRunStatus,
+    stored_enum_value,
 )
 from app.core.config import settings
 from app.core.exceptions import ConflictError, NotFoundError, ServiceUnavailableError
@@ -171,7 +172,7 @@ def build_summary_markdown(
         file_cell = _escape_markdown_table_cell(group.file_path or "—")
         title_cell = _escape_markdown_table_cell(group.title)
         lines.append(
-            f"| {group.severity.value} | {group.category.value} | {title_cell} | {file_cell} |"
+            f"| {stored_enum_value(group.severity)} | {stored_enum_value(group.category)} | {title_cell} | {file_cell} |"
         )
     if len(active_all) > SUMMARY_ROW_CAP:
         lines.append("")
@@ -556,7 +557,7 @@ async def run_publish_job(
                             body=github_api.format_inline_comment_body(
                                 title=finding.title,
                                 message=finding.message,
-                                severity=finding.severity.value,
+                                severity=stored_enum_value(finding.severity),
                                 suggestion=is_publishable_suggestion(finding),
                             ),
                             auth_headers=auth_headers,
