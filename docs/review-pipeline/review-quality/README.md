@@ -1,6 +1,6 @@
 # Review quality program (post-R8)
 
-**Status:** findings + general plans + execution locked (2026-07-27). **Ship:** one PR `feat/review-quality` → tag `review-quality-v1`. **Next:** `phase-execution` (execution peer-review complete).
+**Status:** findings + general plans + execution locked (2026-07-27). **Ship:** one PR `feat/review-quality` → tag `review-quality-v1`. **Pace:** outcomes distillation first — see [agents/](../agents/README.md#principles-pace--outcomes). **Next:** RQ0 shipped; migration pause until staging `0026`.
 
 Post-R8 program: **diff-first review**, **pipeline explainability**, Greptile-shaped **GitHub publish**, incremental index (C1), evidence + grounding, resolution metrics. R0–R8 = core pipeline.
 
@@ -17,10 +17,10 @@ Post-R8 program: **diff-first review**, **pipeline explainability**, Greptile-sh
 | 3 | [R1](./REVIEW_QUALITY_R1_DIFF_AND_TRACE_GENERAL_PLAN.md) · [R2](./REVIEW_QUALITY_R2_INCREMENTAL_INDEX_GENERAL_PLAN.md) · [R3](./REVIEW_QUALITY_R3_GITHUB_PUBLISH_GENERAL_PLAN.md) · [R4](./REVIEW_QUALITY_R4_EVIDENCE_JUDGE_GENERAL_PLAN.md) · [R5](./REVIEW_QUALITY_R5_RESOLUTION_METRICS_GENERAL_PLAN.md) | Slice general plans (one PR) |
 | 4 | [REVIEW_QUALITY_EXECUTION.md](../waves/REVIEW_QUALITY_EXECUTION.md) | RQ0–RQ8 — **`phase-execution`** on `feat/review-quality` (peer-reviewed) |
 | — | [REVIEW_QUALITY_PEER_REVIEW.md](./REVIEW_QUALITY_PEER_REVIEW.md) | Architecture peer review + pre-execution locks |
-| — | [REVIEW_QUALITY_STRUCTURAL_CONTEXT.md](./REVIEW_QUALITY_STRUCTURAL_CONTEXT.md) | **Post-v1 strategy** — LSP defer, RQ-STRUCT-1/2, Greptile parity |
-| — | [REVIEW_QUALITY_REVIEW_CONTEXT.md](./REVIEW_QUALITY_REVIEW_CONTEXT.md) | Greptile/Bugbot wiring; RQ-RC-1; dogfood log |
-| — | [REVIEW_QUALITY_DOGFOOD_PR50.md](./REVIEW_QUALITY_DOGFOOD_PR50.md) | **PR #50** — Greptile + Revy triage, babysit, wave backlog |
-| — | [agents/](../agents/README.md) | **Living** — LOOP, Bugbot gate, prompts (update each RQ) |
+| — | [agents/](../agents/README.md) | **How we build** — LOOP, gates, prompts ([platform map](../agents/README.md)) |
+| — | [REVIEW_QUALITY_DOGFOOD_PR50.md](./REVIEW_QUALITY_DOGFOOD_PR50.md) | **Evidence** — PR #50 Greptile vs Revy |
+| — | [REVIEW_QUALITY_REVIEW_CONTEXT.md](./REVIEW_QUALITY_REVIEW_CONTEXT.md) | Bot wiring (RC); post-v1 RQ-RC-1 |
+| — | [REVIEW_QUALITY_STRUCTURAL_CONTEXT.md](./REVIEW_QUALITY_STRUCTURAL_CONTEXT.md) | Post-v1 code graph (SC) |
 
 ---
 

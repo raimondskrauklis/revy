@@ -48,7 +48,7 @@ Root [`.cursorrules`](.cursorrules) is a short pointer.
 |-------|------|
 | `ship-changes` | Ship: branch, commit, push, PR |
 | `sentry-fix-issues` | User points at one Sentry issue URL/ID |
-| `phase-execution` | Full scaffold execution LOOP from `docs/starter-pack/SCAFFOLD_P*_EXECUTION.md` |
+| `phase-execution` | Full program LOOP — scaffold (`docs/starter-pack/`) or review-quality (`docs/review-pipeline/waves/REVIEW_QUALITY_EXECUTION.md`); see [agents/](docs/review-pipeline/agents/README.md) |
 | `chunk-execution` | One scaffold subphase only |
 | `babysit-pr` | Triage/fix Greptile review comments on an open PR |
 
