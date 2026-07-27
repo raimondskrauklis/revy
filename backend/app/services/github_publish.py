@@ -248,7 +248,7 @@ async def get_latest_publish_job_for_revision(
 
 def _load_inline_thread_map(jobs: list[GitHubPublishJobORM]) -> dict[str, int]:
     merged: dict[str, int] = {}
-    for prior in reversed(jobs):
+    for prior in jobs:
         summary = prior.summary_json
         if not isinstance(summary, dict):
             continue
@@ -731,18 +731,19 @@ async def run_publish_job(
                 job.github_comment_id = comment_id
                 await _checkpoint_publish_surface(session, persist=persist_github_surface)
 
+            await _resolve_superseded_inline_threads(
+                client,
+                session=session,
+                github_installation_id=installation.github_installation_id,
+                owner=owner,
+                repo_name=repo_name,
+                pull_request_id=pull_request.id,
+                pull_number=pull_request.number,
+                inline_threads=inline_threads,
+                auth_headers=auth_headers,
+            )
+
             if post_inline:
-                await _resolve_superseded_inline_threads(
-                    client,
-                    session=session,
-                    github_installation_id=installation.github_installation_id,
-                    owner=owner,
-                    repo_name=repo_name,
-                    pull_request_id=pull_request.id,
-                    pull_number=pull_request.number,
-                    inline_threads=inline_threads,
-                    auth_headers=auth_headers,
-                )
                 inline_findings = list(
                     await session.scalars(
                         inline_publish_findings_statement(review_run_id=job.review_run_id).order_by(

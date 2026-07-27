@@ -429,7 +429,7 @@ async def create_pull_request_review_comment(
     response.raise_for_status()
     data = response.json()
     comment_id = data.get("id")
-    if not isinstance(comment_id, int):
+    if not isinstance(comment_id, int) or comment_id <= 0:
         raise ServiceUnavailableError(
             message="GitHub pull request review comment response invalid",
             error_code="github_api_error",
@@ -499,6 +499,8 @@ async def find_review_thread_id_for_comment(
         thread_id = thread.get("id")
         comments = thread.get("comments", {}).get("nodes", [])
         for comment in comments:
+            if not isinstance(comment, dict):
+                continue
             if comment.get("databaseId") == comment_database_id:
                 return thread_id if isinstance(thread_id, str) else None
     return None
