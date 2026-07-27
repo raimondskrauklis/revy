@@ -2455,6 +2455,8 @@ async def test_run_publish_job_persists_inline_progress_between_posts():
 
     assert inline_calls == 2
     assert flush_mock.await_count >= 2
+    commit_mock = session.commit
+    assert commit_mock.await_count >= 2
     checkpoint_mock.assert_awaited_once()
 
 

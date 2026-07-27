@@ -1138,7 +1138,7 @@ async def _flush_publish_surface(
                             thread_ids=inline_thread_ids,
                         ),
                     }
-                    await session.flush()
+                    await _commit_inline_retry_progress(session)
                 except httpx.HTTPStatusError as exc:
                     if exc.response.status_code in (404, 422):
                         logger.warning(
@@ -1178,6 +1178,12 @@ async def _checkpoint_publish_surface(
     await session.flush()
     if persist:
         await session.commit()
+
+
+async def _commit_inline_retry_progress(session: AsyncSession) -> None:
+    """Commit partial inline thread map so Celery retry survives mid-loop failures."""
+    await session.flush()
+    await session.commit()
 
 
 async def run_publish_job(
