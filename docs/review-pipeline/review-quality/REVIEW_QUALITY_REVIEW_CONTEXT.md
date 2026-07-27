@@ -108,7 +108,8 @@ Evaluate during **`feat/review-quality` PR** dogfood; ship improvements in **RQ-
 |----|------|--------|--------|--------|
 | **RC-D1** | 2026-07-27 | GitHub Checks UX — Greptile shows spinner; Revy does not | **Gap** — `create_check_run` posts `status: completed` only at publish end | **G10** locked → RQ3/RQ7 |
 | **RC-D2** | 2026-07-27 | Revy autostart on planning PR (old deploy) | **Useful** — flagged full-RAG vs diff-first (`github_review.py`) | Validates RQ1 scope; not a false positive |
-| **RC-D3** | 2026-07-27 | Greptile wired context (RC0) | **Pass** — 37 files, 6 comments; P1 FK/index fixes in babysit | [DOGFOOD_PR50](./REVIEW_QUALITY_DOGFOOD_PR50.md) |
+| **RC-D3** | 2026-07-27 | Greptile wired context (RC0) | **Pass** — inline cites AS1 on `index_mode` | [DOGFOOD_PR50](./REVIEW_QUALITY_DOGFOOD_PR50.md) |
+| **RC-D6** | 2026-07-27 | Visual/context vs Greptile/Bugbot | **Gap** — Revy table-only check; target RQ7 G | [visual UX §](./REVIEW_QUALITY_DOGFOOD_PR50.md#visual--context-ux--greptile--bugbot-vs-revy-target-bar) |
 | **RC-D4** | 2026-07-27 | CI on RQ0 migration | **Pass** | — |
 | **RC-D5** | 2026-07-27 | Local Bugbot pre-push | **No findings** | — |
 

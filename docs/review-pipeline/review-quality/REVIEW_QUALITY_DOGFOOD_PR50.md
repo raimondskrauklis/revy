@@ -8,6 +8,71 @@
 
 ---
 
+## Visual & context UX — Greptile / Bugbot vs Revy (target bar)
+
+**What we are building toward:** Greptile-shaped **GitHub triage** (RQ7 **G** track) + Bugbot-class **inline threads** — not copying vendor config, matching the **surface** humans use on PR #50.
+
+### At a glance (PR #50 screenshots)
+
+| Surface | Greptile / Bugbot | Revy today (`build_summary_markdown`) | Target (locked) |
+|---------|-------------------|--------------------------------------|-----------------|
+| **Check status** | `in_progress` spinner while reviewing | Check appears **only when done** | **G10** — RQ3 start / RQ7 finalize |
+| **Top-level triage** | Long **summary comment**: narrative, confidence 0–5, “files needing attention”, merge verdict | **Check body only**: `## Revy review summary` + 4-col table + `Open in Revy` | **RQ7** — `github_publish_formatter` issue comment (G3: full narrative on comment, compact on check) |
+| **Inline on code** | **P1/P2 badge** on exact lines; diff hunk visible; “Resolve conversation” | Inline only **error/critical** with line; title+message in thread — **no P-badge**, no `suggestion` block for warnings | **RQ7** — extend inline threshold; map severity → P0–P2 badge; R6 suggestion blocks |
+| **Context depth** | Cites **AS1**, execution contract, behavioral regression (“RQ0→RQ1 window”) | Table row: title + file — **message lives in Revy UI** | **G5** narrative + execution-aware prompts when wired |
+| **Actionability** | `suggestion` fenced blocks on some threads | Table is read-only; action in app | Inline `suggestion` + check footer `@revy review` |
+| **Planning docs** | Low noise on `.md` when scoped to `backend/**` | Flags doc inconsistencies in table | RC1 slice scoping if needed |
+
+### What Greptile does well (copy the pattern, not the vendor)
+
+```text
+  [Check: Greptile Review — in_progress … completed]
+           │
+           ├── Top comment: narrative + confidence + files list
+           │
+           └── Inline threads (per file/line)
+                 P1 badge + title
+                 Explanation (why + locked spec reference)
+                 Optional ```suggestion``` block
+                 Resolve conversation
+```
+
+**PR #50 example (inline):** P1 on `github_index_job.py` `index_mode` default — explains that **AS1** requires manual admin index → `full`, warns of regression before RQ1 wires job-create paths. That is **engineering-context review** (RC0 wiring working).
+
+### What Revy does today
+
+```text
+  [Check: revy/review — appears only at end, often failure on old deploy]
+           │
+           └── output.summary (same body as issue comment today)
+                 ## Revy review summary
+                 [Open in Revy](app link)     ← detail behind click
+                 | Severity | Category | Title | File |
+                 (no confidence, no narrative, no per-line explanation in check)
+```
+
+Inline comments **exist** (`inline_publish_findings_statement` — error/critical only) but PR #50 findings on **docs** and **architectural** gaps show up in the **table only**, not as anchored threads — feels thinner than Greptile/Bugbot even when the underlying finding is valid.
+
+### Bugbot (local)
+
+Same **class** as Greptile for UX: severity table, file:line, explanation in review output — not on GitHub Checks unless Cursor posts to PR. Use as **pre-push** gate; Greptile as **post-push** gate; Revy must match **both** on GitHub after RQ7.
+
+### Gap → wave map (not landed yet)
+
+| UX gap | ID | Ships in | Notes |
+|--------|-----|----------|-------|
+| In-progress check on PR | **G10** | RQ3 + RQ7 | `create_check_run(in_progress)` → `update_check_run(completed)` |
+| Narrative + confidence 0–5 | **G2**, **G5** | RQ7 | Formatter LLM; deterministic score prose |
+| Split check vs issue comment | **G3** | RQ7 | Check = compact; comment = Greptile-shaped sections |
+| P1/P2 inline badges + explanation | **G6/G7** | RQ7 (+ R6 suggestion) | Warnings in table today → should be inline optional |
+| “Fixed since last review” | **G9** | RQ6 + RQ7 | Reads `resolution_status` |
+| Execution-doc-aware findings | **RC0** | Done | Greptile; Revy prompts not wired to planning docs |
+| Pipeline trace in GitHub | **O9 GET** | RQ3 | Until then: paste / Revy UI only |
+
+**North star:** GitHub = **triage + inline action** (Greptile bar); Revy app = **workflow + trace + dismiss** — but GitHub must not be a bare table with a link.
+
+---
+
 ## What we can fetch automatically
 
 | Source | `gh` / API | Full detail | Gap |
@@ -45,8 +110,9 @@
 | P2 | `0026_review_quality.py` | Historical `index_mode` backfill → `full` | **Fixed** |
 | P2 | `0026_review_quality.py` | `revision_id` → `ON DELETE CASCADE` | **Fixed** |
 | P2 | `0026_review_quality.py` | Artifact `CHECK` content present | **Fixed** |
+| P1 | `github_index_job.py` | ORM `index_mode` default `diff` breaks AS1 manual → `full` | **RQ1** — set at job create, not column default alone |
 
-**Greptile verdict:** RC0 wiring worked — cited O8, execution contract, migration file. Confidence 3/5 was fair before FK fixes.
+**Greptile verdict:** RC0 wiring worked — cited O8, execution contract, AS1 on inline thread. Visual UX is the bar for RQ7.
 
 ---
 
@@ -72,6 +138,7 @@
 | G3 | Local Bugbot pre-push — zero findings on RQ0 ORM |
 | G4 | CI green on migration + models |
 | G5 | Greptile confidence + “files needing attention” — good triage surface |
+| G6 | Greptile inline cites locked spec (AS1) on exact line — **target UX for Revy RQ7** |
 
 ---
 
@@ -79,7 +146,7 @@
 
 | ID | Wave | Item |
 |----|------|------|
-| **G10** | RQ3 + RQ7 | `revy/review` check `in_progress` → `completed` (Greptile/Bugbot parity) |
+| **G-UX** | RQ7 | Greptile-shaped **issue comment** + P-badge inline + G3 split bodies — see [visual UX §](./REVIEW_QUALITY_DOGFOOD_PR50.md#visual--context-ux--greptile--bugbot-vs-revy-target-bar) |
 | **RQ1** | RQ1 | Diff-first retrieval — fixes Revy error on deploy |
 | **RQ3** | RQ3 | Pipeline GET — agents can read trace without UI paste |
 | **RC1** | RQ-RC-1 | Scope Greptile files to active RQ slice if noise grows |

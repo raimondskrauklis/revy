@@ -21,7 +21,7 @@
 
 ## Target GitHub surface (Greptile reference)
 
-Revy today publishes a **compact** check-run summary (`Severity | Category | Title | File`) plus inline comments for error/critical only. Greptile on our PRs shows a richer **top-level PR comment** that is the primary triage surface. That is the bar for a future Revy publish UX (R9+ / polish), not a copy of Greptile vendor config.
+Revy today publishes a **compact** check-run summary (`Severity | Category | Title | File`) plus inline comments for error/critical only. Greptile on our PRs shows a richer **top-level PR comment** that is the primary triage surface. **PR #50 dogfood:** Greptile/Bugbot = narrative + P-badge inline on lines + resolve threads; Revy = table + `Open in Revy` link — [visual comparison](./review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#visual--context-ux--greptile--bugbot-vs-revy-target-bar). Target ships **RQ7** (review-quality G track), not R9+.
 
 ### Anatomy of a good PR summary comment
 
@@ -305,11 +305,12 @@ When shipping **large program PRs** (code + planning docs), wire bots to the **e
 
 | ID | Finding |
 |----|---------|
-| **RC-D1** | Revy `revy/review` has **no in-progress spinner** — check appears only at publish (`create_check_run` → `completed` one-shot). Greptile/Bugbot show `in_progress` immediately. **Fix: G10** (RQ3/RQ7). |
-| **RC-D2** | Pre-deploy Revy autostart on planning PR still useful — flagged full-RAG vs diff-first (`github_review.py`); validates RQ1. |
-| **RC-D3** | Greptile RC0 wiring: pass, 37 files / 6 comments. |
+| **RC-D1** | Revy `revy/review` has **no in-progress spinner** — check appears only at publish end. Greptile/Bugbot show `in_progress` immediately. **Fix: G10** (RQ3/RQ7). |
+| **RC-D2** | Pre-deploy Revy autostart useful — full-RAG vs diff-first (`github_review.py`); validates RQ1. |
+| **RC-D3** | Greptile RC0 wiring: pass; inline cites AS1 on `index_mode` default. |
+| **RC-D6** | **Visual/context gap** — Revy check = table + app link; Greptile/Bugbot = narrative + P-badge inline + resolve threads. **Target: RQ7 G track** — [dogfood visual §](./review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#visual--context-ux--greptile--bugbot-vs-revy-target-bar). |
 
-Full log: [REVIEW_QUALITY_DOGFOOD_PR50.md](./review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md) · paste: [actual_output_revy_greptile.txt](./review-quality/actual_output_revy_greptile.txt).
+Full log: [REVIEW_QUALITY_DOGFOOD_PR50.md](./review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md).
 
 **Babysit (RQ0):** Greptile P1/P2 migration fixes applied — SET NULL FKs, `created_at` index, `index_mode` backfill `full`, revision CASCADE, artifact CHECK.
 
