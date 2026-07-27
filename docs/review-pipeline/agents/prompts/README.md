@@ -48,7 +48,40 @@ Pass 3+ — repeat until clean
 commit → push → Greptile (post-push, different axis)
 ```
 
-See RC-D14 in [DOGFOOD_PR50 § RQ4 pass 2](../../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#rq4-bugbot-pass-2--closure-vs-thinking-trace-rc-d14).
+See RC-D14 in [DOGFOOD_PR50 § RQ4 pass 2](../../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#rq4-bugbot-pass-2--closure-vs-thinking-trace-rc-d14). RC-D16: pass 1 also requires Deferred when empty — [§](../../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#greptile-babysit-vs-bugbot-depth-rc-d16).
+
+---
+
+## Greptile babysit (shallow fix + Bugbot deep gate)
+
+**Skill:** [babysit-pr](../../../.cursor/skills/babysit-pr/SKILL.md) · **Evidence:** RC-D16 in [DOGFOOD](../../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#greptile-babysit-vs-bugbot-depth-rc-d16)
+
+Greptile and Bugbot are **different axes** on the same PR. Babysit fixes listed threads only; Bugbot adversarially traces failure modes. **Never skip Bugbot** because Greptile already ran.
+
+```text
+1. Fetch open greptile-apps threads → fix valid P1/P2 vs locked Q#
+2. pytest + ruff (if backend touched)
+3. Local Bugbot — paste pre-feed + OUTPUT_FORMAT Pass 1 (see below)
+4. commit → push (operator may hold push for manual thought review)
+```
+
+**Babysit agent (parent) — stay shallow:**
+
+```text
+Scope: open Greptile threads only. Verify fix vs FINDINGS/EXECUTION locks.
+Do NOT deep-review — that is Bugbot's job.
+```
+
+**Pre-Bugbot Custom Instructions (paste before OUTPUT_FORMAT Pass 1):**
+
+```text
+Context: Greptile babysit fixes on PR #50.
+Locked: D10-M one-shot supersede in migration 0026 (no fingerprint backfill).
+Ignore unless diff worsens: pre-existing Celery duplicate delivery, missing unique on
+  pipeline_runs.index_job_id, narrow deploy reconcile→publish window, draft-PR G10 parking (RQ7).
+```
+
+Then append [OUTPUT_FORMAT.md](./OUTPUT_FORMAT.md) Pass 1 block (Deferred required even when findings empty).
 
 ---
 

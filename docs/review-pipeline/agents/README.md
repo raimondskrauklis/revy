@@ -30,7 +30,7 @@ LOCAL BUGBOT  ← mandatory (skills enforce)
         ↓
 commit → push
         ↓
-Greptile + Revy on PR  →  babysit + distill  →  findings row  →  Bugbot  →  push
+Greptile + Revy on PR  →  babysit (shallow) + local Bugbot (deep)  →  distill  →  push
         ↓
 Human gate if execution says stop (e.g. migration pause)
         ↓
@@ -73,4 +73,4 @@ Next RQ
 - New index files per PR — extend `DOGFOOD_PR50.md` table or add `DOGFOOD_PR<n>.md` when needed
 - Skip Bugbot because Greptile will run later
 
-**Active program:** review-quality · [PR #50](https://github.com/raimondskrauklis/revy/pull/50) · RQ2 shipped locally · push pending Greptile on docs.
+**Active program:** review-quality · [PR #50](https://github.com/raimondskrauklis/revy/pull/50) · RQ4 shipped · babysit RC-D16 · RQ5 next.

@@ -340,6 +340,55 @@ The thinking trace explores **many** hypotheses (deletion-only sync, `paths_to_i
 
 ---
 
+## Greptile babysit vs Bugbot depth (RC-D16)
+
+**Source:** [local_bugbot_from_ui_2](../agents/chain_of_thoughts/local_bugbot_from_ui_2) (~273 lines UI thinking) · fixes in `71e4911` (Greptile P1s: G10 TX split + D10-M supersede).
+
+### Axis model (same PR, different jobs)
+
+| Agent | When | Depth | Optimizes for |
+|-------|------|-------|---------------|
+| **Greptile babysit** | Post-push threads | Shallow — fix listed P1/P2 only | Contract/spec (D10-M, schema, EXECUTION citations) |
+| **Local Bugbot** | Pre-push gate | Deep — read callers, retry, TX boundaries | Lifecycle, rollback orphans, cross-worker edges |
+
+**Babysit must not substitute for Bugbot.** Greptile says *where*; Bugbot asks *what breaks under failure*. On this slice Greptile found 2 real P1s; Bugbot explored ~15 hypotheses, dismissed most, confirmed the fix — **correct outcome, wrong output shape** (RC-D14 again: 273 lines → `no bugs` with no Deferred table).
+
+### Babysit agent rule (distilled)
+
+```text
+Scope: open Greptile threads only — verify fix vs locked Q# / D10-M.
+Do NOT deep-review (that is Bugbot's job).
+After fixes: pytest + ruff → local Bugbot with babysit pre-feed (below) → commit → push.
+```
+
+### Pre-Bugbot feed (babysit fixes)
+
+Paste into Custom Instructions **before** OUTPUT_FORMAT Pass 1:
+
+```text
+Context: Greptile babysit fixes on PR #50.
+Locked: D10-M one-shot supersede in migration 0026 (no fingerprint backfill).
+Ignore unless diff worsens: pre-existing Celery duplicate delivery, missing unique on
+  pipeline_runs.index_job_id, narrow deploy reconcile→publish window, draft-PR G10 parking (RQ7).
+```
+
+### Deferred from Bugbot thinking (babysit slice — not filed as bugs)
+
+| Sev | Topic | Why deferred |
+|-----|-------|--------------|
+| low | Worker dies after TX1 commits, before TX2 (`max_retries=0`) | Celery redelivery recovers; orphan pending step mitigated by retry |
+| medium | Migration supersede → publish before next reconcile shows green check | One-shot deploy; D10-M accepted; narrow rolling window |
+| low | Duplicate Celery task → second GitHub check | Pre-existing; `external_id` may upsert; not introduced by TX split |
+| low | Re-dispatch index task on completed job → orphan `in_progress` check | Pre-existing; TX split does not worsen |
+| low | Draft/closed PR leaves G10 `in_progress` | Parking — RQ7/G10 `neutral` finalize |
+| low | Massive `UPDATE` locks `github_finding_groups` | One-shot migration; acceptable for v1 scale |
+
+**Real fixes (Greptile was right):** G10 check stranded on same-session rollback → split `get_db_context`; D10 fingerprint orphans active groups → supersede pass in `0026`.
+
+**Archive:** commit `local_bugbot_from_ui_2` under `agents/chain_of_thoughts/`; distill rows above → OUTPUT_FORMAT example + [prompts/README § Babysit](../agents/prompts/README.md#greptile-babysit-shallow-fix--bugbot-deep-gate).
+
+---
+
 ## Revy — triage (old deploy)
 
 | Sev | Location | Finding | Action |
@@ -399,3 +448,4 @@ After each LOOP commit on #50, add a row:
 | RQ4 | pending | suspended | RC-D13 — initial push skipped Bugbot; retro pass 1 → 3 bugs; pass 2 clean — [§](#loop-discipline-failure--rq3rq4-rc-d13) |
 | RQ4 pass 2 | — | — | RC-D14 closure trace + 2 deferred fixes before RQ5 — [§](#rq4-bugbot-pass-2--closure-vs-thinking-trace-rc-d14) |
 | prompts | — | — | RC-D15 — `agents/prompts/` distill directory — [§](#prompt-handling--rc-d15) |
+| babysit | 2 P1 (G10 TX, D10 supersede) | — | RC-D16 — shallow Greptile fix + deep Bugbot; [§](#greptile-babysit-vs-bugbot-depth-rc-d16) |

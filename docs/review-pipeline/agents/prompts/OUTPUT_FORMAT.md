@@ -16,12 +16,15 @@ Report ALL actionable bugs introduced by the diff.
 Format each: severity (high|medium|low) · file:line · one-line title · 2–3 sentence why.
 Cite locked FINDINGS/EXECUTION IDs when applicable (e.g. G10, C1, O2).
 Do not report pre-existing issues outside the diff unless the diff worsens them.
+If findings are empty after deep review: REQUIRED "Deferred" table (same columns as pass 2).
+Do not answer only "no bugs" without Findings (or empty) + Deferred tables.
 ```
 
 **Expected sections:**
 
-1. **Findings** — table or bullets (may be empty only if diff is trivially safe)
-2. **Scope note** — one line: which EXECUTION § RQn reviewed
+1. **Findings** — table or bullets (empty allowed if truly none)
+2. **Deferred** — **required when findings empty** — hypotheses considered but not filed (RC-D16)
+3. **Scope note** — one line: which EXECUTION § RQn reviewed
 
 ---
 
@@ -49,12 +52,27 @@ Do not answer only "no bugs" without Closed + Deferred tables.
 
 ---
 
-## Example deferred row (from RQ4 pass 2)
+## Example deferred rows
+
+### RQ4 pass 2 (closure)
 
 | Sev | Topic | Why deferred |
 |-----|-------|----------------|
 | low | Draft PR leaves G10 check `in_progress` | Pre-existing; needs `neutral` finalize (RQ7/G10 parking) |
 | — | — | Fixed in follow-up commit: embed fail partial commit; review enqueue G10 |
+
+### Greptile babysit pass (RC-D16 — pass 1, findings empty)
+
+Source: [local_bugbot_from_ui_2](../chain_of_thoughts/local_bugbot_from_ui_2) · commit `71e4911`.
+
+| Sev | Topic | Why deferred |
+|-----|-------|--------------|
+| low | Worker dies after TX1, before TX2 | Celery redelivery; not introduced by split |
+| medium | Migration supersede → publish before reconcile → green check | One-shot deploy; D10-M accepted |
+| low | Duplicate Celery → second GitHub check | Pre-existing race |
+| low | Re-dispatch on completed job → orphan check | Pre-existing; split does not worsen |
+| low | Draft/closed PR G10 stuck `in_progress` | Parking — RQ7 |
+| low | Bulk supersede `UPDATE` table lock | One-shot migration |
 
 ---
 
