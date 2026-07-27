@@ -37,7 +37,7 @@ Human gate if execution says stop (e.g. migration pause)
 Next RQ
 ```
 
-**Parallel dogfood on #50:** Greptile (GitHub) · local Bugbot (Cursor) · Revy (deploy). GitHub Bugbot = reference only (not on this repo). Distill → Revy.
+**Parallel dogfood on #50:** Greptile (GitHub) · local Bugbot (Cursor). Revy app **suspended** — no new runs. Distill → Revy.
 
 ---
 

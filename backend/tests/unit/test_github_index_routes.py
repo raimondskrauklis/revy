@@ -7,9 +7,10 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from app.api.v1.workspaces.installation_indexing import post_index_pull_request_revision
-from app.constants.enums import GitHubIndexJobStatus
+from app.constants.enums import GitHubIndexJobStatus, GitHubIndexMode
 from app.core.exceptions import ServiceUnavailableError
 from app.models.github_index_job import GitHubIndexJobORM
+from app.schemas.github_indexing import IndexTriggerRequest
 
 
 @pytest.mark.asyncio
@@ -28,6 +29,7 @@ async def test_post_index_pull_request_revision_queues_job():
         revision_id=revision_id,
         workspace_id=workspace_id,
         status=GitHubIndexJobStatus.pending,
+        index_mode=GitHubIndexMode.full,
     )
     job.id = uuid.uuid4()
     job.created_at = datetime.now(UTC)
@@ -47,6 +49,7 @@ async def test_post_index_pull_request_revision_queues_job():
                         repository_id=repository_id,
                         pull_request_id=pull_request_id,
                         revision_id=revision_id,
+                        body=IndexTriggerRequest(),
                         current_user=current_user,
                         session=session,
                         idempotent=None,
@@ -79,6 +82,7 @@ async def test_post_index_disabled_embeddings_raises():
                         repository_id=uuid.uuid4(),
                         pull_request_id=uuid.uuid4(),
                         revision_id=uuid.uuid4(),
+                        body=IndexTriggerRequest(),
                         current_user=current_user,
                         session=session,
                         idempotent=None,

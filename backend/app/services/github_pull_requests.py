@@ -98,7 +98,13 @@ def _extract_pr_fields(pull_request: dict[str, Any]) -> dict[str, Any] | None:
     head_sha = head.get("sha")
     head_ref = head.get("ref")
     base_ref = base.get("ref")
-    if not isinstance(head_sha, str) or not isinstance(head_ref, str) or not isinstance(base_ref, str):
+    base_sha = base.get("sha")
+    if (
+        not isinstance(head_sha, str)
+        or not isinstance(head_ref, str)
+        or not isinstance(base_ref, str)
+        or not isinstance(base_sha, str)
+    ):
         return None
 
     try:
@@ -115,6 +121,7 @@ def _extract_pr_fields(pull_request: dict[str, Any]) -> dict[str, Any] | None:
         "head_sha": head_sha,
         "head_ref": head_ref,
         "base_ref": base_ref,
+        "base_sha": base_sha,
         "html_url": html_url if isinstance(html_url, str) else None,
         "is_draft": pull_request.get("draft") is True,
     }
@@ -185,6 +192,7 @@ async def _append_revision(
     *,
     pull_request: GitHubPullRequestORM,
     head_sha: str,
+    base_sha: str | None,
 ) -> GitHubPullRequestRevisionORM:
     pull_request.revision_count += 1
     pull_request.head_sha = head_sha
@@ -192,6 +200,7 @@ async def _append_revision(
         pull_request_id=pull_request.id,
         revision_number=pull_request.revision_count,
         head_sha=head_sha,
+        base_sha=base_sha,
     )
     session.add(revision)
     await session.flush()
@@ -204,12 +213,14 @@ async def _create_pull_request(
     repository: GitHubRepositoryORM,
     fields: dict[str, Any],
 ) -> tuple[GitHubPullRequestORM, GitHubPullRequestRevisionORM]:
+    base_sha = fields.get("base_sha")
+    pr_fields = {key: value for key, value in fields.items() if key != "base_sha"}
     pull_request = GitHubPullRequestORM(
         repository_id=repository.id,
         workspace_id=repository.workspace_id,
         installation_id=repository.installation_id,
         revision_count=1,
-        **fields,
+        **pr_fields,
     )
     session.add(pull_request)
     await session.flush()
@@ -217,6 +228,7 @@ async def _create_pull_request(
         pull_request_id=pull_request.id,
         revision_number=1,
         head_sha=fields["head_sha"],
+        base_sha=base_sha if isinstance(base_sha, str) else None,
     )
     session.add(revision)
     await session.flush()
@@ -259,7 +271,12 @@ async def _upsert_pull_request(
     existing.is_draft = fields["is_draft"]
 
     if create_revision and fields["head_sha"] != existing.head_sha:
-        revision = await _append_revision(session, pull_request=existing, head_sha=fields["head_sha"])
+        revision = await _append_revision(
+            session,
+            pull_request=existing,
+            head_sha=fields["head_sha"],
+            base_sha=fields.get("base_sha"),
+        )
         return existing, revision
 
     existing.head_sha = fields["head_sha"]

@@ -274,6 +274,7 @@ def _index_job_fixture() -> tuple[AsyncMock, GitHubIndexJobORM, GitHubPullReques
     session.flush = AsyncMock()
     session.add = MagicMock()
     session.execute = AsyncMock()
+    session.scalar = AsyncMock(return_value=1)
 
     return session, job, revision
 
@@ -314,7 +315,7 @@ async def test_run_index_job_preserves_chunks_when_embed_fails():
                                 result = await run_index_job(session, index_job_id=job.id)
 
     assert result.status == GitHubIndexJobStatus.failed
-    session.execute.assert_not_awaited()
+    session.add.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -349,7 +350,7 @@ async def test_run_index_job_marks_failed_on_rate_limit():
 
     assert result.status == GitHubIndexJobStatus.failed
     assert result.error_message is not None
-    session.execute.assert_not_awaited()
+    session.add.assert_not_called()
 
 
 @pytest.mark.asyncio

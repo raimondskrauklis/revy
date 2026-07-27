@@ -19,14 +19,14 @@ Distill how to run **phase-execution** on large program PRs: ship **Revy**, run 
 | After fixing Greptile (`babysit-pr`) | Re-run Bugbot, then push | **No** |
 | After `ruff`/test fixes only | Re-run Bugbot if Python changed | **No** |
 
-**Greptile + Revy on PR are post-push** dogfood — distill into findings. **Local Bugbot** stays (Cursor, pre-push). **GitHub Bugbot** is not on #50; use operator experience + [arch notes](../code-review-arch_perplexity_searcj_advice_only.md) as the deeper-review bar for Revy RQ4+.
+**Greptile on PR is post-push** dogfood — distill into findings. **Local Bugbot** stays (Cursor, pre-push). **Revy GitHub App suspended** for #50 (2026-07-27) — no webhook/autostart/token burn; re-enable at deploy milestones. **GitHub Bugbot** not on #50; operator/arch reference for RQ4+ bar.
 
 ```text
 implement → pytest → ruff → phase gate → LOCAL BUGBOT → commit → push
                                               │
                     ┌─────────────────────────┴─────────────────────────┐
                     ▼                                                   ▼
-            Greptile (PR review)                              Revy autostart (deployed stack)
+            Greptile (PR review)                              Revy — suspended on GitHub for #50 dogfood (no new runs)
             babysit-pr fixes valid threads                    (may lag branch — note in dogfood)
                     │
                     └── fix → ruff → LOCAL BUGBOT again → push

@@ -7,7 +7,11 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from app.constants.enums import GitHubIndexJobStatus
+from app.constants.enums import GitHubIndexJobStatus, GitHubIndexMode
+
+
+class IndexTriggerRequest(BaseModel):
+    mode: GitHubIndexMode | None = None
 
 
 class GitHubIndexJobResponse(BaseModel):
@@ -17,8 +21,11 @@ class GitHubIndexJobResponse(BaseModel):
     revision_id: UUID
     workspace_id: UUID
     status: GitHubIndexJobStatus
+    index_mode: GitHubIndexMode
     error_message: str | None
     chunk_count: int | None
+    fallback_reason: str | None = None
+    warning_message: str | None = None
     created_at: datetime
     updated_at: datetime
 

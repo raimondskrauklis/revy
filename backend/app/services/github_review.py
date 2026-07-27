@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.constants.enums import (
     FindingCategory,
     FindingSeverity,
-    GitHubIndexJobStatus,
+    GitHubIndexMode,
     GitHubReviewRunStatus,
     ReviewProfile,
 )
@@ -33,7 +33,8 @@ from app.schemas.github_indexing import GitHubChunkSearchResult
 from app.schemas.github_review import GitHubFindingListResponse, GitHubFindingResponse
 from app.services.github_indexing import (
     ensure_revision_access,
-    get_latest_index_job,
+    get_latest_completed_index_job,
+    index_job_in_progress,
     search_revision_chunks,
 )
 from app.services.github_suggestion import normalize_end_line, validated_suggestion_for_row
@@ -50,6 +51,7 @@ CONTEXT_CHUNK_CAP = 30
 TOP_K_PER_QUERY = 10
 FINDING_LIST_DEFAULT_LIMIT = 100
 FINDING_LIST_MAX_LIMIT = 500
+_FULL_INDEX_PROFILES = frozenset({ReviewProfile.deep, ReviewProfile.critical})
 
 
 def _review_profile_str(profile: ReviewProfile | str) -> str:
@@ -89,15 +91,31 @@ async def create_review_run(
         revision_id=revision_id,
     )
 
-    index_job = await get_latest_index_job(
+    if await index_job_in_progress(
+        session,
+        workspace_id=workspace_id,
+        revision_id=revision_id,
+    ):
+        raise ConflictError(
+            message="An index job is already in progress for this revision",
+            error_code="index_in_progress",
+        )
+
+    index_job = await get_latest_completed_index_job(
         session,
         workspace_id=workspace_id,
         revision_id=revision_id,
     )
-    if index_job is None or index_job.status != GitHubIndexJobStatus.completed:
+    if index_job is None:
         raise ConflictError(
             message="Revision must be indexed before review",
             error_code="index_required",
+        )
+
+    if profile in _FULL_INDEX_PROFILES and index_job.index_mode != GitHubIndexMode.full:
+        raise ConflictError(
+            message="Deep/critical review requires a completed full-repo index",
+            error_code="index_mode_mismatch",
         )
 
     in_progress = await session.scalar(

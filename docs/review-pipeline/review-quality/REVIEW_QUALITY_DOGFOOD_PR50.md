@@ -6,6 +6,8 @@
 
 **Deploy context:** Revy autostart ran on **pre-RQ0 production/staging** — findings about `github_review.py` reflect **shipped** code, not this branch. **On GitHub for #50:** Greptile only (RC0 wiring). **Local:** Cursor Bugbot pre-push. No GitHub Bugbot on this repo.
 
+**2026-07-27:** Revy GitHub App **suspended** on GitHub for this dogfood window — saves tokens; current Revy behavior on old deploy is already captured (RC-D2). **No new Revy check/comments** on pushes until app is re-enabled. Focus: **Greptile** monitoring + local Bugbot + distill. Re-enable Revy when branch is deployed (RQ1+ smoke) or RQ8 human gate.
+
 ---
 
 ## Visual & context UX — Greptile / Bugbot vs Revy (target bar)
@@ -120,14 +122,14 @@ Same **class** as Greptile for UX: severity table, file:line, explanation in rev
 
 ## Reference reviewers — distill for Revy (PR #50)
 
-**Not the product architecture.** On **PR #50** we actually run **Greptile (GitHub) + local Bugbot (Cursor) + Revy (deploy)** — compare outputs and distill into findings / RQ waves. **GitHub Bugbot is not on this repo**; operator experience on other GitHub PRs + [arch notes](../code-review-arch_perplexity_searcj_advice_only.md) inform what Revy should absorb (deeper agentic review, RQ4+). Goal: **Revy absorbs those patterns** — external tools are benchmarks, not layers customers need forever.
+**Not the product architecture.** On **PR #50** we run **Greptile (GitHub) + local Bugbot (Cursor)** and distill into findings / RQ waves. **Revy GitHub App suspended** (2026-07-27) — prior deploy findings captured; no new runs until re-enabled. **GitHub Bugbot is not on this repo**; operator experience on other GitHub PRs + [arch notes](../code-review-arch_perplexity_searcj_advice_only.md) inform what Revy should absorb (deeper agentic review, RQ4+). Goal: **Revy absorbs those patterns** — external tools are benchmarks, not layers customers need forever.
 
 ```text
   PR #50 (what we run)                         NORTH STAR
   ────────────────────                         ──────────
   Local Bugbot (Cursor, pre-push) ──┐          Revy pipeline:
   Greptile (GitHub, post-push) ─────┼── distill  • spec/rules (RC4)
-  Revy (deploy, post-push) ─────────┘      →    • trace agents (RQ4+)
+  Revy — suspended (prior findings) ─┘      →    • trace agents (RQ4+)
                                                 • Greptile UX (RQ7)
 
   GitHub Bugbot — not on #50; industry reference for deeper review bar
@@ -139,7 +141,7 @@ Same **class** as Greptile for UX: severity table, file:line, explanation in rev
 | **Local Bugbot** | Yes (pre-push) | Fast diff hygiene; read/grep on harder hunks | Dev habit only | Clean on `index_mode` fix; missed AS1 before babysit |
 | **Greptile** | Yes (GitHub) | RC0 execution-doc citations; schema/FK; P-badge inline | RQ7 + RC4 | P1 `index_mode`, O8 index, SET NULL FKs |
 | **GitHub Bugbot** | **No** — other repos / operator knowledge | Deeper cross-file; often finds what local skips; multi-pass agent loop ([arch notes](../code-review-arch_perplexity_searcj_advice_only.md)) | RQ4 evidence + trace | — (not logged on #50) |
-| **Revy** | Yes (deploy) | Intent vs **shipped** code | The product | `github_review.py` full-RAG vs diff-first |
+| **Revy** | **Suspended** (was deploy) | Intent vs shipped code — captured RC-D2 | The product | `github_review.py` full-RAG (historical) |
 
 ### Under the hood (working hypothesis)
 

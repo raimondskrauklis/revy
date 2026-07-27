@@ -9,7 +9,7 @@ from starlette.responses import JSONResponse
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.database import get_db
-from app.core.exceptions import ForbiddenError
+from app.core.exceptions import ConflictError, ForbiddenError
 from app.core.idempotency import idempotency_guard
 from app.core.pagination import CursorParams, CursorResponse, get_cursor_params
 from app.core.permissions import Permission, require_permission
@@ -24,7 +24,11 @@ from app.schemas.github_review import (
 )
 from app.services.audit_service import record_audit
 from app.services.github_finding_reconcile import list_reconciled_finding_groups
-from app.services.github_indexing import ensure_revision_access
+from app.services.github_indexing import (
+    enqueue_index_job,
+    ensure_revision_access,
+    prepare_full_index_for_review_profile,
+)
 from app.services.github_publish import (
     create_publish_job,
     enqueue_publish_job,
@@ -64,6 +68,35 @@ async def post_review_pull_request_revision(
     require_same_workspace(current_user, workspace_id)
     if current_user.user_id is None:
         raise ForbiddenError(message="User not provisioned")
+
+    enqueued_index = await prepare_full_index_for_review_profile(
+        session,
+        workspace_id=workspace_id,
+        repository_id=repository_id,
+        pull_request_id=pull_request_id,
+        revision_id=revision_id,
+        profile=body.profile,
+    )
+    if enqueued_index is not None:
+        await record_audit(
+            session,
+            actor_user_id=current_user.user_id,
+            workspace_id=workspace_id,
+            action="index.run_requested",
+            resource_type="github_index_job",
+            resource_id=str(enqueued_index.id),
+            metadata={
+                "revision_id": str(revision_id),
+                "index_mode": "full",
+                "reason": "deep_critical_review",
+            },
+        )
+        await session.commit()
+        enqueue_index_job(enqueued_index.id)
+        raise ConflictError(
+            message="Full-repo index required for deep/critical review; index job enqueued",
+            error_code="full_index_required",
+        )
 
     run = await create_review_run(
         session,

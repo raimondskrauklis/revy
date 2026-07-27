@@ -7,18 +7,25 @@ from pathlib import Path
 from uuid import UUID
 
 import httpx
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import (
     GitHubIndexJobStatus,
     GitHubIndexJobTriggerSource,
     GitHubIndexMode,
+    ReviewProfile,
     stored_enum_value,
 )
 from app.core.config import settings
-from app.core.exceptions import ConflictError, NotFoundError, ServiceUnavailableError
+from app.core.exceptions import (
+    ConflictError,
+    NotFoundError,
+    RateLimitedError,
+    ServiceUnavailableError,
+)
 from app.core.logging import get_logger
+from app.integrations.github_api import compare_commits
 from app.integrations.github_archive import (
     download_repository_tarball,
     extract_tarball,
@@ -44,6 +51,8 @@ logger = get_logger(__name__)
 
 CHUNK_LIST_DEFAULT_LIMIT = 100
 CHUNK_LIST_MAX_LIMIT = 500
+
+_FULL_INDEX_PROFILES = frozenset({ReviewProfile.deep, ReviewProfile.critical})
 
 
 async def index_job_in_progress(
@@ -104,6 +113,7 @@ async def create_index_job(
     repository_id: UUID,
     pull_request_id: UUID,
     revision_id: UUID,
+    index_mode: GitHubIndexMode | None = None,
 ) -> GitHubIndexJobORM:
     if not settings.embeddings_enabled:
         raise ServiceUnavailableError(
@@ -139,7 +149,7 @@ async def create_index_job(
         workspace_id=workspace_id,
         status=GitHubIndexJobStatus.pending,
         trigger_source=GitHubIndexJobTriggerSource.manual,
-        index_mode=GitHubIndexMode.full,
+        index_mode=index_mode or GitHubIndexMode.full,
     )
     session.add(job)
     await session.flush()
@@ -150,6 +160,58 @@ def enqueue_index_job(index_job_id: UUID) -> None:
     from app.workers.index_tasks import index_pull_request_revision
 
     index_pull_request_revision.delay(str(index_job_id))
+
+
+async def prepare_full_index_for_review_profile(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    repository_id: UUID,
+    pull_request_id: UUID,
+    revision_id: UUID,
+    profile: ReviewProfile,
+) -> GitHubIndexJobORM | None:
+    """Enqueue a full index when deep/critical review needs it. Returns job or None if ready."""
+    if profile not in _FULL_INDEX_PROFILES:
+        return None
+
+    await ensure_revision_access(
+        session,
+        workspace_id=workspace_id,
+        repository_id=repository_id,
+        pull_request_id=pull_request_id,
+        revision_id=revision_id,
+    )
+
+    if await index_job_in_progress(
+        session,
+        workspace_id=workspace_id,
+        revision_id=revision_id,
+    ):
+        raise ConflictError(
+            message="An index job is already in progress for this revision",
+            error_code="index_in_progress",
+        )
+
+    index_job = await get_latest_completed_index_job(
+        session,
+        workspace_id=workspace_id,
+        revision_id=revision_id,
+    )
+    if (
+        index_job is not None
+        and index_job.index_mode == GitHubIndexMode.full
+    ):
+        return None
+
+    return await create_index_job(
+        session,
+        workspace_id=workspace_id,
+        repository_id=repository_id,
+        pull_request_id=pull_request_id,
+        revision_id=revision_id,
+        index_mode=GitHubIndexMode.full,
+    )
 
 
 async def mark_index_job_failed(
@@ -166,6 +228,57 @@ async def mark_index_job_failed(
     job.status = GitHubIndexJobStatus.failed
     job.error_message = error_message[:2000]
     await session.flush()
+
+
+async def _revision_chunk_count(session: AsyncSession, *, revision_id: UUID) -> int:
+    count = await session.scalar(
+        select(func.count())
+        .select_from(GitHubCodeChunkORM)
+        .where(GitHubCodeChunkORM.revision_id == revision_id)
+    )
+    return int(count or 0)
+
+
+async def _set_full_mode_warning(
+    session: AsyncSession,
+    job: GitHubIndexJobORM,
+    *,
+    file_count: int,
+) -> None:
+    duration_note = ""
+    p50_seconds = await session.scalar(
+        select(
+            func.percentile_cont(0.5).within_group(
+                func.extract(
+                    "epoch",
+                    GitHubIndexJobORM.updated_at - GitHubIndexJobORM.created_at,
+                )
+            )
+        ).where(
+            GitHubIndexJobORM.workspace_id == job.workspace_id,
+            GitHubIndexJobORM.index_mode == GitHubIndexMode.full,
+            GitHubIndexJobORM.status == GitHubIndexJobStatus.completed,
+            GitHubIndexJobORM.id != job.id,
+        )
+    )
+    if p50_seconds is not None:
+        duration_note = f" Typical full index duration ~{int(float(p50_seconds))}s (p50)."
+    job.warning_message = f"Full-repo index: {file_count} file(s).{duration_note}"[:2000]
+
+
+def _collect_chunks_for_paths(
+    root_dir: Path,
+    paths: set[str] | None,
+) -> tuple[list[tuple[str, int, str]], int]:
+    raw_chunks: list[tuple[str, int, str]] = []
+    file_count = 0
+    for file_path, content in iter_indexable_files(root_dir):
+        file_count += 1
+        if paths is not None and file_path not in paths:
+            continue
+        for chunk in chunk_file_content(file_path, content):
+            raw_chunks.append((chunk.file_path, chunk.chunk_index, chunk.content))
+    return raw_chunks, file_count
 
 
 async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubIndexJobORM:
@@ -209,7 +322,37 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
     work_dir = Path(settings.revy_worktrees_path) / str(job.revision_id)
     try:
         owner, repo_name = repository.full_name.split("/", 1)
+        paths_to_index: set[str] | None = None
+        paths_to_remove: list[str] = []
+        use_diff = job.index_mode == GitHubIndexMode.diff
+
         async with httpx.AsyncClient(timeout=120.0) as client:
+            if use_diff:
+                if not revision.base_sha:
+                    job.index_mode = GitHubIndexMode.full
+                    job.fallback_reason = "missing_base_sha"
+                    use_diff = False
+                else:
+                    try:
+                        compare = await compare_commits(
+                            client,
+                            github_installation_id=installation.github_installation_id,
+                            owner=owner,
+                            repo=repo_name,
+                            base_sha=revision.base_sha,
+                            head_sha=revision.head_sha,
+                        )
+                        paths_to_index = set(compare.paths_to_index)
+                        paths_to_remove = list(compare.paths_to_remove)
+                    except (NotFoundError, RateLimitedError, ServiceUnavailableError) as exc:
+                        job.index_mode = GitHubIndexMode.full
+                        job.fallback_reason = exc.error_code
+                        use_diff = False
+                    except httpx.HTTPStatusError as exc:
+                        job.index_mode = GitHubIndexMode.full
+                        job.fallback_reason = f"compare_http_{exc.response.status_code}"
+                        use_diff = False
+
             archive_bytes = await download_repository_tarball(
                 client,
                 github_installation_id=installation.github_installation_id,
@@ -222,17 +365,33 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
             shutil.rmtree(work_dir)
         root_dir = extract_tarball(archive_bytes, work_dir)
 
-        raw_chunks: list[tuple[str, int, str]] = []
-        for file_path, content in iter_indexable_files(root_dir):
-            for chunk in chunk_file_content(file_path, content):
-                raw_chunks.append((chunk.file_path, chunk.chunk_index, chunk.content))
+        if use_diff and paths_to_index is not None:
+            path_filter = paths_to_index
+        else:
+            path_filter = None
+
+        raw_chunks, indexed_file_count = _collect_chunks_for_paths(root_dir, path_filter)
 
         if not raw_chunks:
-            await session.execute(
-                delete(GitHubCodeChunkORM).where(GitHubCodeChunkORM.revision_id == job.revision_id)
-            )
+            if use_diff:
+                stale_paths = list(paths_to_remove)
+                if paths_to_index:
+                    stale_paths.extend(paths_to_index)
+                if stale_paths:
+                    await session.execute(
+                        delete(GitHubCodeChunkORM).where(
+                            GitHubCodeChunkORM.revision_id == job.revision_id,
+                            GitHubCodeChunkORM.file_path.in_(stale_paths),
+                        )
+                    )
+            else:
+                await session.execute(
+                    delete(GitHubCodeChunkORM).where(GitHubCodeChunkORM.revision_id == job.revision_id)
+                )
             job.status = GitHubIndexJobStatus.completed
-            job.chunk_count = 0
+            job.chunk_count = await _revision_chunk_count(session, revision_id=job.revision_id)
+            if job.index_mode == GitHubIndexMode.full:
+                await _set_full_mode_warning(session, job, file_count=indexed_file_count)
             await session.flush()
             return job
 
@@ -243,9 +402,26 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
         if len(embeddings) != len(raw_chunks):
             raise RuntimeError("embedding_count_mismatch")
 
-        await session.execute(
-            delete(GitHubCodeChunkORM).where(GitHubCodeChunkORM.revision_id == job.revision_id)
-        )
+        if use_diff and paths_to_remove:
+            await session.execute(
+                delete(GitHubCodeChunkORM).where(
+                    GitHubCodeChunkORM.revision_id == job.revision_id,
+                    GitHubCodeChunkORM.file_path.in_(paths_to_remove),
+                )
+            )
+
+        if use_diff and paths_to_index is not None:
+            if paths_to_index:
+                await session.execute(
+                    delete(GitHubCodeChunkORM).where(
+                        GitHubCodeChunkORM.revision_id == job.revision_id,
+                        GitHubCodeChunkORM.file_path.in_(paths_to_index),
+                    )
+                )
+        else:
+            await session.execute(
+                delete(GitHubCodeChunkORM).where(GitHubCodeChunkORM.revision_id == job.revision_id)
+            )
 
         for (file_path, chunk_index, content), embedding in zip(raw_chunks, embeddings, strict=True):
             session.add(
@@ -261,7 +437,9 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
             )
 
         job.status = GitHubIndexJobStatus.completed
-        job.chunk_count = len(raw_chunks)
+        job.chunk_count = await _revision_chunk_count(session, revision_id=job.revision_id)
+        if job.index_mode == GitHubIndexMode.full:
+            await _set_full_mode_warning(session, job, file_count=indexed_file_count)
         await session.flush()
         return job
     except httpx.HTTPStatusError as exc:
@@ -295,6 +473,24 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
     finally:
         if work_dir.exists():
             shutil.rmtree(work_dir, ignore_errors=True)
+
+
+async def get_latest_completed_index_job(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    revision_id: UUID,
+) -> GitHubIndexJobORM | None:
+    return await session.scalar(
+        select(GitHubIndexJobORM)
+        .where(
+            GitHubIndexJobORM.workspace_id == workspace_id,
+            GitHubIndexJobORM.revision_id == revision_id,
+            GitHubIndexJobORM.status == GitHubIndexJobStatus.completed,
+        )
+        .order_by(GitHubIndexJobORM.created_at.desc())
+        .limit(1)
+    )
 
 
 async def get_latest_index_job(

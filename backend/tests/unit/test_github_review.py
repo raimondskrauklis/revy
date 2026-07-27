@@ -12,6 +12,7 @@ from app.constants.enums import (
     FindingCategory,
     FindingSeverity,
     GitHubIndexJobStatus,
+    GitHubIndexMode,
     GitHubPullRequestState,
     GitHubReviewJudgeStatus,
     GitHubReviewRunStatus,
@@ -60,11 +61,15 @@ async def test_create_review_run_index_required_raises():
             AsyncMock(),
         ):
             with patch(
-                "app.services.github_review.get_latest_index_job",
-                AsyncMock(return_value=None),
+                "app.services.github_review.index_job_in_progress",
+                AsyncMock(return_value=False),
             ):
-                with pytest.raises(ConflictError) as exc:
-                    await github_review.create_review_run(
+                with patch(
+                    "app.services.github_review.get_latest_completed_index_job",
+                    AsyncMock(return_value=None),
+                ):
+                    with pytest.raises(ConflictError) as exc:
+                        await github_review.create_review_run(
                         session,
                         workspace_id=workspace_id,
                         repository_id=uuid.uuid4(),
@@ -72,6 +77,45 @@ async def test_create_review_run_index_required_raises():
                         revision_id=revision_id,
                     )
     assert exc.value.error_code == "index_required"
+
+
+@pytest.mark.asyncio
+async def test_create_review_run_deep_profile_requires_full_index():
+    workspace_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    index_job = GitHubIndexJobORM(
+        revision_id=revision_id,
+        workspace_id=workspace_id,
+        status=GitHubIndexJobStatus.completed,
+        index_mode=GitHubIndexMode.diff,
+    )
+    session = AsyncMock()
+    session.scalar = AsyncMock(return_value=None)
+
+    with patch("app.services.github_review.settings") as mock_settings:
+        mock_settings.reviewer_llm_enabled.return_value = True
+        mock_settings.embeddings_enabled = True
+        mock_settings.github_api_enabled = True
+        mock_settings.revy_llm_provider = "moonshot"
+        with patch("app.services.github_review.ensure_revision_access", AsyncMock()):
+            with patch(
+                "app.services.github_review.index_job_in_progress",
+                AsyncMock(return_value=False),
+            ):
+                with patch(
+                    "app.services.github_review.get_latest_completed_index_job",
+                    AsyncMock(return_value=index_job),
+                ):
+                    with pytest.raises(ConflictError) as exc:
+                        await github_review.create_review_run(
+                            session,
+                            workspace_id=workspace_id,
+                            repository_id=uuid.uuid4(),
+                            pull_request_id=uuid.uuid4(),
+                            revision_id=revision_id,
+                            profile=ReviewProfile.deep,
+                        )
+    assert exc.value.error_code == "index_mode_mismatch"
 
 
 @pytest.mark.asyncio
@@ -93,17 +137,21 @@ async def test_create_review_run_review_in_progress_raises():
         mock_settings.revy_llm_provider = "moonshot"
         with patch("app.services.github_review.ensure_revision_access", AsyncMock()):
             with patch(
-                "app.services.github_review.get_latest_index_job",
-                AsyncMock(return_value=index_job),
+                "app.services.github_review.index_job_in_progress",
+                AsyncMock(return_value=False),
             ):
-                with pytest.raises(ConflictError) as exc:
-                    await github_review.create_review_run(
-                        session,
-                        workspace_id=workspace_id,
-                        repository_id=uuid.uuid4(),
-                        pull_request_id=uuid.uuid4(),
-                        revision_id=revision_id,
-                    )
+                with patch(
+                    "app.services.github_review.get_latest_completed_index_job",
+                    AsyncMock(return_value=index_job),
+                ):
+                    with pytest.raises(ConflictError) as exc:
+                        await github_review.create_review_run(
+                            session,
+                            workspace_id=workspace_id,
+                            repository_id=uuid.uuid4(),
+                            pull_request_id=uuid.uuid4(),
+                            revision_id=revision_id,
+                        )
     assert exc.value.error_code == "review_in_progress"
 
 

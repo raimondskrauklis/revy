@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -10,9 +11,58 @@ import httpx
 import jwt
 
 from app.core.config import settings
-from app.core.exceptions import ServiceUnavailableError
+from app.core.exceptions import NotFoundError, RateLimitedError, ServiceUnavailableError
 
 GITHUB_API_BASE = "https://api.github.com"
+
+_INDEXABLE_COMPARE_STATUSES = frozenset({"added", "modified", "copied", "renamed", "changed"})
+_REMOVED_COMPARE_STATUSES = frozenset({"removed"})
+
+
+@dataclass(frozen=True)
+class CompareFileChange:
+    filename: str
+    status: str
+    patch: str | None
+    previous_filename: str | None = None
+
+
+@dataclass(frozen=True)
+class CompareCommitsResult:
+    files: tuple[CompareFileChange, ...]
+
+    @property
+    def paths_to_index(self) -> tuple[str, ...]:
+        return tuple(
+            f.filename
+            for f in self.files
+            if f.status in _INDEXABLE_COMPARE_STATUSES
+        )
+
+    @property
+    def paths_to_remove(self) -> tuple[str, ...]:
+        removed: list[str] = []
+        for f in self.files:
+            if f.status in _REMOVED_COMPARE_STATUSES:
+                removed.append(f.filename)
+            elif f.status == "renamed" and f.previous_filename:
+                removed.append(f.previous_filename)
+        return tuple(removed)
+
+
+def _compare_http_error(exc: httpx.HTTPStatusError) -> None:
+    status_code = exc.response.status_code
+    if status_code == 404:
+        raise NotFoundError(
+            message="GitHub compare not found",
+            error_code="github_compare_not_found",
+        ) from exc
+    if status_code == 429:
+        raise RateLimitedError(
+            message="GitHub API rate limit exceeded",
+            error_code="github_rate_limited",
+        ) from exc
+    raise exc
 
 
 def _load_private_key() -> str:
@@ -116,6 +166,61 @@ async def list_installation_repositories(
             break
         page += 1
     return repos
+
+
+async def compare_commits(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+    owner: str,
+    repo: str,
+    base_sha: str,
+    head_sha: str,
+    auth_headers: dict[str, str] | None = None,
+) -> CompareCommitsResult:
+    headers = await _resolve_auth_headers(
+        client,
+        github_installation_id=github_installation_id,
+        auth_headers=auth_headers,
+    )
+    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/compare/{base_sha}...{head_sha}"
+    try:
+        response = await client.get(url, headers=headers)
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        _compare_http_error(exc)
+        raise  # pragma: no cover
+
+    data = response.json()
+    raw_files = data.get("files")
+    if not isinstance(raw_files, list):
+        return CompareCommitsResult(files=())
+
+    if len(raw_files) >= 300:
+        raise ServiceUnavailableError(
+            message="GitHub compare returned too many changed files",
+            error_code="github_compare_truncated",
+        )
+
+    files: list[CompareFileChange] = []
+    for item in raw_files:
+        if not isinstance(item, dict):
+            continue
+        filename = item.get("filename")
+        status = item.get("status")
+        if not isinstance(filename, str) or not isinstance(status, str):
+            continue
+        patch = item.get("patch")
+        previous = item.get("previous_filename")
+        files.append(
+            CompareFileChange(
+                filename=filename,
+                status=status,
+                patch=patch if isinstance(patch, str) else None,
+                previous_filename=previous if isinstance(previous, str) else None,
+            )
+        )
+    return CompareCommitsResult(files=tuple(files))
 
 
 CHECK_RUN_NAME = "revy/review"

@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from app.core.exceptions import ServiceUnavailableError
+from app.core.exceptions import NotFoundError, RateLimitedError, ServiceUnavailableError
 from app.integrations import github_api
 
 
@@ -79,6 +79,97 @@ async def test_list_installation_repositories_raises_on_http_error():
                 client,
                 github_installation_id=99,
             )
+
+
+@pytest.mark.asyncio
+async def test_compare_commits_returns_changed_paths():
+    client = AsyncMock()
+    response = MagicMock()
+    response.json.return_value = {
+        "files": [
+            {"filename": "a.py", "status": "modified", "patch": "@@"},
+            {"filename": "b.py", "status": "removed"},
+            {
+                "filename": "c.py",
+                "status": "renamed",
+                "previous_filename": "old_c.py",
+            },
+        ],
+    }
+    response.raise_for_status = MagicMock()
+    client.get = AsyncMock(return_value=response)
+
+    with patch(
+        "app.integrations.github_api._installation_headers",
+        AsyncMock(return_value={"Authorization": "Bearer t"}),
+    ):
+        result = await github_api.compare_commits(
+            client,
+            github_installation_id=1,
+            owner="acme",
+            repo="demo",
+            base_sha="base",
+            head_sha="head",
+        )
+
+    assert result.paths_to_index == ("a.py", "c.py")
+    assert result.paths_to_remove == ("b.py", "old_c.py")
+
+
+@pytest.mark.asyncio
+async def test_compare_commits_404_raises_not_found():
+    client = AsyncMock()
+    error_response = MagicMock(status_code=404)
+    client.get = AsyncMock(
+        side_effect=httpx.HTTPStatusError(
+            "missing",
+            request=MagicMock(),
+            response=error_response,
+        ),
+    )
+
+    with patch(
+        "app.integrations.github_api._installation_headers",
+        AsyncMock(return_value={"Authorization": "Bearer t"}),
+    ):
+        with pytest.raises(NotFoundError) as exc:
+            await github_api.compare_commits(
+                client,
+                github_installation_id=1,
+                owner="acme",
+                repo="demo",
+                base_sha="base",
+                head_sha="head",
+            )
+    assert exc.value.error_code == "github_compare_not_found"
+
+
+@pytest.mark.asyncio
+async def test_compare_commits_429_raises_rate_limited():
+    client = AsyncMock()
+    error_response = MagicMock(status_code=429)
+    client.get = AsyncMock(
+        side_effect=httpx.HTTPStatusError(
+            "rate",
+            request=MagicMock(),
+            response=error_response,
+        ),
+    )
+
+    with patch(
+        "app.integrations.github_api._installation_headers",
+        AsyncMock(return_value={"Authorization": "Bearer t"}),
+    ):
+        with pytest.raises(RateLimitedError) as exc:
+            await github_api.compare_commits(
+                client,
+                github_installation_id=1,
+                owner="acme",
+                repo="demo",
+                base_sha="base",
+                head_sha="head",
+            )
+    assert exc.value.error_code == "github_rate_limited"
 
 
 @pytest.mark.asyncio

@@ -85,7 +85,7 @@ def _pull_request_payload(*, action: str, head_sha: str = "abc123", draft: bool 
             "draft": draft,
             "html_url": "https://github.com/acme/demo/pull/7",
             "head": {"sha": head_sha, "ref": "feature"},
-            "base": {"ref": "main"},
+            "base": {"sha": "base000", "ref": "main"},
         },
     }
 
@@ -102,6 +102,23 @@ async def test_apply_pull_request_opened_creates_pr_and_revision():
     await apply_pull_request_webhook_event(session, _pull_request_payload(action="opened"))
 
     assert session.add.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_apply_pull_request_opened_persists_base_sha():
+    installation = _installation()
+    repository = _repository(installation)
+    session = _session_with_nested()
+    session.scalar = AsyncMock(side_effect=[installation, repository, None])
+    added: list[object] = []
+    session.add = MagicMock(side_effect=lambda obj: added.append(obj))
+    session.flush = AsyncMock()
+
+    await apply_pull_request_webhook_event(session, _pull_request_payload(action="opened"))
+
+    revisions = [obj for obj in added if hasattr(obj, "base_sha")]
+    assert len(revisions) == 1
+    assert revisions[0].base_sha == "base000"
 
 
 @pytest.mark.asyncio
