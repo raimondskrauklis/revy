@@ -31,9 +31,11 @@ from app.models.github_pull_request import (
 )
 from app.models.github_repository import GitHubRepositoryORM
 from app.models.github_review_run import GitHubReviewRunORM
+from app.services.github_generation_lifecycle import is_review_run_superseded
 from app.services.github_indexing import ensure_revision_access, get_latest_completed_index_job
 from app.services.github_pipeline_trace import (
     finalize_pipeline_github_check_failure,
+    finalize_pipeline_github_check_neutral,
     get_pipeline_run_for_review_run,
     link_publish_job_to_pipeline,
     record_publish_pipeline_step,
@@ -59,6 +61,45 @@ _PUBLISH_GROUP_SEVERITY_ORDER = case(
 
 class PublishJobRetryableError(WorkerRetryableError):
     """Transient publish failure — Celery should retry after persisting progress."""
+
+
+_SKIP_PUBLISH_NEUTRAL_SUMMARY = "Superseded by newer commit"
+
+_TERMINAL_PUBLISH_JOB_STATUSES = frozenset({
+    GitHubPublishJobStatus.completed,
+    GitHubPublishJobStatus.failed,
+    GitHubPublishJobStatus.skipped_not_head,
+    GitHubPublishJobStatus.skipped_superseded,
+})
+
+
+async def _skip_publish_job_at_gate(
+    session: AsyncSession,
+    job: GitHubPublishJobORM,
+    *,
+    skip_status: GitHubPublishJobStatus,
+    log_event: str,
+) -> GitHubPublishJobORM:
+    job.status = skip_status
+    job.error_message = None
+    await session.flush()
+    pipeline_run = await get_pipeline_run_for_review_run(session, review_run_id=job.review_run_id)
+    if pipeline_run is not None:
+        await finalize_pipeline_github_check_neutral(
+            session,
+            pipeline_run_id=pipeline_run.id,
+            summary=_SKIP_PUBLISH_NEUTRAL_SUMMARY,
+        )
+    logger.info(
+        log_event,
+        extra={
+            "publish_job_id": str(job.id),
+            "review_run_id": str(job.review_run_id),
+            "revision_id": str(job.revision_id),
+            "head_sha": job.head_sha,
+        },
+    )
+    return job
 
 
 async def mark_publish_job_failed(
@@ -88,6 +129,8 @@ async def create_publish_job_for_review_run(
         .with_for_update()
     )
     if run is None or run.status != GitHubReviewRunStatus.completed:
+        return None
+    if is_review_run_superseded(run):
         return None
 
     pending = await session.scalar(
@@ -502,6 +545,7 @@ async def find_publish_job_for_head_sha(
             GitHubPublishJobORM.revision_id.in_(revision_ids),
             GitHubPublishJobORM.head_sha == head_sha,
             GitHubPublishJobORM.github_check_run_id.is_not(None),
+            GitHubPublishJobORM.status == GitHubPublishJobStatus.completed,
         )
         .order_by(GitHubPublishJobORM.created_at.desc())
         .limit(1)
@@ -661,10 +705,8 @@ async def run_publish_job(
     job = await session.get(GitHubPublishJobORM, publish_job_id)
     if job is None:
         raise NotFoundError("Publish job not found")
-
-    job.status = GitHubPublishJobStatus.processing
-    job.error_message = None
-    await session.flush()
+    if job.status in _TERMINAL_PUBLISH_JOB_STATUSES:
+        return job
 
     run = await session.get(GitHubReviewRunORM, job.review_run_id)
     revision = await session.get(GitHubPullRequestRevisionORM, job.revision_id)
@@ -675,15 +717,38 @@ async def run_publish_job(
         return job
 
     pull_request = await session.get(GitHubPullRequestORM, revision.pull_request_id)
-    repository = await session.get(GitHubRepositoryORM, pull_request.repository_id) if pull_request else None
-    installation = (
-        await session.get(GitHubInstallationORM, pull_request.installation_id) if pull_request else None
-    )
-    if pull_request is None or repository is None or installation is None:
+    if pull_request is None:
         job.status = GitHubPublishJobStatus.failed
         job.error_message = "pull_request_context_not_found"
         await session.flush()
         return job
+
+    if is_review_run_superseded(run):
+        return await _skip_publish_job_at_gate(
+            session,
+            job,
+            skip_status=GitHubPublishJobStatus.skipped_superseded,
+            log_event="publish_skipped_superseded",
+        )
+    if job.head_sha != pull_request.head_sha:
+        return await _skip_publish_job_at_gate(
+            session,
+            job,
+            skip_status=GitHubPublishJobStatus.skipped_not_head,
+            log_event="publish_skipped_not_head",
+        )
+
+    repository = await session.get(GitHubRepositoryORM, pull_request.repository_id)
+    installation = await session.get(GitHubInstallationORM, pull_request.installation_id)
+    if repository is None or installation is None:
+        job.status = GitHubPublishJobStatus.failed
+        job.error_message = "pull_request_context_not_found"
+        await session.flush()
+        return job
+
+    job.status = GitHubPublishJobStatus.processing
+    job.error_message = None
+    await session.flush()
 
     groups = list(
         await session.scalars(

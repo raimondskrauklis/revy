@@ -2147,3 +2147,207 @@ async def test_run_publish_job_raises_retryable_error_when_persisting():
                 )
 
     assert job.status == GitHubPublishJobStatus.processing
+
+
+@pytest.mark.asyncio
+async def test_run_publish_job_head_gate_skipped_not_head():
+    publish_job_id, session, job = _publish_job_context()
+    job.head_sha = "old-sha"
+    run = GitHubReviewRunORM(
+        revision_id=job.revision_id,
+        workspace_id=job.workspace_id,
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    revision = GitHubPullRequestRevisionORM(
+        pull_request_id=uuid.uuid4(),
+        revision_number=1,
+        head_sha="old-sha",
+    )
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=job.workspace_id,
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=7,
+        title="PR",
+        state=GitHubPullRequestState.open,
+        head_sha="new-sha",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=2,
+    )
+    session.get = AsyncMock(side_effect=[job, run, revision, pull_request])
+
+    pipeline_run = MagicMock()
+    pipeline_run.id = uuid.uuid4()
+
+    with patch(
+        "app.services.github_publish.get_pipeline_run_for_review_run",
+        AsyncMock(return_value=pipeline_run),
+    ):
+        with patch(
+            "app.services.github_publish.finalize_pipeline_github_check_neutral",
+            AsyncMock(),
+        ) as neutral_mock:
+            with patch(
+                "app.services.github_publish.github_api.create_pull_request_review_comment",
+                AsyncMock(),
+            ) as inline_mock:
+                result = await github_publish.run_publish_job(
+                    session,
+                    publish_job_id=publish_job_id,
+                )
+
+    assert result.status == GitHubPublishJobStatus.skipped_not_head
+    assert result.status != GitHubPublishJobStatus.processing
+    inline_mock.assert_not_awaited()
+    neutral_mock.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_run_publish_job_skipped_superseded():
+    publish_job_id, session, job = _publish_job_context()
+    run = GitHubReviewRunORM(
+        revision_id=job.revision_id,
+        workspace_id=job.workspace_id,
+        status=GitHubReviewRunStatus.superseded,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    revision = GitHubPullRequestRevisionORM(
+        pull_request_id=uuid.uuid4(),
+        revision_number=1,
+        head_sha=job.head_sha,
+    )
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=job.workspace_id,
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=7,
+        title="PR",
+        state=GitHubPullRequestState.open,
+        head_sha=job.head_sha,
+        head_ref="feature",
+        base_ref="main",
+        revision_count=1,
+    )
+    session.get = AsyncMock(side_effect=[job, run, revision, pull_request])
+
+    pipeline_run = MagicMock()
+    pipeline_run.id = uuid.uuid4()
+
+    with patch(
+        "app.services.github_publish.get_pipeline_run_for_review_run",
+        AsyncMock(return_value=pipeline_run),
+    ):
+        with patch(
+            "app.services.github_publish.finalize_pipeline_github_check_neutral",
+            AsyncMock(),
+        ) as neutral_mock:
+            result = await github_publish.run_publish_job(
+                session,
+                publish_job_id=publish_job_id,
+            )
+
+    assert result.status == GitHubPublishJobStatus.skipped_superseded
+    neutral_mock.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_find_publish_job_for_head_sha_completed_only():
+    pull_request_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    skipped_job = GitHubPublishJobORM(
+        review_run_id=uuid.uuid4(),
+        revision_id=revision_id,
+        workspace_id=uuid.uuid4(),
+        head_sha="abc123",
+        status=GitHubPublishJobStatus.skipped_not_head,
+        github_check_run_id=100,
+    )
+    completed_job = GitHubPublishJobORM(
+        review_run_id=uuid.uuid4(),
+        revision_id=revision_id,
+        workspace_id=uuid.uuid4(),
+        head_sha="abc123",
+        status=GitHubPublishJobStatus.completed,
+        github_check_run_id=200,
+    )
+    session = AsyncMock()
+    session.scalars = AsyncMock(return_value=[revision_id])
+    session.scalar = AsyncMock(return_value=completed_job)
+
+    result = await github_publish.find_publish_job_for_head_sha(
+        session,
+        pull_request_id=pull_request_id,
+        head_sha="abc123",
+    )
+
+    assert result is completed_job
+    assert result is not skipped_job
+
+
+@pytest.mark.asyncio
+async def test_create_publish_job_for_review_run_skips_superseded():
+    review_run_id = uuid.uuid4()
+    run = GitHubReviewRunORM(
+        revision_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        status=GitHubReviewRunStatus.superseded,
+        profile=ReviewProfile.standard,
+    )
+    session = AsyncMock()
+    session.scalar = AsyncMock(return_value=run)
+
+    job_id = await github_publish.create_publish_job_for_review_run(
+        session,
+        review_run_id=review_run_id,
+    )
+
+    assert job_id is None
+
+
+@pytest.mark.asyncio
+async def test_create_publish_job_for_review_run_after_skipped_not_head():
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    run = GitHubReviewRunORM(
+        revision_id=revision_id,
+        workspace_id=workspace_id,
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+    )
+    run.id = review_run_id
+    revision = GitHubPullRequestRevisionORM(
+        pull_request_id=uuid.uuid4(),
+        revision_number=1,
+        head_sha="same-sha",
+    )
+    revision.id = revision_id
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[run, None])
+    session.get = AsyncMock(return_value=revision)
+    session.add = MagicMock()
+    new_job_id = uuid.uuid4()
+
+    async def _flush_assign_id() -> None:
+        added = session.add.call_args.args[0]
+        added.id = new_job_id
+
+    session.flush = AsyncMock(side_effect=_flush_assign_id)
+
+    with patch(
+        "app.services.github_publish.get_pipeline_run_for_review_run",
+        AsyncMock(return_value=None),
+    ):
+        job_id = await github_publish.create_publish_job_for_review_run(
+            session,
+            review_run_id=review_run_id,
+        )
+
+    assert job_id == new_job_id
