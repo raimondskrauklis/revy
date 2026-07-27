@@ -1,18 +1,18 @@
 {
   "files": [
     {
-      "path": "docs/review-pipeline/github-surface-hardening/GITHUB_SURFACE_HARDENING_EXECUTION.md",
-      "description": "GitHub surface hardening — LOOP order, locked decisions, phase gates (P0–P4)",
+      "path": "docs/review-pipeline/review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_EXECUTION.md",
+      "description": "Review generation lifecycle — LOOP order P0–P5, locked decisions, phase gates",
       "scope": ["backend/**"]
     },
     {
-      "path": "docs/review-pipeline/github-surface-hardening/GITHUB_SURFACE_HARDENING_FINDINGS.md",
-      "description": "Hardening baseline — GH-1 thread resolve, GraphQL scale, test harness",
+      "path": "docs/review-pipeline/review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_FINDINGS.md",
+      "description": "Generation lifecycle baseline — RG gaps, snapshot semantics, locked Q#",
       "scope": ["backend/**"]
     },
     {
-      "path": "docs/review-pipeline/github-surface-hardening/GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md",
-      "description": "General plan — hardening phases P0–P4",
+      "path": "docs/review-pipeline/review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_GENERAL_PLAN.md",
+      "description": "General plan — HEAD gate, supersede, surface flush, coalesce",
       "scope": ["backend/**"]
     },
     {
