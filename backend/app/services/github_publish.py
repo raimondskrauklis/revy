@@ -916,6 +916,13 @@ async def run_publish_job(
                         else None
                     )
                     if group is None:
+                        logger.warning(
+                            "github_publish_inline_skipped_no_group",
+                            extra={
+                                "publish_job_id": str(publish_job_id),
+                                "finding_id": str(finding.id),
+                            },
+                        )
                         continue
                     try:
                         comment_id = await github_api.create_pull_request_review_comment(
