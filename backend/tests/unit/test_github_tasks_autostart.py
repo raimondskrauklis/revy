@@ -57,6 +57,38 @@ def test_process_github_event_enqueues_pipeline_after_pull_request_opened():
     enqueue_mock.assert_called_once_with(job_id)
 
 
+def test_process_github_event_command_supersedes_before_enqueue():
+    workspace_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    job_id = uuid.uuid4()
+    delivery = _delivery(event_type="issue_comment")
+    session = AsyncMock()
+    session.get = AsyncMock(return_value=delivery)
+
+    intent = IssueCommentPipelineIntent(workspace_id=workspace_id, revision_id=revision_id)
+
+    with patch("app.workers.github_tasks.get_db_context", return_value=_db_context(session)):
+        with patch(
+            "app.workers.github_tasks.apply_issue_comment_webhook_event",
+            AsyncMock(return_value=intent),
+        ):
+            with patch(
+                "app.workers.github_tasks.supersede_active_generations_for_revision",
+                AsyncMock(),
+            ) as supersede_mock:
+                with patch(
+                    "app.workers.github_tasks.maybe_enqueue_pipeline_for_revision",
+                    AsyncMock(return_value=job_id),
+                ) as pipeline_mock:
+                    with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
+                        github_tasks.process_github_event.run("d-auto")
+
+    supersede_mock.assert_awaited_once()
+    assert supersede_mock.await_args.kwargs["revision_id"] == revision_id
+    pipeline_mock.assert_awaited_once()
+    enqueue_mock.assert_called_once_with(job_id)
+
+
 def test_process_github_event_enqueues_pipeline_for_issue_comment_command():
     workspace_id = uuid.uuid4()
     revision_id = uuid.uuid4()

@@ -1,7 +1,7 @@
 # backend/tests/unit/test_github_generation_lifecycle.py
 """Generation lifecycle authority and supersede helpers — P0."""
 import uuid
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -13,6 +13,8 @@ from app.services.github_generation_lifecycle import (
     is_review_run_superseded,
     mark_active_review_runs_superseded_for_revision,
     mark_review_runs_superseded_for_pull_request,
+    supersede_active_generations_for_revision,
+    supersede_stale_generations_for_new_revision,
 )
 
 
@@ -155,3 +157,100 @@ def test_is_review_run_superseded():
         status=GitHubReviewRunStatus.pending,
     )
     assert is_review_run_superseded(active) is False
+
+
+@pytest.mark.asyncio
+async def test_supersede_stale_generations_for_new_revision_finalizes_pipelines():
+    pull_request = _pull_request()
+    old_revision = _revision(pull_request, revision_number=1, head_sha="old")
+    keep_revision = _revision(pull_request, revision_number=2, head_sha="new")
+    pending_old = _review_run(old_revision, status=GitHubReviewRunStatus.pending)
+    pipeline_run_id = uuid.uuid4()
+
+    session = AsyncMock()
+    session.get = AsyncMock(return_value=keep_revision)
+    session.scalars = AsyncMock(side_effect=[[old_revision.id], [pending_old]])
+    session.flush = AsyncMock()
+
+    pipeline_run = MagicMock()
+    pipeline_run.id = pipeline_run_id
+
+    with patch(
+        "app.services.github_generation_lifecycle.get_pipeline_run_for_review_run",
+        AsyncMock(return_value=pipeline_run),
+    ):
+        with patch(
+            "app.services.github_generation_lifecycle.finalize_pipeline_github_check_neutral",
+            AsyncMock(),
+        ) as finalize_mock:
+            superseded_ids = await supersede_stale_generations_for_new_revision(
+                session,
+                pull_request_id=pull_request.id,
+                keep_revision_id=keep_revision.id,
+            )
+
+    assert superseded_ids == [pending_old.id]
+    finalize_mock.assert_awaited_once_with(
+        session,
+        pipeline_run_id=pipeline_run_id,
+        summary="Superseded by newer commit",
+    )
+
+
+@pytest.mark.asyncio
+async def test_supersede_on_synchronize_hook_marks_older_runs_only():
+    """P2.6 scenario: supersede helper only targets older revision runs."""
+    pull_request = _pull_request(head_sha="h2-sha")
+    h1_revision = _revision(pull_request, revision_number=1, head_sha="h1-sha")
+    h2_revision = _revision(pull_request, revision_number=2, head_sha="h2-sha")
+    h1_run = _review_run(h1_revision, status=GitHubReviewRunStatus.processing)
+
+    session = AsyncMock()
+    session.get = AsyncMock(return_value=h2_revision)
+    session.scalars = AsyncMock(side_effect=[[h1_revision.id], [h1_run]])
+    session.flush = AsyncMock()
+
+    with patch(
+        "app.services.github_generation_lifecycle.finalize_pipeline_checks_for_superseded_review_runs",
+        AsyncMock(),
+    ):
+        superseded_ids = await supersede_stale_generations_for_new_revision(
+            session,
+            pull_request_id=pull_request.id,
+            keep_revision_id=h2_revision.id,
+        )
+
+    assert superseded_ids == [h1_run.id]
+    assert h1_run.status == GitHubReviewRunStatus.superseded
+
+
+@pytest.mark.asyncio
+async def test_supersede_active_generations_for_revision_finalizes_pipelines():
+    pull_request = _pull_request()
+    revision = _revision(pull_request, revision_number=1, head_sha="sha")
+    pending = _review_run(revision, status=GitHubReviewRunStatus.pending)
+    pipeline_run_id = uuid.uuid4()
+
+    session = AsyncMock()
+    session.get = AsyncMock(return_value=revision)
+    session.scalars = AsyncMock(return_value=[pending])
+    session.flush = AsyncMock()
+
+    pipeline_run = MagicMock()
+    pipeline_run.id = pipeline_run_id
+
+    with patch(
+        "app.services.github_generation_lifecycle.get_pipeline_run_for_review_run",
+        AsyncMock(return_value=pipeline_run),
+    ):
+        with patch(
+            "app.services.github_generation_lifecycle.finalize_pipeline_github_check_neutral",
+            AsyncMock(),
+        ) as finalize_mock:
+            superseded_ids = await supersede_active_generations_for_revision(
+                session,
+                revision_id=revision.id,
+            )
+
+    assert superseded_ids == [pending.id]
+    finalize_mock.assert_awaited_once()

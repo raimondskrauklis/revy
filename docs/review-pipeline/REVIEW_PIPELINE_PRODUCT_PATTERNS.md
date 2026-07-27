@@ -62,7 +62,7 @@
 | Same issue every re-review | Learning + dedupe over time | R5 fingerprints + supersede / resolve | **shipped** |
 | Idempotent GitHub surface | Known pain: new summary comment each push | R6-Q1: update check run + summary **in place**; **per-PR** issue comment reuse across pushes (#52) | **shipped** |
 | Resolve review threads when fixed | Greptile auto-resolves inline threads | Option A: resolve when fingerprint ∉ current-run publishable findings; superseded/resolved groups; GraphQL `resolveReviewThread` | **shipped** |
-| **Snapshot generation at HEAD** | Greptile/Bugbot: latest pass only; supersede in-flight; results after finish | [review-generation-lifecycle](./review-generation-lifecycle/) — HEAD gate, supersede, full surface flush, coalesce ≤10 s | **in flight** |
+| **Snapshot generation at HEAD** | Greptile/Bugbot: latest pass only; supersede in-flight; results after finish | [review-generation-lifecycle](./review-generation-lifecycle/) — HEAD gate, supersede on sync, stage guards, coalesce ≤10 s | **in flight** — [PR #54](https://github.com/raimondskrauklis/revy/pull/54) P0–P2 |
 | Check run **in progress** on PR | Greptile/Bugbot show spinner while reviewing | **G10:** `in_progress` at pipeline start (`start_pipeline_github_check`); `completed` at publish; reuses pipeline check id per `head_sha`; neutral finalize on supersede/skip (generation program) | **shipped** |
 | Human dismiss / ack | Resolve threads, 👍/👎 | R7 execution **deferred** dismiss/ack → **R7.6**; judge `resolved` exists | **defer** — [review-quality peer review](./review-quality/REVIEW_QUALITY_PEER_REVIEW.md) M2 |
 | Learn from team comments | Memory from PR comments, reactions, commits | Post-R7 analytics + optional rule suggestions | **future** (R8+) |

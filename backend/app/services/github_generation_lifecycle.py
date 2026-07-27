@@ -22,8 +22,14 @@ from app.constants.enums import GitHubReviewRunStatus, stored_enum_value
 from app.core.logging import get_logger
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
 from app.models.github_review_run import GitHubReviewRunORM
+from app.services.github_pipeline_trace import (
+    finalize_pipeline_github_check_neutral,
+    get_pipeline_run_for_review_run,
+)
 
 logger = get_logger(__name__)
+
+_SUPERSEDED_CHECK_SUMMARY = "Superseded by newer commit"
 
 _ACTIVE_REVIEW_RUN_STATUSES = (
     GitHubReviewRunStatus.pending,
@@ -128,4 +134,55 @@ async def mark_active_review_runs_superseded_for_revision(
         )
     if superseded_ids:
         await session.flush()
+    return superseded_ids
+
+
+async def finalize_pipeline_checks_for_superseded_review_runs(
+    session: AsyncSession,
+    *,
+    review_run_ids: list[UUID],
+) -> None:
+    for review_run_id in review_run_ids:
+        pipeline_run = await get_pipeline_run_for_review_run(session, review_run_id=review_run_id)
+        if pipeline_run is not None:
+            await finalize_pipeline_github_check_neutral(
+                session,
+                pipeline_run_id=pipeline_run.id,
+                summary=_SUPERSEDED_CHECK_SUMMARY,
+            )
+
+
+async def supersede_stale_generations_for_new_revision(
+    session: AsyncSession,
+    *,
+    pull_request_id: UUID,
+    keep_revision_id: UUID,
+) -> list[UUID]:
+    """On synchronize: supersede in-flight runs on older revisions and neutralize G10 checks."""
+    superseded_ids = await mark_review_runs_superseded_for_pull_request(
+        session,
+        pull_request_id=pull_request_id,
+        keep_revision_id=keep_revision_id,
+    )
+    await finalize_pipeline_checks_for_superseded_review_runs(
+        session,
+        review_run_ids=superseded_ids,
+    )
+    return superseded_ids
+
+
+async def supersede_active_generations_for_revision(
+    session: AsyncSession,
+    *,
+    revision_id: UUID,
+) -> list[UUID]:
+    """On command enqueue: supersede autostart in-flight on the same HEAD revision."""
+    superseded_ids = await mark_active_review_runs_superseded_for_revision(
+        session,
+        revision_id=revision_id,
+    )
+    await finalize_pipeline_checks_for_superseded_review_runs(
+        session,
+        review_run_ids=superseded_ids,
+    )
     return superseded_ids

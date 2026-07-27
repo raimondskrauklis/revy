@@ -216,6 +216,10 @@ async def test_prepare_review_after_index_skips_when_review_pending(create_revie
 
 
 @pytest.mark.asyncio
+@patch(
+    "app.services.review_pipeline.is_authoritative_for_pull_request_head",
+    AsyncMock(return_value=True),
+)
 @patch("app.services.review_pipeline.create_review_run", new_callable=AsyncMock)
 async def test_prepare_review_after_index_for_autostart(create_review_run_mock: AsyncMock):
     workspace_id = uuid.uuid4()
@@ -294,6 +298,33 @@ async def test_prepare_review_after_index_skips_closed_pull_request(create_revie
 
 
 @pytest.mark.asyncio
+@patch("app.services.review_pipeline.create_review_run", new_callable=AsyncMock)
+async def test_prepare_review_after_index_skips_not_authoritative(create_review_run_mock: AsyncMock):
+    workspace_id = uuid.uuid4()
+    revision, pull_request = _revision_chain(workspace_id)
+    pull_request.head_sha = "new-head"
+    revision.head_sha = "old-head"
+    job = GitHubIndexJobORM(
+        revision_id=revision.id,
+        workspace_id=workspace_id,
+        status=GitHubIndexJobStatus.completed,
+        trigger_source=GitHubIndexJobTriggerSource.autostart,
+    )
+    job.id = uuid.uuid4()
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[revision, pull_request, revision, pull_request])
+    session.scalar = AsyncMock(return_value=None)
+
+    result = await prepare_review_after_index(session, job)
+
+    assert result.review_run_id is None
+    assert result.neutral_finalize_check is True
+    assert "not pull request HEAD" in (result.pipeline_check_summary or "")
+    create_review_run_mock.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_prepare_review_after_index_skips_manual_trigger():
     job = GitHubIndexJobORM(
         revision_id=uuid.uuid4(),
@@ -307,6 +338,10 @@ async def test_prepare_review_after_index_skips_manual_trigger():
 
 
 @pytest.mark.asyncio
+@patch(
+    "app.services.review_pipeline.is_authoritative_for_pull_request_head",
+    AsyncMock(return_value=True),
+)
 @patch("app.services.review_pipeline.create_review_run", new_callable=AsyncMock)
 async def test_prepare_review_after_index_fails_check_on_llm_unavailable(
     create_review_run_mock: AsyncMock,

@@ -23,6 +23,7 @@ from app.models.github_index_job import GitHubIndexJobORM
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.models.workspaces import WorkspaceORM
+from app.services.github_generation_lifecycle import is_authoritative_for_pull_request_head
 from app.services.github_indexing import index_job_in_progress
 from app.services.github_pipeline_trace import (
     get_pipeline_run_for_index_job,
@@ -255,6 +256,19 @@ async def prepare_review_after_index(
         return ReviewAfterIndexOutcome(
             neutral_finalize_check=True,
             pipeline_check_summary="Review skipped — pull request is draft or not open",
+        )
+
+    if not await is_authoritative_for_pull_request_head(session, revision_id=job.revision_id):
+        logger.info(
+            "pipeline_review_skipped_not_authoritative",
+            extra={
+                "index_job_id": str(job.id),
+                "revision_id": str(job.revision_id),
+            },
+        )
+        return ReviewAfterIndexOutcome(
+            neutral_finalize_check=True,
+            pipeline_check_summary="Review skipped — revision is not pull request HEAD",
         )
 
     try:

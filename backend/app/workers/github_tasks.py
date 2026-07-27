@@ -8,6 +8,7 @@ from app.constants.enums import GitHubIndexJobTriggerSource
 from app.core.database import get_db_context
 from app.core.logging import get_logger
 from app.models.github_webhook_delivery import GitHubWebhookDeliveryORM
+from app.services.github_generation_lifecycle import supersede_active_generations_for_revision
 from app.services.github_indexing import enqueue_index_job
 from app.services.github_installations import apply_installation_webhook_event
 from app.services.github_pull_requests import (
@@ -71,6 +72,10 @@ def process_github_event(self, delivery_id: str) -> None:
             if event_type == "issue_comment":
                 intent = await apply_issue_comment_webhook_event(session, payload)
                 if intent is not None:
+                    await supersede_active_generations_for_revision(
+                        session,
+                        revision_id=intent.revision_id,
+                    )
                     job_id = await maybe_enqueue_pipeline_for_revision(
                         session,
                         workspace_id=intent.workspace_id,
