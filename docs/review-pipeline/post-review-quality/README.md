@@ -1,8 +1,8 @@
 # Post review-quality — GitHub surface
 
-**Status:** P0–P4 **merged** via [PR #52](https://github.com/raimondskrauklis/revy/pull/52) (`feat/revy-github`) — **ready to merge** · post-merge **staging deploy** + dogfood row pending.
+**Status:** **Complete** — merged [PR #52](https://github.com/raimondskrauklis/revy/pull/52). Follow-up program: [github-surface-hardening/](../github-surface-hardening/README.md).
 
-**Next:** [POST_REVIEW_QUALITY_FOLLOWUPS.md](./POST_REVIEW_QUALITY_FOLLOWUPS.md) → findings + general plan for P5+.
+**Next:** ~~POST_REVIEW_QUALITY_FOLLOWUPS~~ → [GITHUB_SURFACE_HARDENING_FINDINGS.md](../github-surface-hardening/GITHUB_SURFACE_HARDENING_FINDINGS.md).
 
 **Ship model:** All program docs in this folder — findings → general plan → execution P0–P4.
 
@@ -30,7 +30,7 @@ Engine (L4) is on `main`. PR reviews run on **branch `head_sha` before merge**; 
 | P3 — L3 inline | [GITHUB_SURFACE_P3_EXECUTION.md](./GITHUB_SURFACE_P3_EXECUTION.md) | **merged** (#52) · inline + thread lifecycle |
 | P4 — Doc sync | [GITHUB_SURFACE_P4_EXECUTION.md](./GITHUB_SURFACE_P4_EXECUTION.md) | **done** |
 
-**Follow-ups:** [POST_REVIEW_QUALITY_FOLLOWUPS.md](./POST_REVIEW_QUALITY_FOLLOWUPS.md)
+**Follow-ups:** moved to [github-surface-hardening/](../github-surface-hardening/README.md)
 
 Index: [GITHUB_SURFACE_EXECUTION.md](./GITHUB_SURFACE_EXECUTION.md)
 
@@ -44,7 +44,8 @@ Index: [GITHUB_SURFACE_EXECUTION.md](./GITHUB_SURFACE_EXECUTION.md)
 | 2 | [POST_REVIEW_QUALITY_GENERAL_PLAN.md](./POST_REVIEW_QUALITY_GENERAL_PLAN.md) | Phases P0–P4 + dogfood rubric |
 | 3 | [GITHUB_SURFACE_DOGFOOD.md](./GITHUB_SURFACE_DOGFOOD.md) | Per-PR push log |
 | 4 | [GITHUB_SURFACE_EXECUTION.md](./GITHUB_SURFACE_EXECUTION.md) | Execution index + locked decisions |
-| 5 | [POST_REVIEW_QUALITY_FOLLOWUPS.md](./POST_REVIEW_QUALITY_FOLLOWUPS.md) | Next program seed (P5+) |
+| 5 | [POST_REVIEW_QUALITY_FOLLOWUPS.md](./POST_REVIEW_QUALITY_FOLLOWUPS.md) | Seed (superseded by hardening program) |
+| — | [github-surface-hardening/](../github-surface-hardening/) | **Active** follow-up program |
 
 ---
 

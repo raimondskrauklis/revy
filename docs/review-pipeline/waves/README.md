@@ -81,4 +81,18 @@ Baseline: [post-review-quality/](../post-review-quality/README.md) · **LOOP:** 
 | P3 — L3 inline | Warning threads | [GITHUB_SURFACE_P3_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_P3_EXECUTION.md) | **merged** (#52) |
 | P4 — Doc sync | PRODUCT_PATTERNS | [GITHUB_SURFACE_P4_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_P4_EXECUTION.md) | done |
 
-**Next:** [POST_REVIEW_QUALITY_FOLLOWUPS.md](../post-review-quality/POST_REVIEW_QUALITY_FOLLOWUPS.md) · Index: [GITHUB_SURFACE_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_EXECUTION.md)
+Index: [GITHUB_SURFACE_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_EXECUTION.md)
+
+---
+
+## GitHub surface hardening (post P0–P4)
+
+Baseline: [github-surface-hardening/](../github-surface-hardening/README.md) · **Status:** findings baseline · general plan next
+
+| Focus | Doc |
+|-------|-----|
+| Findings | [GITHUB_SURFACE_HARDENING_FINDINGS.md](../github-surface-hardening/GITHUB_SURFACE_HARDENING_FINDINGS.md) |
+| General plan | *pending* |
+| Execution | *pending* |
+
+**Top priority:** GH-1 — auto-resolve Revy inline threads when findings close (Greptile parity).
