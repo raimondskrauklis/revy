@@ -76,6 +76,12 @@ _TERMINAL_PUBLISH_JOB_STATUSES = frozenset({
     GitHubPublishJobStatus.skipped_superseded,
 })
 
+_PUBLISH_SURFACE_REUSE_STATUSES = (
+    GitHubPublishJobStatus.completed,
+    GitHubPublishJobStatus.skipped_not_head,
+    GitHubPublishJobStatus.skipped_superseded,
+)
+
 
 async def _skip_publish_job_at_gate(
     session: AsyncSession,
@@ -440,7 +446,7 @@ async def _fetch_prior_completed_publish_jobs(
             select(GitHubPublishJobORM)
             .where(
                 GitHubPublishJobORM.revision_id.in_(revision_ids),
-                GitHubPublishJobORM.status == GitHubPublishJobStatus.completed,
+                GitHubPublishJobORM.status.in_(_PUBLISH_SURFACE_REUSE_STATUSES),
             )
             .order_by(GitHubPublishJobORM.created_at.asc())
         )
@@ -460,28 +466,34 @@ async def _publishable_fingerprints_for_run(
     session: AsyncSession,
     *,
     review_run_id: UUID,
+    pull_request_id: UUID,
 ) -> set[str]:
-    """Fingerprints of groups with publishable inline findings for this review run."""
-    rows = await session.scalars(
-        select(GitHubFindingGroupORM.fingerprint)
-        .join(GitHubFindingORM, GitHubFindingORM.group_id == GitHubFindingGroupORM.id)
-        .where(
-            GitHubFindingORM.review_run_id == review_run_id,
-            GitHubFindingGroupORM.state == GitHubFindingGroupState.active,
-            GitHubFindingORM.severity.in_(
-                (
-                    FindingSeverity.error,
-                    FindingSeverity.critical,
-                    FindingSeverity.warning,
-                    FindingSeverity.info,
-                ),
-            ),
-            GitHubFindingORM.file_path.is_not(None),
-            GitHubFindingORM.start_line.is_not(None),
+    """Fingerprints eligible for inline publish (aligned with build inline_posts judge gate)."""
+    outcome_group_ids = set(
+        await session.scalars(
+            select(GitHubFindingJudgeOutcomeORM.group_id).where(
+                GitHubFindingJudgeOutcomeORM.review_run_id == review_run_id,
+            )
         )
-        .distinct()
     )
-    return set(rows)
+    fingerprints: set[str] = set()
+    inline_findings = list(
+        await session.scalars(inline_publish_findings_statement(review_run_id=review_run_id))
+    )
+    for finding in inline_findings:
+        if finding.group_id is None:
+            continue
+        group = await session.get(GitHubFindingGroupORM, finding.group_id)
+        if group is None or group.pull_request_id != pull_request_id:
+            continue
+        if (
+            is_judge_candidate(severity=finding.severity, category=finding.category)
+            and group.id not in outcome_group_ids
+            and group.state != GitHubFindingGroupState.resolved
+        ):
+            continue
+        fingerprints.add(group.fingerprint)
+    return fingerprints
 
 
 async def _resolve_stale_inline_threads(
@@ -501,7 +513,11 @@ async def _resolve_stale_inline_threads(
     if not inline_threads:
         return
 
-    publishable = await _publishable_fingerprints_for_run(session, review_run_id=review_run_id)
+    publishable = await _publishable_fingerprints_for_run(
+        session,
+        review_run_id=review_run_id,
+        pull_request_id=pull_request_id,
+    )
     fingerprints_to_resolve: set[str] = {
         fingerprint for fingerprint in inline_threads if fingerprint not in publishable
     }
@@ -583,7 +599,7 @@ async def find_publish_job_for_head_sha(
             GitHubPublishJobORM.revision_id.in_(revision_ids),
             GitHubPublishJobORM.head_sha == head_sha,
             GitHubPublishJobORM.github_check_run_id.is_not(None),
-            GitHubPublishJobORM.status == GitHubPublishJobStatus.completed,
+            GitHubPublishJobORM.status.in_(_PUBLISH_SURFACE_REUSE_STATUSES),
         )
         .order_by(GitHubPublishJobORM.created_at.desc())
         .limit(1)
@@ -611,7 +627,7 @@ async def find_prior_issue_comment_id_for_pull_request(
         .where(
             GitHubPublishJobORM.revision_id.in_(revision_ids),
             GitHubPublishJobORM.github_comment_id.is_not(None),
-            GitHubPublishJobORM.status == GitHubPublishJobStatus.completed,
+            GitHubPublishJobORM.status.in_(_PUBLISH_SURFACE_REUSE_STATUSES),
         )
         .order_by(GitHubPublishJobORM.created_at.desc())
         .limit(1)

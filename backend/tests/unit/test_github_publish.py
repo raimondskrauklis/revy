@@ -240,14 +240,48 @@ def test_load_inline_thread_map_reads_v2_entries():
 
 @pytest.mark.asyncio
 async def test_publishable_fingerprints_for_run():
+    from app.models.github_finding import GitHubFindingORM
+
     review_run_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    group_id = uuid.uuid4()
+
+    group = GitHubFindingGroupORM(
+        id=group_id,
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="fp-a",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Warn",
+        message="fix",
+        file_path="app/main.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+    finding = GitHubFindingORM(
+        review_run_id=review_run_id,
+        workspace_id=workspace_id,
+        group_id=group_id,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Warn",
+        message="fix",
+        file_path="app/main.py",
+        start_line=3,
+    )
+
     session = AsyncMock()
-    session.scalars = AsyncMock(return_value=["fp-a", "fp-b"])
+    session.scalars = AsyncMock(side_effect=[[], [finding]])
+    session.get = AsyncMock(return_value=group)
+
     result = await github_publish._publishable_fingerprints_for_run(
         session,
         review_run_id=review_run_id,
+        pull_request_id=pull_request_id,
     )
-    assert result == {"fp-a", "fp-b"}
+    assert result == {"fp-a"}
 
 
 def test_fingerprint_thread_ids_from_index():
@@ -273,7 +307,7 @@ async def test_resolve_stale_inline_threads_uses_thread_index():
     pull_request_id = uuid.uuid4()
     inline_threads = {"stale-fp": 1001}
     session = AsyncMock()
-    session.scalars = AsyncMock(side_effect=[[], []])
+    session.scalars = AsyncMock(side_effect=[[], [], []])
     client = AsyncMock()
     list_mock = AsyncMock()
     with patch(
@@ -310,16 +344,40 @@ async def test_resolve_stale_inline_threads_uses_thread_index():
 @pytest.mark.resolve_unmocked
 @pytest.mark.asyncio
 async def test_resolve_stale_inline_threads_option_a():
+    from app.models.github_finding import GitHubFindingORM
+
     review_run_id = uuid.uuid4()
     pull_request_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
     inline_threads = {"stale-fp": 1001, "active-fp": 1002}
-    session = AsyncMock()
-    session.scalars = AsyncMock(
-        side_effect=[
-            ["active-fp"],
-            [],
-        ]
+    group_id = uuid.uuid4()
+    active_group = GitHubFindingGroupORM(
+        id=group_id,
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="active-fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Active",
+        message="still",
+        file_path="app/main.py",
+        last_seen_revision_id=uuid.uuid4(),
     )
+    active_finding = GitHubFindingORM(
+        review_run_id=review_run_id,
+        workspace_id=workspace_id,
+        group_id=group_id,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Active",
+        message="still",
+        file_path="app/main.py",
+        start_line=3,
+    )
+    session = AsyncMock()
+    session.scalars = AsyncMock(side_effect=[[], [active_finding], []])
+    session.get = AsyncMock(return_value=active_group)
     client = AsyncMock()
     with patch(
         "app.services.github_publish.github_api.find_review_thread_id_for_comment",
@@ -435,7 +493,7 @@ async def test_run_publish_job_persists_thread_map_after_resolve_when_inline_ski
     session.get = AsyncMock(
         side_effect=[job, run, revision, pull_request, repository, installation]
     )
-    session.scalars = AsyncMock(side_effect=[[], [revision_id], ["active-only"], []])
+    session.scalars = AsyncMock(side_effect=[[], [revision_id], [], [], [], []])
     session.scalar = AsyncMock(return_value=None)
     session.flush = AsyncMock()
 
@@ -855,7 +913,7 @@ async def test_run_publish_job_posts_inline_for_warning_finding():
 
     session = AsyncMock()
     session.get = AsyncMock(
-        side_effect=[job, run, revision, pull_request, repository, installation, group]
+        side_effect=[job, run, revision, pull_request, repository, installation, group, group]
     )
     session.scalars = AsyncMock(side_effect=[[], [], [finding]])
     session.scalar = AsyncMock(return_value=None)
@@ -1731,7 +1789,7 @@ async def test_run_publish_job_same_sha_re_publish_persists_thread_map():
     session.get = AsyncMock(
         side_effect=[job, run, revision, pull_request, repository, installation]
     )
-    session.scalars = AsyncMock(side_effect=[[], [revision_id], [], []])
+    session.scalars = AsyncMock(side_effect=[[], [revision_id], [], [], [], []])
     session.scalar = AsyncMock(return_value=existing_job)
     session.flush = AsyncMock()
 
@@ -1977,10 +2035,18 @@ async def test_run_publish_job_reactivates_inline_same_publish():
 
     session = AsyncMock()
     session.get = AsyncMock(
-        side_effect=[job, run, revision, pull_request, repository, installation, group]
+        side_effect=[job, run, revision, pull_request, repository, installation, group, group, group]
     )
     session.scalars = AsyncMock(
-        side_effect=[[], [revision_id], [revision_id], [finding], ["return-fp"], []]
+        side_effect=[
+            [],
+            [revision_id],
+            [revision_id],
+            [finding],
+            [],
+            [finding],
+            [],
+        ]
     )
     session.scalar = AsyncMock(return_value=None)
     session.flush = AsyncMock()
@@ -1999,26 +2065,30 @@ async def test_run_publish_job_reactivates_inline_same_publish():
                 AsyncMock(),
             ) as resolve_mock:
                 with patch(
-                    "app.services.github_publish.get_pipeline_run_for_review_run",
-                    AsyncMock(return_value=None),
+                    "app.services.github_publish._publishable_fingerprints_for_run",
+                    AsyncMock(return_value={"return-fp"}),
                 ):
                     with patch(
-                        "app.services.github_publish.github_api.installation_auth_headers",
-                        AsyncMock(return_value={"Authorization": "Bearer t"}),
+                        "app.services.github_publish.get_pipeline_run_for_review_run",
+                        AsyncMock(return_value=None),
                     ):
-                        with patch("app.services.github_publish.github_api.create_check_run", AsyncMock(return_value=1)):
-                            with patch(
-                                "app.services.github_publish.github_api.create_issue_comment",
-                                AsyncMock(return_value=2),
-                            ):
+                        with patch(
+                            "app.services.github_publish.github_api.installation_auth_headers",
+                            AsyncMock(return_value={"Authorization": "Bearer t"}),
+                        ):
+                            with patch("app.services.github_publish.github_api.create_check_run", AsyncMock(return_value=1)):
                                 with patch(
-                                    "app.services.github_publish.github_api.create_pull_request_review_comment",
-                                    inline_mock,
+                                    "app.services.github_publish.github_api.create_issue_comment",
+                                    AsyncMock(return_value=2),
                                 ):
-                                    result = await github_publish.run_publish_job(
-                                        session,
-                                        publish_job_id=publish_job_id,
-                                    )
+                                    with patch(
+                                        "app.services.github_publish.github_api.create_pull_request_review_comment",
+                                        inline_mock,
+                                    ):
+                                        result = await github_publish.run_publish_job(
+                                            session,
+                                            publish_job_id=publish_job_id,
+                                        )
 
     assert result.status == GitHubPublishJobStatus.completed
     resolve_mock.assert_not_awaited()
