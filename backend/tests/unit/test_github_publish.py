@@ -5,6 +5,7 @@ Harness notes (GH-6):
 - Autouse `_publish_formatter_defaults` mocks format, prior jobs, thread index, and resolve (unless `@pytest.mark.resolve_unmocked`).
 - `resolve_unmocked` tests call real `_resolve_stale_inline_threads`; patch `github_api` GraphQL only.
 - Prefer `_publish_job_context()` + targeted patches over ordered `session.scalars` side_effect chains.
+- Build phase (`_build_publish_surface`) runs before flush; scalars order is groups → revision ids (×2) → inline findings → resolve queries.
 """
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -1974,7 +1975,7 @@ async def test_run_publish_job_reactivates_inline_same_publish():
         side_effect=[job, run, revision, pull_request, repository, installation, group]
     )
     session.scalars = AsyncMock(
-        side_effect=[[], [revision_id], [revision_id], ["return-fp"], [], [finding]]
+        side_effect=[[], [revision_id], [revision_id], [finding], ["return-fp"], []]
     )
     session.scalar = AsyncMock(return_value=None)
     session.flush = AsyncMock()
@@ -2254,6 +2255,198 @@ async def test_run_publish_job_skipped_superseded():
 
     assert result.status == GitHubPublishJobStatus.skipped_superseded
     neutral_mock.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_run_publish_job_surface_flush_call_order():
+    from app.models.github_finding import GitHubFindingORM
+
+    publish_job_id, session, job = _publish_job_context()
+    workspace_id = job.workspace_id
+    review_run_id = job.review_run_id
+    revision_id = job.revision_id
+    pull_request_id = uuid.uuid4()
+    group_id = uuid.uuid4()
+    base_gets = [job, *list(session.get.side_effect)[1:]]
+
+    group = GitHubFindingGroupORM(
+        id=group_id,
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="fp-inline",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Warn",
+        message="fix",
+        file_path="app/main.py",
+        last_seen_revision_id=revision_id,
+    )
+    finding = GitHubFindingORM(
+        review_run_id=review_run_id,
+        workspace_id=workspace_id,
+        group_id=group_id,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Warn",
+        message="fix",
+        file_path="app/main.py",
+        start_line=3,
+    )
+    finding.id = uuid.uuid4()
+
+    session.get = AsyncMock(side_effect=[*base_gets, group])
+    session.scalars = AsyncMock(
+        side_effect=[
+            [],
+            [revision_id],
+            [revision_id],
+            [finding],
+        ]
+    )
+
+    call_order: list[str] = []
+
+    def _track(name: str, return_value):
+        async def _fn(*args, **kwargs):
+            call_order.append(name)
+            return return_value
+
+        return _fn
+
+    prior_job = MagicMock()
+    prior_job.summary_json = {"github_inline_threads": {"stale-fp": 9001}}
+
+    with patch(
+        "app.services.github_publish._fetch_prior_completed_publish_jobs",
+        AsyncMock(return_value=[prior_job]),
+    ):
+        with patch(
+            "app.services.github_publish.get_pipeline_run_for_review_run",
+            AsyncMock(return_value=None),
+        ):
+            with patch(
+                "app.services.github_publish.github_api.build_review_thread_comment_index",
+                _track("index", {}),
+            ):
+                with patch(
+                    "app.services.github_publish._resolve_stale_inline_threads",
+                    _track("resolve", None),
+                ):
+                    with patch(
+                        "app.services.github_publish.github_api.installation_auth_headers",
+                        AsyncMock(return_value={"Authorization": "Bearer t"}),
+                    ):
+                        with patch(
+                            "app.services.github_publish.github_api.create_check_run",
+                            _track("check", 100),
+                        ):
+                            with patch(
+                                "app.services.github_publish.github_api.create_issue_comment",
+                                _track("issue", 200),
+                            ):
+                                with patch(
+                                    "app.services.github_publish.github_api.create_pull_request_review_comment",
+                                    _track("inline", 300),
+                                ):
+                                    await github_publish.run_publish_job(
+                                        session,
+                                        publish_job_id=publish_job_id,
+                                    )
+
+    assert call_order == ["index", "resolve", "check", "issue", "inline"]
+
+
+@pytest.mark.asyncio
+async def test_run_publish_job_no_checkpoint_between_inline_posts():
+    from app.models.github_finding import GitHubFindingORM
+
+    publish_job_id, session, job = _publish_job_context()
+    workspace_id = job.workspace_id
+    review_run_id = job.review_run_id
+    revision_id = job.revision_id
+    pull_request_id = uuid.uuid4()
+    base_gets = [job, *list(session.get.side_effect)[1:]]
+
+    groups_and_findings = []
+    for idx, line in enumerate((3, 7), start=1):
+        group_id = uuid.uuid4()
+        group = GitHubFindingGroupORM(
+            id=group_id,
+            workspace_id=workspace_id,
+            pull_request_id=pull_request_id,
+            fingerprint=f"fp-{idx}",
+            state=GitHubFindingGroupState.active,
+            severity=FindingSeverity.warning,
+            category=FindingCategory.bug,
+            title=f"Warn {idx}",
+            message="fix",
+            file_path="app/main.py",
+            last_seen_revision_id=revision_id,
+        )
+        finding = GitHubFindingORM(
+            review_run_id=review_run_id,
+            workspace_id=workspace_id,
+            group_id=group_id,
+            severity=FindingSeverity.warning,
+            category=FindingCategory.bug,
+            title=f"Warn {idx}",
+            message="fix",
+            file_path="app/main.py",
+            start_line=line,
+        )
+        finding.id = uuid.uuid4()
+        groups_and_findings.append((group, finding))
+
+    session.get = AsyncMock(
+        side_effect=[*base_gets, groups_and_findings[0][0], groups_and_findings[1][0]]
+    )
+    session.scalars = AsyncMock(
+        side_effect=[
+            [],
+            [revision_id],
+            [revision_id],
+            [groups_and_findings[0][1], groups_and_findings[1][1]],
+        ]
+    )
+
+    checkpoint_mock = AsyncMock()
+    inline_calls = 0
+
+    async def inline_post(*args, **kwargs):
+        nonlocal inline_calls
+        inline_calls += 1
+        checkpoint_mock.assert_not_awaited()
+        return 300 + inline_calls
+
+    with patch(
+        "app.services.github_publish.get_pipeline_run_for_review_run",
+        AsyncMock(return_value=None),
+    ):
+        with patch(
+            "app.services.github_publish._checkpoint_publish_surface",
+            checkpoint_mock,
+        ):
+            with patch(
+                "app.services.github_publish.github_api.installation_auth_headers",
+                AsyncMock(return_value={"Authorization": "Bearer t"}),
+            ):
+                with patch("app.services.github_publish.github_api.create_check_run", AsyncMock(return_value=100)):
+                    with patch(
+                        "app.services.github_publish.github_api.create_issue_comment",
+                        AsyncMock(return_value=200),
+                    ):
+                        with patch(
+                            "app.services.github_publish.github_api.create_pull_request_review_comment",
+                            inline_post,
+                        ):
+                            await github_publish.run_publish_job(
+                                session,
+                                publish_job_id=publish_job_id,
+                                persist_github_surface=True,
+                            )
+
+    checkpoint_mock.assert_awaited_once()
 
 
 @pytest.mark.asyncio
