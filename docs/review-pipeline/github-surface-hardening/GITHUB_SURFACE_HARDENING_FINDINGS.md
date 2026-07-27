@@ -174,8 +174,8 @@ Row: [GITHUB_SURFACE_DOGFOOD.md](../post-review-quality/GITHUB_SURFACE_DOGFOOD.m
 | Q# | Question | Status | Resolution |
 |----|----------|--------|------------|
 | **GH-Q1** | Separate “Revybot resolver” from publish? | **locked** | **No** — one publish path |
-| **GH-Q2** | Diff-based resolve in v1? | **open** | Prefer fingerprint + group state first (GH-1A) |
-| **GH-Q3** | Store `thread_id` in summary_json? | **open** | Likely yes for GH-2/3 — schema in general plan |
+| **GH-Q2** | Diff-based resolve in v1? | **locked** | **No** — fingerprint + group state (P1); see general plan |
+| **GH-Q3** | Store `thread_id` in summary_json? | **locked** | **Yes** — P2 |
 | **GH-Q4** | Track B in this program? | **locked** | **No** |
 | **GH-Q5** | Program name / folder | **locked** | `github-surface-hardening` |
 
@@ -228,6 +228,5 @@ Row: [GITHUB_SURFACE_DOGFOOD.md](../post-review-quality/GITHUB_SURFACE_DOGFOOD.m
 
 ## Next step
 
-1. `architecture-peer-review` on this doc.
-2. `create-general-plan` → `GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md`.
-3. `create-execution-plan` → `GITHUB_SURFACE_HARDENING_EXECUTION.md` + P0–Pn files.
+1. ~~`create-general-plan`~~ → [GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md](./GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md).
+2. `create-execution-plan` → `GITHUB_SURFACE_HARDENING_EXECUTION.md` + P0–P4 execution files.

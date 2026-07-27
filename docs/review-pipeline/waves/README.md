@@ -87,12 +87,12 @@ Index: [GITHUB_SURFACE_EXECUTION.md](../post-review-quality/GITHUB_SURFACE_EXECU
 
 ## GitHub surface hardening (post P0–P4)
 
-Baseline: [github-surface-hardening/](../github-surface-hardening/README.md) · **Status:** findings baseline · general plan next
+Baseline: [github-surface-hardening/](../github-surface-hardening/README.md) · **Status:** general plan ready · execution next
 
 | Focus | Doc |
 |-------|-----|
 | Findings | [GITHUB_SURFACE_HARDENING_FINDINGS.md](../github-surface-hardening/GITHUB_SURFACE_HARDENING_FINDINGS.md) |
-| General plan | *pending* |
-| Execution | *pending* |
+| General plan | [GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md](../github-surface-hardening/GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md) |
+| Execution | *pending* (`create-execution-plan`) |
 
 **Top priority:** GH-1 — auto-resolve Revy inline threads when findings close (Greptile parity).
