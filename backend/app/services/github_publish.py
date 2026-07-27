@@ -17,6 +17,7 @@ from app.constants.enums import (
 from app.core.config import settings
 from app.core.exceptions import ConflictError, NotFoundError, ServiceUnavailableError
 from app.core.logging import get_logger
+from app.core.worker_retries import WorkerRetryableError, classify_transient_error
 from app.integrations import github_api
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
@@ -43,7 +44,7 @@ _PUBLISH_GROUP_SEVERITY_ORDER = case(
 )
 
 
-class PublishJobRetryableError(Exception):
+class PublishJobRetryableError(WorkerRetryableError):
     """Transient publish failure — Celery should retry after persisting progress."""
 
 
@@ -588,4 +589,7 @@ async def run_publish_job(
             job.status = GitHubPublishJobStatus.failed
             job.error_message = str(exc)[:2000]
             await session.flush()
-        raise PublishJobRetryableError(str(exc)) from exc
+        retryable = classify_transient_error(exc)
+        if retryable is not None:
+            raise PublishJobRetryableError(str(exc)) from exc
+        return job

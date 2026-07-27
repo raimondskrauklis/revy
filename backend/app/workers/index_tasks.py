@@ -7,11 +7,11 @@ from uuid import UUID
 from app.constants.enums import GitHubIndexJobStatus, ReviewProfile
 from app.core.database import get_db_context
 from app.core.logging import get_logger
-from app.services.github_indexing import run_index_job
+from app.services.github_indexing import mark_index_job_failed, run_index_job
 from app.services.github_review import enqueue_review_run
 from app.services.review_pipeline import prepare_review_after_index
-from app.workers.async_runner import run_worker_async
 from app.workers.celery_app import celery_app
+from app.workers.task_retries import run_with_retryable_failure
 
 logger = get_logger(__name__)
 
@@ -19,18 +19,19 @@ logger = get_logger(__name__)
 @celery_app.task(
     name="app.workers.index_tasks.index_pull_request_revision",
     bind=True,
-    max_retries=3,
+    max_retries=0,
     queue="indexing",
 )
 def index_pull_request_revision(self, index_job_id: str) -> None:
     review_run_ids: list[UUID] = []
 
     async def _run() -> None:
+        nonlocal review_run_ids
         async with get_db_context() as session:
             job = await run_index_job(session, index_job_id=UUID(index_job_id))
             log_extra = {
                 "index_job_id": index_job_id,
-                "status": job.status.value,
+                "status": str(job.status),
                 "chunk_count": job.chunk_count,
             }
             if job.status == GitHubIndexJobStatus.failed:
@@ -42,20 +43,23 @@ def index_pull_request_revision(self, index_job_id: str) -> None:
             if review_run_id is not None:
                 review_run_ids.append(review_run_id)
 
-    try:
-        run_worker_async(_run())
-    except Exception as exc:
-        logger.error(
-            "github_index_job_task_failed",
-            extra={
-                "index_job_id": index_job_id,
-                "error": str(exc),
-                "retries": self.request.retries,
-            },
-        )
-        if self.request.retries < self.max_retries:
-            raise self.retry(exc=exc, countdown=60 * (2**self.request.retries)) from exc
-        raise
-    else:
-        for review_run_id in review_run_ids:
-            enqueue_review_run(review_run_id, profile=ReviewProfile.standard)
+    async def _mark_failed(error_message: str) -> None:
+        async with get_db_context() as session:
+            await mark_index_job_failed(
+                session,
+                index_job_id=UUID(index_job_id),
+                error_message=error_message,
+            )
+            await session.commit()
+
+    run_with_retryable_failure(
+        self,
+        max_retries=self.max_retries,
+        run=_run,
+        mark_permanent_failure=_mark_failed,
+        log_context={"index_job_id": index_job_id},
+        logger=logger,
+    )
+
+    for review_run_id in review_run_ids:
+        enqueue_review_run(review_run_id, profile=ReviewProfile.standard)

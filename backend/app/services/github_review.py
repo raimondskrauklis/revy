@@ -24,6 +24,7 @@ from app.core.exceptions import (
     ValidationError,
 )
 from app.core.logging import get_logger
+from app.core.worker_retries import classify_transient_error
 from app.integrations import llm_dispatch, moonshot_review
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
@@ -49,6 +50,10 @@ CONTEXT_CHUNK_CAP = 30
 TOP_K_PER_QUERY = 10
 FINDING_LIST_DEFAULT_LIMIT = 100
 FINDING_LIST_MAX_LIMIT = 500
+
+
+def _review_profile_str(profile: ReviewProfile | str) -> str:
+    return profile if isinstance(profile, str) else profile.value
 
 
 async def create_review_run(
@@ -246,7 +251,7 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> GitHu
     if run.status != GitHubReviewRunStatus.pending:
         logger.info(
             "github_review_run_skip_non_pending",
-            extra={"review_run_id": str(review_run_id), "status": run.status.value},
+            extra={"review_run_id": str(review_run_id), "status": str(run.status)},
         )
         return run
 
@@ -281,7 +286,7 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> GitHu
             pr_title=pull_request.title,
         )
         prompt = _build_review_prompt(pr_title=pull_request.title, chunks=chunks)
-        model_role = review_profile_to_model_role(run.profile.value)
+        model_role = review_profile_to_model_role(_review_profile_str(run.profile))
         model_ref = await resolve_model(session, run.workspace_id, model_role)
         run.provider = model_ref.provider
         run.model_id = model_ref.model_id
@@ -289,7 +294,7 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> GitHu
 
         raw_json = await _call_llm(
             model_ref=model_ref,
-            profile=run.profile.value,
+            profile=_review_profile_str(run.profile),
             prompt=prompt,
         )
 
@@ -320,7 +325,23 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> GitHu
         run.status = GitHubReviewRunStatus.completed
         await session.flush()
         return run
-    except (httpx.HTTPError, ServiceUnavailableError, ValidationError) as exc:
+    except ValidationError as exc:
+        logger.error(
+            "github_review_run_failed",
+            extra={"review_run_id": str(review_run_id), "error": str(exc)},
+        )
+        run.status = GitHubReviewRunStatus.failed
+        run.error_message = str(exc)[:2000]
+        await session.flush()
+        return run
+    except (httpx.HTTPError, ServiceUnavailableError) as exc:
+        retryable = classify_transient_error(exc)
+        if retryable is not None:
+            logger.warning(
+                "github_review_run_transient_failure",
+                extra={"review_run_id": str(review_run_id), "error": str(exc)},
+            )
+            raise retryable from exc
         logger.error(
             "github_review_run_failed",
             extra={"review_run_id": str(review_run_id), "error": str(exc)},
