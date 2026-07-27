@@ -49,6 +49,39 @@ Announce once before coding: plan folder, start phase, end phase, file per phase
 
 ---
 
+## PR review context (Greptile + Bugbot)
+
+Programs that ship **code + planning docs in one PR** should wire review bots on the **first LOOP iteration** (same commit as first schema/bootstrap work when applicable).
+
+Changed `.md` files appear in the PR diff, but Greptile/Bugbot do **not** treat planning docs as authoritative unless wired.
+
+| Tool | Repo file | Content |
+|:---|:---|:---|
+| **Greptile** | `.greptile/files.json` | `path` entries + `scope` (e.g. `backend/**`) |
+| **Bugbot** | `.cursor/BUGBOT.md` | Markdown links to the same docs (paths relative to `.cursor/`) |
+
+**Default paths to wire** (when execution doc does not override):
+
+1. **Active execution file** — current phase contract (or single-file execution plan for the whole program).
+2. **Findings baseline** — locked Q# / decisions doc linked from execution header.
+3. **Authority** doc — only if execution file links `**Authority:**`.
+
+**First-iteration checklist:**
+
+- [ ] `.greptile/files.json` exists; scopes match touched code (`backend/**`, `frontend/**`, …).
+- [ ] `.cursor/BUGBOT.md` links execution + findings (and authority when present).
+- [ ] Both ship in **first phase commit** — do not defer to final doc-sync phase.
+
+**Per-phase commit pattern:** phase code + **minimal** doc touch (README status row / execution table for that slice). Do **not** re-edit full findings + peer-review corpus every push (context budget).
+
+**Not** `.cursor/rules/` — IDE-agent only; Bugbot does not read them.
+
+**Reference:** [REVIEW_QUALITY_EXECUTION.md](../../docs/review-pipeline/waves/REVIEW_QUALITY_EXECUTION.md) § PR review context.
+
+If the execution doc has an explicit **PR review context** block — follow it over these defaults.
+
+---
+
 ## The LOOP
 
 One **iteration** = one full phase. After success → **next phase immediately** unless a stop rule fires.
@@ -57,16 +90,17 @@ One **iteration** = one full phase. After success → **next phase immediately**
 FOR each phase in scope (discovered order):
   1. Read ONLY this phase's execution file (+ findings locks if doc references them)
   2. If file/README links **Authority:** — read it; stop if this phase contradicts it
-  3. Cancel prior phase todos; create one todo per **remaining** subphase (from resume point if set)
-  4. FOR each subphase in order (skip subphases before resume point):
+  3. First iteration only: ensure **PR review context** wiring (`.greptile/files.json`, `.cursor/BUGBOT.md`) per section above
+  4. Cancel prior phase todos; create one todo per **remaining** subphase (from resume point if set)
+  5. FOR each subphase in order (skip subphases before resume point):
        implement → run tests from **Deliverable** / doc → mark todo done
        if migration subphase (new handwritten Alembic revision): STOP — migration pause (see stop rules)
        (last phase: **`post-finish-gap-pass`** once before doc-sync subphases)
-  5. **Ruff** (backend) — safe fixes only; must pass before phase gate
-  6. Run **phase gate** from execution doc — must be green
-  7. **`ship-changes`** — Bugbot, commit, push, PR (one commit per phase)
-  8. Log: phase id, commit sha, PR URL if any, next phase id
-  9. Continue LOOP
+  6. **Ruff** (backend) — safe fixes only; must pass before phase gate
+  7. Run **phase gate** from execution doc — must be green
+  8. **`ship-changes`** — Bugbot, commit, push, PR (one commit per phase)
+  9. Log: phase id, commit sha, PR URL if any, next phase id
+  10. Continue LOOP
 ```
 
 **Context hygiene:** only the **current** phase execution file is active scope; respect **Out of scope** / **Depends on** in that file; do not re-implement prior phases.
@@ -140,6 +174,8 @@ Per **`ship-changes`**. LOOP extras:
 ## Execution doc contract
 
 Plans must follow **`create-execution-plan`** (one file per phase, README, phase gate, 3–6 subphases). If gate missing, propose minimal gate before implementing.
+
+Programs with code + docs in one PR: execution doc **first phase** should include **PR review context** (or link to a single-file execution §) — see **PR review context** section above.
 
 ---
 

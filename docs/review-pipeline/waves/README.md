@@ -40,6 +40,27 @@ Baseline: [REVIEW_PIPELINE_POLISH_FINDINGS.md](../REVIEW_PIPELINE_POLISH_FINDING
 | R5 — Reconcile + judge | [R5](../REVIEW_PIPELINE_R5_RECONCILE_JUDGE_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R5_EXECUTION.md](./REVIEW_PIPELINE_R5_EXECUTION.md) | done — `main` ([#29](https://github.com/raimondskrauklis/revy/pull/29)) |
 | R6 — GitHub publish | [R6](../REVIEW_PIPELINE_R6_GITHUB_PUBLISH_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R6_EXECUTION.md](./REVIEW_PIPELINE_R6_EXECUTION.md) | done — `main` ([#29](https://github.com/raimondskrauklis/revy/pull/29)) |
 | R7 — Reviewer UI | [R7](../REVIEW_PIPELINE_R7_REVIEWER_UI_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R7_EXECUTION.md](./REVIEW_PIPELINE_R7_EXECUTION.md) | done — `main` ([#29](https://github.com/raimondskrauklis/revy/pull/29)) |
-| R8 — Automation | [R8](../REVIEW_PIPELINE_R8_AUTOMATION_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R8_EXECUTION.md](./REVIEW_PIPELINE_R8_EXECUTION.md) | in PR [#31](https://github.com/raimondskrauklis/revy/pull/31) — tag `review-r8-v1` after merge |
+| R8 — Automation | [R8](../REVIEW_PIPELINE_R8_AUTOMATION_GENERAL_PLAN.md) | [REVIEW_PIPELINE_R8_EXECUTION.md](./REVIEW_PIPELINE_R8_EXECUTION.md) | done — `main` (#31) |
 
-**Program status:** R0–R7 on `main`; R8 in PR [#31](https://github.com/raimondskrauklis/revy/pull/31).
+**Program status:** R0–R8 on `main`; R8 merged (#31).
+
+---
+
+## Review quality (post-R8)
+
+Baseline: [REVIEW_QUALITY_FINDINGS.md](../review-quality/REVIEW_QUALITY_FINDINGS.md) · Peer review: [REVIEW_QUALITY_PEER_REVIEW.md](../review-quality/REVIEW_QUALITY_PEER_REVIEW.md) · General plans: [index](../review-quality/REVIEW_QUALITY_GENERAL_PLAN.md).
+
+**Branch:** `feat/review-quality` · **LOOP order:** RQ0 → RQ1 → … → RQ8 (single PR).
+
+| Phase | Focus | Execution | Status |
+|-------|--------|-----------|--------|
+| **Review quality** | Diff-first + trace + Greptile publish + evidence + metrics | [REVIEW_QUALITY_EXECUTION.md](./REVIEW_QUALITY_EXECUTION.md) | peer-reviewed — pending `phase-execution` |
+
+**Tag after merge:** `review-quality-v1`
+
+**Post-v1 (same program folder):**
+
+| Track | Focus | When |
+|-------|--------|------|
+| **RQ-STRUCT-1** | Cross-file grep/import bridge | After tag — [structural context](../review-quality/REVIEW_QUALITY_STRUCTURAL_CONTEXT.md) |
+| **RQ-RC-1** | Greptile/Bugbot planning-doc improvements | After tag — [review context](../review-quality/REVIEW_QUALITY_REVIEW_CONTEXT.md) |
