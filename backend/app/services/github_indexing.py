@@ -10,7 +10,7 @@ import httpx
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.constants.enums import GitHubIndexJobStatus, GitHubIndexJobTriggerSource
+from app.constants.enums import GitHubIndexJobStatus, GitHubIndexJobTriggerSource, stored_enum_value
 from app.core.config import settings
 from app.core.exceptions import ConflictError, NotFoundError, ServiceUnavailableError
 from app.core.logging import get_logger
@@ -170,7 +170,7 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
     if job.status != GitHubIndexJobStatus.pending:
         logger.info(
             "github_index_job_skip_non_pending",
-            extra={"index_job_id": str(index_job_id), "status": job.status.value},
+            extra={"index_job_id": str(index_job_id), "status": stored_enum_value(job.status)},
         )
         return job
 

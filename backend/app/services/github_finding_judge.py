@@ -15,6 +15,7 @@ from app.constants.enums import (
     GitHubJudgeOutcome,
     GitHubReviewJudgeStatus,
     GitHubReviewRunStatus,
+    stored_enum_value,
 )
 from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError, ValidationError
@@ -44,8 +45,8 @@ def is_judge_candidate(*, severity: FindingSeverity, category: FindingCategory) 
 def _build_judge_prompt(*, group: GitHubFindingGroupORM) -> str:
     return (
         f"Title: {group.title}\n"
-        f"Severity: {group.severity.value}\n"
-        f"Category: {group.category.value}\n"
+        f"Severity: {stored_enum_value(group.severity)}\n"
+        f"Category: {stored_enum_value(group.category)}\n"
         f"File: {group.file_path or 'n/a'}\n"
         f"Message: {group.message}\n"
     )

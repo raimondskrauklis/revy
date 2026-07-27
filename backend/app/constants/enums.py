@@ -155,6 +155,11 @@ class FindingCategory(str, Enum):
     other = "other"
 
 
+def stored_enum_value(value: Enum | str) -> str:
+    """ORM String columns may hydrate enum fields as plain strings."""
+    return value if isinstance(value, str) else value.value
+
+
 class GitHubFindingGroupState(str, Enum):
     """github_finding_groups.state — R5 reconciliation."""
 
