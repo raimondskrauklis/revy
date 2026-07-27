@@ -82,13 +82,14 @@ PR #52 proved the gap: **four Revybot ERROR threads stayed open after fixes** wh
 
 | ID | Gap | User impact | Code touch | Priority |
 |----|-----|-------------|------------|----------|
-| **GH-1** | **No auto-resolve when finding fixed** | Stale open threads; PR looks “dirty”; Greptile contrast | `github_publish.py`, maybe new helper | **P0** |
-| **GH-2** | **GraphQL pagination** (`first: 100` threads, `first: 20` comments) | Silent miss on large PRs | `github_api.py:460–465` | **P1** |
-| **GH-3** | **N+1 GraphQL** in supersede loop | Slow publish; API rate limits | `github_publish.py:318–340` | **P1** |
-| **GH-4** | **Same-SHA re-publish** edge cases | Threads not resolved when job re-runs without new inline | `run_publish_job` idempotency | **P2** — verify in dogfood |
-| **GH-5** | **Missing `group_id` on finding** | Inline skipped silently | `github_publish.py:758–764` | **P2** |
-| **GH-6** | **Brittle publish unit tests** | Regressions slip through | `test_github_publish.py` | **P2** |
-| **GH-7** | **Post-merge staging dogfood** | Unvalidated deploy | Ops + dogfood log | **Gate** (human) |
+| **GH-1** | **No auto-resolve when finding fixed** | Stale open threads; PR looks “dirty”; Greptile contrast | `github_publish.py` | **program P1** |
+| **GH-1b** | **`summary_json` not persisted after resolve when `post_inline=False`** | Same-SHA re-resolve loops; stale map in DB | `github_publish.py:734–801` | **program P1** (with GH-1) |
+| **GH-2** | **GraphQL pagination** (`first: 100` threads, `first: 20` comments) | Silent miss on busy PRs — **correctness**, not only perf | `github_api.py:460–465` | **program P2** |
+| **GH-3** | **N+1 GraphQL** in supersede loop | Slow publish; API rate limits | `github_publish.py:318–340` | **program P2** |
+| **GH-4** | **Same-SHA re-publish idempotency** | Re-run publish without new inline | `run_publish_job` | **program P3** — verify after GH-1b |
+| **GH-5** | **Missing `group_id` on finding** | Inline skipped silently | `github_publish.py:758–764` | **program P3** |
+| **GH-6** | **Brittle publish unit tests** | Regressions slip through | `test_github_publish.py` | **program P4** (P1 adds direct resolve tests) |
+| **GH-7** | **Post-merge staging dogfood** | Unvalidated deploy | Ops + dogfood log | **Gate** — after P1 for GH-1 proof |
 
 **Out of scope:** recall (H3), STRUCT, RC4 rules, `/reviewer` pipeline tab, human dismiss R7.6.
 
@@ -96,39 +97,68 @@ PR #52 proved the gap: **four Revybot ERROR threads stayed open after fixes** wh
 
 ## 4. GH-1 deep dive — auto-resolve (north star)
 
+### #52 root cause (peer-reviewed, verified)
+
+PR #52 threads stayed open **after code fix** because:
+
+1. **Reconcile does not close absent groups** — `reconcile_review_run` only iterates findings in the current run (`github_finding_reconcile.py:110–180`). When the LLM stops emitting a finding, the group stays **`active`** with a stale `last_seen_revision_id`.
+2. **Resolve only queries `superseded`/`resolved`** — `_resolve_superseded_inline_threads` (`github_publish.py:305–316`) never sees those groups.
+3. **“No active group” is the wrong trigger** — #52 groups were still **active**; they were simply **absent from the new review run**.
+
 ### Greptile behavior (benchmark)
 
-On each review pass, Greptile compares diff + prior threads → **marks resolved** when it believes the issue is fixed. Threads collapse on GitHub without human action.
+On each review pass, Greptile re-evaluates the diff and **collapses threads** it believes are fixed — without waiting for DB `group.state` to change.
 
 ### Revy today
 
 ```text
 publish → load github_inline_threads from prior jobs
-       → for group in superseded|resolved: find thread by comment_id → resolveReviewThread
-       → post new inline for active findings
+       → for group in superseded|resolved ONLY: resolve thread
+       → post new inline for active findings in current run
 ```
 
-**Gaps:**
+### Locked v1 resolve trigger (GH-Q6)
 
-1. **Active finding removed from publish set** (judge dismissed, reconciled away) but group not yet `resolved`/`superseded` — thread stays open.
-2. **Code fixed, group still `active`** until next reconcile — thread stays open (Greptile would resolve on diff).
-3. **No stored `thread_id`** — must scan all threads per `comment_id` (`github_api.py:456–506`).
+**Option A (primary):** resolve when `fingerprint` is in `inline_threads` but **not** in the current `review_run_id` publishable finding set (`inline_publish_findings_statement` fingerprints). Run-scoped — not new diff logic.
 
-### Recommended direction (advice — not execution)
+**Also keep:** existing resolve for groups in `superseded`/`resolved` state.
 
-**Phase A (minimal, fingerprint-based):**
+**Explicitly not v1:**
 
-- After reconcile, on publish: for each `fingerprint` in `inline_threads`, if no matching **active** group with that fingerprint → resolve thread and pop map.
-- Extends current supersede logic beyond `superseded`/`resolved` states.
+| Option | Why deferred |
+|--------|----------------|
+| **B** — `resolution_status == addressed` | Diff-based signal already exists (`github_resolution_metrics.py:139–194`) but does not change `group.state`; adopting it is a second trigger — consider post-v1 alignment only |
+| **C** — reconcile marks absent groups resolved | Fixes check/summary too but is reconcile scope change — out of this program |
 
-**Phase B (scale):**
+**v1 scope for check/summary (GH-Q7):** GH-1 **collapses GitHub threads only**. Active groups absent from the new run may still appear in check/summary until reconcile changes (separate program). Do not block GH-1 on reconcile.
 
-- Store `thread_id` in `github_inline_threads` value (object or parallel map).
-- One paginated `reviewThreads` fetch per publish; batch resolve.
+### GH-1b — thread-map persistence (same program phase as GH-1)
 
-**Phase C (Greptile-class, optional later):**
+**Verified bug:** `_resolve_superseded_inline_threads` mutates `inline_threads` in place (`pop` at `github_publish.py:340`), but `job.summary_json` is only reassigned inside `if post_inline:` (`798–801`). No `flag_modified` in backend. In-place JSONB mutation may not persist on flush.
 
-- Diff-aware resolve (line removed or hunk changed) — overlaps track B; defer unless dogfood demands.
+**Fix:** always reassign `job.summary_json` (or `flag_modified`) after resolve — even when `post_inline=False`.
+
+### Scale (program P2)
+
+- Store `thread_id` in thread map (GH-Q3).
+- Paginated `reviewThreads` index; batch resolve (GH-2, GH-3).
+
+### Diff-based resolve (deferred)
+
+GH-Q2 locked **no** new diff-based resolve logic. M2 `resolution_status` may inform a future phase — document only.
+
+---
+
+## 4b. `resolution_status` coupling (documented, not v1 trigger)
+
+| Fact | Location |
+|------|----------|
+| `apply_resolution_status_for_synchronize` stamps diff-based `addressed` on push | `github_resolution_metrics.py:139–194` |
+| Does **not** change `group.state` | same |
+| `count_resolution_status` excludes `addressed` while group still `active` | `github_publish_formatter.py:97–100` — L2 prose under-counts fixes |
+| Thread resolve ignores `resolution_status` today | `github_publish.py:290–350` |
+
+Execution must not silently adopt Option B without updating formatter/check semantics.
 
 ---
 
@@ -138,7 +168,7 @@ publish → load github_inline_threads from prior jobs
 
 **Verified:** `_resolve_superseded_inline_threads` calls lookup **once per closed group** (`github_publish.py:323`) — O(n) HTTP.
 
-**Advice:** Add `list_review_threads` with cursor pagination; build `databaseId → threadId` index once per publish; reuse for resolve + optional GH-1.
+**Advice:** Add `list_review_threads` with cursor pagination; build `databaseId → threadId` index once per publish. **Until P2 ships**, busy PRs (>100 threads) can silently miss resolves (`None` at `332–333`) — acceptable for internal dogfood only.
 
 ---
 
@@ -161,11 +191,9 @@ Row: [GITHUB_SURFACE_DOGFOOD.md](../post-review-quality/GITHUB_SURFACE_DOGFOOD.m
 
 | Case | Risk |
 |------|------|
-| Finding re-activated after resolve | New inline comment; map must keep **newest** id (fixed #52) |
-| Transient GraphQL failure | Pop only after success (fixed #52) — retry on next publish |
-| Thread on old commit line after push | GitHub may mark outdated; resolve anyway if fingerprint closed |
-| Docs-only PR, no line findings | GH-1 loop no-op; no inline spam |
-| Multiple comments same fingerprint historical | Newest wins in `_load_inline_thread_map` |
+| Re-activation same publish | Resolve runs before inline post (`734` then `746`) — test fingerprint reappearing |
+| `post_inline=False` | Must still persist map after resolve (GH-1b) |
+| Thread map v2 shape | Migrate-on-read: current `dict[str, int]` → `{ "fp": { "comment_id": int, "thread_id"?: str } }` or equivalent — execution must specify |
 
 ---
 
@@ -174,10 +202,19 @@ Row: [GITHUB_SURFACE_DOGFOOD.md](../post-review-quality/GITHUB_SURFACE_DOGFOOD.m
 | Q# | Question | Status | Resolution |
 |----|----------|--------|------------|
 | **GH-Q1** | Separate “Revybot resolver” from publish? | **locked** | **No** — one publish path |
-| **GH-Q2** | Diff-based resolve in v1? | **locked** | **No** — fingerprint + group state (P1); see general plan |
-| **GH-Q3** | Store `thread_id` in summary_json? | **locked** | **Yes** — P2 |
+| **GH-Q2** | New diff-based resolve logic in v1? | **locked** | **No** — Option A (run-scoped fingerprints) |
+| **GH-Q3** | Store `thread_id` in summary_json? | **locked** | **Yes** — program P2 |
 | **GH-Q4** | Track B in this program? | **locked** | **No** |
 | **GH-Q5** | Program name / folder | **locked** | `github-surface-hardening` |
+| **GH-Q6** | GH-1 resolve trigger v1? | **locked** | **Option A** + existing superseded/resolved pass |
+| **GH-Q7** | Stale active groups — threads vs check/summary? | **locked** | **Threads only** in v1; reconcile unchanged |
+| **GH-Q8** | Gap ID vs program phase naming? | **locked** | **GH-*** = gap id; **P0–P4** = program phase in general/execution plan |
+
+**Naming:** findings “Priority” column used GH-1 **P0** (urgency) vs program **P1** (phase) — use **GH-*** ids in execution docs to avoid “ship P0 twice” confusion.
+
+**Review context (verified stale on `main`):** `.greptile/files.json` and `.cursor/BUGBOT.md` still point at post-review-quality / `feat/revy-github` — program P0 deliverable.
+
+**Tests (verified):** zero direct unit tests for `_resolve_superseded_inline_threads` (autouse mock at `test_github_publish.py:30–44`). Program P1 must add ≥1 unmocked test; full harness refactor stays P4.
 
 ---
 
@@ -194,8 +231,8 @@ Row: [GITHUB_SURFACE_DOGFOOD.md](../post-review-quality/GITHUB_SURFACE_DOGFOOD.m
 
 | Risk | Mitigation |
 |------|------------|
-| Over-resolve threads while finding still active | Only resolve when fingerprint not in active set + explicit state transition |
-| GraphQL pagination complexity | Ship GH-1A first with current query; paginate before customer scale |
+| Over-resolve threads while finding still active | Resolve only when fingerprint **not in current run publishable set** (Option A) |
+| GraphQL pagination complexity | Ship GH-1 with current query; GH-2 before customer-scale busy PRs |
 | summary_json shape change | Version key or migrate on read |
 | Test refactor scope creep | GH-6 as own subphase; don’t block GH-1 |
 
@@ -205,10 +242,10 @@ Row: [GITHUB_SURFACE_DOGFOOD.md](../post-review-quality/GITHUB_SURFACE_DOGFOOD.m
 
 | Check | Pass |
 |-------|------|
-| Push fix on dogfood PR → Revy thread collapses without manual `gh` | GH-1 |
-| PR with >100 threads (simulated or staging) → resolve still finds target | GH-2 |
-| Publish with 10 closed groups → ≤2 GraphQL list calls | GH-3 |
-| Staging deploy + dogfood row L1/L2/L3 Y | GH-7 |
+| Push fix on dogfood PR → Revy thread collapses without manual `gh` | GH-1 + GH-1b (program P1) |
+| PR with >100 threads (unit mock) → resolve still finds target | GH-2 (program P2) |
+| Publish with 10 closed groups → ≤2 GraphQL list calls | GH-3 (program P2) |
+| Staging deploy + dogfood: thread auto-resolve on fix push | GH-7 — **after P1**, before program sign-off |
 | Local Bugbot clean on each phase | Process |
 
 ---
@@ -223,6 +260,15 @@ Row: [GITHUB_SURFACE_DOGFOOD.md](../post-review-quality/GITHUB_SURFACE_DOGFOOD.m
 | Prior program dogfood | `docs/review-pipeline/post-review-quality/GITHUB_SURFACE_DOGFOOD.md` |
 | Greptile resolve pattern | `docs/review-pipeline/REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md` § Inline comment shape |
 | PRODUCT_PATTERNS partial row | `docs/review-pipeline/REVIEW_PIPELINE_PRODUCT_PATTERNS.md` — “Resolve review threads when fixed” |
+
+| Reconcile | `backend/app/services/github_finding_reconcile.py` |
+| Resolution metrics | `backend/app/services/github_resolution_metrics.py` |
+
+---
+
+## 13. Peer review adjustments (2026-07-27)
+
+Architecture peer-review cross-checked findings + plan against publish, reconcile, resolution metrics, tests, and review-context wiring. **Accepted** — see §4 (#52 root cause), GH-Q6–Q8, GH-1b, review-context stale, P1 tests. **Deferred** — Option B/C as v1 triggers; reconcile changes.
 
 ---
 

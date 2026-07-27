@@ -1,6 +1,6 @@
 # GitHub surface hardening (post P0–P4)
 
-**Status:** General plan ready — execution plan next. **Branch:** `feat/github-surface-hardening` (docs + code ship together per phase).
+**Status:** Findings + general plan peer-reviewed (2026-07-27). Execution plan next. **Branch:** `feat/github-surface-hardening` (local only).
 
 **Prerequisite:** [post-review-quality](../post-review-quality/README.md) P0–P4 merged ([#52](https://github.com/raimondskrauklis/revy/pull/52)).
 
