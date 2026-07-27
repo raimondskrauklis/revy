@@ -318,7 +318,7 @@ Full log: [REVIEW_QUALITY_DOGFOOD_PR50.md](./review-quality/REVIEW_QUALITY_DOGFO
 
 **Local Bugbot before every push** — hard gate in `phase-execution` and `ship-changes` skills. Post-push: Greptile `babysit-pr` (not a substitute).
 
-Full patterns (parent agent discipline, prompt shapes, parallelism): [REVIEW_QUALITY_AGENT_ORCHESTRATION.md](./review-quality/REVIEW_QUALITY_AGENT_ORCHESTRATION.md).
+Full patterns (parent agent discipline, prompt shapes, parallelism): [agents/ORCHESTRATION.md](./agents/ORCHESTRATION.md).
 
 ---
 
@@ -327,7 +327,8 @@ Full patterns (parent agent discipline, prompt shapes, parallelism): [REVIEW_QUA
 | Path | Role |
 |------|------|
 | [review-quality/REVIEW_QUALITY_FINDINGS.md](./review-quality/REVIEW_QUALITY_FINDINGS.md) | Review quality baseline — diff-first + trace + GitHub |
-| [review-quality/REVIEW_QUALITY_AGENT_ORCHESTRATION.md](./review-quality/REVIEW_QUALITY_AGENT_ORCHESTRATION.md) | Local Bugbot before push; LOOP prompts; parent-agent discipline |
+| [agents/README.md](./agents/README.md) | Living agent docs — orchestration, prompts, dogfood index |
+| [agents/ORCHESTRATION.md](./agents/ORCHESTRATION.md) | Local Bugbot before push; LOOP; parent-agent discipline |
 | [REVIEW_PIPELINE_FINDINGS.md](./REVIEW_PIPELINE_FINDINGS.md) | Locked Q# + domain states |
 | [REVIEW_PIPELINE_PRODUCT_PATTERNS.md](./REVIEW_PIPELINE_PRODUCT_PATTERNS.md) | Pattern → phase map |
 | [REVIEW_PIPELINE_STAGING_SMOKE_VALIDATION.md](./REVIEW_PIPELINE_STAGING_SMOKE_VALIDATION.md) | Staging e2e + infra learnings |

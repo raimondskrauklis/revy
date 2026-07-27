@@ -19,6 +19,10 @@ docs/review-pipeline/
   REVIEW_PIPELINE_RECOVERY_CHECKLIST.md    ← agent handoff + active tracks
   REVIEW_PIPELINE_MERGE_CHECKLIST.md       ← babysit + merge gates (R4–R7 stack)
   REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md ← Greptile babysit + industry patterns → product backlog
+  agents/                                  ← living: Cursor LOOP, Bugbot, prompts (update each RQ)
+    README.md
+    ORCHESTRATION.md
+    PROMPTS.md
   REVIEW_PIPELINE_STAGING_SMOKE_VALIDATION.md ← 2026-07-27 staging e2e smoke + hotfix log
   review-quality/                          ← post-R8: diff-first, trace, GitHub publish
     README.md                              ← program index

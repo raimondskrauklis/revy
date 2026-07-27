@@ -1,10 +1,10 @@
-# Review quality — agent orchestration (learnings)
+# Agent orchestration
 
-**Purpose:** Distill how to run **phase-execution** on large program PRs with **local Bugbot**, **Greptile**, and **Revy** — prompts, gates, parallelism, and parent-agent discipline. Grows from [PR #50 dogfood](./REVIEW_QUALITY_DOGFOOD_PR50.md).
+**Index:** [agents/README.md](./README.md) · **Prompts:** [PROMPTS.md](./PROMPTS.md)
 
-**Audience:** Humans + parent agents (Composer) orchestrating subagents. **Not** product Revy pipeline code.
+Distill how to run **phase-execution** on large program PRs with **local Bugbot**, **Greptile**, and **Revy**. Grows from [PR #50 dogfood](../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md).
 
-**Related:** [phase-execution skill](../../../.cursor/skills/phase-execution/SKILL.md) · [ship-changes](../../../.cursor/skills/ship-changes/SKILL.md) · [babysit-pr](../../../.cursor/skills/babysit-pr/SKILL.md) · [review-bugbot](../../../.cursor/skills-cursor/review-bugbot/SKILL.md) (Cursor built-in).
+**Audience:** Humans + parent agents (Composer) orchestrating subagents.
 
 ---
 
@@ -40,13 +40,13 @@ implement → pytest → ruff → phase gate → LOCAL BUGBOT → commit → pus
 | **Greptile** | Post-push | `.greptile/files.json` | Inline P1/P2 + summary; `babysit-pr` |
 | **Revy** | Post-push | Shipped code on staging/prod | Table check + app link; RQ1+ improves |
 
-**Visual/context bar:** Greptile/Bugbot — [dogfood visual §](./REVIEW_QUALITY_DOGFOOD_PR50.md#visual--context-ux--greptile--bugbot-vs-revy-target-bar). Revy catches **RQ1** gaps even on planning PRs.
+**Visual/context bar:** Greptile/Bugbot — [dogfood visual §](../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#visual--context-ux--greptile--bugbot-vs-revy-target-bar).
 
 ---
 
 ## Parent agent (orchestrator) discipline
 
-Patterns that worked on PR #50 (Composer 2.5–class parent):
+Patterns that worked on PR #50 (Composer-class parent):
 
 ### Scope and memory
 
@@ -64,13 +64,13 @@ Patterns that worked on PR #50 (Composer 2.5–class parent):
 | `feat/<topic>` from `main`; announce branch once | Implement on `main` |
 | Stop at **migration pause**; report next phase id | Auto-continue RQ1 before human applies migration |
 | `feat(review-quality): RQn …` commit messages | Vague "wip" commits |
-| Capture dogfood row in [DOGFOOD_PR50](./REVIEW_QUALITY_DOGFOOD_PR50.md) | Rely on memory |
+| Capture dogfood row in [DOGFOOD_PR50](../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md) | Rely on memory |
 
 ### Subagent use (when / when not)
 
 | Use subagent | Use parent direct tools |
 |--------------|-------------------------|
-| **Bugbot** — pre-push review (`review-bugbot` skill, `run_in_background: false`) | Implementation, pytest, ruff, migration authoring |
+| **Bugbot** — pre-push review (`review-bugbot`, `run_in_background: false`) | Implementation, pytest, ruff, migration authoring |
 | **execution-peer-review** — read-only, separate session | Babysit fixes (parent implements) |
 | **explore** — broad codebase unknowns | Single-file grep/read when path known |
 
@@ -83,39 +83,6 @@ Patterns that worked on PR #50 (Composer 2.5–class parent):
 | Human applies staging migration while Greptile runs on PR | Bugbot → commit → push |
 | Multiple `gh` queries while planning | Migration subphase + later subphases same session |
 | User triages Greptile while agent stopped at pause | Push before Bugbot green |
-
----
-
-## Prompt patterns (copy-paste)
-
-### Local Bugbot (pre-push)
-
-Use `review-bugbot` skill. Default shape:
-
-```text
-Full Repository Path: /absolute/path/to/revy
-Diff: uncommitted changes
-Custom Instructions: Review against docs/review-pipeline/waves/REVIEW_QUALITY_EXECUTION.md
-§ <RQn> and REVIEW_QUALITY_FINDINGS.md locked Q#. Fix blockers only.
-```
-
-After first push on a program PR, prefer `Diff: branch changes` for phase commits.
-
-### phase-execution invoke
-
-```text
-@docs/review-pipeline/waves/REVIEW_QUALITY_EXECUTION.md /phase-execution
-```
-
-Optional: `from RQ1` after migration pause. Opt out of PR: `no pr`.
-
-### babysit-pr (post-push Greptile)
-
-```text
-/babysit-pr 50
-```
-
-Triage: fix valid P1/P2 in code; skip expected gaps (e.g. RQ1 not shipped). **Re-run local Bugbot before push.**
 
 ---
 
@@ -136,17 +103,19 @@ Triage: fix valid P1/P2 in code; skip expected gaps (e.g. RQ1 not shipped). **Re
 
 **First iteration only:** `.greptile/files.json` + `.cursor/BUGBOT.md` (RC0).
 
+Copy-paste prompts: [PROMPTS.md](./PROMPTS.md).
+
 ---
 
 ## PR #50 distilled outcomes
 
 | Lesson | Doc |
 |--------|-----|
-| Local Bugbot clean on RQ0 ORM; Greptile caught schema FK/index | [DOGFOOD_PR50](./REVIEW_QUALITY_DOGFOOD_PR50.md) |
+| Local Bugbot clean on RQ0 ORM; Greptile caught schema FK/index | [DOGFOOD_PR50](../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md) |
 | Revy (old deploy) still valuable for intent vs code | RC-D2 |
 | Greptile visual/context = RQ7 target | RC-D6 |
 | Babysit fixed 6 Greptile threads; new P1 `index_mode` → RQ1 | Greptile triage table |
-| G10 in-progress check | [REVIEW_CONTEXT](./REVIEW_QUALITY_REVIEW_CONTEXT.md) |
+| G10 in-progress check | [REVIEW_CONTEXT](../review-quality/REVIEW_QUALITY_REVIEW_CONTEXT.md) |
 
 ---
 
@@ -162,9 +131,9 @@ Triage: fix valid P1/P2 in code; skip expected gaps (e.g. RQ1 not shipped). **Re
 
 ---
 
-## Next (evolve this doc)
+## Backlog (evolve this folder)
 
-- [ ] Per-RQ rows in dogfood table after each push
-- [ ] Prompt templates per slice (RQ1 diff, RQ7 publish formatter)
-- [ ] When to add `Custom Instructions` for security/schema-only phases
+- [ ] Per-RQ prompt blocks in [PROMPTS.md](./PROMPTS.md)
+- [ ] `SUBAGENTS.md` — Task vs explore decision tree
+- [ ] `DOGFOOD_INDEX.md` — one row per program PR
 - [ ] RC-API: fetch Revy run JSON for agent babysit without paste
