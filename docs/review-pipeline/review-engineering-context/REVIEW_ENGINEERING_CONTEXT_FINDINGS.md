@@ -253,8 +253,20 @@ Sources: [Packmind playbook](https://packmind.com/context-engineering-ai-coding/
 | **RCX-D7** | **Context over format** — locked decisions + evidence beat generic API advice (RC-D23). |
 | **RCX-D8** | **Moonshot inject shape** — read manifest → resolve MD at `head_sha` → prepend bounded block (active program + extracted locks/smoke) **before** unified diff; skip paths already fully in diff. |
 | **RCX-D9** | **One edit, two consumers** — manifest update feeds Greptile `files.json` and Revy inject; no hand-duplicated path lists. |
+| **RCX-D10** | **Raise prompt caps (dogfood)** — operator spend is low; safe to increase `DIFF_MAX_BYTES` (128 KB today) and engineering-inject budget in RCX P0. Prefer config/env over hardcoded constants; revisit after cost telemetry on program PRs. |
 
 ---
+
+## Prompt caps (today → RCX P0)
+
+| Cap | Today (`github_review.py`) | RCX P0 direction |
+|-----|---------------------------|------------------|
+| Unified diff | `DIFF_MAX_BYTES` = **128 KB** | **Raise** — dogfood spend low; fewer omitted patches on large program PRs |
+| PR body | `PR_BODY_MAX_BYTES` = 4 KB | Keep or modest raise if RC2-lite bodies grow |
+| Engineering inject | N/A | New bounded budget (extracted locks/smoke); can be **generous** vs 300-line findings — still extract, not dump |
+| Supplemental RAG | 15 (diff) / 30 (full) chunks | Unchanged unless retrieval noise shows up |
+
+**Operator position (2026-07-29):** Spending is low — **do not optimize caps down** at the cost of dropped MD/diff on program PRs. Inject + higher diff cap are complementary (inject for locks off-diff; cap for co-committed docs in diff).
 
 ## Moonshot inject (locked design — RCX-D8)
 
@@ -297,6 +309,7 @@ Sources: [Packmind playbook](https://packmind.com/context-engineering-ai-coding/
 |---|-------------|-------|-------|
 | **RCX-G1** | **Manifest schema** | P0 | `active_program` + paths + `scope`; dogfood: extend `.greptile/files.json` |
 | **RCX-G2** | **Moonshot inject** | P0 | `prepare_review_context` — RCX-D8 algorithm; tests + manifest in trace |
+| **RCX-G2b** | **Raise diff cap** | P0 | `DIFF_MAX_BYTES` via config; RCX-D10 — dogfood spend headroom |
 | **RCX-G3** | **Lock/smoke extractor** | P0 | Parse findings MD sections; bounded output |
 | **RCX-G4** | **Active program trim** | P0 | One program in manifest; Greptile noise fix (RC1) |
 | **RCX-G5** | **Greptile sync** | P0 | Generate or validate `files.json` from manifest — parallel consumer |
@@ -335,6 +348,7 @@ Sources: [Packmind playbook](https://packmind.com/context-engineering-ai-coding/
 - **Greptile = parallel** — borrow `files.json` pattern; validate manifest while tuning Revy.
 - **JSON = pointer, MD = content** — LOOP co-commits planning docs; manifest says which paths matter.
 - **Bugbot** — daily workflow, whole pipeline; **not P0 build** for RCX (maintain manually).
+- **Prompt caps** — safe to **raise** `DIFF_MAX_BYTES` and inject budget; dogfood spend is low (RCX-D10).
 
 ### RCX-Q1 — Manifest SSOT?
 
