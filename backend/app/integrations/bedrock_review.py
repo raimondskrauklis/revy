@@ -117,6 +117,7 @@ async def judge_finding(
     model_id: str,
     region: str | None,
     timeout_seconds: float | None = None,
+    system_prompt: str | None = None,
 ) -> dict:
     _require_bedrock_configured(model_id=model_id, region=region)
     try:
@@ -125,7 +126,7 @@ async def judge_finding(
                 _converse_sync,
                 model_id=model_id,
                 region=region,
-                system_prompt=JUDGE_SYSTEM_PROMPT,
+                system_prompt=system_prompt or JUDGE_SYSTEM_PROMPT,
                 user_prompt=user_prompt,
                 max_tokens=1024,
             ),

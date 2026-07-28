@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 import httpx
 
+from app.constants.enums import stored_enum_value
 from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError
 
@@ -40,6 +41,16 @@ JUDGE_SYSTEM_PROMPT = (
     "(modified = real issue but overstated severity). "
     "Return JSON only: "
     '{"outcome":"upheld|dismissed|modified","notes":"brief rationale tied to evidence"}'
+)
+
+VERIFICATION_JUDGE_SYSTEM_PROMPT = (
+    "You verify whether an automated code review finding from a PRIOR revision "
+    "is still valid given ONLY the push delta (changes since that revision). "
+    "Original claim from prior revision — still valid on this push delta? "
+    "Dismiss only when the push delta shows the issue was fixed or the claim no longer holds. "
+    "Uphold when the delta does not refute the finding. "
+    "Do not search for new issues. Return JSON only: "
+    '{"outcome":"upheld|dismissed","notes":"brief rationale tied to push delta evidence"}'
 )
 
 
@@ -252,13 +263,14 @@ async def judge_finding(
     user_prompt: str,
     model_id: str | None = None,
     timeout_seconds: float | None = None,
+    system_prompt: str | None = None,
 ) -> dict:
     _require_judge_anthropic_enabled()
     profiles = _judge_profiles(model_id)
     text = await _post_with_profile_fallback(
         client,
         profiles,
-        system=JUDGE_SYSTEM_PROMPT,
+        system=system_prompt or JUDGE_SYSTEM_PROMPT,
         user_prompt=user_prompt,
         max_tokens=1024,
         timeout_seconds=timeout_seconds or settings.revy_revision_timeout_standard_seconds,
@@ -267,6 +279,40 @@ async def judge_finding(
     if not isinstance(payload, dict):
         raise ValueError("judge_json_not_object")
     return payload
+
+
+def build_verification_judge_prompt(
+    *,
+    group: object,
+    push_delta_patch: str | None,
+    evidence_snippet: str | None,
+    start_line: int | None = None,
+    end_line: int | None = None,
+) -> str:
+    title = getattr(group, "title", "")
+    severity = stored_enum_value(getattr(group, "severity", ""))
+    category = stored_enum_value(getattr(group, "category", ""))
+    file_path = getattr(group, "file_path", None) or "n/a"
+    message = getattr(group, "message", "")
+    parts = [
+        "Original finding from prior revision — is it still valid on this push delta?",
+        "",
+        f"Title: {title}",
+        f"Severity: {severity}",
+        f"Category: {category}",
+        f"File: {file_path}",
+        f"Message: {message}",
+    ]
+    if start_line is not None:
+        line_ref = str(start_line)
+        if end_line is not None and end_line != start_line:
+            line_ref = f"{start_line}-{end_line}"
+        parts.append(f"Line: {line_ref}")
+    if push_delta_patch:
+        parts.extend(["", "Push delta (since prior revision):", push_delta_patch])
+    if evidence_snippet:
+        parts.extend(["", "Evidence excerpt:", evidence_snippet])
+    return "\n".join(parts)
 
 
 def parse_judge_outcome(raw: dict) -> tuple[str, str | None]:

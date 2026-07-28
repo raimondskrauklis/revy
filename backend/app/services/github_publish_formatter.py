@@ -13,6 +13,7 @@ from app.constants.enums import (
     FindingSeverity,
     GitHubFindingGroupState,
     GitHubIndexMode,
+    ResolutionMethod,
     ResolutionStatus,
     stored_enum_value,
 )
@@ -93,6 +94,8 @@ class PublishFormatContext:
     groups: list[GitHubFindingGroupORM]
     index_mode: GitHubIndexMode | str | None = None
     fallback_reason: str | None = None
+    resolution_metrics_manifest: dict[str, object] | None = None
+    pr_active_groups: list[GitHubFindingGroupORM] | None = None
 
 
 @dataclass(frozen=True)
@@ -107,17 +110,22 @@ def count_resolution_status(groups: list[GitHubFindingGroupORM]) -> dict[str, in
     counts = {
         ResolutionStatus.addressed.value: 0,
         ResolutionStatus.judge_dismissed.value: 0,
+        ResolutionMethod.verification_dismissed.value: 0,
+        ResolutionMethod.human_dismissed.value: 0,
         ResolutionStatus.still_open.value: 0,
     }
     for group in groups:
-        if group.resolution_status is None:
-            continue
-        if group.state == GitHubFindingGroupState.resolved:
-            counts[ResolutionStatus.judge_dismissed.value] += 1
-            continue
-        if group.resolution_status == ResolutionStatus.addressed:
-            if group.state != GitHubFindingGroupState.active:
+        if group.state == GitHubFindingGroupState.resolved and group.resolution_method is not None:
+            if group.resolution_method == ResolutionMethod.absent_and_addressed:
                 counts[ResolutionStatus.addressed.value] += 1
+            elif group.resolution_method == ResolutionMethod.judge_dismissed:
+                counts[ResolutionStatus.judge_dismissed.value] += 1
+            elif group.resolution_method == ResolutionMethod.verification_dismissed:
+                counts[ResolutionMethod.verification_dismissed.value] += 1
+            elif group.resolution_method == ResolutionMethod.human_dismissed:
+                counts[ResolutionMethod.human_dismissed.value] += 1
+            continue
+        if group.resolution_status is None:
             continue
         if (
             group.resolution_status == ResolutionStatus.still_open
@@ -125,6 +133,41 @@ def count_resolution_status(groups: list[GitHubFindingGroupORM]) -> dict[str, in
         ):
             counts[ResolutionStatus.still_open.value] += 1
     return counts
+
+
+def format_resolution_metrics_block(manifest: dict[str, object]) -> str:
+    """FR-Q12 transitions block from reconcile manifest resolution_pass."""
+    rate = manifest.get("resolution_rate_pct", 0.0)
+    addressed = manifest.get("transitions_addressed", 0)
+    dismissed = manifest.get("transitions_dismissed", {})
+    still_open = manifest.get("still_open_count")
+    denominator = manifest.get("denominator_active_prior", 0)
+    compare_failed = manifest.get("compare_failed_count", 0)
+
+    dismissed_parts: list[str] = []
+    if isinstance(dismissed, dict):
+        for method, label in (
+            (ResolutionMethod.judge_dismissed.value, "judge"),
+            (ResolutionMethod.verification_dismissed.value, "verification"),
+            (ResolutionMethod.human_dismissed.value, "human"),
+        ):
+            count = dismissed.get(method, 0)
+            if isinstance(count, int) and count > 0:
+                dismissed_parts.append(f"{count} by {label}")
+
+    lines = [
+        "### Resolution metrics (this push)",
+        "",
+        f"- **Resolution rate:** {rate}% ({manifest.get('transition_count', 0)}/{denominator} prior active)",
+        f"- **Closed as fixed:** {addressed}",
+    ]
+    if dismissed_parts:
+        lines.append(f"- **Dismissed:** {', '.join(dismissed_parts)}")
+    if isinstance(still_open, int) and still_open > 0:
+        lines.append(f"- **Still open from prior review:** {still_open}")
+    if isinstance(compare_failed, int) and compare_failed > 0:
+        lines.append(f"- **Compare blocked:** {compare_failed} group(s)")
+    return "\n".join(lines)
 
 
 def compute_confidence(groups: list[GitHubFindingGroupORM]) -> int:
@@ -140,7 +183,12 @@ def compute_confidence(groups: list[GitHubFindingGroupORM]) -> int:
 
     resolution = count_resolution_status(groups)
     score += min(2, resolution[ResolutionStatus.addressed.value])
-    score += min(1, resolution[ResolutionStatus.judge_dismissed.value])
+    dismissed_total = (
+        resolution[ResolutionStatus.judge_dismissed.value]
+        + resolution[ResolutionMethod.verification_dismissed.value]
+        + resolution[ResolutionMethod.human_dismissed.value]
+    )
+    score += min(1, dismissed_total)
     return max(0, min(5, score))
 
 
@@ -150,9 +198,14 @@ def build_g9_resolution_prose(groups: list[GitHubFindingGroupORM]) -> str:
     if counts[ResolutionStatus.addressed.value]:
         n = counts[ResolutionStatus.addressed.value]
         parts.append(f"{n} issue{'s' if n != 1 else ''} fixed since last push")
-    if counts[ResolutionStatus.judge_dismissed.value]:
-        n = counts[ResolutionStatus.judge_dismissed.value]
-        parts.append(f"{n} dismissed by judge")
+    for method, label in (
+        (ResolutionStatus.judge_dismissed.value, "judge"),
+        (ResolutionMethod.verification_dismissed.value, "verification"),
+        (ResolutionMethod.human_dismissed.value, "human"),
+    ):
+        if counts[method]:
+            n = counts[method]
+            parts.append(f"{n} dismissed by {label}")
     if counts[ResolutionStatus.still_open.value]:
         n = counts[ResolutionStatus.still_open.value]
         parts.append(f"{n} still open from prior review")
@@ -179,23 +232,51 @@ def _severity_table_rows(groups: list[GitHubFindingGroupORM]) -> list[str]:
     return rows
 
 
+def format_summary_comment(
+    *,
+    generation_groups: list[GitHubFindingGroupORM],
+    pr_active_groups: list[GitHubFindingGroupORM],
+) -> str:
+    """FR-Q7 two-block summary: this generation + PR-level still open."""
+    generation_active = _active_groups(generation_groups)
+    pr_active = _active_groups(pr_active_groups)
+
+    lines = [
+        "### This generation",
+        "",
+    ]
+    if generation_active:
+        lines.extend(_severity_table_rows(generation_groups))
+        if len(generation_active) > SUMMARY_ROW_CAP:
+            lines.extend(["", f"_Showing {SUMMARY_ROW_CAP} of {len(generation_active)} findings._"])
+    else:
+        lines.append("No publishable findings this generation.")
+
+    lines.extend(["", "### Still open on PR", ""])
+    if pr_active:
+        lines.extend(_severity_table_rows(pr_active_groups))
+        if len(pr_active) > SUMMARY_ROW_CAP:
+            lines.extend(["", f"_Showing {SUMMARY_ROW_CAP} of {len(pr_active)} findings._"])
+    else:
+        lines.append("No open findings on this pull request.")
+
+    return "\n".join(lines)
+
+
 def build_check_run_summary(ctx: PublishFormatContext) -> str:
     """G3 compact body for GitHub check run output."""
-    active = _active_groups(ctx.groups)
     confidence = compute_confidence(ctx.groups)
+    pr_active = ctx.pr_active_groups if ctx.pr_active_groups is not None else ctx.groups
     lines = [
         "## Revy review",
         "",
         f"**Confidence:** {confidence}/5",
         "",
+        format_summary_comment(
+            generation_groups=ctx.groups,
+            pr_active_groups=pr_active,
+        ),
     ]
-    if not active:
-        lines.append("No files require special attention.")
-        return "\n".join(lines)
-
-    lines.extend(_severity_table_rows(ctx.groups))
-    if len(active) > SUMMARY_ROW_CAP:
-        lines.extend(["", f"_Showing {SUMMARY_ROW_CAP} of {len(active)} findings._"])
     return "\n".join(lines)
 
 
@@ -222,7 +303,17 @@ def _index_footer(ctx: PublishFormatContext) -> str:
     return "\n".join(lines)
 
 
-def build_pr_review_comment_fallback(ctx: PublishFormatContext) -> str:
+def _resolution_metrics_block(ctx: PublishFormatContext) -> str | None:
+    if ctx.resolution_metrics_manifest is None:
+        return None
+    return format_resolution_metrics_block(ctx.resolution_metrics_manifest)
+
+
+def build_pr_review_comment_fallback(
+    ctx: PublishFormatContext,
+    *,
+    resolution_metrics_block: str | None = None,
+) -> str:
     """Deterministic Greptile-shaped issue comment (G3 full narrative fallback)."""
     active = _active_groups(ctx.groups)
     confidence = compute_confidence(ctx.groups)
@@ -245,6 +336,12 @@ def build_pr_review_comment_fallback(ctx: PublishFormatContext) -> str:
 
     if resolution_prose:
         lines.extend(["", f"**Since last push:** {resolution_prose}"])
+
+    if resolution_metrics_block is None:
+        resolution_metrics_block = _resolution_metrics_block(ctx)
+
+    if resolution_metrics_block:
+        lines.extend(["", resolution_metrics_block])
 
     attention = _files_needing_attention(ctx.groups)
     if attention:
@@ -278,6 +375,13 @@ def build_pr_review_comment_fallback(ctx: PublishFormatContext) -> str:
         lines.extend(["", footer])
 
     return "\n".join(lines)
+
+
+def _append_resolution_metrics_block(text: str, ctx: PublishFormatContext) -> str:
+    block = _resolution_metrics_block(ctx)
+    if block and block not in text:
+        return f"{text}\n\n{block}"
+    return text
 
 
 async def build_pr_review_comment(ctx: PublishFormatContext) -> str:
@@ -319,7 +423,7 @@ async def build_pr_review_comment(ctx: PublishFormatContext) -> str:
         footer = _index_footer(ctx)
         if footer and footer not in text:
             text = f"{text}\n\n{footer}"
-        return text
+        return _append_resolution_metrics_block(text, ctx)
     except (httpx.HTTPError, ValueError, OSError, ServiceUnavailableError) as exc:
         logger.warning(
             "github_publish_formatter_llm_failed",

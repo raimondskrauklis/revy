@@ -13,12 +13,18 @@ from app.constants.enums import (
     GitHubFindingGroupState,
     GitHubReviewJudgeStatus,
     GitHubReviewRunStatus,
+    ResolutionMethod,
+    ResolutionStatus,
     ReviewProfile,
 )
 
 
 class ReviewTriggerRequest(BaseModel):
     profile: ReviewProfile = ReviewProfile.standard
+
+
+class DismissFindingGroupRequest(BaseModel):
+    reason: str | None = None
 
 
 class GitHubReviewRunResponse(BaseModel):
@@ -72,5 +78,9 @@ class ReconciledFindingResponse(BaseModel):
     message: str
     file_path: str | None
     last_seen_revision_id: UUID
+    resolution_status: ResolutionStatus | None = None
+    resolution_method: ResolutionMethod | None = None
+    resolved_at_revision_id: UUID | None = None
+    closure_blocked_reason: str | None = None
     created_at: datetime
     updated_at: datetime

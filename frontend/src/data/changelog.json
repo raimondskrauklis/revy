@@ -1,5 +1,11 @@
 [
   {
+    "id": "finding-resolution-reviewer",
+    "date": "2026-07-28",
+    "title": "Finding resolution in reviewer",
+    "summary": "Resolution status badges, admin dismiss on reconciled findings, and resolution-rate metrics on published GitHub comments after each push."
+  },
+  {
     "id": "saas-w8-hardening",
     "date": "2026-07-25",
     "title": "Platform hardening",

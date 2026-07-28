@@ -40,6 +40,7 @@ from app.services.github_pipeline_trace import (
     finalize_pipeline_github_check_failure,
     finalize_pipeline_github_check_neutral,
     get_pipeline_run_for_review_run,
+    get_resolution_metrics_for_review_run,
     link_publish_job_to_pipeline,
     record_publish_pipeline_step,
     record_publish_skip_on_pipeline,
@@ -955,6 +956,21 @@ async def publishable_groups_for_review_run(
     return _sort_publishable_groups(list(publishable.values()))
 
 
+async def _load_pr_active_groups(
+    session: AsyncSession,
+    *,
+    pull_request_id: UUID,
+) -> list[GitHubFindingGroupORM]:
+    return list(
+        await session.scalars(
+            select(GitHubFindingGroupORM).where(
+                GitHubFindingGroupORM.pull_request_id == pull_request_id,
+                GitHubFindingGroupORM.state == GitHubFindingGroupState.active,
+            )
+        )
+    )
+
+
 async def _build_publish_surface(
     session: AsyncSession,
     *,
@@ -969,11 +985,19 @@ async def _build_publish_surface(
         review_run_id=job.review_run_id,
         pull_request_id=pull_request.id,
     )
+    pr_active_groups = await _load_pr_active_groups(
+        session,
+        pull_request_id=pull_request.id,
+    )
     conclusion = compute_check_conclusion(groups)
     index_job = await get_latest_completed_index_job(
         session,
         workspace_id=job.workspace_id,
         revision_id=job.revision_id,
+    )
+    resolution_metrics_manifest = await get_resolution_metrics_for_review_run(
+        session,
+        review_run_id=job.review_run_id,
     )
     formatted = await build_publish_format_result_async(
         PublishFormatContext(
@@ -984,6 +1008,8 @@ async def _build_publish_surface(
             groups=groups,
             index_mode=index_job.index_mode if index_job is not None else None,
             fallback_reason=index_job.fallback_reason if index_job is not None else None,
+            resolution_metrics_manifest=resolution_metrics_manifest,
+            pr_active_groups=pr_active_groups,
         )
     )
     prior_jobs = await _fetch_prior_completed_publish_jobs(

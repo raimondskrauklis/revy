@@ -458,12 +458,29 @@ async def record_review_pipeline_step(
     )
 
 
+async def _get_reconcile_pipeline_step(
+    session: AsyncSession,
+    *,
+    pipeline_run_id: UUID,
+) -> GitHubPipelineStepORM | None:
+    return await session.scalar(
+        select(GitHubPipelineStepORM)
+        .where(
+            GitHubPipelineStepORM.pipeline_run_id == pipeline_run_id,
+            GitHubPipelineStepORM.step_type == PipelineStepType.reconcile,
+        )
+        .order_by(GitHubPipelineStepORM.created_at.asc())
+        .limit(1)
+    )
+
+
 async def record_reconcile_pipeline_step(
     session: AsyncSession,
     *,
     pipeline_run_id: UUID,
     group_count: int,
     duration_ms: int,
+    resolution_pass: dict[str, Any] | None = None,
 ) -> None:
     step = await _create_completed_step(
         session,
@@ -471,12 +488,51 @@ async def record_reconcile_pipeline_step(
         step_type=PipelineStepType.reconcile,
         duration_ms=duration_ms,
     )
+    manifest: dict[str, Any] = {"linked_group_count": group_count}
+    if resolution_pass is not None:
+        manifest["resolution_pass"] = resolution_pass
     await add_step_artifact(
         session,
         step_id=step.id,
         kind=PipelineArtifactKind.manifest,
-        content_json={"linked_group_count": group_count},
+        content_json=manifest,
     )
+
+
+async def record_resolution_pass_on_reconcile_step(
+    session: AsyncSession,
+    *,
+    pipeline_run_id: UUID,
+    resolution_pass: dict[str, Any],
+) -> None:
+    step = await _get_reconcile_pipeline_step(session, pipeline_run_id=pipeline_run_id)
+    if step is None:
+        return
+    await _upsert_step_manifest(
+        session,
+        step_id=step.id,
+        updates={"resolution_pass": resolution_pass},
+    )
+
+
+async def get_resolution_metrics_for_review_run(
+    session: AsyncSession,
+    *,
+    review_run_id: UUID,
+) -> dict[str, Any] | None:
+    pipeline_run = await get_pipeline_run_for_review_run(session, review_run_id=review_run_id)
+    if pipeline_run is None:
+        return None
+    step = await _get_reconcile_pipeline_step(session, pipeline_run_id=pipeline_run.id)
+    if step is None:
+        return None
+    manifest_artifact = await _get_step_manifest_artifact(session, step_id=step.id)
+    if manifest_artifact is None or not isinstance(manifest_artifact.content_json, dict):
+        return None
+    resolution_pass = manifest_artifact.content_json.get("resolution_pass")
+    if not isinstance(resolution_pass, dict):
+        return None
+    return resolution_pass
 
 
 async def record_judge_pipeline_step(
@@ -486,6 +542,8 @@ async def record_judge_pipeline_step(
     judged_count: int,
     duration_ms: int,
     candidates: list | None = None,
+    verification_judged_count: int = 0,
+    verification_candidates: list | None = None,
 ) -> None:
     step = await _create_completed_step(
         session,
@@ -504,6 +562,17 @@ async def record_judge_pipeline_step(
         }
         for item in (candidates or [])
     ]
+    verification_payload = [
+        {
+            "group_id": str(item.group_id),
+            "evidence_snippet": item.evidence_snippet,
+            "user_prompt": item.user_prompt,
+            "file_patch_chars": item.file_patch_chars,
+            "raw_response": item.raw_response,
+            "outcome": item.outcome,
+        }
+        for item in (verification_candidates or [])
+    ]
     await add_step_artifact(
         session,
         step_id=step.id,
@@ -511,6 +580,9 @@ async def record_judge_pipeline_step(
         content_json={
             "judged_count": judged_count,
             "candidates": candidate_payload,
+            "verification_judged_count": verification_judged_count,
+            "verification_candidates": verification_payload,
+            "verification_group_ids": [item["group_id"] for item in verification_payload],
         },
     )
 

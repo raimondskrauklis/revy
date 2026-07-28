@@ -2,17 +2,21 @@
 import { useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
+import { dismissFindingGroup } from '@/features/reviewer/api';
 import { FindingRow } from '@/features/reviewer/components/FindingRow';
 import { JudgeSkippedBadge } from '@/features/reviewer/components/JudgeSkippedBadge';
 import { MergeReadinessBadge } from '@/features/reviewer/components/MergeReadinessBadge';
 import {
+  reviewerQueryKeys,
   usePublishJob,
   usePullRequest,
   useReconciledFindings,
   useReviewRun,
 } from '@/features/reviewer/hooks';
 import { deriveMergeConclusion, pickLatestRevisionId } from '@/features/reviewer/mergeConclusion';
+import { hasPermission } from '@/lib/permissions';
 import { mapApiError } from '@/shared/errors';
 import { showDomainErrorToast } from '@/shared/errors/toasts';
 
@@ -21,6 +25,25 @@ export function PullRequestDetailPage() {
   const { user } = useAuth();
   const workspaceId = user?.workspace_id ?? null;
   const { repoId, prId } = useParams<{ repoId: string; prId: string }>();
+  const queryClient = useQueryClient();
+  const canDismiss = hasPermission(
+    user?.role ?? undefined,
+    'admin:users',
+    user?.platform_role ?? undefined,
+  );
+
+  const dismissMutation = useMutation({
+    mutationFn: (groupId: string) =>
+      dismissFindingGroup(workspaceId!, repoId!, prId!, groupId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: reviewerQueryKeys.reconciled(workspaceId ?? '', repoId ?? '', prId ?? ''),
+      });
+    },
+    onError: (error) => {
+      showDomainErrorToast(mapApiError(error));
+    },
+  });
 
   const {
     items: reconciledFindings,
@@ -124,11 +147,18 @@ export function PullRequestDetailPage() {
                 <th className="px-3 py-2 font-medium">{t('reviewer.findings.title')}</th>
                 <th className="px-3 py-2 font-medium">{t('reviewer.findings.file')}</th>
                 <th className="px-3 py-2 font-medium">{t('reviewer.findings.message')}</th>
+                <th className="px-3 py-2 font-medium">{t('reviewer.findings.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {reconciledFindings.map((finding) => (
-                <FindingRow key={finding.id} finding={finding} />
+                <FindingRow
+                  key={finding.id}
+                  finding={finding}
+                  canDismiss={canDismiss}
+                  dismissPending={dismissMutation.isPending}
+                  onDismiss={(groupId) => dismissMutation.mutate(groupId)}
+                />
               ))}
             </tbody>
           </table>

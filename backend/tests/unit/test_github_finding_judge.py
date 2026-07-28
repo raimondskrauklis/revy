@@ -11,11 +11,13 @@ from app.constants.enums import (
     GitHubFindingGroupState,
     GitHubReviewJudgeStatus,
     GitHubReviewRunStatus,
+    ResolutionMethod,
     ReviewProfile,
 )
 from app.core.exceptions import ServiceUnavailableError, ValidationError
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
+from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.services.github_finding_judge import (
     _build_judge_prompt,
@@ -398,6 +400,7 @@ async def test_run_judge_dismissed_resolves_group():
     assert count == 1
     assert run.judge_status == GitHubReviewJudgeStatus.completed
     assert group.state == GitHubFindingGroupState.resolved
+    assert group.resolution_method == ResolutionMethod.judge_dismissed
 
 
 @pytest.mark.asyncio
@@ -551,6 +554,114 @@ async def test_run_judge_service_unavailable_continues():
     assert run.judge_status == GitHubReviewJudgeStatus.skipped_unavailable
     assert group.state == GitHubFindingGroupState.active
     session.add.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_run_judge_partial_llm_failure_skipped_unavailable():
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+
+    run = GitHubReviewRunORM(
+        revision_id=revision_id,
+        workspace_id=workspace_id,
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    run.id = review_run_id
+
+    groups: list[GitHubFindingGroupORM] = []
+    findings: list[GitHubFindingORM] = []
+    for idx in range(3):
+        group_id = uuid.uuid4()
+        group = GitHubFindingGroupORM(
+            workspace_id=workspace_id,
+            pull_request_id=pull_request_id,
+            fingerprint=f"fp-{idx}",
+            state=GitHubFindingGroupState.active,
+            severity=FindingSeverity.critical,
+            category=FindingCategory.security,
+            title=f"Issue {idx}",
+            message="msg",
+            file_path=f"app/{idx}.py",
+            last_seen_revision_id=uuid.uuid4(),
+        )
+        group.id = group_id
+        groups.append(group)
+        findings.append(
+            GitHubFindingORM(
+                review_run_id=review_run_id,
+                workspace_id=workspace_id,
+                severity=FindingSeverity.critical,
+                category=FindingCategory.security,
+                title=f"Issue {idx}",
+                message="msg",
+                file_path=f"app/{idx}.py",
+                group_id=group_id,
+            )
+        )
+
+    revision = MagicMock()
+    revision.pull_request_id = pull_request_id
+    revision.base_sha = "base"
+    revision.head_sha = "head"
+    pull_request = MagicMock()
+
+    async def _get(model, key):
+        if model is GitHubReviewRunORM:
+            return run
+        if model is GitHubFindingGroupORM:
+            return next((group for group in groups if group.id == key), None)
+        if model is GitHubPullRequestRevisionORM:
+            return revision
+        if model is GitHubPullRequestORM:
+            return pull_request
+        return None
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=_get)
+    session.scalars = AsyncMock(return_value=findings)
+    session.scalar = AsyncMock(return_value=None)
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    call_count = 0
+
+    async def _judge_side_effect(*_args, **_kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 2:
+            raise ServiceUnavailableError(
+                message="Anthropic judge response invalid",
+                error_code="llm_error",
+            )
+        return {"outcome": "dismissed", "notes": "false positive"}
+
+    with patch("app.services.github_finding_judge.settings") as mock_settings:
+        mock_settings.judge_llm_enabled.return_value = True
+        mock_settings.revy_revision_timeout_standard_seconds = 900
+        with patch(
+            "app.services.github_finding_judge.resolve_model",
+            AsyncMock(return_value=ModelRef(provider="anthropic", model_id="claude-test")),
+        ):
+            with patch(
+                "app.services.github_finding_judge.fetch_compare_patches_by_file",
+                AsyncMock(return_value={}),
+            ):
+                with patch(
+                    "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
+                    AsyncMock(side_effect=_judge_side_effect),
+                ):
+                    judged = await record_review_run_judge_status(
+                        session,
+                        review_run_id=review_run_id,
+                    )
+
+    assert judged == 2
+    assert run.judge_status == GitHubReviewJudgeStatus.skipped_unavailable
+    assert session.add.call_count == 2
 
 
 @pytest.mark.asyncio

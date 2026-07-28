@@ -31,6 +31,11 @@ from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullReque
 from app.models.github_repository import GitHubRepositoryORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.schemas.github_review import ReconciledFindingResponse
+from app.services.github_finding_closure_rules import (
+    reopen_fields_for_re_report,
+    should_reopen_absent_and_addressed,
+    should_skip_resolved_group_on_reconcile,
+)
 
 logger = get_logger(__name__)
 
@@ -154,7 +159,31 @@ async def reconcile_review_run(session: AsyncSession, *, review_run_id: UUID) ->
                 revision_id=revision.id,
                 exclude_group_id=group.id,
             )
-        elif group.state == GitHubFindingGroupState.resolved:
+        elif should_reopen_absent_and_addressed(
+            state=group.state,
+            resolution_method=group.resolution_method,
+            fingerprint_in_current_run=True,
+        ):
+            for key, value in reopen_fields_for_re_report().items():
+                setattr(group, key, value)
+            group.last_seen_revision_id = revision.id
+            group.severity = finding.severity
+            group.category = finding.category
+            group.title = finding.title
+            group.message = finding.message
+            group.file_path = finding.file_path
+            await _mark_superseded_peers(
+                session,
+                pull_request_id=pull_request_id,
+                file_path=finding.file_path,
+                category=finding.category,
+                revision_id=revision.id,
+                exclude_group_id=group.id,
+            )
+        elif should_skip_resolved_group_on_reconcile(
+            state=group.state,
+            resolution_method=group.resolution_method,
+        ):
             pass
         else:
             group.last_seen_revision_id = revision.id

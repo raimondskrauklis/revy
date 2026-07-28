@@ -59,6 +59,21 @@
       "path": "docs/review-pipeline/agents/prompts/ROLES.md",
       "description": "Master/reviewer boundaries and FIND/VALIDATE/CLOSE verbs",
       "scope": ["backend/**"]
+    },
+    {
+      "path": "docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_EXECUTION.md",
+      "description": "Finding resolution — LOOP P0–P5, closure passes, FR-Q12 metrics",
+      "scope": ["backend/**"]
+    },
+    {
+      "path": "docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_FINDINGS.md",
+      "description": "Finding resolution baseline — FR-Q gaps, multi-pass model",
+      "scope": ["backend/**"]
+    },
+    {
+      "path": "docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_GENERAL_PLAN.md",
+      "description": "Finding resolution general plan — P0–P5 phases",
+      "scope": ["backend/**"]
     }
   ]
 }

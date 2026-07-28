@@ -5,21 +5,19 @@ from __future__ import annotations
 import re
 from uuid import UUID
 
-import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.constants.enums import GitHubFindingGroupState, ResolutionStatus
-from app.core.exceptions import NotFoundError, RateLimitedError, ServiceUnavailableError
-from app.core.logging import get_logger
-from app.integrations.github_api import compare_commits
+from app.constants.enums import (
+    GitHubFindingGroupState,
+    ResolutionMethod,
+    ResolutionStatus,
+)
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
-from app.models.github_installation import GitHubInstallationORM
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
-from app.models.github_repository import GitHubRepositoryORM
-
-logger = get_logger(__name__)
+from app.services.github_compare_patches import ComparePatchesResult, fetch_compare_patches
+from app.services.github_finding_closure_rules import COMPARE_FAILED_REASON
 
 _HUNK_HEADER_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 
@@ -65,36 +63,14 @@ async def _fetch_compare_patches(
     pull_request: GitHubPullRequestORM,
     prior_revision: GitHubPullRequestRevisionORM,
     new_revision: GitHubPullRequestRevisionORM,
-) -> dict[str, str]:
-    base_sha = prior_revision.head_sha
-    head_sha = new_revision.head_sha
-    if not base_sha or not head_sha or base_sha == head_sha:
-        return {}
-
-    repository = await session.get(GitHubRepositoryORM, pull_request.repository_id)
-    installation = await session.get(GitHubInstallationORM, pull_request.installation_id)
-    if repository is None or installation is None:
-        return {}
-
-    owner, repo_name = repository.full_name.split("/", 1)
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        try:
-            compare = await compare_commits(
-                client,
-                github_installation_id=installation.github_installation_id,
-                owner=owner,
-                repo=repo_name,
-                base_sha=base_sha,
-                head_sha=head_sha,
-            )
-        except (httpx.HTTPError, OSError, NotFoundError, RateLimitedError, ServiceUnavailableError) as exc:
-            logger.warning(
-                "resolution_metrics_compare_failed",
-                extra={"pull_request_id": str(pull_request.id), "error": str(exc)},
-            )
-            return {}
-
-    return {item.filename: item.patch for item in compare.files if item.patch}
+) -> ComparePatchesResult:
+    return await fetch_compare_patches(
+        session,
+        pull_request=pull_request,
+        base_sha=prior_revision.head_sha,
+        head_sha=new_revision.head_sha,
+        log_event="resolution_metrics_compare_failed",
+    )
 
 
 async def _latest_finding_lines(
@@ -172,7 +148,7 @@ async def apply_resolution_status_for_synchronize(
         await session.flush()
         return 0
 
-    patches_by_file = await _fetch_compare_patches(
+    compare_result = await _fetch_compare_patches(
         session,
         pull_request=pull_request,
         prior_revision=prior_revision,
@@ -181,10 +157,17 @@ async def apply_resolution_status_for_synchronize(
 
     updated = 0
     for group in groups:
+        if compare_result.compare_failed:
+            group.closure_blocked_reason = COMPARE_FAILED_REASON
+            group.resolution_status = ResolutionStatus.still_open
+            updated += 1
+            continue
+
+        group.closure_blocked_reason = None
         start_line, end_line = await _latest_finding_lines(session, group_id=group.id)
         group.resolution_status = resolve_group_resolution_status(
             group=group,
-            patches_by_file=patches_by_file,
+            patches_by_file=compare_result.patches_by_file,
             start_line=start_line,
             end_line=end_line,
         )
@@ -192,3 +175,131 @@ async def apply_resolution_status_for_synchronize(
 
     await session.flush()
     return updated
+
+
+def _is_pre_sync_resolved(
+    group: GitHubFindingGroupORM,
+    *,
+    current_revision_id: UUID,
+) -> bool:
+    return (
+        group.state == GitHubFindingGroupState.resolved
+        and group.resolved_at_revision_id is not None
+        and group.resolved_at_revision_id != current_revision_id
+    )
+
+
+def _in_sync_stamp_cohort(
+    group: GitHubFindingGroupORM,
+    *,
+    prior_revision_id: UUID,
+    current_revision_id: UUID,
+) -> bool:
+    """Groups active on N−1 at Pass 1 sync, including re-reported cohort members."""
+    if group.last_seen_revision_id == prior_revision_id:
+        return True
+    if group.resolved_at_revision_id == current_revision_id:
+        return True
+    return (
+        group.last_seen_revision_id == current_revision_id
+        and group.resolution_status is not None
+    )
+
+
+def build_resolution_pass_manifest(
+    groups: list[GitHubFindingGroupORM],
+    *,
+    prior_revision_id: UUID,
+    current_revision_id: UUID,
+) -> dict[str, object]:
+    """FR-Q12 transitions-only metrics for reconcile manifest resolution_pass."""
+    cohort = [
+        group
+        for group in groups
+        if group.state != GitHubFindingGroupState.superseded
+        and _in_sync_stamp_cohort(
+            group,
+            prior_revision_id=prior_revision_id,
+            current_revision_id=current_revision_id,
+        )
+    ]
+    compare_failed_count = sum(
+        1 for group in cohort if group.closure_blocked_reason == COMPARE_FAILED_REASON
+    )
+    denominator_groups = [
+        group
+        for group in cohort
+        if group.closure_blocked_reason != COMPARE_FAILED_REASON
+        and not _is_pre_sync_resolved(group, current_revision_id=current_revision_id)
+    ]
+    transitions = [
+        group
+        for group in cohort
+        if group.state == GitHubFindingGroupState.resolved
+        and group.resolved_at_revision_id == current_revision_id
+        and group.resolution_method is not None
+    ]
+    transitions_addressed = sum(
+        1
+        for group in transitions
+        if group.resolution_method == ResolutionMethod.absent_and_addressed
+    )
+    transitions_dismissed = {
+        ResolutionMethod.judge_dismissed.value: sum(
+            1
+            for group in transitions
+            if group.resolution_method == ResolutionMethod.judge_dismissed
+        ),
+        ResolutionMethod.verification_dismissed.value: sum(
+            1
+            for group in transitions
+            if group.resolution_method == ResolutionMethod.verification_dismissed
+        ),
+        ResolutionMethod.human_dismissed.value: sum(
+            1
+            for group in transitions
+            if group.resolution_method == ResolutionMethod.human_dismissed
+        ),
+    }
+    transition_count = len(transitions)
+    denominator = len(denominator_groups)
+    resolution_rate_pct = (
+        round(100.0 * transition_count / denominator, 1) if denominator else 0.0
+    )
+    still_open_count = sum(
+        1
+        for group in denominator_groups
+        if group.state == GitHubFindingGroupState.active
+        and group.resolution_status == ResolutionStatus.still_open
+    )
+    return {
+        "transitions_addressed": transitions_addressed,
+        "transitions_dismissed": transitions_dismissed,
+        "transition_count": transition_count,
+        "denominator_active_prior": denominator,
+        "resolution_rate_pct": resolution_rate_pct,
+        "compare_failed_count": compare_failed_count,
+        "still_open_count": still_open_count,
+    }
+
+
+async def compute_resolution_transitions(
+    session: AsyncSession,
+    *,
+    pull_request: GitHubPullRequestORM,
+    prior_revision: GitHubPullRequestRevisionORM,
+    current_revision: GitHubPullRequestRevisionORM,
+) -> dict[str, object]:
+    groups = list(
+        await session.scalars(
+            select(GitHubFindingGroupORM).where(
+                GitHubFindingGroupORM.pull_request_id == pull_request.id,
+                GitHubFindingGroupORM.state != GitHubFindingGroupState.superseded,
+            )
+        )
+    )
+    return build_resolution_pass_manifest(
+        groups,
+        prior_revision_id=prior_revision.id,
+        current_revision_id=current_revision.id,
+    )

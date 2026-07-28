@@ -164,6 +164,22 @@ class ResolutionStatus(str, Enum):
     judge_dismissed = "judge_dismissed"
 
 
+class ResolutionMethod(str, Enum):
+    """github_finding_groups.resolution_method — finding-resolution closure."""
+
+    absent_and_addressed = "absent_and_addressed"
+    judge_dismissed = "judge_dismissed"
+    verification_dismissed = "verification_dismissed"
+    human_dismissed = "human_dismissed"
+
+
+class JudgePurpose(str, Enum):
+    """github_finding_judge_outcomes.judge_purpose — discovery vs verification."""
+
+    discovery = "discovery"
+    verification = "verification"
+
+
 class GitHubReviewRunStatus(str, Enum):
     """github_review_runs.status — R4 review run."""
 

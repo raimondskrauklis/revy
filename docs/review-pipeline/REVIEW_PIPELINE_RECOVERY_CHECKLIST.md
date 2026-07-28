@@ -3,7 +3,7 @@
 **Purpose:** Single handoff for agents when context is limited. Work **top to bottom** on active tracks; mark `[x]` as done.  
 **Rules:** No direct pushes to `main`. One concern per PR. **Peer review = separate agent session** (human-invoked); never self-certified by the implementing agent.
 
-**Last updated:** 2026-07-27 — review-quality **merged to `main`** (PR #50); **active: RQ9 hardening + human gate**
+**Last updated:** 2026-07-28 — finding-resolution **code-complete** on PR #57; staging human gate pending
 
 ---
 
@@ -77,6 +77,15 @@
 - [ ] Merge PR [#54](https://github.com/raimondskrauklis/revy/pull/54) → `main`
 - [ ] Staging dogfood — two pushes ~8 s apart ([dogfood log](./review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md))
 - [ ] Optional tag `review-generation-lifecycle-v1` on `main`
+
+### Track K — Finding resolution — **code-complete** (PR #57, `feat/finding-resolution`)
+
+- [x] P0–P5 LOOP — closure passes, FR-Q12 metrics, dismiss API, reviewer UI
+- [x] Validation memo — [finding-resolution/FINDING_RESOLUTION_STAGING_VALIDATION.md](./finding-resolution/FINDING_RESOLUTION_STAGING_VALIDATION.md)
+- [ ] Apply migration **`0028`** on staging
+- [ ] Operator dogfood — fix → push → metrics → thread resolve (§ P5.1 table)
+- [ ] Merge PR [#57](https://github.com/raimondskrauklis/revy/pull/57) → `main`
+- [ ] Start [judge-json-contract](./judge-json-contract/README.md) from `main` after merge
 
 ---
 

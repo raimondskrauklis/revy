@@ -7,7 +7,7 @@ import uuid
 from sqlalchemy import ForeignKey, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.constants.enums import GitHubJudgeOutcome
+from app.constants.enums import GitHubJudgeOutcome, JudgePurpose
 from app.models.base import TimestampedModel
 
 
@@ -30,6 +30,12 @@ class GitHubFindingJudgeOutcomeORM(TimestampedModel):
         nullable=False,
     )
     outcome: Mapped[GitHubJudgeOutcome] = mapped_column(String(length=32), nullable=False)
+    judge_purpose: Mapped[JudgePurpose] = mapped_column(
+        String(length=32),
+        nullable=False,
+        default=JudgePurpose.discovery,
+        server_default=JudgePurpose.discovery.value,
+    )
     judge_provider: Mapped[str | None] = mapped_column(String(length=32), nullable=True)
     judge_model_id: Mapped[str | None] = mapped_column(String(length=128), nullable=True)
     judge_notes: Mapped[str | None] = mapped_column(Text, nullable=True)

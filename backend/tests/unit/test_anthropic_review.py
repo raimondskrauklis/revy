@@ -79,3 +79,33 @@ async def test_complete_review_returns_content():
 
 def test_parse_review_json_empty_findings():
     assert parse_review_json(json.dumps({"findings": []})) == []
+
+
+def test_build_verification_judge_prompt_includes_push_delta():
+    from app.integrations.anthropic_review import (
+        VERIFICATION_JUDGE_SYSTEM_PROMPT,
+        build_verification_judge_prompt,
+    )
+
+    group = type(
+        "Group",
+        (),
+        {
+            "title": "Null deref",
+            "severity": "error",
+            "category": "bug",
+            "file_path": "app/x.py",
+            "message": "Possible null",
+        },
+    )()
+    prompt = build_verification_judge_prompt(
+        group=group,
+        push_delta_patch="@@ -1 +1 @@\n-old\n+new\n",
+        evidence_snippet="old line",
+        start_line=10,
+        end_line=10,
+    )
+    assert "push delta" in prompt.lower() or "Push delta" in prompt
+    assert "Null deref" in prompt
+    assert "@@ -1 +1 @@" in prompt
+    assert "upheld|dismissed" in VERIFICATION_JUDGE_SYSTEM_PROMPT

@@ -609,6 +609,25 @@
       "headSha": "Head SHA",
       "revisions": "Revīzijas"
     },
+    "groupState": {
+      "active": "Aktīvs",
+      "superseded": "Aizstāts",
+      "resolved": "Atrisināts"
+    },
+    "resolution": {
+      "dismiss": "Noraidīt",
+      "status": {
+        "addressed": "Novērsts",
+        "still_open": "Joprojām atvērts",
+        "judge_dismissed": "Tiesnesis noraidīja"
+      },
+      "method": {
+        "absent_and_addressed": "Salabots kopš pēdējā push",
+        "judge_dismissed": "Noraidīja tiesnesis",
+        "verification_dismissed": "Noraidīja verifikācija",
+        "human_dismissed": "Noraidīja administrators"
+      }
+    },
     "findings": {
       "empty": "Šim pull request nav saskaņotu atradumu.",
       "severity": "Smagums",
@@ -616,7 +635,8 @@
       "state": "Stāvoklis",
       "title": "Nosaukums",
       "file": "Fails",
-      "message": "Ziņojums"
+      "message": "Ziņojums",
+      "actions": "Darbības"
     },
     "severity": {
       "info": "Info",
@@ -631,11 +651,6 @@
       "style": "Stils",
       "maintainability": "Uzturēšana",
       "other": "Cits"
-    },
-    "groupState": {
-      "active": "Aktīvs",
-      "superseded": "Aizstāts",
-      "resolved": "Atrisināts"
     },
     "reviewRun": {
       "none": "Vēl nav recenzijas izpildes.",
