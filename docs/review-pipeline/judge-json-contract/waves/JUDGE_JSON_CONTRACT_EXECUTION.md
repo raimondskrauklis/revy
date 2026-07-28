@@ -15,7 +15,7 @@ P0 → P1 → P2 → P3 → P4 → P5
 each phase: implement → pytest gate → Bugbot → local commit (operator pushes + validates staging)
 ```
 
-**Operator LOOP:** Agent stops at **phase boundary** — no `git push`. Fill [JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](../JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) after deploy (P5 human gate).
+**Operator LOOP:** Agent stops at **phase boundary** for local work; `phase-execution` skill pushes per phase after gate + Bugbot. Fill [JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](../JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) after deploy (P5 human gate; stub may start in P4.0).
 
 **No migrations** in this program — schema changes are manifest JSON fields only (P1).
 
@@ -43,6 +43,6 @@ each phase: implement → pytest gate → Bugbot → local commit (operator push
 | P4 — Targeted retry | Max 1 retry on parse failure | [JUDGE_JSON_CONTRACT_P4_EXECUTION.md](./JUDGE_JSON_CONTRACT_P4_EXECUTION.md) | — | pending |
 | P5 — Staging + docs | Validation memo, program closeout | [JUDGE_JSON_CONTRACT_P5_EXECUTION.md](./JUDGE_JSON_CONTRACT_P5_EXECUTION.md) | — | pending |
 
-**Peer review:** run `execution-peer-review` on all execution files before `phase-execution`.
+**Peer review:** execution-peer-review complete (2026-07-28) — P1 integration-layer + P4.4 skip fixes applied.
 
 **P0 calibration lock:** If RTU gateway rejects `output_config.format`, P3 ships `parse_llm_json_object` + P2 only until provider upgrade — document matrix in P0 gate output.

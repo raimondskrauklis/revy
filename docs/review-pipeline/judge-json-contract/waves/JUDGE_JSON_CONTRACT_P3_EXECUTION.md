@@ -7,7 +7,7 @@ Phase **P3** of [JUDGE_JSON_CONTRACT_GENERAL_PLAN.md](../JUDGE_JSON_CONTRACT_GEN
 ## Decisions locked for P3
 
 - Shared helper: `parse_llm_json_object(text: str) -> dict` in `anthropic_review.py` — strip markdown fences, extract first `{...}` object, `json.loads`; raise `ValueError` with stable code on failure.
-- `judge_finding()`: when P0 matrix says gateway supports structured output, send `output_config` / `json_schema` with judge outcome schema; on `400`/unsupported from gateway, fall back to plain prompt + `parse_llm_json_object` on response text (one attempt per profile, not P4 retry).
+- `judge_finding()`: when findings § **P0 smoke results** gateway structured row = pass **and** `settings.revy_judge_structured_output` is `True` (env `REVY_JUDGE_STRUCTURED_OUTPUT`, default `False`), send `output_config` / `json_schema`; on `400`/unsupported from gateway, fall back to plain prompt + `parse_llm_json_object` on response text (one attempt per profile, not P4 retry).
 - `parse_judge_outcome(raw: dict)` unchanged — enum gate after parse.
 - Bedrock path: use structured output equivalent when `bedrock_review.judge_finding` supports it; else `parse_llm_json_object` on text body — same tests mock both paths via `llm_dispatch`.
 - P0 matrix **off** for structured output: P3 still ships `parse_llm_json_object` wired into existing `json.loads(text)` path.
@@ -36,7 +36,7 @@ cd backend && pipenv run pytest tests/unit/test_anthropic_review.py -k "parse_ll
 
 ## P3.2 — Structured output on `judge_finding`
 
-**What:** Wire `output_config.format` when `settings` / feature flag `revy_judge_structured_output_enabled` (or env `REVY_JUDGE_STRUCTURED_OUTPUT=true`) and P0 matrix allows; gateway + direct profile paths in `_post_with_profile_fallback`.
+**What:** Wire `output_config.format` when `settings.revy_judge_structured_output` is `True` and findings P0 matrix gateway row = pass; add `revy_judge_structured_output: bool = False` to `Settings` + `backend/.env.example` (`REVY_JUDGE_STRUCTURED_OUTPUT`).
 
 **Files:** `backend/app/integrations/anthropic_review.py`, `backend/app/core/config.py`, `backend/.env.example`
 

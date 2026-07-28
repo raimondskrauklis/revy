@@ -39,9 +39,9 @@ Phase **P5** of [JUDGE_JSON_CONTRACT_GENERAL_PLAN.md](../JUDGE_JSON_CONTRACT_GEN
 
 ---
 
-## P5.3 — Validation memo
+## P5.3 — Validation memo (expand stub)
 
-**What:** Create `docs/review-pipeline/judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md` — dated results, SQL repro, P0 matrix final, P4 skip note if applicable.
+**What:** Expand `JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md` (stub from P4.0 if present) — dated results, SQL repro, P0 matrix final, P4 skip note if applicable.
 
 **Files:** `docs/review-pipeline/judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md`
 
@@ -70,7 +70,7 @@ Phase **P5** of [JUDGE_JSON_CONTRACT_GENERAL_PLAN.md](../JUDGE_JSON_CONTRACT_GEN
 **Phase gate** (from `backend/`):
 
 ```bash
-pipenv run pytest tests/unit/test_anthropic_review.py tests/unit/test_github_finding_judge.py tests/unit/test_github_finding_closure.py tests/unit/test_github_pipeline_trace.py -q
+pipenv run pytest tests/unit/test_anthropic_review.py tests/unit/test_bedrock_review.py tests/unit/test_github_finding_judge.py tests/unit/test_github_finding_closure.py tests/unit/test_github_pipeline_trace.py -q
 ```
 
 **Human gate:** Staging validation memo signed with ≥95% outcome persistence on dogfood PR — LOOP stops here even if tests pass.

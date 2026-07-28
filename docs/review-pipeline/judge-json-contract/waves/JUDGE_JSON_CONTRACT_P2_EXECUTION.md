@@ -7,8 +7,10 @@ Phase **P2** of [JUDGE_JSON_CONTRACT_GENERAL_PLAN.md](../JUDGE_JSON_CONTRACT_GEN
 ## Decisions locked for P2
 
 - When `evidence_snippet` is non-empty after strip: **do not** attach `file_patch` to discovery or verification judge prompts.
-- Tier 2 — line anchor present, snippet empty/thin: attach truncated patch only (`JUDGE_FILE_PATCH_MAX_CHARS = 2048`).
-- Tier 3 — no line anchor: patch fallback with same 2048 cap (down from 8192).
+- Tier 2 — line anchor present, snippet empty/thin: attach truncated patch only.
+- Tier 3 — no line anchor: patch fallback with same cap.
+- **Patch cap (locked):** add `JUDGE_PROMPT_PATCH_MAX_CHARS = 2048` in `github_finding_judge.py` for `_build_judge_prompt` truncation only — **do not** change `JUDGE_FILE_PATCH_MAX_CHARS = 8192` in `github_review.py` (`resolve_judge_code_context` unchanged).
+- Verification prompts use the same `JUDGE_PROMPT_PATCH_MAX_CHARS` constant (import from judge module or duplicate in `anthropic_review.py` with comment).
 - `build_verification_judge_prompt` in `anthropic_review.py` follows same tier rules as `_build_judge_prompt`.
 - `file_patch_chars` in artifact: `None` when patch omitted; `len(patch)` when included.
 - `resolve_judge_code_context` unchanged — truncation happens at prompt assembly layer.

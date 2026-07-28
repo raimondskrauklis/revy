@@ -8,9 +8,9 @@ Phase **P0** of [JUDGE_JSON_CONTRACT_GENERAL_PLAN.md](../JUDGE_JSON_CONTRACT_GEN
 
 - Smoke script: `backend/scripts/test_anthropic_judge_gateway.py` — extend in place, no new script file.
 - Judge schema fields: `outcome` enum (`upheld`, `dismissed`, `modified`) + optional `notes` string — matches `parse_judge_outcome`.
-- Flags: `--structured`, `--prompt-file PATH`, `--chars N`, `--print-raw`, `--compare-direct` (optional when both gateway + direct keys present).
+- Flags: `--structured`, `--prompt-file PATH`, `--chars N`, `--print-raw`; `--compare-direct` when both gateway + direct keys present (P0.2).
 - P0 documents pass/fail matrix in `JUDGE_JSON_CONTRACT_FINDINGS.md` § P0 smoke results (dated subsection) — no worker code changes.
-- `judge_finding()` signature unchanged in P0 — structured call lives in smoke helper or optional kwarg used only by script until P3.
+- `judge_finding()` signature unchanged in P0 — structured call uses private `anthropic_review._post_structured_judge_smoke` (script + P3 promotes to production path).
 
 ## PR review context (first commit)
 
@@ -41,7 +41,7 @@ python -m json.tool .greptile/files.json > /dev/null
 
 ## P0.2 — Smoke script CLI flags
 
-**What:** Add `argparse` to `test_anthropic_judge_gateway.py` — `--structured`, `--prompt-file`, `--chars`, `--print-raw`; default prompt unchanged for backward compat.
+**What:** Add `argparse` to `test_anthropic_judge_gateway.py` — `--structured`, `--prompt-file`, `--chars`, `--print-raw`, `--compare-direct` (runs gateway then direct when both configured, prints side-by-side parse result); default prompt unchanged for backward compat.
 
 **Files:** `backend/scripts/test_anthropic_judge_gateway.py`
 
@@ -51,9 +51,9 @@ python -m json.tool .greptile/files.json > /dev/null
 
 ## P0.3 — Structured-output smoke path
 
-**What:** When `--structured`, POST with `output_config.format` / `json_schema` for judge outcome object; assert response parses and `outcome` in allowed set. Implement smoke-only helper in script or `anthropic_review._post_structured_judge` (private, script + P3 reuse).
+**What:** When `--structured`, POST with `output_config.format` / `json_schema` for judge outcome object; assert response parses and `outcome` in allowed set. Implement via private `anthropic_review._post_structured_judge_smoke` (reused by P3 production wiring).
 
-**Files:** `backend/scripts/test_anthropic_judge_gateway.py`, `backend/app/integrations/anthropic_review.py` (optional private helper)
+**Files:** `backend/scripts/test_anthropic_judge_gateway.py`, `backend/app/integrations/anthropic_review.py`
 
 **Deliverable (non-gate):** Operator runs with RTU creds in `backend/.env`:
 
