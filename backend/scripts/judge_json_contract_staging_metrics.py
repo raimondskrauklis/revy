@@ -149,6 +149,20 @@ WHERE s.step_type = 'review'
   AND ($1::timestamptz IS NULL OR rr.created_at >= $1::timestamptz);
 """
 
+_CONTEXT_STATS_SQL = """
+SELECT count(*)::int AS runs_with_context_stats,
+       count(*) FILTER (
+         WHERE coalesce((context_stats->>'engineering_context_injected')::boolean, false)
+       )::int AS engineering_context_injected_runs,
+       percentile_cont(0.5) WITHIN GROUP (
+         ORDER BY coalesce((context_stats->>'engineering_context_bytes')::int, 0)
+       )::int AS engineering_context_bytes_p50
+FROM github_review_runs rr
+WHERE rr.status = 'completed'
+  AND rr.context_stats IS NOT NULL
+  AND ($1::timestamptz IS NULL OR rr.created_at >= $1::timestamptz);
+"""
+
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Judge JSON contract staging metrics")
@@ -190,6 +204,7 @@ async def _fetch_metrics(since: datetime | None) -> dict[str, Any]:
         failures = await conn.fetch(_RECENT_FAILURES_SQL, since)
         retrieve_row = await conn.fetchrow(_RETRIEVE_MANIFESTS_SQL, since)
         prompt_row = await conn.fetchrow(_REVIEW_PROMPT_SQL, since)
+        context_stats_row = await conn.fetchrow(_CONTEXT_STATS_SQL, since)
         alembic_row = await conn.fetchrow(_ALEMBIC_SQL)
     finally:
         await conn.close()
@@ -211,6 +226,7 @@ async def _fetch_metrics(since: datetime | None) -> dict[str, Any]:
         "review_context": {
             "retrieve_manifest": dict(retrieve_row) if retrieve_row else {},
             "review_prompt": dict(prompt_row) if prompt_row else {},
+            "context_stats": dict(context_stats_row) if context_stats_row else {},
         },
     }
 
@@ -267,7 +283,8 @@ async def _run() -> int:
     review_ctx = metrics.get("review_context", {})
     retrieve = review_ctx.get("retrieve_manifest", {})
     prompt = review_ctx.get("review_prompt", {})
-    if retrieve or prompt:
+    context_stats = review_ctx.get("context_stats", {})
+    if retrieve or prompt or context_stats:
         print()
         print("Review context (retrieve + Moonshot prompt):")
         if retrieve:
@@ -287,6 +304,13 @@ async def _run() -> int:
         if prompt:
             print(f"  moonshot prompt p50/p95 chars: "
                   f"{prompt.get('prompt_chars_p50')}/{prompt.get('prompt_chars_p95')}")
+        if context_stats:
+            print(f"  runs_with_context_stats: "
+                  f"{context_stats.get('runs_with_context_stats', 0)}")
+            print(f"  context_stats engineering_injected: "
+                  f"{context_stats.get('engineering_context_injected_runs', 0)}")
+            print(f"  context_stats engineering_bytes p50: "
+                  f"{context_stats.get('engineering_context_bytes_p50')}")
     return 0
 
 

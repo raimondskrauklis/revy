@@ -42,6 +42,7 @@ from app.models.github_repository import GitHubRepositoryORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.schemas.github_indexing import GitHubChunkSearchResult
 from app.schemas.github_review import GitHubFindingListResponse, GitHubFindingResponse
+from app.services.engineering_context.stats import engineering_context_manifest_defaults
 from app.services.github_generation_lifecycle import is_review_run_superseded
 from app.services.github_indexing import (
     ensure_revision_access,
@@ -536,7 +537,7 @@ def build_retrieval_manifest(
     fallback_reason: str | None,
     supplemental: list[ScopedChunkHit],
 ) -> dict:
-    return {
+    manifest = {
         "index_mode": stored_enum_value(index_mode),
         "changed_files": changed_files,
         "diff_truncated": diff_truncated,
@@ -560,6 +561,8 @@ def build_retrieval_manifest(
         "caller_files_included": [],
         "structural_context_attempted": False,
     }
+    manifest.update(engineering_context_manifest_defaults())
+    return manifest
 
 
 async def create_review_run(

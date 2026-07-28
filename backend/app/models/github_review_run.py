@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from sqlalchemy import ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.constants.enums import GitHubReviewJudgeStatus, GitHubReviewRunStatus, ReviewProfile
@@ -51,3 +53,4 @@ class GitHubReviewRunORM(TimestampedModel):
         default=GitHubReviewJudgeStatus.not_applicable,
         server_default=GitHubReviewJudgeStatus.not_applicable.value,
     )
+    context_stats: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
