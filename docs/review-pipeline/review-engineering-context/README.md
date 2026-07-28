@@ -14,7 +14,7 @@
 
 | Phase | File | Status |
 |-------|------|--------|
-| P0 — Foundations | [waves/REVIEW_ENGINEERING_CONTEXT_P0_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P0_EXECUTION.md) | pending |
+| P0 — Foundations | Migration `0029`, SSOT, caps (settings only), path-exists CI | [waves/REVIEW_ENGINEERING_CONTEXT_P0_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P0_EXECUTION.md) | pending |
 | P1 — Loader + extract | [waves/REVIEW_ENGINEERING_CONTEXT_P1_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P1_EXECUTION.md) | pending |
 | P2 — Moonshot inject | [waves/REVIEW_ENGINEERING_CONTEXT_P2_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P2_EXECUTION.md) | pending |
 | P3 — Greptile sync | [waves/REVIEW_ENGINEERING_CONTEXT_P3_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P3_EXECUTION.md) | pending |

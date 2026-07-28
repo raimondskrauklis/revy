@@ -30,7 +30,7 @@
 
 **Scope — out:** GitHub file fetch; inject; Greptile `files.json` generation; judge.
 
-**Deliverables:** Migration; config wired (code still uses new settings even if staging env unchanged until deploy); SSOT file + parser tests; manifest keys defined in `build_retrieval_manifest` stub.
+**Deliverables:** Migration; settings + tests (behavior unchanged until P2); SSOT + path-exists validation; manifest key stubs in `build_retrieval_manifest`.
 
 **Depends on:** `main` at `0028`.
 
