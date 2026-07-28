@@ -1,6 +1,6 @@
 # Review engineering context — program index
 
-**Status:** **findings expanded** (2026-07-29) — discuss → `create-general-plan`.
+**Status:** Q1–Q5 locked in findings — ready for `create-general-plan`.
 
 **Problem:** Engineering context (locked decisions, execution contract, operator smoke) is wired for Greptile + local Bugbot only. **Hosted `revybot[bot]`** and the **Revy product pipeline** (Moonshot/judge) lack the same intent layer → false positives and generic API advice (PR #58).
 
