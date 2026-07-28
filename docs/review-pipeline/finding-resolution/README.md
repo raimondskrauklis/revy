@@ -28,4 +28,4 @@
 
 **Related shipped programs:** R5 reconcile + judge · RQ6 resolution metrics · github-surface-hardening Option A · generation lifecycle RG-Q10 · judge input quality.
 
-**Next:** `phase-execution` from P0 on `feat/finding-resolution`. Staging dogfood validates Pass 1–3 as phases land.
+**Next:** `phase-execution` from **P1** on `feat/finding-resolution` (P0 done locally; migration `0028` pause before P1 deploy).

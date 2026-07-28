@@ -15,8 +15,8 @@ Phase **P2** of [FINDING_RESOLUTION_GENERAL_PLAN.md](../FINDING_RESOLUTION_GENER
 - **Prior revision (locked):** load `prior_revision` where `revision_number == current_revision.revision_number - 1` (same query as `apply_resolution_status_for_synchronize` in `github_resolution_metrics.py`).
 - Verification prompt: “Original claim from prior revision — still valid on this push delta?” — conservative dismiss.
 - `dismissed` → `group.state=resolved`, `resolution_method=verification_dismissed`.
+- **Module home (locked):** `VERIFICATION_JUDGE_MAX_PER_RUN`, `verify_still_open_escalation_groups()`, and verification LLM loop live in **`github_finding_closure.py`**. Discovery judge (`record_review_run_judge_status`, `JUDGE_MAX_PER_RUN`) stays in **`github_finding_judge.py`**.
 - **Trace split (locked):** P2 writes verification detail on **judge** pipeline step artifact (`verification_judged_count`, candidate `group_ids`, outcomes). **Do not** write `resolution_pass` / FR-Q12 metrics here — **P3.1** owns reconcile-step `resolution_pass`.
-- **Module home (locked):** `verify_still_open_escalation_groups`, `VERIFICATION_JUDGE_MAX_PER_RUN`, and verification LLM loop live in **`github_finding_closure.py`**. Discovery judge (`record_review_run_judge_status`, `JUDGE_MAX_PER_RUN`) stays in **`github_finding_judge.py`**.
 
 ## Out of scope for P2
 
