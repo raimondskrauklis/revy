@@ -196,6 +196,6 @@ DB connect: [DATABASE_CONNECTION_GUIDE.md](../../utils/DATABASE_CONNECTION_GUIDE
 
 1. ~~Merge finding-resolution PR (code + these docs).~~ ✓ merged #57 (`a73c9ff`).
 2. ~~`create-general-plan`~~ → [JUDGE_JSON_CONTRACT_GENERAL_PLAN.md](./JUDGE_JSON_CONTRACT_GENERAL_PLAN.md) ✓
-3. `create-execution-plan` → `waves/JUDGE_JSON_CONTRACT_EXECUTION.md`.
+3. ~~`create-execution-plan`~~ → [waves/JUDGE_JSON_CONTRACT_EXECUTION.md](./waves/JUDGE_JSON_CONTRACT_EXECUTION.md) ✓
 4. `execution-peer-review` → `phase-execution` on `feat/judge-json-contract` from `main`.
 5. Optional: operator adds RTU env to local `backend/.env` and runs smoke script before wave starts.

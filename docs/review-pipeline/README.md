@@ -50,6 +50,13 @@ docs/review-pipeline/
     waves/
       FINDING_RESOLUTION_EXECUTION.md
       FINDING_RESOLUTION_P0_EXECUTION.md … P5
+  judge-json-contract/                   ← judge outcome JSON, observability, structured output
+    README.md
+    JUDGE_JSON_CONTRACT_FINDINGS.md
+    JUDGE_JSON_CONTRACT_GENERAL_PLAN.md
+    waves/
+      JUDGE_JSON_CONTRACT_EXECUTION.md
+      JUDGE_JSON_CONTRACT_P0_EXECUTION.md … P5
   REVIEW_PIPELINE_GREPTILE_PR26_EMAIL.md   ← archived Greptile PR #26 email (triage reference)
   REVIEW_PIPELINE_PRODUCT_PATTERNS.md      ← Greptile-style patterns → Revy phases (defer/future map)
   code-review-arch_perplexity_searcj_advice_only.md  ← external architecture notes (advice only)

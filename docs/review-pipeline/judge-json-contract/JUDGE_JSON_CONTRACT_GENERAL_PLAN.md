@@ -109,4 +109,4 @@
 
 **P0 smoke:** whether RTU/Azure backend honors `output_config.format` on the Revy gateway profile — if not, P3 ships parse fallback + P2 only until provider upgrades.
 
-**Next step:** **`create-execution-plan`** → `waves/JUDGE_JSON_CONTRACT_EXECUTION.md` + P0–P5 execution files.
+**Next step:** **`phase-execution`** → [waves/JUDGE_JSON_CONTRACT_EXECUTION.md](./waves/JUDGE_JSON_CONTRACT_EXECUTION.md) starting at P0.
