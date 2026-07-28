@@ -112,4 +112,4 @@
 
 None — cap default **512 KB** locked from staging baseline (25% truncated at 128 KB).
 
-**Next step:** **`create-execution-plan`** → `waves/REVIEW_ENGINEERING_CONTEXT_EXECUTION.md` starting at P0.
+**Next step:** **`phase-execution`** → [waves/REVIEW_ENGINEERING_CONTEXT_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_EXECUTION.md) starting at P0.

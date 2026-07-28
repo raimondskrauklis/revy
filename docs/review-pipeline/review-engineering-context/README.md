@@ -1,27 +1,30 @@
 # Review engineering context — program index
 
-**Status:** Peer-reviewed general plan — `create-execution-plan` next.
+**Status:** Execution plans ready — `phase-execution` from P0.
 
 **Problem:** Revy Moonshot has no engineering-context layer. Greptile loads 15 programs from `files.json`. **RCX P2** = Moonshot inject; **P3** = Greptile generated from SSOT; Bugbot manual.
 
 | Doc | Purpose |
 |-----|---------|
-| [REVIEW_ENGINEERING_CONTEXT_FINDINGS.md](./REVIEW_ENGINEERING_CONTEXT_FINDINGS.md) | Baseline — RCX-D1–D12, validation metrics, peer-review aligned deliverables |
-| [REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md](./REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md) | **Execution authority** — P0–P5 |
+| [REVIEW_ENGINEERING_CONTEXT_FINDINGS.md](./REVIEW_ENGINEERING_CONTEXT_FINDINGS.md) | Baseline — RCX-D1–D12, validation metrics |
+| [REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md](./REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md) | Phases P0–P5 — execution authority |
+| [waves/REVIEW_ENGINEERING_CONTEXT_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_EXECUTION.md) | LOOP index + locked execution decisions |
 
-**Phase map (authority = general plan)**
+## Execution table
 
-| Phase | Focus |
-|-------|--------|
-| P0 | SSOT schema, migration `0029`, caps default 512 KB, manifest key contract |
-| P1 | Extractor + `fetch_repository_file_at_sha` |
-| P2 | Moonshot inject + populate metrics |
-| P3 | Greptile `files.json` generation + active program trim |
-| P4 | Judge lock reuse |
-| P5 | Staging validation (requires dogfood PR) |
+| Phase | File | Status |
+|-------|------|--------|
+| P0 — Foundations | [waves/REVIEW_ENGINEERING_CONTEXT_P0_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P0_EXECUTION.md) | pending |
+| P1 — Loader + extract | [waves/REVIEW_ENGINEERING_CONTEXT_P1_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P1_EXECUTION.md) | pending |
+| P2 — Moonshot inject | [waves/REVIEW_ENGINEERING_CONTEXT_P2_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P2_EXECUTION.md) | pending |
+| P3 — Greptile sync | [waves/REVIEW_ENGINEERING_CONTEXT_P3_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P3_EXECUTION.md) | pending |
+| P4 — Judge reuse | [waves/REVIEW_ENGINEERING_CONTEXT_P4_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P4_EXECUTION.md) | pending |
+| P5 — Validation + closeout | [waves/REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md) | pending |
 
-**Supersedes:** [RQ-RC-1](../review-quality/REVIEW_QUALITY_REVIEW_CONTEXT.md) dogfood items (RC1, RC2, RC5 inject) — folded into RCX.
+**Branch:** `feat/review-engineering-context` from `main`
+
+**Supersedes:** [RQ-RC-1](../review-quality/REVIEW_QUALITY_REVIEW_CONTEXT.md) dogfood items (RC1, RC2, RC5 inject).
 
 **Related:** [review-quality/README.md](../review-quality/README.md) · [judge-json-contract](../judge-json-contract/README.md)
 
-**Next step:** `create-execution-plan` → P0 execution file.
+**Next step:** `phase-execution` → P0 (migration `0029` — LOOP pauses after P0.1).
