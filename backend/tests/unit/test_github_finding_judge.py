@@ -25,6 +25,15 @@ from app.services.github_finding_judge import (
 from app.services.model_policy import ModelRef
 
 
+@pytest.fixture(autouse=True)
+def _mock_fetch_compare_patches_for_judge():
+    with patch(
+        "app.services.github_finding_judge.fetch_compare_patches_by_file",
+        AsyncMock(return_value={}),
+    ):
+        yield
+
+
 def test_is_judge_candidate_error():
     assert is_judge_candidate(severity=FindingSeverity.error, category=FindingCategory.bug)
 
@@ -113,6 +122,28 @@ def test_build_judge_prompt_without_evidence_uses_conservative_grounding():
     prompt = _build_judge_prompt(group=group, evidence_snippet=None)
     assert "Evidence" not in prompt
     assert "Judge conservatively" in prompt
+
+
+def test_build_judge_prompt_includes_file_patch():
+    group = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=uuid.uuid4(),
+        fingerprint="abc",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Bug",
+        message="msg",
+        file_path="app/handler.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+    prompt = _build_judge_prompt(
+        group=group,
+        evidence_snippet="snippet",
+        file_patch="@@ -1 +1 @@\n+line\n",
+    )
+    assert "File diff (scoped):" in prompt
+    assert "+line" in prompt
 
 
 def test_judge_system_prompt_verifier_role():
@@ -338,8 +369,14 @@ async def test_run_judge_dismissed_resolves_group():
         group_id=group_id,
     )
 
+    revision = MagicMock()
+    revision.pull_request_id = uuid.uuid4()
+    revision.base_sha = "base"
+    revision.head_sha = "head"
+    pull_request = MagicMock()
+
     session = AsyncMock()
-    session.get = AsyncMock(side_effect=[run, group])
+    session.get = AsyncMock(side_effect=[run, group, revision, pull_request])
     session.scalars = AsyncMock(return_value=[finding])
     session.scalar = AsyncMock(return_value=None)
     session.add = MagicMock()
@@ -403,8 +440,14 @@ async def test_run_judge_bedrock_provider_without_anthropic_key():
         group_id=group_id,
     )
 
+    revision = MagicMock()
+    revision.pull_request_id = uuid.uuid4()
+    revision.base_sha = "base"
+    revision.head_sha = "head"
+    pull_request = MagicMock()
+
     session = AsyncMock()
-    session.get = AsyncMock(side_effect=[run, group])
+    session.get = AsyncMock(side_effect=[run, group, revision, pull_request])
     session.scalars = AsyncMock(return_value=[finding])
     session.scalar = AsyncMock(side_effect=[None, uuid.uuid4()])
     session.add = MagicMock()
@@ -473,8 +516,14 @@ async def test_run_judge_service_unavailable_continues():
         group_id=group_id,
     )
 
+    revision = MagicMock()
+    revision.pull_request_id = uuid.uuid4()
+    revision.base_sha = "base"
+    revision.head_sha = "head"
+    pull_request = MagicMock()
+
     session = AsyncMock()
-    session.get = AsyncMock(side_effect=[run, group])
+    session.get = AsyncMock(side_effect=[run, group, revision, pull_request])
     session.scalars = AsyncMock(return_value=[finding])
     session.scalar = AsyncMock(return_value=None)
     session.add = MagicMock()

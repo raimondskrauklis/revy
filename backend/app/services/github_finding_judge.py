@@ -26,8 +26,11 @@ from app.integrations import anthropic_review, llm_dispatch
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_finding_judge_outcome import GitHubFindingJudgeOutcomeORM
+from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
 from app.models.github_review_run import GitHubReviewRunORM
+from app.services.github_compare_patches import fetch_compare_patches_by_file
 from app.services.github_finding_reconcile import severity_rank
+from app.services.github_review import resolve_judge_code_context
 from app.services.model_policy import ModelRef, ModelRole, resolve_model
 
 logger = get_logger(__name__)
@@ -51,6 +54,7 @@ class JudgeCandidateArtifact:
     user_prompt: str
     raw_response: dict[str, Any] | None
     outcome: str | None
+    file_patch_chars: int | None = None
 
 
 def is_judge_candidate(*, severity: FindingSeverity, category: FindingCategory) -> bool:
@@ -69,6 +73,7 @@ def _build_judge_prompt(
     start_line: int | None = None,
     end_line: int | None = None,
     suggestion: str | None = None,
+    file_patch: str | None = None,
 ) -> str:
     parts = [
         "Automated reviewer (Moonshot) raised the finding below. Verify this claim only.",
@@ -87,6 +92,14 @@ def _build_judge_prompt(
         parts.append(f"Line: {line_ref}")
     if suggestion:
         parts.append(f"Suggested fix: {suggestion}")
+    if file_patch:
+        parts.extend(
+            [
+                "",
+                "File diff (scoped):",
+                file_patch,
+            ]
+        )
     if evidence_snippet:
         parts.extend(
             [
@@ -141,6 +154,7 @@ async def _run_judge_llm_loop(
     review_run_id: UUID,
     candidates: list[tuple[GitHubFindingORM, GitHubFindingGroupORM]],
     model_ref: ModelRef,
+    patches_by_file: dict[str, str],
     artifacts_out: list[JudgeCandidateArtifact] | None = None,
 ) -> int:
     judged = 0
@@ -155,12 +169,21 @@ async def _run_judge_llm_loop(
             if existing is not None:
                 continue
 
+            code_context = resolve_judge_code_context(
+                file_path=finding.file_path,
+                start_line=finding.start_line,
+                patches_by_file=patches_by_file,
+                supplemental_top_by_file={},
+            )
+            evidence_snippet = finding.evidence_snippet or code_context.evidence_snippet
+            file_patch = code_context.file_patch
             user_prompt = _build_judge_prompt(
                 group=group,
-                evidence_snippet=finding.evidence_snippet,
+                evidence_snippet=evidence_snippet,
                 start_line=finding.start_line,
                 end_line=finding.end_line,
                 suggestion=finding.suggestion,
+                file_patch=file_patch,
             )
             raw: dict[str, Any] | None = None
             outcome_str: str | None = None
@@ -183,12 +206,13 @@ async def _run_judge_llm_loop(
                     artifacts_out.append(
                         JudgeCandidateArtifact(
                             group_id=group.id,
-                            evidence_snippet=finding.evidence_snippet,
+                            evidence_snippet=evidence_snippet,
                             user_prompt=user_prompt,
                             raw_response=None,
                             outcome=None,
+                            file_patch_chars=len(file_patch) if file_patch else None,
                         )
-                    )
+                )
                 continue
 
             outcome = GitHubJudgeOutcome(outcome_str)
@@ -213,10 +237,11 @@ async def _run_judge_llm_loop(
                 artifacts_out.append(
                     JudgeCandidateArtifact(
                         group_id=group.id,
-                        evidence_snippet=finding.evidence_snippet,
+                        evidence_snippet=evidence_snippet,
                         user_prompt=user_prompt,
                         raw_response=raw,
                         outcome=outcome_str,
+                        file_patch_chars=len(file_patch) if file_patch else None,
                     )
                 )
             judged += 1
@@ -299,12 +324,24 @@ async def record_review_run_judge_status(
         await session.flush()
         return 0
 
+    revision = await session.get(GitHubPullRequestRevisionORM, run.revision_id)
+    patches_by_file: dict[str, str] = {}
+    if revision is not None:
+        pull_request = await session.get(GitHubPullRequestORM, revision.pull_request_id)
+        if pull_request is not None:
+            patches_by_file = await fetch_compare_patches_by_file(
+                session,
+                pull_request=pull_request,
+                revision=revision,
+            )
+
     judged = await _run_judge_llm_loop(
         session,
         run=run,
         review_run_id=review_run_id,
         candidates=candidates,
         model_ref=model_ref,
+        patches_by_file=patches_by_file,
         artifacts_out=artifacts_out,
     )
     await session.flush()

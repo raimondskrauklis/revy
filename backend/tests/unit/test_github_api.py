@@ -173,6 +173,29 @@ async def test_compare_commits_429_raises_rate_limited():
 
 
 @pytest.mark.asyncio
+async def test_get_pull_request_returns_payload():
+    client = AsyncMock()
+    response = MagicMock()
+    response.json.return_value = {"number": 42, "body": "Fixes #1"}
+    response.raise_for_status = MagicMock()
+    client.get = AsyncMock(return_value=response)
+
+    with patch(
+        "app.integrations.github_api._installation_headers",
+        AsyncMock(return_value={"Authorization": "Bearer t"}),
+    ):
+        data = await github_api.get_pull_request(
+            client,
+            github_installation_id=1,
+            owner="acme",
+            repo="demo",
+            pull_number=42,
+        )
+
+    assert data["body"] == "Fixes #1"
+
+
+@pytest.mark.asyncio
 async def test_list_installation_repositories_raises_on_mid_pagination_error():
     client = AsyncMock()
     first = MagicMock()

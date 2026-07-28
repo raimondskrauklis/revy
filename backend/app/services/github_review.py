@@ -7,6 +7,7 @@ import re
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
+from typing import Any
 from uuid import UUID
 
 import httpx
@@ -32,7 +33,12 @@ from app.core.exceptions import (
 from app.core.logging import get_logger
 from app.core.worker_retries import classify_transient_error
 from app.integrations import llm_dispatch, moonshot_review
-from app.integrations.github_api import CompareCommitsResult, CompareFileChange, compare_commits
+from app.integrations.github_api import (
+    CompareCommitsResult,
+    CompareFileChange,
+    compare_commits,
+    get_pull_request,
+)
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_index_job import GitHubIndexJobORM
 from app.models.github_installation import GitHubInstallationORM
@@ -66,7 +72,7 @@ PR_BODY_MAX_BYTES = 4 * 1024
 FINDING_LIST_DEFAULT_LIMIT = 100
 FINDING_LIST_MAX_LIMIT = 500
 EVIDENCE_SNIPPET_MAX_CHARS = 2048
-EVIDENCE_CONTEXT_LINES = 5
+EVIDENCE_CONTEXT_LINES = 15
 JUDGE_FILE_PATCH_MAX_CHARS = 8192
 _HUNK_HEADER_RE = re.compile(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@")
 _FULL_INDEX_PROFILES = frozenset({ReviewProfile.deep, ReviewProfile.critical})
@@ -113,6 +119,18 @@ def _truncate_utf8(text: str, max_bytes: int) -> str:
     if len(encoded) <= max_bytes:
         return text
     return encoded[:max_bytes].decode("utf-8", errors="ignore")
+
+
+def normalize_finding_start_line(raw: Any) -> int | None:
+    if isinstance(raw, int):
+        value = raw
+    elif isinstance(raw, str) and raw.strip().isdigit():
+        value = int(raw.strip())
+    else:
+        return None
+    if value <= 0:
+        return None
+    return value
 
 
 def normalize_patch_file_key(file_path: str) -> str:
@@ -338,6 +356,14 @@ def resolve_evidence_snippet(
             return snippet
 
     supplemental = supplemental_top_by_file.get(file_path)
+    if supplemental is None and file_path:
+        normalized = normalize_patch_file_key(file_path)
+        supplemental = supplemental_top_by_file.get(normalized)
+        if supplemental is None:
+            for key, hit in supplemental_top_by_file.items():
+                if normalize_patch_file_key(key) == normalized:
+                    supplemental = hit
+                    break
     if supplemental is not None:
         return _truncate_utf8(supplemental.hit.content, max_chars)
 
@@ -591,6 +617,39 @@ async def _fetch_compare_for_review(
     return compare, None
 
 
+async def _fetch_pr_body_for_review(
+    session: AsyncSession,
+    *,
+    pull_request: GitHubPullRequestORM,
+) -> str | None:
+    repository = await session.get(GitHubRepositoryORM, pull_request.repository_id)
+    installation = await session.get(GitHubInstallationORM, pull_request.installation_id)
+    if repository is None or installation is None:
+        return None
+
+    owner, repo_name = repository.full_name.split("/", 1)
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        try:
+            payload = await get_pull_request(
+                client,
+                github_installation_id=installation.github_installation_id,
+                owner=owner,
+                repo=repo_name,
+                pull_number=pull_request.number,
+            )
+        except (httpx.HTTPError, NotFoundError, RateLimitedError, ServiceUnavailableError) as exc:
+            logger.warning(
+                "review_pr_body_fetch_failed",
+                extra={"pull_request_id": str(pull_request.id), "error": str(exc)},
+            )
+            return None
+
+    body = payload.get("body")
+    if isinstance(body, str) and body.strip():
+        return body
+    return None
+
+
 async def prepare_review_context(
     session: AsyncSession,
     *,
@@ -636,9 +695,11 @@ async def prepare_review_context(
         broaden_on_compare_failure=broaden_supplemental,
     )
 
+    pr_body = await _fetch_pr_body_for_review(session, pull_request=pull_request)
+
     prompt = _build_review_prompt(
         pr_title=pull_request.title,
-        pr_body=None,
+        pr_body=pr_body,
         head_sha=revision.head_sha,
         base_ref=pull_request.base_ref,
         head_ref=pull_request.head_ref,
@@ -685,9 +746,7 @@ def _parse_finding_row(raw: dict) -> tuple[dict | None, str | None]:
     start_line = raw.get("start_line")
     end_line = raw.get("end_line")
     normalized_end_line = normalize_end_line(int(end_line) if isinstance(end_line, int) else None)
-    normalized_start_line = int(start_line) if isinstance(start_line, int) else None
-    if normalized_start_line == 0:
-        normalized_start_line = None
+    normalized_start_line = normalize_finding_start_line(start_line)
 
     parsed_file_path = (
         file_path.strip() if isinstance(file_path, str) and file_path.strip() else None

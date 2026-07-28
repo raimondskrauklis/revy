@@ -765,6 +765,13 @@ def test_build_unified_diff_truncates_largest_files_first():
     assert "large.py" not in diff
 
 
+def test_normalize_finding_start_line():
+    assert github_review.normalize_finding_start_line(12) == 12
+    assert github_review.normalize_finding_start_line("15") == 15
+    assert github_review.normalize_finding_start_line(0) is None
+    assert github_review.normalize_finding_start_line("abc") is None
+
+
 def test_normalize_patch_file_key():
     assert github_review.normalize_patch_file_key("./app/main.py") == "app/main.py"
     assert github_review.normalize_patch_file_key("app\\main.py") == "app/main.py"

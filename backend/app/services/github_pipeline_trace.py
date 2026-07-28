@@ -498,6 +498,7 @@ async def record_judge_pipeline_step(
             "group_id": str(item.group_id),
             "evidence_snippet": item.evidence_snippet,
             "user_prompt": item.user_prompt,
+            "file_patch_chars": item.file_patch_chars,
             "raw_response": item.raw_response,
             "outcome": item.outcome,
         }
