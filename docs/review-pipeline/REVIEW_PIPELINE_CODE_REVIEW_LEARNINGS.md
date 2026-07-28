@@ -345,6 +345,14 @@ Full log: [REVIEW_QUALITY_DOGFOOD_PR50.md](./review-quality/REVIEW_QUALITY_DOGFO
 
 **Open for P2+ dogfood:** supersede on `synchronize`, coalesce, full surface flush — current PR does not activate lifecycle on webhooks yet.
 
+### Dogfood log — PR #56 (judge input quality)
+
+**PR:** [#56](https://github.com/raimondskrauklis/revy/pull/56) · **branch:** `feat/judge-input-quality` · Evidence CLOSE at `fe703cb`.
+
+| ID | Finding |
+|----|---------|
+| **RC-D23** | **Two Bugbot runtimes + context over format** — Local subagent: accept XML / thin answer; master reads thinking for gate ([distill](./agents/chain_of_thoughts/cursor_bugbot_judge_p56_evidence_close.md)). Do not fight OUTPUT_FORMAT in Custom Instructions. revybot on #56 caught evidence bug; master trace + thinking closed the loop. |
+
 ### Iterative review (industry + dogfood)
 
 Greptile documents [multiple passes per PR](https://www.greptile.com/docs/code-review/first-pr-review) as normal. PR #50 confirms the same for **local Bugbot**: one pass is hygiene; **explicit iteration** (fix → Bugbot → fix → push) is where cross-file and lifecycle bugs appear.

@@ -84,7 +84,9 @@ Greptile minimum fix ≠ production fix (RC-D17). Always VALIDATE with a named f
 
 **Greptile 👀** on PR open = queued ack (RC-D20), not “read your summary.” Log first comment in [DOGFOOD § PR #51](../review-pipeline/review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#dogfood-pr-51--docsagent-work-rq9) — did it cite execution § RQn?
 
-**Bugbot output:** Findings + Deferred + Scope note always (RC-D19). Platform XML may win on shape — master reads thinking export when Deferred missing.
+**Bugbot gate:** `VERB` + trace quality in thinking export — **not** subagent table shape (RC-D23). Master synthesizes for human; accept XML / one-line answers.
+
+**Two runtimes (RC-D23):** Hosted GitHub Bugbot vs local Task subagent — different channels; same rule: **context over format**.
 
 ---
 
