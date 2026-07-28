@@ -2,7 +2,7 @@
 
 **Purpose:** Capture how Revy wires **planning docs and locked decisions** into **Greptile** and **Bugbot** during dogfood — and the product path to workspace-scoped review policy. Complements [structural context](./REVIEW_QUALITY_STRUCTURAL_CONTEXT.md) (code graph) with **engineering context** (what the PR is supposed to implement).
 
-**Status:** strategy locked (2026-07-27). **v0 ships in RQ0**; improvements are **post-`review-quality-v1`**.
+**Status:** strategy locked (2026-07-27). **v0 ships in RQ0**; dogfood improvements **RC1 / RC2 / RC5 inject** → [review-engineering-context program](../review-engineering-context/README.md) (**supersedes RQ-RC-1** for dogfood wiring, 2026-07-29).
 
 **Related:** [REVIEW_QUALITY_EXECUTION.md](../waves/REVIEW_QUALITY_EXECUTION.md) § PR review context · [REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md](../REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md) · [REVIEW_PIPELINE_PRODUCT_PATTERNS.md](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md) · `phase-execution` / `create-execution-plan` skills.
 
@@ -15,7 +15,7 @@
 | **Wire Greptile + Bugbot to execution + findings in v1** | **Yes** — `.greptile/files.json` + `.cursor/BUGBOT.md` in **RQ0** (first commit) |
 | **Treat changed `.md` in PR diff as authoritative spec** | **No** — bots need explicit wiring; diff alone is insufficient |
 | **Productize as workspace policy in v1** | **No** — dogfood repo config first; `.revy/rules` → post-G (DB) |
-| **Improve iteratively after dogfood** | **Yes** — **RQ-RC-1** track after `review-quality-v1` tag |
+| **Improve iteratively after dogfood** | **Yes** — was **RQ-RC-1**; now **[RCX](../review-engineering-context/README.md)** (Moonshot inject + Greptile SSOT) |
 
 **Why it matters:** Large program PRs (RQ0–RQ8) ship code + docs together. Without wired context, Greptile/Bugbot review **implementation** against **intent** — route mismatches, missing migration columns, wrong API paths — are missed or rediscovered late.
 
@@ -68,7 +68,7 @@ Shipped in **RQ0** (same commit as migration `0026`):
 
 ## Improvement ladder (post-v1)
 
-Evaluate during **`feat/review-quality` PR** dogfood; ship improvements in **RQ-RC-1** (separate PR after tag).
+Evaluate during dogfood; ship improvements in **[RCX](../review-engineering-context/README.md)** (supersedes RQ-RC-1 draft below for RC1/RC2/RC5).
 
 | Rung | ID | What | Trigger |
 |------|-----|------|---------|
@@ -82,7 +82,7 @@ Evaluate during **`feat/review-quality` PR** dogfood; ship improvements in **RQ-
 | **v2** | RC5 | **Auto-wiring from pipeline** — on review run, inject locked Q# from workspace findings registry | Customer repos, not just Revy dogfood |
 | **v3** | RC6 | **Reviewer agent tool** — `read_planning_doc(path)` in Track A investigator | SC8 agent runtime |
 
-**RQ-RC-1 scope (draft):** RC1 + RC2 from dogfood metrics; RC3 only if frontend phases need it. RC4+ stays product program.
+**RQ-RC-1 scope (historical):** RC1 + RC2 — **superseded by RCX P3**; RC5 inject — **RCX P2**; RC3/RC4+ unchanged.
 
 ---
 
@@ -91,11 +91,11 @@ Evaluate during **`feat/review-quality` PR** dogfood; ship improvements in **RQ-
 | Q# | Question | Status | Resolution |
 |----|----------|--------|------------|
 | **RC0** | Wire Greptile + Bugbot in v1 dogfood PR? | **locked** | **Yes** — RQ0; see [execution](../waves/REVIEW_QUALITY_EXECUTION.md) |
-| **RC1** | Path-scoped doc subsets in `files.json`? | **open** | **RQ-RC-1** if dogfood shows context noise |
-| **RC2** | Active RQ phase pointer in `BUGBOT.md`? | **open** | **RQ-RC-1** — manual update each phase until automated |
-| **RC3** | Per-directory `.greptile/rules` in this repo? | **open** | **RQ-RC-1** if backend-only scope too narrow |
+| **RC1** | Path-scoped doc subsets in `files.json`? | **superseded** | **[RCX](../review-engineering-context/README.md) P3** |
+| **RC2** | Active RQ phase pointer in `BUGBOT.md`? | **superseded** | **RCX P3** SSOT `active_program` |
+| **RC3** | Per-directory `.greptile/rules` in this repo? | **open** | Post-RCX if backend-only scope too narrow |
 | **RC4** | `.revy/rules` workspace policy (product)? | **open** | Post-G — was parking lot; see [findings](./REVIEW_QUALITY_FINDINGS.md) |
-| **RC5** | Pipeline injects locked decisions into review prompt? | **open** | Track A + workspace policy |
+| **RC5** | Pipeline injects locked decisions into review prompt? | **superseded** | **[RCX](../review-engineering-context/README.md) P2** |
 | **RC6** | `read_planning_doc` agent tool? | **open** | Track A — pairs with SC8 investigator |
 | **G10** | `revy/review` check shows in-progress on PR? | **locked** | **Yes** — RQ3 create `in_progress`; RQ7 `update_check_run` → `completed` |
 

@@ -1,22 +1,27 @@
 # Review engineering context — program index
 
-**Status:** General plan ready — `create-execution-plan` next.
+**Status:** Peer-reviewed general plan — `create-execution-plan` next.
 
-**Problem:** Revy Moonshot (`prepare_review_context`) has no engineering-context layer — only diff + RAG. Greptile has partial wiring via `.greptile/files.json` but loads every shipped program. **P0 = Revy inject**; Greptile parallel; Bugbot maintained in daily workflow but not P0 build.
+**Problem:** Revy Moonshot has no engineering-context layer. Greptile loads 15 programs from `files.json`. **RCX P2** = Moonshot inject; **P3** = Greptile generated from SSOT; Bugbot manual.
 
 | Doc | Purpose |
 |-----|---------|
-| [REVIEW_ENGINEERING_CONTEXT_FINDINGS.md](./REVIEW_ENGINEERING_CONTEXT_FINDINGS.md) | Baseline — platform view, RCX-D8 Moonshot inject, manifest, deliverables |
-| [REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md](./REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md) | Phases P0–P5 — manifest, inject, metrics migration `0029`, validation |
+| [REVIEW_ENGINEERING_CONTEXT_FINDINGS.md](./REVIEW_ENGINEERING_CONTEXT_FINDINGS.md) | Baseline — RCX-D1–D12, validation metrics, peer-review aligned deliverables |
+| [REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md](./REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md) | **Execution authority** — P0–P5 |
 
-**Authority:** [REVIEW_QUALITY_REVIEW_CONTEXT.md](../review-quality/REVIEW_QUALITY_REVIEW_CONTEXT.md) (RC0–RC6) · [REVIEW_PIPELINE_PRODUCT_PATTERNS.md](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md)
+**Phase map (authority = general plan)**
 
-**Related programs**
+| Phase | Focus |
+|-------|--------|
+| P0 | SSOT schema, migration `0029`, caps default 512 KB, manifest key contract |
+| P1 | Extractor + `fetch_repository_file_at_sha` |
+| P2 | Moonshot inject + populate metrics |
+| P3 | Greptile `files.json` generation + active program trim |
+| P4 | Judge lock reuse |
+| P5 | Staging validation (requires dogfood PR) |
 
-| Program | Link |
-|---------|------|
-| Review quality (RC track) | [review-quality/README.md](../review-quality/README.md) |
-| Structural context (sibling) | [REVIEW_QUALITY_STRUCTURAL_CONTEXT.md](../review-quality/REVIEW_QUALITY_STRUCTURAL_CONTEXT.md) |
-| Judge JSON contract (shipped) | [judge-json-contract/README.md](../judge-json-contract/README.md) |
+**Supersedes:** [RQ-RC-1](../review-quality/REVIEW_QUALITY_REVIEW_CONTEXT.md) dogfood items (RC1, RC2, RC5 inject) — folded into RCX.
 
-**Next step:** `create-execution-plan` → P0 execution file (migration `0029`, caps, manifest schema).
+**Related:** [review-quality/README.md](../review-quality/README.md) · [judge-json-contract](../judge-json-contract/README.md)
+
+**Next step:** `create-execution-plan` → P0 execution file.

@@ -1,77 +1,80 @@
 # Review engineering context — general plan
 
-**Baseline:** [REVIEW_ENGINEERING_CONTEXT_FINDINGS.md](./REVIEW_ENGINEERING_CONTEXT_FINDINGS.md) (platform locked, 2026-07-29)  
-**Prerequisite:** `main` with judge-json-contract (#58) + review pipeline R3–R8; absorbs RQ-RC-1 dogfood items (RC1–RC2, RC5 inject).
+**Baseline:** [REVIEW_ENGINEERING_CONTEXT_FINDINGS.md](./REVIEW_ENGINEERING_CONTEXT_FINDINGS.md) (peer-reviewed, 2026-07-29)  
+**Prerequisite:** `main` with judge-json-contract (#58) + review pipeline R3–R8; **supersedes RQ-RC-1** dogfood items (RC1, RC2, RC5 inject).
 
-**Thesis:** Revy Moonshot needs a **manifest-driven engineering-context layer** — JSON pointer, MD content, bounded inject before diff. Greptile consumes the same manifest in parallel. Bugbot stays manual this program.
+**Thesis:** Revy Moonshot needs a **manifest-driven engineering-context layer** — SSOT JSON pointer, MD content, bounded inject before diff (P2). Greptile consumes **generated** `files.json` (P3). Bugbot stays manual.
 
-**Gap IDs:** **RCX-*** in findings; **P0–P5** = program phases below.
+**Gap IDs:** **RCX-*** in findings; **P0–P5** below are **execution authority** (overrides findings deliverable phase labels).
 
-**Locked:** RCX-D1–D10; Moonshot inject in P0 path (RCX-D8); raise diff cap (RCX-D10); latest-run metrics only (RCX-D6); no `BUGBOT.md` generator; RC4 DB post-program.
+**Locked:** RCX-D1–D12; inject **P2**; cap default **512 KB in P0 config** (RCX-D10); SSOT `.greptile/review-context.json` (RCX-D11); dedupe RCX-D12.
 
 ---
 
 ## Cross-cutting (every phase)
 
-- **Tests:** `backend/tests/unit/` — manifest parse, extractor, inject/dedupe, manifest JSON fields, `context_stats` persist, staging script fixtures.
-- **Trace:** Retrieve-step manifest + `github_review_runs.context_stats` (P0 migration) — operator can verify inject/caps without parsing prompt artifacts.
-- **Tenancy:** workspace scope unchanged; manifest read from repo at `head_sha` only.
-- **i18n:** backend-only — no new UI strings.
-- **Validation:** extend `judge_json_contract_staging_metrics.py` review-context block; fill findings § Post-RCX + [JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](../judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) § Review context (`--since` post-deploy only).
+- **Tests:** `backend/tests/unit/` — manifest parse, extractor fixtures from real program MD, inject/dedupe, `context_stats`, staging script.
+- **Trace:** Single retrieve manifest — `engineering_context_*` keys **alongside** existing SC3 fields (`structural_context_mode`, `caller_files_*`); no second manifest. `github_review_runs.context_stats` (P0 migration, P2 populate).
+- **Module owner:** `app/services/engineering_context/` — manifest schema, extract, loader; shared by Moonshot (P2) and judge (P4).
+- **Tenancy:** manifest read from repo at `head_sha` via GitHub API (P1 adds `fetch_repository_file_at_sha`).
+- **i18n:** backend-only.
+- **Validation:** staging metrics script; P5 requires **deliberate dogfood PR** after deploy (`--since` window; post-#58 = 0 runs today).
 
 ---
 
-## P0 — Foundations: manifest schema, caps, metrics migration
+## P0 — Foundations: SSOT schema, caps, metrics migration
 
-**Goal:** Shared primitives every later phase depends on — manifest shape, configurable caps, denormalized metrics row for staging SQL.
+**Goal:** Primitives every later phase depends on — manifest contract, config caps (512 KB default), `context_stats` column, retrieve-manifest key contract (empty until P2).
 
-**Scope — in:** Alembic **`0029_review_context_stats`** — nullable `context_stats JSONB` on `github_review_runs` (denormalized snapshot: `active_program`, `diff_max_bytes`, `unified_diff_bytes`, `diff_truncated`, `omitted_files_count`, `omitted_md_count`, `engineering_context_injected`, `engineering_context_bytes`, `engineering_context_deduped_paths`, `lock_ids_extracted`, `prompt_chars`); config `revy_diff_max_bytes`, `revy_engineering_context_max_bytes`, `revy_pr_body_max_bytes` in `config.py` + `.env.example` (replace hardcoded 128 KB / 4 KB); dogfood manifest schema (`active_program` + `programs[]` with `paths` + `scope`) — source file `.greptile/review-context.json` (or extended `files.json` shape documented in execution); retrieve manifest field contract in `build_retrieval_manifest`; staging metrics script reads `context_stats` when present (fallback to retrieve manifest JSON).
+**Scope — in:** Alembic **`0029_review_context_stats`** — nullable `context_stats JSONB` on `github_review_runs`; config `revy_diff_max_bytes` (default **524288**), `revy_engineering_context_max_bytes`, `revy_pr_body_max_bytes`; SSOT schema `.greptile/review-context.json` + typed parser in `engineering_context`; retrieve manifest + `context_stats` **field contract** documented in code; CI path-exists on SSOT paths; staging script reads `context_stats` when present.
 
-**Scope — out:** Moonshot inject logic; Greptile file rewrite; judge prompt changes.
+**Scope — out:** GitHub file fetch; inject; Greptile `files.json` generation; judge.
 
-**Deliverables:** Migration applied; caps env-driven; manifest schema doc + JSON schema or typed parser stub; empty `context_stats` contract tested; metrics script P0 queries documented.
+**Deliverables:** Migration; config wired (code still uses new settings even if staging env unchanged until deploy); SSOT file + parser tests; manifest keys defined in `build_retrieval_manifest` stub.
 
 **Depends on:** `main` at `0028`.
 
 ---
 
-## P1 — Lock/smoke extractor & manifest loader
+## P1 — Extractor, loader, GitHub file at SHA
 
-**Goal:** Resolve pointed `.md` at `head_sha` and extract bounded locks + operator smoke — not full findings.
+**Goal:** Resolve pointed `.md` at `head_sha`; extract bounded locks + smoke.
 
-**Scope — in:** `engineering_context` service module — load manifest from repo (GitHub tree/compare at revision `head_sha`); scope filter vs `changed_files`; parse `## Locked decisions` tables + smoke sections (stable heading conventions per findings); byte-budget truncate; unit tests on fixture MD files.
+**Scope — in:** `fetch_repository_file_at_sha` in `github_api.py` (Contents API or git blob — align rate limits with `compare_commits`); load SSOT from repo; scope filter vs `changed_files`; tolerant parse of `## Locked decisions` (+ dated suffixes) and smoke tables; byte-budget truncate; fixtures from `JUDGE_JSON_CONTRACT_FINDINGS.md`, RCX findings, one execution MD.
 
-**Scope — out:** Prompt assembly; Greptile sync.
+**Scope — out:** Prompt assembly; Greptile generation.
 
-**Deliverables:** `EngineeringContextPack` (or equivalent) with `active_program`, `lock_ids`, `extracted_text`, `source_paths`; loader errors surfaced for trace (missing path, empty extract).
+**Deliverables:** `EngineeringContextPack` (`active_program`, `lock_ids`, `extracted_text`, `source_paths`); loader errors for trace.
 
 **Depends on:** P0.
 
 ---
 
-## P2 — Moonshot inject & pipeline instrumentation
+## P2 — Moonshot inject & instrumentation populate
 
-**Goal:** `prepare_review_context` prepends engineering block before unified diff; dedupe when MD already fully in diff; persist metrics.
+**Goal:** `prepare_review_context` prepends engineering block; dedupe per RCX-D12; populate manifest + `context_stats`.
 
-**Scope — in:** RCX-D8 algorithm in `github_review.py` — inject before diff, update review instruction to treat block as authoritative; dedupe skip list; populate retrieve manifest engineering fields + `context_stats` on review run at context prepare; unit tests for inject order, dedupe, truncation fallback.
+**Scope — in:** RCX-D8 in `github_review.py`; review instruction treats block as authoritative; dedupe table (locks always, body skip when in diff and not omitted); populate retrieve engineering fields + `context_stats`; use `revy_diff_max_bytes` from config.
 
-**Scope — out:** Greptile `files.json` trim; judge reuse.
+**Scope — out:** Greptile trim; judge.
 
-**Deliverables:** Moonshot prompt includes engineering block on scoped program PRs; pipeline trace shows `engineering_context_injected` + cap fields; `context_stats` row on completed review runs.
+**Deliverables:** Moonshot inject on scoped PRs; trace fields populated; unit tests inject order + dedupe + truncation fallback.
 
 **Depends on:** P1.
 
+**Note:** With P0 default 512 KB, omitted-`.md` rate should drop vs 128 KB baseline before P3 Greptile trim.
+
 ---
 
-## P3 — Active program trim, cap raise, Greptile sync
+## P3 — Active program trim & Greptile sync
 
-**Goal:** One manifest edit feeds Revy + Greptile; active program only; raised diff cap deployed.
+**Goal:** One SSOT edit → Revy + Greptile; generated `files.json` only.
 
-**Scope — in:** Trim dogfood manifest to current program (3 docs: execution, findings, general plan); generate or validate `.greptile/files.json` from manifest (RCX-D9); set staging/prod `revy_diff_max_bytes` per RCX-D10 (calibrate from P0 baseline truncation %); CI path-exists check on manifest paths; phase-execution skill note for LOOP manifest update.
+**Scope — in:** SSOT lists **active program only** (3 docs); script/CI generates `.greptile/files.json` from SSOT each LOOP commit (RCX-D9/D11); deploy staging with new cap if not already; phase-execution skill note.
 
 **Scope — out:** `BUGBOT.md` generator; nested `.greptile/` (RC3).
 
-**Deliverables:** Greptile loads one program on `backend/**` PRs; cap raised with config documented; manifest + `files.json` in sync.
+**Deliverables:** Greptile loads one program on `backend/**`; SSOT + `files.json` committed together; validation: generated paths match SSOT.
 
 **Depends on:** P2.
 
@@ -79,34 +82,34 @@
 
 ## P4 — Judge context reuse
 
-**Goal:** Judge path shares extracted locks where prompt budget allows — symmetric intent layer.
+**Goal:** Judge shares P1 lock extract on escalation runs.
 
-**Scope — in:** Reuse P1 extractor output in `github_finding_judge` / `judge_prompt_context` when escalation runs on program-touched files; bounded lock block in judge user prompt; manifest/judge artifact notes `lock_ids_cited` optional field.
+**Scope — in:** Reuse `EngineeringContextPack` in judge prompt path; optional `lock_ids_cited` on judge manifest.
 
-**Scope — out:** New judge parse contract; Moonshot changes.
+**Scope — out:** Moonshot changes; judge parse contract.
 
-**Deliverables:** Judge prompts include lock IDs on program PRs; unit tests; no regression to judge-json-contract persistence.
+**Deliverables:** Judge prompts include lock IDs on program PRs; no judge-json-contract regression.
 
 **Depends on:** P2.
 
 ---
 
-## P5 — Staging validation & program closeout
+## P5 — Staging validation & closeout
 
-**Goal:** Human gate — metrics prove inject + caps work on dogfood PRs.
+**Goal:** Human gate after **dogfood PR** on staging.
 
-**Scope — in:** Run staging metrics `--since` post-deploy; fill validation tables (diff truncated %, omitted `.md`, inject %, prompt p95, manual contradict-locks check); `REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md` stub; program README done; recovery checklist Track M row.
+**Scope — in:** Metrics `--since` post-RCX deploy; fill validation tables; **sign-off requires P2–P4** (Moonshot inject + cap + Greptile trim + judge locks); manual contradict-locks check; program README + recovery checklist Track M.
 
-**Scope — out:** RC4 `workspace_review_policy` spike (RCX-G8 — separate program); disposition helpers (RCX-G7 — optional follow-up).
+**Scope — out:** RC4 DB spike; disposition helpers (RCX-G7).
 
-**Deliverables:** Filled validation memo; pass/fail gates from findings; operator sign-off.
+**Deliverables:** Filled validation memo; operator sign-off.
 
-**Depends on:** P3–P4 on staging.
+**Depends on:** P3–P4 on staging + at least one program dogfood PR.
 
 ---
 
 ## Open calibration
 
-**`revy_diff_max_bytes` value** — **baseline captured 2026-07-29:** 25% diff truncated, 9/40 runs omitted `.md`, prompt p95 164k chars. **Default to 512 KB** in P3 unless post-cap script shows <5% truncated at 256 KB trial.
+None — cap default **512 KB** locked from staging baseline (25% truncated at 128 KB).
 
 **Next step:** **`create-execution-plan`** → `waves/REVIEW_ENGINEERING_CONTEXT_EXECUTION.md` starting at P0.

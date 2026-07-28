@@ -21,7 +21,7 @@ Post-R8 program: **diff-first review**, **pipeline explainability**, Greptile-sh
 | — | [agents/](../agents/README.md) | **How we build** — LOOP, gates, prompts |
 | — | [CURSOR_AGENT_WORKFLOW.md](../../utils/CURSOR_AGENT_WORKFLOW.md) | **Quick ref** — human / master / Bugbot |
 | — | [REVIEW_QUALITY_DOGFOOD_PR50.md](./REVIEW_QUALITY_DOGFOOD_PR50.md) | **Evidence** — PR #50 Greptile vs Revy |
-| — | [REVIEW_QUALITY_REVIEW_CONTEXT.md](./REVIEW_QUALITY_REVIEW_CONTEXT.md) | Bot wiring (RC); post-v1 RQ-RC-1 |
+| — | [REVIEW_QUALITY_REVIEW_CONTEXT.md](./REVIEW_QUALITY_REVIEW_CONTEXT.md) | Bot wiring (RC0); RC1/RC2/RC5 → [RCX](../review-engineering-context/) |
 | — | [REVIEW_QUALITY_STRUCTURAL_CONTEXT.md](./REVIEW_QUALITY_STRUCTURAL_CONTEXT.md) | Post-v1 code graph (SC) |
 
 ---
@@ -37,7 +37,7 @@ Post-R8 program: **diff-first review**, **pipeline explainability**, Greptile-sh
 | **E** — Evidence | Snippet; grounding judge | R4 |
 | **M + G9** — Metrics | `resolution_status` → publish prose | R5 |
 | **A** — Agents | Defer R6+ |
-| **RC** — Review context | Greptile/Bugbot ↔ planning docs; RQ0 ships v0; **RQ-RC-1** post-v1 |
+| **RC** — Review context | Greptile/Bugbot ↔ planning docs; RQ0 v0; **RCX** for Moonshot inject + Greptile SSOT |
 
 ---
 
