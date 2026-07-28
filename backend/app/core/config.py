@@ -97,6 +97,7 @@ class Settings(BaseSettings):
     revy_moonshot_model_deep: str = "kimi-k3"
     revy_moonshot_model_critical: str = "kimi-k3"
     revy_anthropic_model: str = "claude-sonnet-5"
+    revy_judge_structured_output: bool = False
     # Optional Anthropic-compatible gateway (e.g. RTU llm.ai.rtu.lv) — does not replace direct API
     anthropic_base_url: str | None = None
     revy_anthropic_gateway_model: str | None = None

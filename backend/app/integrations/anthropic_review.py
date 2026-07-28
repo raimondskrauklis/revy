@@ -15,6 +15,8 @@ from app.integrations.judge_llm_errors import parse_judge_payload
 
 ANTHROPIC_DIRECT_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_VERSION = "2023-06-01"
+# P0 smoke lock — RTU gateway returns structured_outputs not supported (findings § P0).
+JUDGE_GATEWAY_STRUCTURED_OUTPUT_SUPPORTED = False
 
 logger = logging.getLogger(__name__)
 
@@ -189,6 +191,7 @@ async def _post_with_profile_fallback(
     user_prompt: str,
     max_tokens: int,
     timeout_seconds: float,
+    output_config: dict | None = None,
 ) -> str:
     if not profiles:
         raise ServiceUnavailableError(
@@ -199,6 +202,104 @@ async def _post_with_profile_fallback(
     for index, profile in enumerate(profiles):
         try:
             return await _post_anthropic_messages(
+                client,
+                profile,
+                system=system,
+                user_prompt=user_prompt,
+                max_tokens=max_tokens,
+                timeout_seconds=timeout_seconds,
+                output_config=output_config,
+            )
+        except (httpx.HTTPError, ServiceUnavailableError) as exc:
+            last_exc = exc
+            if index < len(profiles) - 1:
+                logger.warning(
+                    "anthropic_profile_failed_trying_fallback",
+                    extra={
+                        "profile": profile.label,
+                        "model_id": profile.model_id,
+                        "error": str(exc),
+                    },
+                )
+    if last_exc is not None:
+        raise last_exc
+    raise ServiceUnavailableError(
+        message="Anthropic API is not configured",
+        error_code="llm_disabled",
+    )
+
+
+def _profile_supports_structured_output(profile: _AnthropicProfile) -> bool:
+    if not settings.revy_judge_structured_output:
+        return False
+    if profile.label == "gateway":
+        return JUDGE_GATEWAY_STRUCTURED_OUTPUT_SUPPORTED
+    return True
+
+
+async def _post_judge_messages_for_profile(
+    client: httpx.AsyncClient,
+    profile: _AnthropicProfile,
+    *,
+    system: str,
+    user_prompt: str,
+    max_tokens: int,
+    timeout_seconds: float,
+) -> str:
+    if not _profile_supports_structured_output(profile):
+        return await _post_anthropic_messages(
+            client,
+            profile,
+            system=system,
+            user_prompt=user_prompt,
+            max_tokens=max_tokens,
+            timeout_seconds=timeout_seconds,
+        )
+    try:
+        return await _post_anthropic_messages(
+            client,
+            profile,
+            system=system,
+            user_prompt=user_prompt,
+            max_tokens=max_tokens,
+            timeout_seconds=timeout_seconds,
+            output_config=judge_structured_output_config(),
+        )
+    except httpx.HTTPStatusError as exc:
+        if exc.response is not None and exc.response.status_code == 400:
+            logger.warning(
+                "anthropic_structured_output_unsupported_fallback_plain",
+                extra={"profile": profile.label, "model_id": profile.model_id},
+            )
+            return await _post_anthropic_messages(
+                client,
+                profile,
+                system=system,
+                user_prompt=user_prompt,
+                max_tokens=max_tokens,
+                timeout_seconds=timeout_seconds,
+            )
+        raise
+
+
+async def _post_judge_with_profile_fallback(
+    client: httpx.AsyncClient,
+    profiles: list[_AnthropicProfile],
+    *,
+    system: str,
+    user_prompt: str,
+    max_tokens: int,
+    timeout_seconds: float,
+) -> str:
+    if not profiles:
+        raise ServiceUnavailableError(
+            message="Anthropic API is not configured",
+            error_code="llm_disabled",
+        )
+    last_exc: Exception | None = None
+    for index, profile in enumerate(profiles):
+        try:
+            return await _post_judge_messages_for_profile(
                 client,
                 profile,
                 system=system,
@@ -272,7 +373,7 @@ async def judge_finding(
 ) -> dict:
     _require_judge_anthropic_enabled()
     profiles = _judge_profiles(model_id)
-    text = await _post_with_profile_fallback(
+    text = await _post_judge_with_profile_fallback(
         client,
         profiles,
         system=system_prompt or JUDGE_SYSTEM_PROMPT,

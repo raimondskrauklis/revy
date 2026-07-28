@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import re
 
 JUDGE_RESPONSE_TEXT_MAX_BYTES = 512 * 1024
+_JSON_FENCE_RE = re.compile(r"^```(?:json)?\s*\n?(.*?)\n?```\s*$", re.DOTALL | re.IGNORECASE)
 
 
 class JudgeParseError(ValueError):
@@ -23,14 +25,36 @@ def truncate_judge_response_text(text: str) -> str:
     return encoded[:JUDGE_RESPONSE_TEXT_MAX_BYTES].decode("utf-8", errors="ignore")
 
 
+def _extract_json_object_text(text: str) -> str:
+    stripped = text.strip()
+    fence_match = _JSON_FENCE_RE.match(stripped)
+    if fence_match is not None:
+        stripped = fence_match.group(1).strip()
+    start = stripped.find("{")
+    if start < 0:
+        raise ValueError("judge_json_invalid")
+    end = stripped.rfind("}")
+    if end < start:
+        raise ValueError("judge_json_invalid")
+    return stripped[start : end + 1]
+
+
+def parse_llm_json_object(text: str) -> dict:
+    """Strip fences / leading prose and parse the first JSON object."""
+    try:
+        payload = json.loads(_extract_json_object_text(text))
+    except json.JSONDecodeError as exc:
+        raise ValueError("judge_json_invalid") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("judge_json_not_object")
+    return payload
+
+
 def parse_judge_payload(text: str) -> dict:
     try:
-        payload = json.loads(text)
-    except json.JSONDecodeError as exc:
-        raise JudgeParseError("judge_json_invalid", response_text=text) from exc
-    if not isinstance(payload, dict):
-        raise JudgeParseError("judge_json_not_object", response_text=text)
-    return payload
+        return parse_llm_json_object(text)
+    except ValueError as exc:
+        raise JudgeParseError(str(exc), response_text=text) from exc
 
 
 def judge_failure_trace_fields(

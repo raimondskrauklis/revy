@@ -184,6 +184,82 @@ def test_parse_judge_payload_invalid_json_raises_judge_parse_error():
     assert "not-json" in exc_info.value.response_text
 
 
+def test_parse_llm_json_object_strips_json_fence():
+    from app.integrations.judge_llm_errors import parse_llm_json_object
+
+    payload = parse_llm_json_object('```json\n{"outcome":"dismissed","notes":"ok"}\n```')
+    assert payload["outcome"] == "dismissed"
+
+
+def test_parse_llm_json_object_extracts_object_after_prose():
+    from app.integrations.judge_llm_errors import parse_llm_json_object
+
+    payload = parse_llm_json_object(
+        'Here is the result:\n{"outcome":"upheld","notes":"supported"}'
+    )
+    assert payload["outcome"] == "upheld"
+
+
+@pytest.mark.asyncio
+async def test_judge_finding_parses_fenced_json_body():
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = {
+        "content": [{"text": '```json\n{"outcome":"dismissed","notes":"ok"}\n```'}]
+    }
+    client = AsyncMock(spec=httpx.AsyncClient)
+    client.post = AsyncMock(return_value=response)
+
+    with patch("app.integrations.anthropic_review.settings") as mock_settings:
+        mock_settings.anthropic_gateway_enabled = True
+        mock_settings.anthropic_gateway_messages_url = "https://llm.ai.rtu.lv/v1/messages"
+        mock_settings.anthropic_auth_token = "rtu-token"
+        mock_settings.effective_anthropic_gateway_judge_model = "azure_ai/claude-opus-5"
+        mock_settings.anthropic_direct_enabled = False
+        mock_settings.revy_judge_structured_output = False
+        mock_settings.revy_revision_timeout_standard_seconds = 30
+        result = await anthropic_review.judge_finding(client, user_prompt="judge this")
+
+    assert result["outcome"] == "dismissed"
+
+
+@pytest.mark.asyncio
+async def test_judge_finding_structured_output_falls_back_on_400():
+    structured_response = MagicMock()
+    structured_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+        "bad request",
+        request=MagicMock(),
+        response=MagicMock(status_code=400),
+    )
+    plain_response = MagicMock()
+    plain_response.raise_for_status = MagicMock()
+    plain_response.json.return_value = {
+        "content": [{"text": json.dumps({"outcome": "upheld", "notes": "ok"})}]
+    }
+    client = AsyncMock(spec=httpx.AsyncClient)
+    client.post = AsyncMock(side_effect=[structured_response, plain_response])
+
+    with (
+        patch("app.integrations.anthropic_review.settings") as mock_settings,
+        patch(
+            "app.integrations.anthropic_review._profile_supports_structured_output",
+            return_value=True,
+        ),
+    ):
+        mock_settings.anthropic_gateway_enabled = False
+        mock_settings.anthropic_direct_enabled = True
+        mock_settings.anthropic_api_key = "direct-key"
+        mock_settings.revy_anthropic_model = "claude-sonnet-5"
+        mock_settings.revy_judge_structured_output = True
+        mock_settings.revy_revision_timeout_standard_seconds = 30
+        result = await anthropic_review.judge_finding(client, user_prompt="judge this")
+
+    assert result["outcome"] == "upheld"
+    assert client.post.await_count == 2
+    assert "output_config" in client.post.await_args_list[0].kwargs["json"]
+    assert "output_config" not in client.post.await_args_list[1].kwargs["json"]
+
+
 @pytest.mark.asyncio
 async def test_judge_finding_raises_judge_parse_error_on_invalid_json():
     from app.integrations.judge_llm_errors import JudgeParseError
@@ -200,6 +276,7 @@ async def test_judge_finding_raises_judge_parse_error_on_invalid_json():
         mock_settings.anthropic_auth_token = "rtu-token"
         mock_settings.effective_anthropic_gateway_judge_model = "azure_ai/claude-opus-5"
         mock_settings.anthropic_direct_enabled = False
+        mock_settings.revy_judge_structured_output = False
         mock_settings.revy_revision_timeout_standard_seconds = 30
         with pytest.raises(JudgeParseError) as exc_info:
             await anthropic_review.judge_finding(client, user_prompt="judge this")
