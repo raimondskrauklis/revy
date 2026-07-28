@@ -1,6 +1,6 @@
 # Judge program — input quality & escalation
 
-**Status:** execution planned — [waves/JUDGE_INPUT_QUALITY_EXECUTION.md](./waves/JUDGE_INPUT_QUALITY_EXECUTION.md)
+**Status:** P0–P5 **implemented** on `feat/judge-input-quality` — staging human gate pending ([validation memo](./JUDGE_INPUT_QUALITY_STAGING_VALIDATION.md)).
 
 **Design direction (findings + web research):** Moonshot gets the full diff for discovery; the judge should **verify Moonshot’s specific claims** with scoped code evidence (hunk/patch), not re-review the entire PR. See findings § Industry practice.
 

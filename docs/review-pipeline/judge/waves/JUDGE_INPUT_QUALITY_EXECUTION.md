@@ -32,12 +32,12 @@ each phase: implement → pytest gate → Bugbot → commit
 
 | Phase | Focus | Execution | Status |
 |-------|--------|-----------|--------|
-| P0 — Primitives | Hunk/snippet helpers + caps | [JUDGE_INPUT_QUALITY_P0_EXECUTION.md](./JUDGE_INPUT_QUALITY_P0_EXECUTION.md) | pending |
-| P1 — Verifier prompts | Moonshot claim-only contract + tests | [JUDGE_INPUT_QUALITY_P1_EXECUTION.md](./JUDGE_INPUT_QUALITY_P1_EXECUTION.md) | pending |
-| P2 — Review ingest | Evidence coverage + path/line fixes | [JUDGE_INPUT_QUALITY_P2_EXECUTION.md](./JUDGE_INPUT_QUALITY_P2_EXECUTION.md) | pending |
-| P3 — Judge context | Compare re-fetch + patch in prompt | [JUDGE_INPUT_QUALITY_P3_EXECUTION.md](./JUDGE_INPUT_QUALITY_P3_EXECUTION.md) | pending |
-| P4 — Moonshot PR body | Wire `pull_request.body` | [JUDGE_INPUT_QUALITY_P4_EXECUTION.md](./JUDGE_INPUT_QUALITY_P4_EXECUTION.md) | pending |
-| P5 — Staging gate | Validation memo + doc sync | [JUDGE_INPUT_QUALITY_P5_EXECUTION.md](./JUDGE_INPUT_QUALITY_P5_EXECUTION.md) | pending |
+| P0 — Primitives | Hunk/snippet helpers + caps | [JUDGE_INPUT_QUALITY_P0_EXECUTION.md](./JUDGE_INPUT_QUALITY_P0_EXECUTION.md) | **done** `c354dc8` |
+| P1 — Verifier prompts | Moonshot claim-only contract + tests | [JUDGE_INPUT_QUALITY_P1_EXECUTION.md](./JUDGE_INPUT_QUALITY_P1_EXECUTION.md) | **done** `3f42ddf` |
+| P2 — Review ingest | Evidence coverage + path/line fixes | [JUDGE_INPUT_QUALITY_P2_EXECUTION.md](./JUDGE_INPUT_QUALITY_P2_EXECUTION.md) | **done** `9982ac1` |
+| P3 — Judge context | Compare re-fetch + patch in prompt | [JUDGE_INPUT_QUALITY_P3_EXECUTION.md](./JUDGE_INPUT_QUALITY_P3_EXECUTION.md) | **done** `9982ac1` |
+| P4 — Moonshot PR body | PR body API fetch | [JUDGE_INPUT_QUALITY_P4_EXECUTION.md](./JUDGE_INPUT_QUALITY_P4_EXECUTION.md) | **done** `9982ac1` |
+| P5 — Staging gate | Validation memo + doc sync | [JUDGE_INPUT_QUALITY_P5_EXECUTION.md](./JUDGE_INPUT_QUALITY_P5_EXECUTION.md) | **done** (human gate pending) |
 
 **Peer review:** incorporated 2026-07-28 — P4 API fetch (no migration), P2 `_parse_finding_row`, P3 module path locked, findings J-8 aligned.
 

@@ -133,18 +133,18 @@ Moonshot may cite issues **without** `start_line` or on lines that don’t map c
 
 | ID | Gap | Severity | Status |
 |----|-----|----------|--------|
-| J-1 | Judge never sees diff hunks — only post-hoc snippet | High | Open — P3 |
-| J-2 | ~47% judge-eligible findings lack `evidence_snippet` on staging | High | Open — P2 |
+| J-1 | Judge never sees diff hunks — only post-hoc snippet | High | **Addressed** (P3) |
+| J-2 | ~47% judge-eligible findings lack `evidence_snippet` on staging | High | Open — staging validation (P5) |
 | J-3 | ~47% lack `start_line` — weak anchor for snippet extraction | Medium | Open — P2 |
-| J-4 | PR body not passed to Moonshot (`pr_body=None`; no DB body — fetch at review time in P4) | Low–medium | Open — P4 |
-| J-5 | Judge system prompt — verifier role / scope boundary | Medium | **Addressed** (working tree, P1) |
-| J-6 | Pipeline trace stores judge `user_prompt` but not hunk for replay | Low | Open — P3 |
-| J-7 | No “Moonshot finding under test” framing in user prompt | Medium | **Addressed** (working tree, P1) |
-| J-8 | **Patch reload at judge time** — `patches_by_file` not available after review; only full review prompt artifact persisted | High | Open — P3 (design) |
-| J-9 | Missing evidence beyond line anchoring — `file_path` null, compare failure / index-only empty patches, path key mismatch | High | Open — P2 |
+| J-4 | PR body not passed to Moonshot (`pr_body=None`; no DB body — fetch at review time in P4) | Low–medium | **Addressed** (P4) |
+| J-5 | Judge system prompt — verifier role / scope boundary | Medium | **Addressed** (P1) |
+| J-6 | Pipeline trace stores judge `user_prompt` but not hunk for replay | Low | **Addressed** (P3) — `file_patch_chars` |
+| J-7 | No “Moonshot finding under test” framing in user prompt | Medium | **Addressed** (P1) |
+| J-8 | **Patch reload at judge time** — `patches_by_file` not available after review | High | **Addressed** (P3) |
+| J-9 | Missing evidence beyond line anchoring — `file_path` null, compare failure / index-only empty patches, path key mismatch | High | Open — P2 partial |
 | J-10 | `modified` outcome always sets `severity=warning` — no title/message edit or severity-specific downgrade | Medium | **Locked v1** (P1) — warning-only application |
-| J-11 | `extract_evidence_from_patch` skips `-` lines — thin snippets for findings on removed code | Medium | Open — P0/P2 |
-| J-12 | `start_line` parsing drops `0`; no string coercion if model drifts | Low | Open — P2 |
+| J-11 | `extract_evidence_from_patch` skips `-` lines — thin snippets for findings on removed code | Medium | **Addressed** (P0) |
+| J-12 | `start_line` parsing drops `0`; no string coercion if model drifts | Low | **Addressed** (P2) |
 
 **P1 note:** `JUDGE_SYSTEM_PROMPT` + Moonshot verifier header in `_build_judge_prompt` match findings draft — present locally, not yet on `main`. Unit tests for verifier framing still required (general plan P1 deliverable).
 
