@@ -38,16 +38,21 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c 'python -m scripts.judge_json_contract_
 
 ### Review context (Moonshot / RCX — same script)
 
-**Queried:** retrieve-step manifest + review prompt artifacts. See [REVIEW_ENGINEERING_CONTEXT_FINDINGS.md](../review-engineering-context/REVIEW_ENGINEERING_CONTEXT_FINDINGS.md) § Validation metrics.
+**Queried:** 2026-07-29 · `revy-staging` · alembic `0028` · full history (pre-RCX). See [REVIEW_ENGINEERING_CONTEXT_FINDINGS.md](../review-engineering-context/REVIEW_ENGINEERING_CONTEXT_FINDINGS.md) § Validation metrics.
+
+**Note:** `engineering_context_injected` is **not a DB column** — script counts a JSON key that **does not exist yet** (always 0). `context_stats` on `github_review_runs` ships in RCX migration `0029`.
 
 | Metric | Baseline (pre-RCX) | Target | After RCX / cap raise |
 |--------|-------------------|--------|------------------------|
-| Diff truncated % | — | <5% program PRs | pending |
-| Omitted files p95 | — | ≤2 | pending |
-| Runs with omitted `.md` | — | 0 | pending |
-| Moonshot prompt p95 (chars) | — | <400k | pending |
-| `engineering_context_injected` runs | **0** (field not shipped) | 100% scoped | pending |
-| `DIFF_MAX_BYTES` config | 128 KB | raised (RCX-D10) | pending |
+| Completed runs (retrieve manifest) | **40** | — | pending |
+| Diff truncated % | **25.0%** (10/40) | <5% | pending |
+| Omitted files p50 / p95 | **0 / 4** | p95 ≤2 | pending |
+| Runs with omitted `.md` | **9** | 0 | pending |
+| Moonshot prompt p50 / p95 (chars) | **143,129 / 163,981** | p95 <400k | ✓ headroom |
+| `engineering_context_injected` runs | **0** (key absent) | 100% scoped | pending RCX P2 |
+| `DIFF_MAX_BYTES` config | **128 KB** hardcoded | **512 KB** candidate | pending RCX P3 |
+
+**Post-#58 (`--since 2026-07-29`):** 0 review runs — no post-deploy dogfood yet.
 
 ### Judge contract (baseline)
 

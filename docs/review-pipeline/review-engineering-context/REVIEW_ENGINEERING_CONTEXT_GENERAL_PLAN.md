@@ -107,6 +107,6 @@
 
 ## Open calibration
 
-**`revy_diff_max_bytes` value** — set from P0 baseline (`diff_truncated %`, omitted `.md` runs) before P3 deploy; 256 KB vs 512 KB is data-driven (RCX-D10).
+**`revy_diff_max_bytes` value** — **baseline captured 2026-07-29:** 25% diff truncated, 9/40 runs omitted `.md`, prompt p95 164k chars. **Default to 512 KB** in P3 unless post-cap script shows <5% truncated at 256 KB trial.
 
 **Next step:** **`create-execution-plan`** → `waves/REVIEW_ENGINEERING_CONTEXT_EXECUTION.md` starting at P0.

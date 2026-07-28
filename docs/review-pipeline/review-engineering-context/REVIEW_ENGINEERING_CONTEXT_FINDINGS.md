@@ -427,52 +427,65 @@ Sources: [Packmind playbook](https://packmind.com/context-engineering-ai-coding/
 
 ## Validation metrics (operator + RCX P0)
 
-**Rule (RCX-D6):** Use `--since` on post-deploy / post-RCX dogfood window only — not full staging history.
+**Rule (RCX-D6):** Use `--since` on post-deploy / post-RCX dogfood window only — not full staging history. **Pre-RCX baseline** below is full-history (`since` omitted) — use only for cap calibration (RCX-D10), not regression claims.
 
-**Script (today):** `backend/scripts/judge_json_contract_staging_metrics.py` — judge block + **review context block** (retrieve/review artifacts). Record in [JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](../judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) § Review context and here after each run.
+**Script:** `backend/scripts/judge_json_contract_staging_metrics.py` — judge block + review context block.
 
 ```bash
 cd backend
-DATABASE_SSL_INSECURE=1 pipenv run sh -c 'python -m scripts.judge_json_contract_staging_metrics --since 2026-07-29T00:00:00Z'
+DATABASE_SSL_INSECURE=1 pipenv run sh -c 'python -m scripts.judge_json_contract_staging_metrics --json'
 DATABASE_SSL_INSECURE=1 pipenv run sh -c 'python -m scripts.judge_json_contract_staging_metrics --since 2026-07-29T00:00:00Z --json'
 ```
 
+### Storage reality (no RCX columns yet)
+
+| Layer | Exists today? | What the script reads |
+|-------|---------------|------------------------|
+| `retrieve` step manifest (`github_pipeline_artifacts.content_json`) | **Yes** — JSONB, no migration | `diff_truncated`, `omitted_files`, `changed_files`, `retrieval_hits`, `fallback_reason` |
+| `engineering_context_*` keys on retrieve manifest | **No** — keys absent | Script counts `engineering_context_injected=true`; **always 0** until RCX P2 |
+| `github_review_runs.context_stats` | **No** — column not shipped | Migration `0029` in RCX P0; script will read when present |
+| Moonshot `prompt` artifact length | **Yes** | `review` step `content_text` length (512 KB artifact cap) |
+
+**Do not interpret `engineering_context_injected_runs: 0` as proof inject works** — the field is not written yet.
+
 ### Metrics matrix
 
-| Metric | Decision use | In DB today? | Source / field | Target (dogfood) |
-|--------|--------------|--------------|----------------|------------------|
-| **Diff truncated %** | Need RCX-D10 cap raise? | **Yes** | `retrieve` manifest `diff_truncated` | **<5%** program PRs; if higher → raise `DIFF_MAX_BYTES` |
-| **Omitted files p50 / p95** | How aggressive is 128 KB cap? | **Yes** | `omitted_files` array length | p95 **≤2** after cap raise |
-| **Runs with omitted `.md`** | Planning docs dropped from diff? | **Yes** (derived) | `omitted_files` paths ending `.md` | **0** on program PRs |
-| **Changed files count p50** | PR size baseline | **Yes** | `changed_files` length | informational |
-| **Retrieval hits p50** | RAG noise vs signal | **Yes** | `retrieval_hits` length | stable; spike → tune caps |
-| **Moonshot prompt p50 / p95** | Token spend + headroom (RCX-D10) | **Yes** | `review` artifact `prompt` `length(content_text)` | p95 **<400k** chars stored (512k artifact cap) |
-| **Compare fallback %** | Diff quality | **Yes** | `fallback_reason` on retrieve manifest | rare |
-| **Engineering inject present** | RCX-D8 shipped? | **No** — RCX P0 | `engineering_context_injected` (planned) | **100%** scoped program PRs |
-| **Engineering inject bytes p50** | Inject budget vs RCX-D10 | **No** — RCX P0 | `engineering_context_bytes` (planned) | bounded extract; generous cap OK |
-| **`diff_max_bytes` applied** | Audit config per run | **No** — RCX P0 | `diff_max_bytes` on retrieve manifest | logged = config value |
-| **`unified_diff_bytes`** | Cap sizing evidence | **No** — RCX P0 | `unified_diff_bytes` (planned) | informs 256 vs 512 KB choice |
-| **Deduped inject paths** | Avoid duplicate MD | **No** — RCX P0 | `engineering_context_deduped_paths` (planned) | non-zero when MD in diff |
-| **`active_program`** | RC1 trim working? | **No** — RCX P0 | manifest field | matches LOOP program |
-| **Lock IDs extracted count** | Extractor health | **No** — RCX P0 | `lock_ids_extracted` (planned) | ≥1 on program PRs with findings |
-| **Findings contradict locks %** | Quality gate | **No** — manual | operator review of published findings | **0%** on smoke PRs |
-| **Judge outcome persistence %** | Sibling track (judge) | **Yes** | judge manifest `outcome` | ≥95% — [judge validation](../judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) |
-| **LLM cost per review run** | RCX-D10 spend guard | **No** | future `usage` on review step | defer until billing row exists |
+| Metric | Decision use | Queryable today? | Source / field | Target (dogfood) |
+|--------|--------------|-------------------|----------------|------------------|
+| **Diff truncated %** | RCX-D10 cap raise? | **Yes** | retrieve manifest `diff_truncated` | **<5%**; baseline **25%** → raise cap |
+| **Omitted files p50 / p95** | 128 KB cap aggression | **Yes** | `omitted_files` length | p95 **≤2**; baseline p95 **4** |
+| **Runs with omitted `.md`** | Planning docs dropped? | **Yes** (derived) | `omitted_files` `%.md` | **0**; baseline **9/40** |
+| **Changed files p50** | PR size baseline | **Yes** | `changed_files` length | informational (baseline **25**) |
+| **Retrieval hits p50** | RAG noise | **Yes** | `retrieval_hits` length | stable (baseline **15**) |
+| **Moonshot prompt p50 / p95** | Token headroom (RCX-D10) | **Yes** | review `prompt` length | p95 **<400k**; baseline **164k** ✓ |
+| **Compare fallback %** | Diff quality | **Yes** | `fallback_reason` | rare (baseline **0**) |
+| **Engineering inject present** | RCX-D8 shipped? | **No** — key not written | `engineering_context_injected` (RCX P2) | 100% scoped PRs |
+| **Engineering inject bytes** | Inject budget | **No** | `engineering_context_bytes` (RCX P2) | bounded extract |
+| **`diff_max_bytes` applied** | Config audit | **No** | retrieve manifest (RCX P2) | = env config |
+| **`unified_diff_bytes`** | Cap sizing | **No** | retrieve manifest (RCX P2) | informs 256 vs 512 KB |
+| **`context_stats` row** | Fast SQL aggregates | **No** — no column | `github_review_runs` (migration `0029`, RCX P0) | populated each run |
+| **Lock IDs extracted** | Extractor health | **No** | manifest / `context_stats` (RCX P1–P2) | ≥1 on program PRs |
+| **Contradict locks %** | Quality gate | **Manual** | operator review | 0% on smoke PRs |
+| **Judge outcome persistence %** | Sibling track | **Yes** | judge manifest `outcome` | ≥95% — [judge validation](../judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) |
 
-**Legend:** **Yes** = queryable now from `github_pipeline_artifacts`; **No** = add in RCX P0 instrumentation (`build_retrieval_manifest` + inject path).
+### Baseline captured (pre-RCX, full staging history)
 
-### Post-RCX fill (operator table)
+**Queried:** 2026-07-29 · `revy-staging` · alembic `0028` · `since` omitted · **40** completed review runs with retrieve manifest.
 
-| Metric | Baseline (pre-RCX) | Target | After RCX deploy | Date |
-|--------|-------------------|--------|------------------|------|
-| Diff truncated % | — | <5% | — | — |
-| Omitted `.md` runs | — | 0 | — | — |
-| `DIFF_MAX_BYTES` config | 128 KB | raised | — | — |
-| Engineering inject % | 0% | 100% scoped | — | — |
-| Inject bytes p50 | n/a | bounded | — | — |
-| Moonshot prompt p95 | — | <400k | — | — |
-| Contradict locks (manual) | — | 0% | — | — |
-| Sample `review_run_id` | — | — | — | — |
+| Metric | Baseline | Target | RCX P0 implication |
+|--------|----------|--------|---------------------|
+| Diff truncated % | **25.0%** (10/40) | <5% | **Raise `DIFF_MAX_BYTES`** — 128 KB too low |
+| Omitted files p50 / p95 | **0 / 4** | p95 ≤2 | Cap raise + inject for omitted MD |
+| Runs with omitted `.md` | **9** | 0 | Program MD dropped from diff today |
+| Moonshot prompt p50 / p95 | **143,129 / 163,981** chars | p95 <400k | Headroom OK; cap raise affordable (RCX-D10) |
+| Changed files p50 | **25** | — | Large program PRs common |
+| Retrieval hits p50 | **15** | stable | At diff-mode cap |
+| `engineering_context_injected` | **0** (field absent) | 100% scoped | RCX P2 — not a measurement yet |
+| `DIFF_MAX_BYTES` config | **128 KB** (hardcoded) | raised | **512 KB** candidate — baseline 25% truncated |
+
+**Post-#58 window (`--since 2026-07-29`):** **0** review runs — no post-deploy dogfood yet; re-query after first program PR.
+
+**Cap calibration (RCX-D10):** Baseline supports **512 KB** first (25% truncated, 9 MD omissions); re-run script after P3 deploy to confirm <5%.
 
 ### Pass/fail gates (RCX dogfood)
 
