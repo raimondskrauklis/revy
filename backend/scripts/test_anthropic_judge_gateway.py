@@ -13,6 +13,7 @@ from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError
 from app.integrations.anthropic_review import (
     JUDGE_SYSTEM_PROMPT,
+    _AnthropicProfile,
     _judge_profiles,
     _post_anthropic_messages,
     _post_structured_judge_smoke,
@@ -35,6 +36,14 @@ DEFAULT_PROMPT = (
 )
 
 _PARSE_ERRORS = (httpx.HTTPError, ValueError, json.JSONDecodeError, OSError, ServiceUnavailableError)
+
+
+def _format_request_error(exc: BaseException) -> str:
+    if isinstance(exc, httpx.HTTPStatusError) and exc.response is not None:
+        body = exc.response.text.strip()
+        if body:
+            return f"{exc}\nResponse body: {body[:2000]}"
+    return str(exc)
 
 
 def _parse_args() -> argparse.Namespace:
@@ -96,7 +105,7 @@ def _payload_from_text(text: str) -> dict:
 
 async def _invoke_profile(
     client: httpx.AsyncClient,
-    profile: object,
+    profile: _AnthropicProfile,
     *,
     prompt: str,
     structured: bool,
@@ -139,7 +148,6 @@ async def _run_compare_direct(
     if not profiles:
         print("No judge profiles configured")
         return 1
-    print(f"Prompt length: {len(prompt)} chars")
     successes = 0
     for profile in profiles:
         print(f"\n--- profile: {profile.label} ({profile.model_id}) ---")
@@ -154,8 +162,8 @@ async def _run_compare_direct(
             print(json.dumps(result, indent=2))
             successes += 1
         except _PARSE_ERRORS as exc:
-            print(f"FAILED: {exc}")
-    return 0 if successes else 1
+            print(f"FAILED: {_format_request_error(exc)}")
+    return 0 if successes == len(profiles) else 1
 
 
 async def _fetch_payload(
@@ -210,10 +218,10 @@ async def _run() -> int:
         )
         return 1
 
-    prompt = _load_prompt(args)
-    print(f"Prompt length: {len(prompt)} chars")
-
     try:
+        prompt = _load_prompt(args)
+        print(f"Prompt length: {len(prompt)} chars")
+
         async with httpx.AsyncClient(timeout=120.0) as client:
             if args.compare_direct:
                 return await _run_compare_direct(
@@ -230,7 +238,7 @@ async def _run() -> int:
                 print_raw=args.print_raw,
             )
     except _PARSE_ERRORS as exc:
-        print(f"FAILED: {exc}")
+        print(f"FAILED: {_format_request_error(exc)}")
         return 1
 
     print("Response:")
@@ -238,7 +246,7 @@ async def _run() -> int:
     try:
         outcome, _ = parse_judge_outcome(payload)
     except ValueError as exc:
-        print(f"FAILED: {exc}")
+        print(f"FAILED: {_format_request_error(exc)}")
         return 1
     print(f"Parsed outcome: {outcome}")
     return 0

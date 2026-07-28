@@ -345,6 +345,8 @@ def judge_outcome_json_schema() -> dict[str, object]:
 
 
 def judge_structured_output_config() -> dict[str, object]:
+    # GA Anthropic shape: type + schema only (no format.name). RTU/LiteLLM gateway
+    # rejects structured_outputs entirely; adding name is an extra field on that path.
     return {
         "format": {
             "type": "json_schema",

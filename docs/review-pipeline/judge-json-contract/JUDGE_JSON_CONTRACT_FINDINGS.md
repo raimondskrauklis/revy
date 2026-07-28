@@ -205,7 +205,7 @@ DB connect: [DATABASE_CONNECTION_GUIDE.md](../../utils/DATABASE_CONNECTION_GUIDE
 | Path | `--structured` | Result | Notes |
 |------|----------------|--------|-------|
 | RTU gateway (`ANTHROPIC_BASE_URL`) | no | **pass** | `outcome=dismissed`, ~3.6s, 240-char prompt |
-| RTU gateway | yes | **fail** | HTTP **400 Bad Request** — gateway rejects `output_config` json_schema (or unsupported shape) |
+| RTU gateway | yes | **fail** | HTTP **400** — `structured_outputs not supported in your workspace` (not missing `format.name`; adding `"name": "judge_outcome"` yields `output_config.format.name: Extra inputs are not permitted`) |
 | Direct API (`ANTHROPIC_API_KEY`) | no | **n/a** | `anthropic_direct_enabled=False` locally |
 | Direct API | yes | **n/a** | Not configured |
 | `--chars 1000` | no | **pass** | `outcome=dismissed`, prompt len 1000 |

@@ -21,6 +21,7 @@ from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullReque
 from app.models.github_review_run import GitHubReviewRunORM
 from app.services.github_finding_judge import (
     _build_judge_prompt,
+    _judge_failure_log_extra,
     is_judge_candidate,
     record_review_run_judge_status,
 )
@@ -106,6 +107,16 @@ def test_build_judge_prompt_includes_evidence_and_grounding():
     assert "if value is None" in prompt
     assert "Grounding (E2)" in prompt
     assert "entailed" in prompt
+
+
+def test_judge_failure_log_extra_includes_raw_response_text():
+    from app.integrations.judge_llm_errors import JudgeParseError
+
+    exc = JudgeParseError("judge_json_invalid", response_text='{"broken":')
+    extra = _judge_failure_log_extra(uuid.uuid4(), exc)
+    assert extra["raw_response_text"] == '{"broken":'
+    assert extra["parse_error"] == "judge_json_invalid"
+    assert extra["response_chars"] == len('{"broken":')
 
 
 def test_build_judge_prompt_without_evidence_uses_conservative_grounding():

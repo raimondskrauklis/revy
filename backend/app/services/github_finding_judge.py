@@ -72,6 +72,7 @@ def _judge_failure_log_extra(group_id: UUID, exc: Exception) -> dict[str, object
         extra["response_chars"] = response_chars
     if raw_response_text is not None:
         extra["parse_error"] = parse_error
+        extra["raw_response_text"] = raw_response_text
     return extra
 
 
