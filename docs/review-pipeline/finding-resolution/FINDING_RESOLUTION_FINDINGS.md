@@ -199,10 +199,10 @@ flowchart TD
 | FR-Q2 | Should `addressed` set `group.state=resolved`? | **locked** | Yes, via Pass 2 rules (absent+addressed); not heuristic-only on sync |
 | FR-Q3 | Reconcile absent fingerprint → `resolved`? | **locked** | Yes when `resolution_status=addressed` |
 | FR-Q4 | Judge on next push for `still_open` escalation groups? | **locked** | Pass 3 verification judge, max 5/run |
-| FR-Q5 | Human dismiss scope (API only vs UI)? | **locked** | P4 minimal admin API; R7.6 UI defer |
+| FR-Q5 | Human dismiss scope (API only vs UI)? | **addressed** | P4 admin API + reviewer dismiss action (R7.6 full UX defer) |
 | FR-Q6 | Use judge vs diff-only for `addressed`? | **locked** | Layered: Pass 1 diff, Pass 3 judge for escalation still-open |
-| FR-Q7 | Summary vs inline scope? | **locked** | Two blocks: generation publishable + PR-level still open (FR-Q14) |
-| FR-Q8 | RG-6 judge_status honesty? | **locked** | Document + test partial failure → `skipped_unavailable` |
+| FR-Q7 | Summary vs inline scope? | **addressed** | Two-block check summary + generation-only issue comment |
+| FR-Q8 | RG-6 judge_status honesty? | **addressed** | `skipped_unavailable` on partial failure — `test_run_judge_partial_llm_failure_skipped_unavailable` |
 | FR-Q9 | Resolution rate KPI | **locked** | Superseded by FR-Q12 (transitions-only) |
 | FR-Q10 | Post-merge re-verify (Bugbot-class)? | **defer** | v1.1 |
 | FR-Q11 | Pass 3 escalation set? | **locked** | `still_open` + `is_judge_candidate` + prior revision + not `compare_failed` |
@@ -227,7 +227,7 @@ flowchart TD
 
 ## Next step
 
-**`phase-execution`** from [waves/FINDING_RESOLUTION_P0_EXECUTION.md](./waves/FINDING_RESOLUTION_P0_EXECUTION.md) on branch `feat/finding-resolution`.
+**Program code-complete on `feat/finding-resolution`.** Merge PR #57 → `main`; operator completes [FINDING_RESOLUTION_STAGING_VALIDATION.md](./FINDING_RESOLUTION_STAGING_VALIDATION.md) human gate (migration `0028`, dogfood metrics). Then start [judge-json-contract](../judge-json-contract/README.md) from `main`.
 
 ---
 

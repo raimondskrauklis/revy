@@ -46,6 +46,10 @@ docs/review-pipeline/
     README.md
     FINDING_RESOLUTION_FINDINGS.md
     FINDING_RESOLUTION_GENERAL_PLAN.md
+    FINDING_RESOLUTION_STAGING_VALIDATION.md
+    waves/
+      FINDING_RESOLUTION_EXECUTION.md
+      FINDING_RESOLUTION_P0_EXECUTION.md … P5
   REVIEW_PIPELINE_GREPTILE_PR26_EMAIL.md   ← archived Greptile PR #26 email (triage reference)
   REVIEW_PIPELINE_PRODUCT_PATTERNS.md      ← Greptile-style patterns → Revy phases (defer/future map)
   code-review-arch_perplexity_searcj_advice_only.md  ← external architecture notes (advice only)

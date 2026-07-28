@@ -34,14 +34,14 @@ each phase: implement → pytest gate → Bugbot → local commit (operator push
 
 ## LOOP order
 
-| Phase | Focus | Execution | Status |
-|-------|--------|-----------|--------|
-| P0 — Closure model | Schema `0028`, enums, compare helper, rules | [FINDING_RESOLUTION_P0_EXECUTION.md](./FINDING_RESOLUTION_P0_EXECUTION.md) | done |
-| P1 — Pass 1 + 2 | Sync stamp + reconcile closure on push | [FINDING_RESOLUTION_P1_EXECUTION.md](./FINDING_RESOLUTION_P1_EXECUTION.md) | done (local) |
-| P2 — Pass 3 verify | Escalation re-check judge (5/run) | [FINDING_RESOLUTION_P2_EXECUTION.md](./FINDING_RESOLUTION_P2_EXECUTION.md) | done (local) |
-| P3 — Metrics | FR-Q12 manifest, G9, API fields | [FINDING_RESOLUTION_P3_EXECUTION.md](./FINDING_RESOLUTION_P3_EXECUTION.md) | pending |
-| P4 — Hardening | Human dismiss, RG-6, summary parity | [FINDING_RESOLUTION_P4_EXECUTION.md](./FINDING_RESOLUTION_P4_EXECUTION.md) | pending |
-| P5 — Staging + docs | Validation memo, program closeout | [FINDING_RESOLUTION_P5_EXECUTION.md](./FINDING_RESOLUTION_P5_EXECUTION.md) | pending |
+| Phase | Focus | Execution | Commit | Status |
+|-------|--------|-----------|--------|--------|
+| P0 — Closure model | Schema `0028`, enums, compare helper, rules | [FINDING_RESOLUTION_P0_EXECUTION.md](./FINDING_RESOLUTION_P0_EXECUTION.md) | `76e8784` | done |
+| P1 — Pass 1 + 2 | Sync stamp + reconcile closure on push | [FINDING_RESOLUTION_P1_EXECUTION.md](./FINDING_RESOLUTION_P1_EXECUTION.md) | `c0522ec` / `97a7e01` | done |
+| P2 — Pass 3 verify | Escalation re-check judge (5/run) | [FINDING_RESOLUTION_P2_EXECUTION.md](./FINDING_RESOLUTION_P2_EXECUTION.md) | `c0522ec` | done |
+| P3 — Metrics | FR-Q12 manifest, G9, API fields | [FINDING_RESOLUTION_P3_EXECUTION.md](./FINDING_RESOLUTION_P3_EXECUTION.md) | `73401aa` | done |
+| P4 — Hardening | Human dismiss, RG-6, summary parity | [FINDING_RESOLUTION_P4_EXECUTION.md](./FINDING_RESOLUTION_P4_EXECUTION.md) | `8b453aa` | done |
+| P5 — Staging + docs | Validation memo, program closeout | [FINDING_RESOLUTION_P5_EXECUTION.md](./FINDING_RESOLUTION_P5_EXECUTION.md) | (P5) | done (docs) |
 
 **Peer review:** architecture + execution peer review (2026-07-28) — two passes; all critical/high gaps fixed in execution files.
 
