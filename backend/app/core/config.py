@@ -97,8 +97,12 @@ class Settings(BaseSettings):
     revy_moonshot_model_deep: str = "kimi-k3"
     revy_moonshot_model_critical: str = "kimi-k3"
     revy_anthropic_model: str = "claude-sonnet-5"
+    # Optional Anthropic-compatible gateway (e.g. RTU llm.ai.rtu.lv) — does not replace direct API
+    anthropic_base_url: str | None = None
+    revy_anthropic_gateway_model: str | None = None
     moonshot_api_key: str | None = None
     anthropic_api_key: str | None = None
+    anthropic_auth_token: str | None = None
     voyage_api_key: str | None = None
 
     # AWS Bedrock — MODEL_POLICY M1
@@ -204,6 +208,37 @@ class Settings(BaseSettings):
         return bool(self.voyage_api_key and self.voyage_api_key.strip())
 
     @property
+    def anthropic_direct_enabled(self) -> bool:
+        return bool(self.anthropic_api_key and self.anthropic_api_key.strip())
+
+    @property
+    def anthropic_gateway_base_url(self) -> str | None:
+        base = (self.anthropic_base_url or "").strip().rstrip("/")
+        if not base or base == "https://api.anthropic.com":
+            return None
+        return base
+
+    @property
+    def anthropic_gateway_enabled(self) -> bool:
+        return bool(
+            self.anthropic_gateway_base_url
+            and self.anthropic_auth_token
+            and self.anthropic_auth_token.strip()
+        )
+
+    @property
+    def anthropic_gateway_messages_url(self) -> str | None:
+        base = self.anthropic_gateway_base_url
+        if not base:
+            return None
+        return f"{base}/v1/messages"
+
+    @property
+    def effective_anthropic_gateway_judge_model(self) -> str | None:
+        value = (self.revy_anthropic_gateway_model or "").strip()
+        return value or None
+
+    @property
     def effective_reviewer_provider(self) -> str:
         global _revy_llm_provider_alias_logged
         explicit = (self.revy_reviewer_provider or "").strip().lower()
@@ -233,7 +268,7 @@ class Settings(BaseSettings):
         if provider == "moonshot":
             return bool(self.moonshot_api_key and self.moonshot_api_key.strip())
         if provider == "anthropic":
-            return bool(self.anthropic_api_key and self.anthropic_api_key.strip())
+            return self.anthropic_direct_enabled
         if provider == "bedrock":
             return self.bedrock_enabled() and bool(
                 (self.revy_bedrock_reviewer_model_id or "").strip()
@@ -243,7 +278,7 @@ class Settings(BaseSettings):
     def judge_llm_enabled(self) -> bool:
         provider = self.effective_judge_provider
         if provider == "anthropic":
-            return bool(self.anthropic_api_key and self.anthropic_api_key.strip())
+            return self.anthropic_gateway_enabled or self.anthropic_direct_enabled
         if provider == "bedrock":
             return self.bedrock_enabled() and bool(
                 (self.revy_bedrock_judge_model_id or "").strip()

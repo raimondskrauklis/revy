@@ -64,16 +64,25 @@ def _bedrock_reviewer_entries() -> list[ModelCatalogEntry]:
 def _anthropic_judge_entries() -> list[ModelCatalogEntry]:
     if settings.effective_judge_provider != "anthropic":
         return []
-    if not settings.anthropic_api_key or not settings.anthropic_api_key.strip():
-        return []
-    model_id = settings.revy_anthropic_model
-    return [
-        ModelCatalogEntry(
-            provider="anthropic",
-            model_id=model_id,
-            display_name="Claude Sonnet (Anthropic API)",
-        ),
-    ]
+    entries: list[ModelCatalogEntry] = []
+    if settings.anthropic_gateway_enabled:
+        gateway_model = settings.effective_anthropic_gateway_judge_model or "azure_ai/claude-opus-5"
+        entries.append(
+            ModelCatalogEntry(
+                provider="anthropic",
+                model_id=gateway_model,
+                display_name="Claude (gateway)",
+            )
+        )
+    if settings.anthropic_direct_enabled:
+        entries.append(
+            ModelCatalogEntry(
+                provider="anthropic",
+                model_id=settings.revy_anthropic_model,
+                display_name="Claude (Anthropic API)",
+            )
+        )
+    return entries
 
 
 def _bedrock_judge_entries() -> list[ModelCatalogEntry]:

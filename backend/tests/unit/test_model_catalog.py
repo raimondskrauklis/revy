@@ -13,7 +13,8 @@ from app.services.model_catalog import (
 def test_anthropic_judge_catalog_uses_configured_model():
     with patch("app.services.model_catalog.settings") as mock_settings:
         mock_settings.moonshot_api_key = None
-        mock_settings.anthropic_api_key = "key"
+        mock_settings.anthropic_direct_enabled = True
+        mock_settings.anthropic_gateway_enabled = False
         mock_settings.bedrock_enabled.return_value = False
         mock_settings.effective_judge_provider = "anthropic"
         mock_settings.revy_anthropic_model = "claude-sonnet-5"
