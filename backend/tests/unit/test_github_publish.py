@@ -343,6 +343,41 @@ async def test_resolve_stale_inline_threads_uses_thread_index():
 
 @pytest.mark.resolve_unmocked
 @pytest.mark.asyncio
+async def test_resolve_stale_inline_threads_falls_back_when_index_misses_comment():
+    review_run_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    inline_threads = {"stale-fp": 1001}
+    session = AsyncMock()
+    session.scalars = AsyncMock(side_effect=[[], [], []])
+    client = AsyncMock()
+    with patch(
+        "app.services.github_publish.github_api.find_review_thread_id_for_comment",
+        AsyncMock(return_value="PRRT_stale"),
+    ) as find_mock:
+        with patch(
+            "app.services.github_publish.github_api.resolve_review_thread",
+            AsyncMock(),
+        ) as resolve_mock:
+            await github_publish._resolve_stale_inline_threads(
+                client,
+                session=session,
+                review_run_id=review_run_id,
+                github_installation_id=12345,
+                owner="acme",
+                repo_name="demo",
+                pull_request_id=pull_request_id,
+                pull_number=7,
+                inline_threads=inline_threads,
+                auth_headers={"Authorization": "Bearer t"},
+                thread_index={9999: "PRRT_other"},
+            )
+    find_mock.assert_awaited_once()
+    resolve_mock.assert_awaited_once()
+    assert inline_threads == {}
+
+
+@pytest.mark.resolve_unmocked
+@pytest.mark.asyncio
 async def test_resolve_stale_inline_threads_option_a():
     from app.models.github_finding import GitHubFindingORM
 
@@ -2727,11 +2762,11 @@ async def test_run_publish_job_skipped_superseded_mid_flush_before_inline():
                     "app.services.github_publish.github_api.installation_auth_headers",
                     AsyncMock(return_value={"Authorization": "Bearer t"}),
                 ):
-                    with patch("app.services.github_publish.github_api.create_check_run", AsyncMock(return_value=100)):
+                    with patch("app.services.github_publish.github_api.create_check_run", AsyncMock(return_value=100)) as check_mock:
                         with patch(
                             "app.services.github_publish.github_api.create_issue_comment",
                             AsyncMock(return_value=200),
-                        ):
+                        ) as comment_mock:
                             with patch(
                                 "app.services.github_publish.github_api.create_pull_request_review_comment",
                                 inline_mock,
@@ -2742,7 +2777,239 @@ async def test_run_publish_job_skipped_superseded_mid_flush_before_inline():
                                 )
 
     assert result.status == GitHubPublishJobStatus.skipped_superseded
+    check_mock.assert_not_awaited()
+    comment_mock.assert_not_awaited()
     inline_mock.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_run_publish_job_neutralizes_check_when_skipped_after_surface_writes():
+    publish_job_id, session, job = _publish_job_context()
+    base_gets = list(session.get.side_effect)
+    run = GitHubReviewRunORM(
+        revision_id=job.revision_id,
+        workspace_id=job.workspace_id,
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=job.workspace_id,
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=7,
+        title="PR",
+        state=GitHubPullRequestState.open,
+        head_sha=job.head_sha,
+        head_ref="feature",
+        base_ref="main",
+        revision_count=1,
+    )
+    session.get = AsyncMock(
+        side_effect=[
+            job,
+            run,
+            GitHubPullRequestRevisionORM(
+                pull_request_id=pull_request.id,
+                revision_number=1,
+                head_sha=job.head_sha,
+            ),
+            pull_request,
+            base_gets[4],
+            base_gets[5],
+        ]
+    )
+
+    minimal_build = github_publish.PublishSurfaceBuild(
+        check_summary="ok",
+        issue_comment="ok",
+        conclusion="success",
+        summary_json={"confidence": 5},
+        inline_threads={},
+        prior_v2_inline={},
+        inline_posts=[],
+        post_inline=False,
+        is_update_from_other=False,
+        existing_github_check_run_id=None,
+        existing_github_comment_id=None,
+        existing_inline_comments_posted=False,
+        external_id="ext",
+        owner="acme",
+        repo_name="demo",
+    )
+
+    refresh_calls = 0
+
+    async def refresh_side_effect(obj):
+        nonlocal refresh_calls
+        if obj is run:
+            refresh_calls += 1
+            if refresh_calls >= 5:
+                run.status = GitHubReviewRunStatus.superseded
+
+    session.refresh = AsyncMock(side_effect=refresh_side_effect)
+
+    pipeline_run = MagicMock()
+    pipeline_run.id = uuid.uuid4()
+    create_check_mock = AsyncMock(return_value=100)
+    neutral_check_mock = AsyncMock()
+    neutral_comment_mock = AsyncMock()
+
+    with patch(
+        "app.services.github_publish._build_publish_surface",
+        AsyncMock(return_value=minimal_build),
+    ):
+        with patch(
+            "app.services.github_publish.get_pipeline_run_for_review_run",
+            AsyncMock(return_value=pipeline_run),
+        ):
+            with patch(
+                "app.services.github_publish.finalize_pipeline_github_check_neutral",
+                AsyncMock(),
+            ):
+                with patch(
+                    "app.services.github_publish.github_api.installation_auth_headers",
+                    AsyncMock(return_value={"Authorization": "Bearer t"}),
+                ):
+                    with patch(
+                        "app.services.github_publish.github_api.create_check_run",
+                        create_check_mock,
+                    ):
+                        with patch(
+                            "app.services.github_publish.github_api.create_issue_comment",
+                            AsyncMock(return_value=200),
+                        ):
+                            with patch(
+                                "app.services.github_publish.github_api.update_check_run",
+                                neutral_check_mock,
+                            ):
+                                with patch(
+                                    "app.services.github_publish.github_api.update_issue_comment",
+                                    neutral_comment_mock,
+                                ):
+                                    result = await github_publish.run_publish_job(
+                                        session,
+                                        publish_job_id=publish_job_id,
+                                    )
+
+    assert result.status == GitHubPublishJobStatus.skipped_superseded
+    create_check_mock.assert_awaited_once()
+    neutral_check_mock.assert_awaited_once()
+    assert neutral_check_mock.await_args.kwargs["conclusion"] == "neutral"
+    neutral_comment_mock.assert_awaited_once()
+    assert neutral_comment_mock.await_args.kwargs["body"] == github_publish._SKIP_PUBLISH_NEUTRAL_SUMMARY
+
+
+@pytest.mark.asyncio
+async def test_run_publish_job_returns_skip_when_neutralize_fails():
+    publish_job_id, session, job = _publish_job_context()
+    base_gets = list(session.get.side_effect)
+    run = GitHubReviewRunORM(
+        revision_id=job.revision_id,
+        workspace_id=job.workspace_id,
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=job.workspace_id,
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=7,
+        title="PR",
+        state=GitHubPullRequestState.open,
+        head_sha=job.head_sha,
+        head_ref="feature",
+        base_ref="main",
+        revision_count=1,
+    )
+    session.get = AsyncMock(
+        side_effect=[
+            job,
+            run,
+            GitHubPullRequestRevisionORM(
+                pull_request_id=pull_request.id,
+                revision_number=1,
+                head_sha=job.head_sha,
+            ),
+            pull_request,
+            base_gets[4],
+            base_gets[5],
+        ]
+    )
+
+    minimal_build = github_publish.PublishSurfaceBuild(
+        check_summary="ok",
+        issue_comment="ok",
+        conclusion="success",
+        summary_json={"confidence": 5},
+        inline_threads={},
+        prior_v2_inline={},
+        inline_posts=[],
+        post_inline=False,
+        is_update_from_other=False,
+        existing_github_check_run_id=None,
+        existing_github_comment_id=None,
+        existing_inline_comments_posted=False,
+        external_id="ext",
+        owner="acme",
+        repo_name="demo",
+    )
+
+    refresh_calls = 0
+
+    async def refresh_side_effect(obj):
+        nonlocal refresh_calls
+        if obj is run:
+            refresh_calls += 1
+            if refresh_calls >= 5:
+                run.status = GitHubReviewRunStatus.superseded
+
+    session.refresh = AsyncMock(side_effect=refresh_side_effect)
+
+    pipeline_run = MagicMock()
+    pipeline_run.id = uuid.uuid4()
+    create_check_mock = AsyncMock(return_value=100)
+    neutral_check_mock = AsyncMock(side_effect=httpx.HTTPError("neutralize failed"))
+
+    with patch(
+        "app.services.github_publish._build_publish_surface",
+        AsyncMock(return_value=minimal_build),
+    ):
+        with patch(
+            "app.services.github_publish.get_pipeline_run_for_review_run",
+            AsyncMock(return_value=pipeline_run),
+        ):
+            with patch(
+                "app.services.github_publish.finalize_pipeline_github_check_neutral",
+                AsyncMock(),
+            ):
+                with patch(
+                    "app.services.github_publish.github_api.installation_auth_headers",
+                    AsyncMock(return_value={"Authorization": "Bearer t"}),
+                ):
+                    with patch(
+                        "app.services.github_publish.github_api.create_check_run",
+                        create_check_mock,
+                    ):
+                        with patch(
+                            "app.services.github_publish.github_api.create_issue_comment",
+                            AsyncMock(return_value=200),
+                        ):
+                            with patch(
+                                "app.services.github_publish.github_api.update_check_run",
+                                neutral_check_mock,
+                            ):
+                                result = await github_publish.run_publish_job(
+                                    session,
+                                    publish_job_id=publish_job_id,
+                                )
+
+    assert result.status == GitHubPublishJobStatus.skipped_superseded
+    create_check_mock.assert_awaited_once()
+    neutral_check_mock.assert_awaited_once()
 
 
 @pytest.mark.asyncio

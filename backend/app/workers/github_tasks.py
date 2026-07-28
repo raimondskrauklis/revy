@@ -46,6 +46,7 @@ async def _maybe_enqueue_autostart_pipeline_for_revision(
 def schedule_autostart_pipeline_for_revision(revision_id: str, workspace_id: str) -> None:
     async def _run() -> None:
         revision_uuid = UUID(revision_id)
+        job_id: UUID | None = None
         async with get_db_context() as session:
             if not await is_authoritative_for_pull_request_head(session, revision_id=revision_uuid):
                 logger.info(
@@ -58,8 +59,8 @@ def schedule_autostart_pipeline_for_revision(revision_id: str, workspace_id: str
                 workspace_id=UUID(workspace_id),
                 revision_id=revision_uuid,
             )
-            if job_id is not None:
-                enqueue_index_job(job_id)
+        if job_id is not None:
+            enqueue_index_job(job_id)
 
     run_worker_async(_run())
 

@@ -14,6 +14,7 @@ from app.services.github_pipeline_trace import (
     record_retrieve_pipeline_step,
     record_review_pipeline_step,
 )
+from app.services.github_generation_lifecycle import is_review_run_superseded
 from app.services.github_review import mark_review_run_failed, run_review_run
 from app.workers.celery_app import celery_app
 from app.workers.task_retries import run_with_retryable_failure
@@ -83,7 +84,8 @@ def review_pull_request_revision(self, review_run_id: str) -> None:
         async with get_db_context() as session:
             outcome = await run_review_run(session, review_run_id=UUID(review_run_id))
             run = outcome.run
-            await _record_review_pipeline_trace(session, review_run_id=run.id, outcome=outcome)
+            if not is_review_run_superseded(run):
+                await _record_review_pipeline_trace(session, review_run_id=run.id, outcome=outcome)
             await session.commit()
             logger.info(
                 "github_review_run_complete",

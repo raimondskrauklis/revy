@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from uuid import UUID
 
 import httpx
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import (
@@ -41,6 +41,7 @@ from app.models.github_repository import GitHubRepositoryORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.schemas.github_indexing import GitHubChunkSearchResult
 from app.schemas.github_review import GitHubFindingListResponse, GitHubFindingResponse
+from app.services.github_generation_lifecycle import is_review_run_superseded
 from app.services.github_indexing import (
     ensure_revision_access,
     get_latest_completed_index_job,
@@ -662,7 +663,19 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> Revie
     if run is None:
         raise NotFoundError("Review run not found")
 
-    if run.status != GitHubReviewRunStatus.pending:
+    started = await session.execute(
+        update(GitHubReviewRunORM)
+        .where(
+            GitHubReviewRunORM.id == review_run_id,
+            GitHubReviewRunORM.status == GitHubReviewRunStatus.pending,
+        )
+        .values(
+            status=GitHubReviewRunStatus.processing,
+            error_message=None,
+        )
+    )
+    if started.rowcount == 0:
+        await session.refresh(run)
         logger.info(
             "github_review_run_skip_non_pending",
             extra={"review_run_id": str(review_run_id), "status": str(run.status)},
@@ -758,6 +771,21 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> Revie
                 if item.hit.file_path not in supplemental_top_by_file:
                     supplemental_top_by_file[item.hit.file_path] = item
 
+        await session.refresh(run)
+        if is_review_run_superseded(run):
+            logger.info(
+                "github_review_run_abandoned_superseded",
+                extra={"review_run_id": str(review_run_id)},
+            )
+            return ReviewRunOutcome(
+                run=run,
+                context_pack=context_pack,
+                raw_response=raw_json,
+                parse_report=parse_report,
+                retrieve_duration_ms=retrieve_duration_ms,
+                review_duration_ms=review_duration_ms,
+            )
+
         await session.execute(
             delete(GitHubFindingORM).where(GitHubFindingORM.review_run_id == run.id)
         )
@@ -777,6 +805,51 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> Revie
                     evidence_snippet=evidence_snippet,
                     **parsed,
                 )
+            )
+
+        await session.refresh(run)
+        if is_review_run_superseded(run):
+            await session.execute(
+                delete(GitHubFindingORM).where(GitHubFindingORM.review_run_id == run.id)
+            )
+            logger.info(
+                "github_review_run_abandoned_superseded_before_complete",
+                extra={"review_run_id": str(review_run_id)},
+            )
+            return ReviewRunOutcome(
+                run=run,
+                context_pack=context_pack,
+                raw_response=raw_json,
+                parse_report=parse_report,
+                retrieve_duration_ms=retrieve_duration_ms,
+                review_duration_ms=review_duration_ms,
+            )
+
+        completed = await session.execute(
+            update(GitHubReviewRunORM)
+            .where(
+                GitHubReviewRunORM.id == run.id,
+                GitHubReviewRunORM.status == GitHubReviewRunStatus.processing,
+            )
+            .values(status=GitHubReviewRunStatus.completed)
+        )
+        if completed.rowcount == 0:
+            await session.refresh(run)
+            if is_review_run_superseded(run):
+                await session.execute(
+                    delete(GitHubFindingORM).where(GitHubFindingORM.review_run_id == run.id)
+                )
+                logger.info(
+                    "github_review_run_abandoned_superseded_on_complete",
+                    extra={"review_run_id": str(review_run_id)},
+                )
+            return ReviewRunOutcome(
+                run=run,
+                context_pack=context_pack,
+                raw_response=raw_json,
+                parse_report=parse_report,
+                retrieve_duration_ms=retrieve_duration_ms,
+                review_duration_ms=review_duration_ms,
             )
 
         run.status = GitHubReviewRunStatus.completed

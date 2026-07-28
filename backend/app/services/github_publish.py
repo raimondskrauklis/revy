@@ -82,6 +82,8 @@ _PUBLISH_SURFACE_REUSE_STATUSES = (
     GitHubPublishJobStatus.skipped_superseded,
 )
 
+_PUBLISH_INLINE_THREAD_REUSE_STATUSES = (GitHubPublishJobStatus.completed,)
+
 
 async def _skip_publish_job_at_gate(
     session: AsyncSession,
@@ -146,6 +148,117 @@ async def _recheck_publish_authority_before_flush(
             log_event="publish_skipped_not_head",
         )
     return None
+
+
+async def _neutralize_github_check_after_partial_flush(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+    owner: str,
+    repo_name: str,
+    job: GitHubPublishJobORM,
+    auth_headers: dict[str, str],
+) -> None:
+    check_run_id = job.github_check_run_id
+    if check_run_id is None:
+        return
+    await github_api.update_check_run(
+        client,
+        github_installation_id=github_installation_id,
+        owner=owner,
+        repo=repo_name,
+        check_run_id=check_run_id,
+        conclusion="neutral",
+        summary=_SKIP_PUBLISH_NEUTRAL_SUMMARY,
+        auth_headers=auth_headers,
+    )
+
+
+async def _neutralize_github_issue_comment_after_partial_flush(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+    owner: str,
+    repo_name: str,
+    job: GitHubPublishJobORM,
+    auth_headers: dict[str, str],
+) -> None:
+    comment_id = job.github_comment_id
+    if comment_id is None:
+        return
+    await github_api.update_issue_comment(
+        client,
+        github_installation_id=github_installation_id,
+        owner=owner,
+        repo=repo_name,
+        comment_id=comment_id,
+        body=_SKIP_PUBLISH_NEUTRAL_SUMMARY,
+        auth_headers=auth_headers,
+    )
+
+
+async def _best_effort_revert_partial_flush_surface(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+    owner: str,
+    repo_name: str,
+    job: GitHubPublishJobORM,
+    auth_headers: dict[str, str],
+    github_check_written: bool,
+    github_comment_written: bool,
+    publish_job_id: UUID,
+    inline_comment_ids: list[int] | None = None,
+) -> None:
+    if github_check_written:
+        try:
+            await _neutralize_github_check_after_partial_flush(
+                client,
+                github_installation_id=github_installation_id,
+                owner=owner,
+                repo_name=repo_name,
+                job=job,
+                auth_headers=auth_headers,
+            )
+        except (httpx.HTTPError, ServiceUnavailableError) as exc:
+            logger.warning(
+                "publish_partial_flush_check_neutralize_failed",
+                extra={"publish_job_id": str(publish_job_id), "error": str(exc)},
+            )
+    if github_comment_written:
+        try:
+            await _neutralize_github_issue_comment_after_partial_flush(
+                client,
+                github_installation_id=github_installation_id,
+                owner=owner,
+                repo_name=repo_name,
+                job=job,
+                auth_headers=auth_headers,
+            )
+        except (httpx.HTTPError, ServiceUnavailableError) as exc:
+            logger.warning(
+                "publish_partial_flush_comment_neutralize_failed",
+                extra={"publish_job_id": str(publish_job_id), "error": str(exc)},
+            )
+    for comment_id in inline_comment_ids or []:
+        try:
+            await github_api.delete_pull_request_review_comment(
+                client,
+                github_installation_id=github_installation_id,
+                owner=owner,
+                repo=repo_name,
+                comment_id=comment_id,
+                auth_headers=auth_headers,
+            )
+        except (httpx.HTTPError, ServiceUnavailableError) as exc:
+            logger.warning(
+                "publish_partial_flush_inline_delete_failed",
+                extra={
+                    "publish_job_id": str(publish_job_id),
+                    "comment_id": comment_id,
+                    "error": str(exc),
+                },
+            )
 
 
 async def mark_publish_job_failed(
@@ -446,7 +559,7 @@ async def _fetch_prior_completed_publish_jobs(
             select(GitHubPublishJobORM)
             .where(
                 GitHubPublishJobORM.revision_id.in_(revision_ids),
-                GitHubPublishJobORM.status.in_(_PUBLISH_SURFACE_REUSE_STATUSES),
+                GitHubPublishJobORM.status.in_(_PUBLISH_INLINE_THREAD_REUSE_STATUSES),
             )
             .order_by(GitHubPublishJobORM.created_at.asc())
         )
@@ -544,9 +657,8 @@ async def _resolve_stale_inline_threads(
         if comment_id is None:
             continue
         try:
-            if thread_index is not None:
-                thread_id = thread_index.get(comment_id)
-            else:
+            thread_id = thread_index.get(comment_id) if thread_index else None
+            if thread_id is None:
                 thread_id = await github_api.find_review_thread_id_for_comment(
                     client,
                     github_installation_id=github_installation_id,
@@ -1007,6 +1119,15 @@ async def _flush_publish_surface(
     retry_posted = retry_posted_inline or {}
     inline_threads.update(retry_posted)
 
+    skipped_at_flush_start = await _recheck_publish_authority_before_flush(
+        session,
+        job,
+        run,
+        pull_request,
+    )
+    if skipped_at_flush_start is not None:
+        return skipped_at_flush_start
+
     async with httpx.AsyncClient(timeout=120.0) as client:
         auth_headers = await github_api.installation_auth_headers(
             client,
@@ -1023,6 +1144,15 @@ async def _flush_publish_surface(
                 pull_number=pull_request.number,
                 auth_headers=auth_headers,
             )
+
+        skipped_before_resolve = await _recheck_publish_authority_before_flush(
+            session,
+            job,
+            run,
+            pull_request,
+        )
+        if skipped_before_resolve is not None:
+            return skipped_before_resolve
 
         await _resolve_stale_inline_threads(
             client,
@@ -1048,6 +1178,17 @@ async def _flush_publish_surface(
             ),
         }
 
+        skipped_after_resolve = await _recheck_publish_authority_before_flush(
+            session,
+            job,
+            run,
+            pull_request,
+        )
+        if skipped_after_resolve is not None:
+            return skipped_after_resolve
+
+        github_check_written = False
+        github_comment_written = False
         if job.github_check_run_id is not None:
             await github_api.update_check_run(
                 client,
@@ -1059,6 +1200,7 @@ async def _flush_publish_surface(
                 summary=build.check_summary,
                 auth_headers=auth_headers,
             )
+            github_check_written = True
         elif build.is_update_from_other and build.existing_github_check_run_id is not None:
             job.github_check_run_id = build.existing_github_check_run_id
             await github_api.update_check_run(
@@ -1071,6 +1213,7 @@ async def _flush_publish_surface(
                 summary=build.check_summary,
                 auth_headers=auth_headers,
             )
+            github_check_written = True
         else:
             check_run_id = await github_api.create_check_run(
                 client,
@@ -1084,6 +1227,7 @@ async def _flush_publish_surface(
                 auth_headers=auth_headers,
             )
             job.github_check_run_id = check_run_id
+            github_check_written = True
 
         if job.github_comment_id is not None:
             await github_api.update_issue_comment(
@@ -1095,6 +1239,7 @@ async def _flush_publish_surface(
                 body=build.issue_comment,
                 auth_headers=auth_headers,
             )
+            github_comment_written = True
         elif build.is_update_from_other and build.existing_github_comment_id is not None:
             job.github_comment_id = build.existing_github_comment_id
             await github_api.update_issue_comment(
@@ -1106,6 +1251,7 @@ async def _flush_publish_surface(
                 body=build.issue_comment,
                 auth_headers=auth_headers,
             )
+            github_comment_written = True
         else:
             comment_id = await github_api.create_issue_comment(
                 client,
@@ -1117,6 +1263,27 @@ async def _flush_publish_surface(
                 auth_headers=auth_headers,
             )
             job.github_comment_id = comment_id
+            github_comment_written = True
+
+        skipped_before_commit = await _recheck_publish_authority_before_flush(
+            session,
+            job,
+            run,
+            pull_request,
+        )
+        if skipped_before_commit is not None:
+            await _best_effort_revert_partial_flush_surface(
+                client,
+                github_installation_id=installation.github_installation_id,
+                owner=build.owner,
+                repo_name=build.repo_name,
+                job=job,
+                auth_headers=auth_headers,
+                github_check_written=github_check_written,
+                github_comment_written=github_comment_written,
+                publish_job_id=publish_job_id,
+            )
+            return skipped_before_commit
 
         await _commit_publish_job_progress(session)
 
@@ -1127,14 +1294,46 @@ async def _flush_publish_surface(
             pull_request,
         )
         if skipped_before_inline is not None:
+            await _best_effort_revert_partial_flush_surface(
+                client,
+                github_installation_id=installation.github_installation_id,
+                owner=build.owner,
+                repo_name=build.repo_name,
+                job=job,
+                auth_headers=auth_headers,
+                github_check_written=github_check_written,
+                github_comment_written=github_comment_written,
+                publish_job_id=publish_job_id,
+            )
             return skipped_before_inline
 
         inline_thread_ids: dict[str, str] = {}
+        inline_written_this_flush: list[int] = []
         if build.post_inline:
             for spec in build.inline_posts:
                 if spec.group_fingerprint in retry_posted:
                     inline_threads[spec.group_fingerprint] = retry_posted[spec.group_fingerprint]
                     continue
+                skipped_during_inline = await _recheck_publish_authority_before_flush(
+                    session,
+                    job,
+                    run,
+                    pull_request,
+                )
+                if skipped_during_inline is not None:
+                    await _best_effort_revert_partial_flush_surface(
+                        client,
+                        github_installation_id=installation.github_installation_id,
+                        owner=build.owner,
+                        repo_name=build.repo_name,
+                        job=job,
+                        auth_headers=auth_headers,
+                        github_check_written=github_check_written,
+                        github_comment_written=github_comment_written,
+                        publish_job_id=publish_job_id,
+                        inline_comment_ids=inline_written_this_flush,
+                    )
+                    return skipped_during_inline
                 try:
                     comment_id = await github_api.create_pull_request_review_comment(
                         client,
@@ -1154,6 +1353,7 @@ async def _flush_publish_surface(
                         auth_headers=auth_headers,
                     )
                     inline_threads[spec.group_fingerprint] = comment_id
+                    inline_written_this_flush.append(comment_id)
                     thread_id = thread_index.get(comment_id)
                     if isinstance(thread_id, str) and thread_id:
                         inline_thread_ids[spec.group_fingerprint] = thread_id
@@ -1323,6 +1523,15 @@ async def run_publish_job(
             )
         return job
     except (httpx.HTTPError, ServiceUnavailableError) as exc:
+        if job.status in (
+            GitHubPublishJobStatus.skipped_not_head,
+            GitHubPublishJobStatus.skipped_superseded,
+        ):
+            logger.warning(
+                "github_publish_job_skip_after_surface_error",
+                extra={"publish_job_id": str(publish_job_id), "error": str(exc)},
+            )
+            return job
         retryable = classify_transient_error(exc)
         if retryable is not None:
             logger.warning(
@@ -1334,9 +1543,10 @@ async def run_publish_job(
             "github_publish_job_failed",
             extra={"publish_job_id": str(publish_job_id), "error": str(exc)},
         )
-        job.status = GitHubPublishJobStatus.failed
-        job.error_message = str(exc)[:2000]
-        await session.flush()
+        if job.status not in _TERMINAL_PUBLISH_JOB_STATUSES:
+            job.status = GitHubPublishJobStatus.failed
+            job.error_message = str(exc)[:2000]
+            await session.flush()
         pipeline_run = await get_pipeline_run_for_review_run(session, review_run_id=job.review_run_id)
         if pipeline_run is not None:
             await record_publish_pipeline_step(

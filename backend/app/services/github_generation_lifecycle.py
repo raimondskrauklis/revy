@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import GitHubReviewRunStatus, stored_enum_value
@@ -56,6 +56,39 @@ def is_review_run_superseded(run: GitHubReviewRunORM) -> bool:
     return stored_enum_value(run.status) == GitHubReviewRunStatus.superseded.value
 
 
+async def _mark_review_run_ids_superseded_cas(
+    session: AsyncSession,
+    run_ids: list[UUID],
+    *,
+    pull_request_id: UUID | None = None,
+    revision_id: UUID | None = None,
+) -> list[UUID]:
+    superseded_ids: list[UUID] = []
+    for run_id in run_ids:
+        result = await session.execute(
+            update(GitHubReviewRunORM)
+            .where(
+                GitHubReviewRunORM.id == run_id,
+                GitHubReviewRunORM.status.in_(_ACTIVE_REVIEW_RUN_STATUSES),
+            )
+            .values(status=GitHubReviewRunStatus.superseded)
+        )
+        if result.rowcount == 0:
+            continue
+        superseded_ids.append(run_id)
+        logger.info(
+            "generation_superseded",
+            extra={
+                "review_run_id": str(run_id),
+                "revision_id": str(revision_id) if revision_id is not None else None,
+                "pull_request_id": str(pull_request_id) if pull_request_id is not None else None,
+            },
+        )
+    if superseded_ids:
+        await session.flush()
+    return superseded_ids
+
+
 async def mark_review_runs_superseded_for_pull_request(
     session: AsyncSession,
     *,
@@ -78,29 +111,19 @@ async def mark_review_runs_superseded_for_pull_request(
     if not older_revision_ids:
         return []
 
-    runs = list(
+    run_ids = list(
         await session.scalars(
-            select(GitHubReviewRunORM).where(
+            select(GitHubReviewRunORM.id).where(
                 GitHubReviewRunORM.revision_id.in_(older_revision_ids),
                 GitHubReviewRunORM.status.in_(_ACTIVE_REVIEW_RUN_STATUSES),
             )
         )
     )
-    superseded_ids: list[UUID] = []
-    for run in runs:
-        run.status = GitHubReviewRunStatus.superseded
-        superseded_ids.append(run.id)
-        logger.info(
-            "generation_superseded",
-            extra={
-                "review_run_id": str(run.id),
-                "revision_id": str(run.revision_id),
-                "pull_request_id": str(pull_request_id),
-            },
-        )
-    if superseded_ids:
-        await session.flush()
-    return superseded_ids
+    return await _mark_review_run_ids_superseded_cas(
+        session,
+        run_ids,
+        pull_request_id=pull_request_id,
+    )
 
 
 async def mark_active_review_runs_superseded_for_revision(
@@ -113,29 +136,20 @@ async def mark_active_review_runs_superseded_for_revision(
     if revision is None:
         return []
 
-    runs = list(
+    run_ids = list(
         await session.scalars(
-            select(GitHubReviewRunORM).where(
+            select(GitHubReviewRunORM.id).where(
                 GitHubReviewRunORM.revision_id == revision_id,
                 GitHubReviewRunORM.status.in_(_ACTIVE_REVIEW_RUN_STATUSES),
             )
         )
     )
-    superseded_ids: list[UUID] = []
-    for run in runs:
-        run.status = GitHubReviewRunStatus.superseded
-        superseded_ids.append(run.id)
-        logger.info(
-            "generation_superseded",
-            extra={
-                "review_run_id": str(run.id),
-                "revision_id": str(revision_id),
-                "pull_request_id": str(revision.pull_request_id),
-            },
-        )
-    if superseded_ids:
-        await session.flush()
-    return superseded_ids
+    return await _mark_review_run_ids_superseded_cas(
+        session,
+        run_ids,
+        pull_request_id=revision.pull_request_id,
+        revision_id=revision_id,
+    )
 
 
 async def finalize_pipeline_checks_for_superseded_review_runs(

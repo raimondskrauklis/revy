@@ -444,6 +444,27 @@ async def create_pull_request_review_comment(
     return comment_id
 
 
+async def delete_pull_request_review_comment(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+    owner: str,
+    repo: str,
+    comment_id: int,
+    auth_headers: dict[str, str] | None = None,
+) -> None:
+    headers = await _resolve_auth_headers(
+        client,
+        github_installation_id=github_installation_id,
+        auth_headers=auth_headers,
+    )
+    response = await client.delete(
+        f"{GITHUB_API_BASE}/repos/{owner}/{repo}/pulls/comments/{comment_id}",
+        headers=headers,
+    )
+    response.raise_for_status()
+
+
 @dataclass(frozen=True)
 class ReviewThreadNode:
     thread_id: str
@@ -660,7 +681,9 @@ async def find_review_thread_id_for_comment(
 ) -> str | None:
     """GraphQL lookup: REST comment id → review thread node id (PRRT_…)."""
     if thread_index is not None:
-        return thread_index.get(comment_database_id)
+        cached = thread_index.get(comment_database_id)
+        if cached is not None:
+            return cached
     index = await build_review_thread_comment_index(
         client,
         github_installation_id=github_installation_id,
@@ -669,6 +692,8 @@ async def find_review_thread_id_for_comment(
         pull_number=pull_number,
         auth_headers=auth_headers,
     )
+    if thread_index is not None:
+        index = {**thread_index, **index}
     return index.get(comment_database_id)
 
 

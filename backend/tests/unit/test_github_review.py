@@ -44,6 +44,12 @@ def _review_context_pack() -> github_review.ReviewContextPack:
     )
 
 
+def _session_execute_mock() -> AsyncMock:
+    result = MagicMock()
+    result.rowcount = 1
+    return AsyncMock(return_value=result)
+
+
 @pytest.mark.asyncio
 async def test_create_review_run_disabled_llm_raises():
     session = AsyncMock()
@@ -268,6 +274,10 @@ async def test_run_review_run_skips_non_pending_status():
 
     session = AsyncMock()
     session.get = AsyncMock(return_value=run)
+    failed_start = MagicMock()
+    failed_start.rowcount = 0
+    session.execute = AsyncMock(return_value=failed_start)
+    session.refresh = AsyncMock()
 
     with patch("app.services.github_review.prepare_review_context", AsyncMock()) as context_mock:
         result = await github_review.run_review_run(session, review_run_id=review_run_id)
@@ -389,7 +399,7 @@ async def test_run_review_run_invalid_json_marks_failed():
     session = AsyncMock()
     session.get = AsyncMock(side_effect=[run, revision, pull_request])
     session.flush = AsyncMock()
-    session.execute = AsyncMock()
+    session.execute = _session_execute_mock()
 
     index_job = _completed_index_job(revision_id=revision_id, workspace_id=workspace_id)
     with patch(
@@ -458,7 +468,7 @@ async def test_run_review_run_happy_path_persists_findings():
     session = AsyncMock()
     session.get = AsyncMock(side_effect=[run, revision, pull_request])
     session.flush = AsyncMock()
-    session.execute = AsyncMock()
+    session.execute = _session_execute_mock()
     session.add = MagicMock()
 
     llm_payload = json.dumps(
@@ -547,7 +557,7 @@ async def test_run_review_run_persists_evidence_snippet_from_diff():
     session = AsyncMock()
     session.get = AsyncMock(side_effect=[run, revision, pull_request])
     session.flush = AsyncMock()
-    session.execute = AsyncMock()
+    session.execute = _session_execute_mock()
 
     added: list = []
     session.add = MagicMock(side_effect=lambda obj: added.append(obj))
@@ -642,7 +652,7 @@ async def test_run_review_run_accepts_profile_string_from_db():
     session = AsyncMock()
     session.get = AsyncMock(side_effect=[run, revision, pull_request])
     session.flush = AsyncMock()
-    session.execute = AsyncMock()
+    session.execute = _session_execute_mock()
     session.add = MagicMock()
 
     index_job = _completed_index_job(revision_id=revision_id, workspace_id=workspace_id)

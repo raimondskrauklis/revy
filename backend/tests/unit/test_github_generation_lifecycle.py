@@ -87,6 +87,12 @@ async def test_is_not_authoritative_when_pr_head_advanced():
     assert await is_authoritative_for_pull_request_head(session, revision_id=revision.id) is False
 
 
+def _cas_execute_mock() -> AsyncMock:
+    result = MagicMock()
+    result.rowcount = 1
+    return AsyncMock(return_value=result)
+
+
 @pytest.mark.asyncio
 async def test_mark_review_runs_superseded_for_pull_request_older_revisions_only():
     pull_request = _pull_request()
@@ -95,17 +101,16 @@ async def test_mark_review_runs_superseded_for_pull_request_older_revisions_only
 
     pending_old = _review_run(old_revision, status=GitHubReviewRunStatus.pending)
     processing_old = _review_run(old_revision, status=GitHubReviewRunStatus.processing)
-    completed_old = _review_run(old_revision, status=GitHubReviewRunStatus.completed)
-    pending_keep = _review_run(keep_revision, status=GitHubReviewRunStatus.pending)
 
     session = AsyncMock()
     session.get = AsyncMock(return_value=keep_revision)
     session.scalars = AsyncMock(
         side_effect=[
             [old_revision.id],
-            [pending_old, processing_old],
+            [pending_old.id, processing_old.id],
         ]
     )
+    session.execute = _cas_execute_mock()
     session.flush = AsyncMock()
 
     superseded_ids = await mark_review_runs_superseded_for_pull_request(
@@ -115,10 +120,7 @@ async def test_mark_review_runs_superseded_for_pull_request_older_revisions_only
     )
 
     assert set(superseded_ids) == {pending_old.id, processing_old.id}
-    assert pending_old.status == GitHubReviewRunStatus.superseded
-    assert processing_old.status == GitHubReviewRunStatus.superseded
-    assert completed_old.status == GitHubReviewRunStatus.completed
-    assert pending_keep.status == GitHubReviewRunStatus.pending
+    assert session.execute.await_count == 2
     session.flush.assert_awaited_once()
 
 
@@ -127,11 +129,11 @@ async def test_mark_active_review_runs_superseded_for_revision():
     pull_request = _pull_request()
     revision = _revision(pull_request, revision_number=1, head_sha="sha")
     pending = _review_run(revision, status=GitHubReviewRunStatus.pending)
-    completed = _review_run(revision, status=GitHubReviewRunStatus.completed)
 
     session = AsyncMock()
     session.get = AsyncMock(return_value=revision)
-    session.scalars = AsyncMock(return_value=[pending])
+    session.scalars = AsyncMock(return_value=[pending.id])
+    session.execute = _cas_execute_mock()
     session.flush = AsyncMock()
 
     superseded_ids = await mark_active_review_runs_superseded_for_revision(
@@ -140,8 +142,7 @@ async def test_mark_active_review_runs_superseded_for_revision():
     )
 
     assert superseded_ids == [pending.id]
-    assert pending.status == GitHubReviewRunStatus.superseded
-    assert completed.status == GitHubReviewRunStatus.completed
+    session.execute.assert_awaited_once()
     session.flush.assert_awaited_once()
 
 
@@ -169,7 +170,8 @@ async def test_supersede_stale_generations_for_new_revision_finalizes_pipelines(
 
     session = AsyncMock()
     session.get = AsyncMock(return_value=keep_revision)
-    session.scalars = AsyncMock(side_effect=[[old_revision.id], [pending_old]])
+    session.scalars = AsyncMock(side_effect=[[old_revision.id], [pending_old.id]])
+    session.execute = _cas_execute_mock()
     session.flush = AsyncMock()
 
     pipeline_run = MagicMock()
@@ -207,7 +209,8 @@ async def test_supersede_on_synchronize_hook_marks_older_runs_only():
 
     session = AsyncMock()
     session.get = AsyncMock(return_value=h2_revision)
-    session.scalars = AsyncMock(side_effect=[[h1_revision.id], [h1_run]])
+    session.scalars = AsyncMock(side_effect=[[h1_revision.id], [h1_run.id]])
+    session.execute = _cas_execute_mock()
     session.flush = AsyncMock()
 
     with patch(
@@ -221,7 +224,6 @@ async def test_supersede_on_synchronize_hook_marks_older_runs_only():
         )
 
     assert superseded_ids == [h1_run.id]
-    assert h1_run.status == GitHubReviewRunStatus.superseded
 
 
 @pytest.mark.asyncio
@@ -233,7 +235,8 @@ async def test_supersede_active_generations_for_revision_finalizes_pipelines():
 
     session = AsyncMock()
     session.get = AsyncMock(return_value=revision)
-    session.scalars = AsyncMock(return_value=[pending])
+    session.scalars = AsyncMock(return_value=[pending.id])
+    session.execute = _cas_execute_mock()
     session.flush = AsyncMock()
 
     pipeline_run = MagicMock()
