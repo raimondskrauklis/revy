@@ -3,7 +3,7 @@
 **Date:** 2026-07-29 (platform reframed)  
 **Purpose:** Baseline for wiring **intent** (locked decisions, execution contract, operator evidence) into the **Revy product pipeline** — primarily Moonshot review generation — with Greptile as a **parallel validation channel** while we tune Revy. **No execution steps.**
 
-**Status:** Platform scope locked — ready for `create-general-plan`. [judge-json-contract](../judge-json-contract/README.md) merged (#58, `9a7b5cb`); staging deploy done, **no post-deploy judge runs yet** (validation memo pending dogfood).
+**Status:** General plan ready — `create-execution-plan` next. [judge-json-contract](../judge-json-contract/README.md) merged (#58, `9a7b5cb`); staging deploy done, **no post-deploy judge runs yet** (validation memo pending dogfood).
 
 **Operator context:** Revy is built **primarily for dogfood on this repo** (solo operator workflow). Greptile and Bugbot remain part of daily PR practice and the whole review surface — but **this program's P0 target is Revy**, not tuning hosted/local Bugbot.
 
@@ -521,6 +521,6 @@ See **Validation metrics** above for the full matrix. Quick checklist:
 
 ## Next steps
 
-1. `create-general-plan` — RCX P0: manifest schema + Moonshot inject (RCX-D8) + Greptile sync.
+1. `create-execution-plan` — P0: migration `0029`, caps, manifest schema.
 2. Dogfood PR — verify inject in pipeline trace on next program slice.
-3. Staging validation — latest runs only after post-#58 dogfood (track L, separate).
+3. Staging validation — latest runs only after RCX deploy (P5).

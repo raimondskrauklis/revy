@@ -58,7 +58,7 @@ docs/review-pipeline/
     waves/
       JUDGE_JSON_CONTRACT_EXECUTION.md
       JUDGE_JSON_CONTRACT_P0_EXECUTION.md … P5
-  review-engineering-context/            ← revybot + locked-decision context wiring (findings)
+  review-engineering-context/            ← Moonshot manifest inject (findings + general plan P0–P5)
     README.md
     REVIEW_ENGINEERING_CONTEXT_FINDINGS.md
   REVIEW_PIPELINE_GREPTILE_PR26_EMAIL.md   ← archived Greptile PR #26 email (triage reference)
