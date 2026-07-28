@@ -142,7 +142,7 @@ Moonshot may cite issues **without** `start_line` or on lines that don’t map c
 | J-7 | No “Moonshot finding under test” framing in user prompt | Medium | **Addressed** (working tree, P1) |
 | J-8 | **Patch reload at judge time** — `patches_by_file` not available after review; only full review prompt artifact persisted | High | Open — P3 (design) |
 | J-9 | Missing evidence beyond line anchoring — `file_path` null, compare failure / index-only empty patches, path key mismatch | High | Open — P2 |
-| J-10 | `modified` outcome always sets `severity=warning` — no title/message edit or severity-specific downgrade | Medium | **Product decision** — P1/P3 gate |
+| J-10 | `modified` outcome always sets `severity=warning` — no title/message edit or severity-specific downgrade | Medium | **Locked v1** (P1) — warning-only application |
 | J-11 | `extract_evidence_from_patch` skips `-` lines — thin snippets for findings on removed code | Medium | Open — P0/P2 |
 | J-12 | `start_line` parsing drops `0`; no string coercion if model drifts | Low | Open — P2 |
 

@@ -88,6 +88,9 @@ def test_build_judge_prompt_includes_evidence_and_grounding():
         last_seen_revision_id=uuid.uuid4(),
     )
     prompt = _build_judge_prompt(group=group, evidence_snippet="if value is None:\n    raise")
+    assert "Automated reviewer (Moonshot)" in prompt
+    assert "Verify this claim only" in prompt
+    assert "Do not introduce new findings" in prompt
     assert "Evidence (code excerpt" in prompt
     assert "if value is None" in prompt
     assert "Grounding (E2)" in prompt
@@ -110,6 +113,15 @@ def test_build_judge_prompt_without_evidence_uses_conservative_grounding():
     prompt = _build_judge_prompt(group=group, evidence_snippet=None)
     assert "Evidence" not in prompt
     assert "Judge conservatively" in prompt
+
+
+def test_judge_system_prompt_verifier_role():
+    from app.integrations.anthropic_review import JUDGE_SYSTEM_PROMPT
+
+    assert "verification judge" in JUDGE_SYSTEM_PROMPT
+    assert "Moonshot" in JUDGE_SYSTEM_PROMPT
+    assert "Do NOT search for additional bugs" in JUDGE_SYSTEM_PROMPT
+    assert "full PR review" in JUDGE_SYSTEM_PROMPT
 
 
 @pytest.mark.asyncio

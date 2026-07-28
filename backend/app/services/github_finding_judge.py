@@ -71,6 +71,9 @@ def _build_judge_prompt(
     suggestion: str | None = None,
 ) -> str:
     parts = [
+        "Automated reviewer (Moonshot) raised the finding below. Verify this claim only.",
+        "Do not introduce new findings.",
+        "",
         f"Title: {group.title}",
         f"Severity: {stored_enum_value(group.severity)}",
         f"Category: {stored_enum_value(group.category)}",
