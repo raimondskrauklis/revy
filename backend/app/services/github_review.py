@@ -42,7 +42,14 @@ from app.models.github_repository import GitHubRepositoryORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.schemas.github_indexing import GitHubChunkSearchResult
 from app.schemas.github_review import GitHubFindingListResponse, GitHubFindingResponse
-from app.services.engineering_context.stats import engineering_context_manifest_defaults
+from app.services.engineering_context.pack import (
+    EngineeringContextPack,
+    build_engineering_context_pack,
+)
+from app.services.engineering_context.stats import (
+    build_context_stats,
+    engineering_context_manifest_defaults,
+)
 from app.services.github_generation_lifecycle import is_review_run_superseded
 from app.services.github_indexing import (
     ensure_revision_access,
@@ -63,8 +70,6 @@ SEARCH_LENSES = (
 TOP_K_PER_QUERY = 10
 SUPPLEMENTAL_CAP_DIFF = 15
 SUPPLEMENTAL_CAP_FULL = 30
-DIFF_MAX_BYTES = 128 * 1024
-PR_BODY_MAX_BYTES = 4 * 1024
 FINDING_LIST_DEFAULT_LIMIT = 100
 FINDING_LIST_MAX_LIMIT = 500
 EVIDENCE_SNIPPET_MAX_CHARS = 2048
@@ -94,6 +99,7 @@ class ReviewContextPack:
     manifest: dict
     patches_by_file: dict[str, str] = field(default_factory=dict)
     supplemental: tuple[ScopedChunkHit, ...] = ()
+    engineering_context_pack: EngineeringContextPack | None = None
 
 
 @dataclass(frozen=True)
@@ -195,8 +201,9 @@ def _format_unified_diff(patches: list[tuple[str, str]]) -> str:
 def build_unified_diff(
     files: tuple[CompareFileChange, ...],
     *,
-    max_bytes: int = DIFF_MAX_BYTES,
+    max_bytes: int | None = None,
 ) -> tuple[str, bool, list[str]]:
+    cap = max_bytes if max_bytes is not None else settings.revy_diff_max_bytes
     patches: list[tuple[str, str]] = []
     for item in files:
         if item.patch:
@@ -206,18 +213,25 @@ def build_unified_diff(
         return "", False, []
 
     total_size = sum(_patch_entry_size(name, patch) for name, patch in patches)
-    if total_size <= max_bytes:
+    if total_size <= cap:
         return _format_unified_diff(patches), False, []
 
     kept = list(patches)
     omitted: list[str] = []
     kept.sort(key=lambda entry: len(entry[1]), reverse=True)
-    while kept and sum(_patch_entry_size(name, patch) for name, patch in kept) > max_bytes:
+    while kept and sum(_patch_entry_size(name, patch) for name, patch in kept) > cap:
         removed_name, _ = kept.pop(0)
         omitted.append(removed_name)
 
     kept.sort(key=lambda entry: entry[0])
     return _format_unified_diff(kept), True, omitted
+
+
+def _format_engineering_context_block(pack: EngineeringContextPack) -> str | None:
+    text = pack.inject_text.strip()
+    if not text:
+        return None
+    return text
 
 
 def _build_review_prompt(
@@ -231,6 +245,7 @@ def _build_review_prompt(
     changed_files: list[str],
     unified_diff: str,
     supplemental: list[ScopedChunkHit],
+    engineering_block: str | None = None,
 ) -> str:
     parts = [
         "Pull request metadata:",
@@ -240,13 +255,16 @@ def _build_review_prompt(
         f"index_mode: {stored_enum_value(index_mode)}",
     ]
     if pr_body:
-        parts.extend(["", "PR body:", _truncate_utf8(pr_body, PR_BODY_MAX_BYTES)])
+        parts.extend(["", "PR body:", _truncate_utf8(pr_body, settings.revy_pr_body_max_bytes)])
 
     parts.extend(["", "Changed files:"])
     if changed_files:
         parts.extend(changed_files)
     else:
         parts.append("(none)")
+
+    if engineering_block:
+        parts.extend(["", "Engineering context (authoritative):", engineering_block])
 
     parts.extend(["", "Unified diff (primary):"])
     if unified_diff:
@@ -268,6 +286,7 @@ def _build_review_prompt(
         [
             "",
             "Review instruction:",
+            "Engineering context locks and smoke decisions override generic API advice. "
             "Focus on introduced or changed logic in the unified diff. "
             "Use supplemental context only to validate cross-file impact.",
         ]
@@ -536,6 +555,7 @@ def build_retrieval_manifest(
     omitted_files: list[str],
     fallback_reason: str | None,
     supplemental: list[ScopedChunkHit],
+    engineering_context: dict[str, Any] | None = None,
 ) -> dict:
     manifest = {
         "index_mode": stored_enum_value(index_mode),
@@ -561,7 +581,12 @@ def build_retrieval_manifest(
         "caller_files_included": [],
         "structural_context_attempted": False,
     }
-    manifest.update(engineering_context_manifest_defaults())
+    rcx_defaults = engineering_context_manifest_defaults(
+        diff_max_bytes=settings.revy_diff_max_bytes,
+    )
+    if engineering_context is not None:
+        rcx_defaults.update(engineering_context)
+    manifest.update(rcx_defaults)
     return manifest
 
 
@@ -722,35 +747,47 @@ async def _collect_supplemental_chunks(
     return merged
 
 
+async def _resolve_github_repo_for_revision(
+    session: AsyncSession,
+    *,
+    pull_request: GitHubPullRequestORM,
+) -> tuple[GitHubInstallationORM, str, str] | None:
+    repository = await session.get(GitHubRepositoryORM, pull_request.repository_id)
+    installation = await session.get(GitHubInstallationORM, pull_request.installation_id)
+    if repository is None or installation is None:
+        return None
+    owner, repo_name = repository.full_name.split("/", 1)
+    return installation, owner, repo_name
+
+
 async def _fetch_compare_for_review(
     session: AsyncSession,
     *,
+    client: httpx.AsyncClient,
     revision: GitHubPullRequestRevisionORM,
     pull_request: GitHubPullRequestORM,
 ) -> tuple[CompareCommitsResult | None, str | None]:
     if not revision.base_sha:
         return None, "missing_base_sha"
 
-    repository = await session.get(GitHubRepositoryORM, pull_request.repository_id)
-    installation = await session.get(GitHubInstallationORM, pull_request.installation_id)
-    if repository is None or installation is None:
+    repo_ctx = await _resolve_github_repo_for_revision(session, pull_request=pull_request)
+    if repo_ctx is None:
         return None, "repository_or_installation_not_found"
 
-    owner, repo_name = repository.full_name.split("/", 1)
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        try:
-            compare = await compare_commits(
-                client,
-                github_installation_id=installation.github_installation_id,
-                owner=owner,
-                repo=repo_name,
-                base_sha=revision.base_sha,
-                head_sha=revision.head_sha,
-            )
-        except (NotFoundError, RateLimitedError, ServiceUnavailableError) as exc:
-            return None, exc.error_code
-        except httpx.HTTPStatusError as exc:
-            return None, f"compare_http_{exc.response.status_code}"
+    installation, owner, repo_name = repo_ctx
+    try:
+        compare = await compare_commits(
+            client,
+            github_installation_id=installation.github_installation_id,
+            owner=owner,
+            repo=repo_name,
+            base_sha=revision.base_sha,
+            head_sha=revision.head_sha,
+        )
+    except (NotFoundError, RateLimitedError, ServiceUnavailableError) as exc:
+        return None, exc.error_code
+    except httpx.HTTPStatusError as exc:
+        return None, f"compare_http_{exc.response.status_code}"
     return compare, None
 
 
@@ -764,68 +801,99 @@ async def prepare_review_context(
     pull_request: GitHubPullRequestORM,
     index_job: GitHubIndexJobORM,
 ) -> ReviewContextPack:
-    compare, compare_fallback = await _fetch_compare_for_review(
-        session,
-        revision=revision,
-        pull_request=pull_request,
-    )
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        compare, compare_fallback = await _fetch_compare_for_review(
+            session,
+            client=client,
+            revision=revision,
+            pull_request=pull_request,
+        )
 
-    changed_files: list[str] = []
-    unified_diff = ""
-    diff_truncated = False
-    omitted_files: list[str] = []
-    patches_by_file: dict[str, str] = {}
-    fallback_reason = compare_fallback or index_job.fallback_reason
-    broaden_supplemental = False
+        changed_files: list[str] = []
+        unified_diff = ""
+        diff_truncated = False
+        omitted_files: list[str] = []
+        patches_by_file: dict[str, str] = {}
+        fallback_reason = compare_fallback or index_job.fallback_reason
+        broaden_supplemental = False
 
-    if compare is not None:
-        changed_files = list(compare.paths_to_index)
-        unified_diff, diff_truncated, omitted_files = build_unified_diff(compare.files)
-        for item in compare.files:
-            if item.patch:
-                patches_by_file[item.filename] = item.patch
-    elif index_job.index_mode == GitHubIndexMode.diff:
-        broaden_supplemental = True
+        if compare is not None:
+            changed_files = list(compare.paths_to_index)
+            unified_diff, diff_truncated, omitted_files = build_unified_diff(compare.files)
+            for item in compare.files:
+                if item.patch:
+                    patches_by_file[item.filename] = item.patch
+        elif index_job.index_mode == GitHubIndexMode.diff:
+            broaden_supplemental = True
 
-    supplemental = await _collect_supplemental_chunks(
-        session,
-        workspace_id=workspace_id,
-        repository_id=repository_id,
-        pull_request_id=pull_request_id,
-        revision_id=revision.id,
-        pr_title=pull_request.title,
-        changed_files=frozenset(changed_files),
-        index_mode=index_job.index_mode,
-        broaden_on_compare_failure=broaden_supplemental,
-    )
+        engineering_pack = EngineeringContextPack()
+        repo_ctx = await _resolve_github_repo_for_revision(session, pull_request=pull_request)
+        if repo_ctx is not None:
+            installation, owner, repo_name = repo_ctx
+            engineering_pack = await build_engineering_context_pack(
+                client,
+                github_installation_id=installation.github_installation_id,
+                owner=owner,
+                repo=repo_name,
+                head_sha=revision.head_sha,
+                changed_files=frozenset(changed_files),
+                omitted_files=frozenset(omitted_files),
+                patches_by_file=patches_by_file,
+            )
 
-    pr_body = pull_request.body
+        supplemental = await _collect_supplemental_chunks(
+            session,
+            workspace_id=workspace_id,
+            repository_id=repository_id,
+            pull_request_id=pull_request_id,
+            revision_id=revision.id,
+            pr_title=pull_request.title,
+            changed_files=frozenset(changed_files),
+            index_mode=index_job.index_mode,
+            broaden_on_compare_failure=broaden_supplemental,
+        )
 
-    prompt = _build_review_prompt(
-        pr_title=pull_request.title,
-        pr_body=pr_body,
-        head_sha=revision.head_sha,
-        base_ref=pull_request.base_ref,
-        head_ref=pull_request.head_ref,
-        index_mode=index_job.index_mode,
-        changed_files=changed_files,
-        unified_diff=unified_diff,
-        supplemental=supplemental,
-    )
-    manifest = build_retrieval_manifest(
-        index_mode=index_job.index_mode,
-        changed_files=changed_files,
-        diff_truncated=diff_truncated,
-        omitted_files=omitted_files,
-        fallback_reason=fallback_reason,
-        supplemental=supplemental,
-    )
-    return ReviewContextPack(
-        prompt=prompt,
-        manifest=manifest,
-        patches_by_file=patches_by_file,
-        supplemental=tuple(supplemental),
-    )
+        engineering_block = _format_engineering_context_block(engineering_pack)
+
+        prompt = _build_review_prompt(
+            pr_title=pull_request.title,
+            pr_body=pull_request.body,
+            head_sha=revision.head_sha,
+            base_ref=pull_request.base_ref,
+            head_ref=pull_request.head_ref,
+            index_mode=index_job.index_mode,
+            changed_files=changed_files,
+            unified_diff=unified_diff,
+            supplemental=supplemental,
+            engineering_block=engineering_block,
+        )
+
+        unified_diff_bytes = len(unified_diff.encode("utf-8"))
+        engineering_fields = {
+            "engineering_context_injected": bool(engineering_pack.inject_text.strip()),
+            "engineering_context_bytes": len(engineering_pack.inject_text.encode("utf-8")),
+            "diff_max_bytes": settings.revy_diff_max_bytes,
+            "unified_diff_bytes": unified_diff_bytes,
+            "active_program": engineering_pack.active_program,
+            "lock_ids_extracted": list(engineering_pack.lock_ids),
+            "engineering_context_deduped_paths": list(engineering_pack.deduped_paths),
+        }
+        manifest = build_retrieval_manifest(
+            index_mode=index_job.index_mode,
+            changed_files=changed_files,
+            diff_truncated=diff_truncated,
+            omitted_files=omitted_files,
+            fallback_reason=fallback_reason,
+            supplemental=supplemental,
+            engineering_context=engineering_fields,
+        )
+        return ReviewContextPack(
+            prompt=prompt,
+            manifest=manifest,
+            patches_by_file=patches_by_file,
+            supplemental=tuple(supplemental),
+            engineering_context_pack=engineering_pack,
+        )
 
 
 def _parse_finding_row(raw: dict) -> tuple[dict | None, str | None]:
@@ -985,6 +1053,16 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> Revie
             index_job=index_job,
         )
         retrieve_duration_ms = int((time.monotonic() - retrieve_started) * 1000)
+        engineering_pack = context_pack.engineering_context_pack or EngineeringContextPack()
+        run.context_stats = build_context_stats(
+            engineering_pack=engineering_pack,
+            prompt_chars=len(context_pack.prompt),
+            unified_diff_bytes=context_pack.manifest.get("unified_diff_bytes", 0),
+            diff_truncated=context_pack.manifest.get("diff_truncated", False),
+            omitted_files=list(context_pack.manifest.get("omitted_files", [])),
+            diff_max_bytes=context_pack.manifest.get("diff_max_bytes"),
+        )
+        await session.flush()
         prompt = context_pack.prompt
         model_role = review_profile_to_model_role(_review_profile_str(run.profile))
         model_ref = await resolve_model(session, run.workspace_id, model_role)
