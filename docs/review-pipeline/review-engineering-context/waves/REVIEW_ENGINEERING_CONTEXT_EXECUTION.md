@@ -37,6 +37,6 @@ each phase: implement → pytest gate → Bugbot → commit (operator pushes; P5
 | P2 — Moonshot inject | `prepare_review_context`, populate metrics | [REVIEW_ENGINEERING_CONTEXT_P2_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P2_EXECUTION.md) | pending |
 | P3 — Greptile sync | SSOT trim + generate `files.json` | [REVIEW_ENGINEERING_CONTEXT_P3_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P3_EXECUTION.md) | pending |
 | P4 — Judge reuse | Lock block in judge prompt | [REVIEW_ENGINEERING_CONTEXT_P4_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P4_EXECUTION.md) | pending |
-| P5 — Validation + closeout | Staging metrics, doc sync | [REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md) | pending |
+| P5 — Validation + closeout | Staging metrics, doc sync, **P5.5** Greptile-shaped issue comment | [REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md) | pending |
 
 **Baseline (pre-RCX):** 25% diff truncated, 9/40 runs omitted `.md`, prompt p95 164k — see findings § Validation metrics.

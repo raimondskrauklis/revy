@@ -2,6 +2,7 @@
 """Parse and validate `.greptile/review-context.json` SSOT (RCX P0)."""
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from app.services.engineering_context.types import (
@@ -62,8 +63,6 @@ def parse_review_context_manifest(raw: dict[str, Any]) -> ReviewContextManifest:
 
 
 def parse_review_context_manifest_json(text: str) -> ReviewContextManifest:
-    import json
-
     raw = json.loads(text)
     if not isinstance(raw, dict):
         raise ValueError("SSOT root must be a JSON object")

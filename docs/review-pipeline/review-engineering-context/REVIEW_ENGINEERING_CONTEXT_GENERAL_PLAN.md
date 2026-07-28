@@ -98,13 +98,27 @@
 
 **Goal:** Human gate after **dogfood PR** on staging.
 
-**Scope — in:** Metrics `--since` post-RCX deploy; fill validation tables; **sign-off requires P2–P4** (Moonshot inject + cap + Greptile trim + judge locks); manual contradict-locks check; program README + recovery checklist Track M.
+**Scope — in:** Metrics `--since` post-RCX deploy; fill validation tables; **sign-off requires P2–P4** (Moonshot inject + cap + Greptile trim + judge locks); manual contradict-locks check; program README + recovery checklist Track M; **P5.5** Greptile-shaped PR issue comment (RQ7 G3+ narrative parity).
 
 **Scope — out:** RC4 DB spike; disposition helpers (RCX-G7).
 
-**Deliverables:** Filled validation memo; operator sign-off.
+**Deliverables:** Filled validation memo; operator sign-off; richer revybot issue comment before dogfood sign-off.
 
 **Depends on:** P3–P4 on staging + at least one program dogfood PR.
+
+### P5.5 — Greptile-shaped issue comment (subphase)
+
+**Goal:** revybot PR issue comment matches Greptile triage depth — narrative paragraph, confidence **rationale**, files needing attention, findings table, optional `<details>` for security + important files (no mermaid).
+
+**Why now:** PR #60 showed revybot summary is thin because `ISSUE_COMMENT_FORMAT_SYSTEM_PROMPT` asks for a **short narrative**; dogfood PR triage should read like Greptile before operator sign-off.
+
+**Scope — in:** `moonshot_review.ISSUE_COMMENT_FORMAT_SYSTEM_PROMPT`; `build_pr_review_comment_fallback` + `build_pr_review_comment` user prompt in `github_publish_formatter.py`; pytest in `test_github_publish_formatter.py`.
+
+**Scope — out:** Check-run body (stays compact G3); mermaid sequence diagrams.
+
+**Deliverables:** Issue comment sections aligned with Greptile Summary shape on next staging dogfood push.
+
+**Execution:** [waves/REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md) § P5.5.
 
 ---
 

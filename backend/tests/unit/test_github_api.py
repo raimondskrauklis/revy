@@ -250,6 +250,34 @@ async def test_fetch_repository_file_at_sha_decodes_base64():
 
 
 @pytest.mark.asyncio
+async def test_fetch_repository_file_at_sha_url_encodes_path():
+    client = AsyncMock()
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = {
+        "encoding": "base64",
+        "content": "aGVsbG8=",
+    }
+    client.get = AsyncMock(return_value=response)
+
+    with patch(
+        "app.integrations.github_api._resolve_auth_headers",
+        AsyncMock(return_value={"Authorization": "token"}),
+    ):
+        await github_api.fetch_repository_file_at_sha(
+            client,
+            github_installation_id=1,
+            owner="org",
+            repo="repo",
+            path="docs/foo bar.md",
+            ref="abc123",
+        )
+
+    called_url = client.get.await_args.args[0]
+    assert "foo%20bar.md" in called_url
+
+
+@pytest.mark.asyncio
 async def test_fetch_repository_file_at_sha_404_raises_not_found():
     client = AsyncMock()
     client.get = AsyncMock(

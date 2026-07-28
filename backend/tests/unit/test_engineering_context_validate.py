@@ -32,3 +32,23 @@ def test_validate_review_context_paths_exist_reports_missing():
     )
     missing = validate_review_context_paths_exist(manifest, repo_root)
     assert missing == ["nonexistent/rcx/path.md"]
+
+
+def test_validate_review_context_paths_exist_rejects_traversal():
+    repo_root = Path(__file__).resolve().parents[3]
+    manifest = parse_review_context_manifest_json(
+        """
+        {
+          "active_program": "p",
+          "programs": [
+            {
+              "id": "p",
+              "scope": ["backend/**"],
+              "paths": [{"path": "../../etc/passwd", "description": "x"}]
+            }
+          ]
+        }
+        """
+    )
+    missing = validate_review_context_paths_exist(manifest, repo_root)
+    assert missing == ["../../etc/passwd"]

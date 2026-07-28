@@ -12,8 +12,15 @@ def validate_review_context_paths_exist(
     repo_root: Path,
 ) -> list[str]:
     missing: list[str] = []
+    resolved_root = repo_root.resolve()
     for program in manifest.programs:
         for entry in program.paths:
-            if not (repo_root / entry.path).is_file():
+            candidate = (repo_root / entry.path).resolve()
+            try:
+                candidate.relative_to(resolved_root)
+            except ValueError:
+                missing.append(entry.path)
+                continue
+            if not candidate.is_file():
                 missing.append(entry.path)
     return missing

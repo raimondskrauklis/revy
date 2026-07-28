@@ -83,6 +83,71 @@ grep -l "review-engineering-context" docs/review-pipeline/README.md docs/review-
 pipenv run pytest tests/unit/test_engineering_context_manifest.py tests/unit/test_engineering_context_pack.py tests/unit/test_github_review.py tests/unit/test_github_finding_judge.py -q
 ```
 
-**Human gate:** P5.2 + P5.3 complete — operator sign-off in validation memo.
+**Human gate:** P5.2 + P5.3 + **P5.5** complete — operator sign-off in validation memo.
 
 **Next:** none — program complete.
+
+---
+
+## P5.5 — Greptile-shaped issue comment (RQ7 G3+)
+
+**Goal:** Rich revybot PR issue comment before dogfood sign-off — Greptile Summary parity (narrative + rationale + structured sections), not a one-line table.
+
+**Baseline:** PR #60 — Greptile posted narrative + confidence rationale + security `<details>` + important-files table; revybot posted a short table because Moonshot formatter prompt says **short narrative** (`moonshot_review.ISSUE_COMMENT_FORMAT_SYSTEM_PROMPT`).
+
+**Locked shape (issue comment only — check run stays compact):**
+
+1. **Narrative** — 2–4 sentences: what changed, main risk theme, merge readiness hint.
+2. **Confidence score** — `N/5` plus **one sentence rationale** (why not higher/lower).
+3. **Since last push** — G9 resolution prose when present.
+4. **Files needing attention** — bullet list with paths.
+5. **Findings** — severity table (`Severity | Category | Title | File`).
+6. **`<details>` Security review** — open when any security-category finding is active.
+7. **`<details>` Important files changed** — short overview table for top changed files (path + one-line note); cap rows like Greptile.
+8. **Review metadata** `<details>` — head_sha, revision, Revy link (existing footer).
+
+**Out of scope:** mermaid; expanding check-run `output.summary`.
+
+---
+
+### P5.5.1 — Moonshot system prompt
+
+**What:** Replace “short narrative” in `ISSUE_COMMENT_FORMAT_SYSTEM_PROMPT` with locked section list above; allow ~400–800 words narrative budget; keep “no JSON wrapper” + 12000 char cap.
+
+**Files:** `backend/app/integrations/moonshot_review.py`
+
+**Deliverable:**
+
+```bash
+cd backend && pipenv run pytest tests/unit/test_moonshot_review.py -q
+```
+
+---
+
+### P5.5.2 — Deterministic fallback parity
+
+**What:** Extend `build_pr_review_comment_fallback` — confidence rationale line (template from active finding severities); optional security `<details>` when category is security; **Important files changed** table from active finding file paths + titles.
+
+**Files:** `backend/app/services/github_publish_formatter.py`, `backend/tests/unit/test_github_publish_formatter.py`
+
+**Deliverable:**
+
+```bash
+cd backend && pipenv run pytest tests/unit/test_github_publish_formatter.py -q
+```
+
+---
+
+### P5.5.3 — LLM user prompt context
+
+**What:** Enrich `build_pr_review_comment` user prompt — pass file-level change hints (paths, severities, titles) so Moonshot narrative can reference important files without inventing paths.
+
+**Files:** `backend/app/services/github_publish_formatter.py`
+
+---
+
+### P5.5.4 — Dogfood verify (human)
+
+**What:** After deploy, confirm revybot issue comment on dogfood PR matches Greptile section depth (narrative + rationale + details blocks).
+
+**Deliverable:** One line in `REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md` § Publish surface.

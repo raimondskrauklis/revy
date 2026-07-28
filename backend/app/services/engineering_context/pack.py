@@ -2,6 +2,7 @@
 """Orchestrate engineering context load + extract (RCX P1)."""
 from __future__ import annotations
 
+import binascii
 from dataclasses import dataclass, field
 
 import httpx
@@ -87,7 +88,13 @@ async def build_engineering_context_pack(
         except NotFoundError:
             pack.errors.append(f"missing_path:{path_entry.path}")
             continue
-        except (RateLimitedError, ServiceUnavailableError, httpx.HTTPError, UnicodeDecodeError) as exc:
+        except (
+            RateLimitedError,
+            ServiceUnavailableError,
+            httpx.HTTPError,
+            UnicodeDecodeError,
+            binascii.Error,
+        ) as exc:
             pack.errors.append(f"fetch_failed:{path_entry.path}:{exc}")
             continue
 

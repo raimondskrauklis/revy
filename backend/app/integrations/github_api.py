@@ -7,6 +7,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 import jwt
@@ -262,7 +263,8 @@ async def fetch_repository_file_at_sha(
         github_installation_id=github_installation_id,
         auth_headers=auth_headers,
     )
-    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}"
+    encoded_path = quote(path, safe="/")
+    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{encoded_path}"
     try:
         response = await client.get(url, headers=headers, params={"ref": ref})
         response.raise_for_status()

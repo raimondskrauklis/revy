@@ -44,30 +44,44 @@ def _extract_lock_ids(section_text: str) -> list[str]:
     return ids
 
 
-def _section_from_match(md_text: str, start: int) -> str:
+def _section_span(md_text: str, start: int) -> tuple[str, int, int]:
     remainder = md_text[start:]
     break_match = _SECTION_BREAK.search(remainder, pos=1)
-    end = break_match.start() if break_match else len(remainder)
-    return remainder[:end].strip()
+    end_offset = break_match.start() if break_match else len(remainder)
+    section = remainder[:end_offset].strip()
+    end_pos = start + end_offset
+    return section, start, end_pos
+
+
+def _overlaps_spans(spans: list[tuple[int, int]], start: int, end: int) -> bool:
+    return any(start < span_end and end > span_start for span_start, span_end in spans)
 
 
 def extract_engineering_context(md_text: str, *, max_bytes: int) -> ExtractResult:
     parts: list[str] = []
     lock_ids: list[str] = []
+    covered: list[tuple[int, int]] = []
 
-    for pattern in (_LOCKED_DECISIONS_HEADING, _SMOKE_HEADING):
-        for match in pattern.finditer(md_text):
-            section = _section_from_match(md_text, match.start())
-            if section:
-                parts.append(section)
-                if pattern is _LOCKED_DECISIONS_HEADING:
-                    lock_ids.extend(_extract_lock_ids(section))
+    def try_add(section: str, start: int, end: int, *, from_locked: bool = False) -> None:
+        if not section or _overlaps_spans(covered, start, end):
+            return
+        parts.append(section)
+        covered.append((start, end))
+        if from_locked:
+            lock_ids.extend(_extract_lock_ids(section))
+
+    for match in _LOCKED_DECISIONS_HEADING.finditer(md_text):
+        section, start, end = _section_span(md_text, match.start())
+        try_add(section, start, end, from_locked=True)
+
+    for match in _SMOKE_HEADING.finditer(md_text):
+        section, start, end = _section_span(md_text, match.start())
+        try_add(section, start, end)
 
     if "**Queried:**" not in "\n\n".join(parts):
         for match in _QUERIED_LINE.finditer(md_text):
-            section = _section_from_match(md_text, match.start())
-            if section:
-                parts.append(section)
+            section, start, end = _section_span(md_text, match.start())
+            try_add(section, start, end)
 
     merged = "\n\n".join(parts).strip()
     if not merged:

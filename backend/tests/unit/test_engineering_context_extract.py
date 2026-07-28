@@ -29,3 +29,15 @@ def test_extract_engineering_context_truncates_utf8():
     md_text = "## Locked decisions\n\n" + ("x" * 1000)
     result = extract_engineering_context(md_text, max_bytes=50)
     assert len(result.text.encode("utf-8")) <= 50
+
+
+def test_extract_engineering_context_skips_duplicate_nested_smoke_sections():
+    md_text = (
+        "## Locked decisions\n\n"
+        "foo\n\n"
+        "### Baseline captured\n\n"
+        "**Queried:** x\n"
+    )
+    result = extract_engineering_context(md_text, max_bytes=8192)
+    assert result.text.count("### Baseline captured") == 1
+    assert result.text.count("**Queried:**") == 1

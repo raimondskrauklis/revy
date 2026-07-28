@@ -92,6 +92,26 @@ cd backend && pipenv run pytest tests/unit/test_engineering_context_pack.py -q
 
 ---
 
+## P1.7 — PR #60 review findings (cleanup)
+
+**What:** Greptile + revybot findings on RCX P0–P1 — all fixed before P2:
+
+| Fix | File |
+|-----|------|
+| Catch `binascii.Error` on Contents decode | `pack.py` |
+| Path traversal guard on SSOT paths | `validate.py` |
+| URL-encode Contents API path | `github_api.py` |
+| Skip duplicate nested smoke sections | `extract.py` |
+| Top-level `import json` | `manifest.py` |
+
+**Deliverable:**
+
+```bash
+cd backend && pipenv run pytest tests/unit/test_engineering_context_validate.py tests/unit/test_engineering_context_extract.py tests/unit/test_engineering_context_pack.py tests/unit/test_github_api.py -q
+```
+
+---
+
 **Phase gate** (from `backend/`):
 
 ```bash

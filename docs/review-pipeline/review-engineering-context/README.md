@@ -19,7 +19,7 @@
 | P2 — Moonshot inject | [waves/REVIEW_ENGINEERING_CONTEXT_P2_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P2_EXECUTION.md) | pending |
 | P3 — Greptile sync | [waves/REVIEW_ENGINEERING_CONTEXT_P3_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P3_EXECUTION.md) | pending |
 | P4 — Judge reuse | [waves/REVIEW_ENGINEERING_CONTEXT_P4_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P4_EXECUTION.md) | pending |
-| P5 — Validation + closeout | [waves/REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md) | pending |
+| P5 — Validation + closeout (+ P5.5 issue-comment narrative) | [waves/REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md) | pending |
 
 **Branch:** `docs/judge-json-contract-staging-validation` — **docs + code ship in one PR** (agent context for Greptile/Bugbot).
 
