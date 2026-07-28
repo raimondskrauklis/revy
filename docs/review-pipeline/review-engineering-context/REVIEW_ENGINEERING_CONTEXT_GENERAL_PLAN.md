@@ -70,11 +70,11 @@
 
 **Goal:** One SSOT edit → Revy + Greptile; generated `files.json` only.
 
-**Scope — in:** SSOT lists **active program only** (3 docs); script/CI generates `.greptile/files.json` from SSOT each LOOP commit (RCX-D9/D11); deploy staging with new cap if not already; phase-execution skill note.
+**Scope — in:** Generate `.greptile/files.json` from SSOT (exactly 3 RCX entries; no workflow refs); replace legacy 15-entry file; generator `--check` in pytest; phase-execution skill note.
 
 **Scope — out:** `BUGBOT.md` generator; nested `.greptile/` (RC3).
 
-**Deliverables:** Greptile loads one program on `backend/**`; SSOT + `files.json` committed together; validation: generated paths match SSOT.
+**Deliverables:** Greptile loads 3 RCX docs on `backend/**`; `files.json` never hand-edited after P3.
 
 **Depends on:** P2.
 
@@ -84,7 +84,7 @@
 
 **Goal:** Judge shares P1 lock extract on escalation runs.
 
-**Scope — in:** Reuse `EngineeringContextPack` in judge prompt path; optional `lock_ids_cited` on judge manifest.
+**Scope — in:** Re-fetch `build_engineering_context_pack` in judge path via `compare_commits` for changed/omitted files; lock block max 2048 chars; optional `lock_ids_cited` on judge manifest.
 
 **Scope — out:** Moonshot changes; judge parse contract.
 
