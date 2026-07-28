@@ -1,30 +1,58 @@
 # Finding resolution — staging validation
 
-**Date:** pending — fill per phase as Revy outputs are checked on staging  
-**Program:** [waves/FINDING_RESOLUTION_EXECUTION.md](./waves/FINDING_RESOLUTION_EXECUTION.md) P5  
-**Branch:** `feat/finding-resolution`  
-**Related:** [JUDGE_INPUT_QUALITY_STAGING_VALIDATION.md](../judge/JUDGE_INPUT_QUALITY_STAGING_VALIDATION.md) (discovery judge context) · [REVIEW_PIPELINE_STAGING_SMOKE_VALIDATION.md](../REVIEW_PIPELINE_STAGING_SMOKE_VALIDATION.md)
+**Date:** 2026-07-28 (partial — rev 2 dogfood on PR #57)  
+**Program:** [waves/FINDING_RESOLUTION_EXECUTION.md](./waves/FINDING_RESOLUTION_EXECUTION.md)  
+**Branch:** `feat/finding-resolution` · head `c0522ec`  
+**Related:** [FINDING_RESOLUTION_TECHNICAL_FINDINGS.md](./FINDING_RESOLUTION_TECHNICAL_FINDINGS.md) · [JUDGE_INPUT_QUALITY_STAGING_VALIDATION.md](../judge/JUDGE_INPUT_QUALITY_STAGING_VALIDATION.md)
 
-**Workflow:** Human pushes after each phase; agent stops at phase boundary (no push). Record evidence here before advancing.
+**Workflow:** Human pushes after each phase; record evidence here before advancing.
 
 ---
 
-## Phase checkpoints (fill as phases land)
+## Phase checkpoints
 
 | Phase | Deployed | PR / commit | Staging checked | Pass |
 |-------|----------|-------------|-----------------|------|
-| P0 — schema `0028` | pending deploy | local commit | apply `0028` before P1 | |
-| P1 — Pass 1 + Pass 2 closure | | | | |
-| P2 — Pass 3 verification judge | | | | |
+| P0 — schema `0028` | staging still `0027` | `76e8784` | migration not applied on staging DB | — |
+| P1 — Pass 1 + Pass 2 closure | `c0522ec` on PR head | Revy rev 2 run | partial (see below) | partial |
+| P2 — Pass 3 verification judge | `c0522ec` | no escalation `still_open` sample yet | — | — |
 | P3 — metrics + G9 + API | | | | |
 | P4 — dismiss + summary parity | | | | |
 | P5 — full dogfood sign-off | | | | |
 
 ---
 
-## P1 — fix + push (typical closure)
+## Staging run — rev 2 (`c0522ec`, 2026-07-28 ~18:15 UTC)
 
-**Setup:** Staging PR with at least one ERROR inline from Moonshot.
+| Check | Expected | Actual | Pass |
+|-------|----------|--------|------|
+| Pipeline completes | index → review → reconcile → judge → publish | Completed | yes |
+| Moonshot review | findings JSON parses | `parsed_count=1`, `dropped_count=0` | yes |
+| Discovery judge | outcome row for escalation candidate | **0** outcomes; `judge_status=skipped_unavailable` | **no** — judge JSON parse fail (see technical findings) |
+| RG-6 publish gate | Withhold inline without outcome | Escalation finding not inline-published; issue comment reused | yes (by design) |
+| Pass 2 on rev 2 | N/A first rev with P1 code | Not exercised (no prior `addressed` groups on rev 1) | — |
+
+**Judge incident:** Not a finding-resolution regression — Anthropic 200 but no persisted outcome; separate judge-json-contract wave (next).
+
+---
+
+## Bot review triage — PR #57 (`c0522ec`)
+
+| Source | Finding | Verdict | Action |
+|--------|---------|---------|--------|
+| Greptile P1 | FK `ondelete=SET NULL` on ORM | **Fixed** in branch | resolved thread |
+| Greptile P2 | `closure_blocked_reason` clear on close | **Fixed** | resolved thread |
+| Greptile P2 | `None` in skip-set undocumented | **Intentional** — legacy resolved rows | docstring updated |
+| Greptile summary | Verification judge must reject `modified` | **Valid** | fixed in branch |
+| Revy WARNING | `base_sha==head_sha` guard on judge path | **Already fixed** — `skip_when_same_sha=False` on `fetch_compare_patches_by_file` | stale thread |
+| Revy WARNING | `should_close` ignores non-compare block reasons | **Fixed** — `closure_blocked_reason is None` | stale thread |
+| Revy INFO | P0 doc `judge_purpose` nullable | **Already fixed** in execution doc | stale thread |
+| Revy/Moonshot rev 2 | Pass 2 overwrites `judge_dismissed` groups | **Valid** | fixed — Pass 2 active groups only |
+| CI | ruff I001 test imports | **Fixed** locally | pending push |
+
+---
+
+## P1 — fix + push (typical closure)
 
 | Step | Expected | Actual | Date |
 |------|----------|--------|------|
@@ -45,16 +73,6 @@
 
 ---
 
-## P3 — resolution rate (FR-Q12)
-
-| Metric | Expected | Actual | Date |
-|--------|----------|--------|------|
-| Reconcile manifest `resolution_pass` | `denominator_active_prior`, transitions, `resolution_rate_pct` | | |
-| Issue comment | Metrics block present | | |
-| Denominator | Excludes `compare_failed` + pre-sync `resolved` | | |
-
----
-
 ## Compare API failure (P1)
 
 | Step | Expected | Actual | Date |
@@ -67,12 +85,13 @@
 ## SQL helpers (staging)
 
 ```sql
--- Groups on dogfood PR
 SELECT state, resolution_status, resolution_method, closure_blocked_reason, count(*)
 FROM github_finding_groups
 WHERE pull_request_id = '<pr_uuid>'
 GROUP BY 1, 2, 3, 4;
 ```
+
+Full repro queries: [FINDING_RESOLUTION_TECHNICAL_FINDINGS.md](./FINDING_RESOLUTION_TECHNICAL_FINDINGS.md).
 
 ---
 
@@ -81,4 +100,5 @@ GROUP BY 1, 2, 3, 4;
 - [ ] Before/after metrics table complete
 - [ ] Compare-failure row documented
 - [ ] Verification judge sample (if any escalation case)
+- [ ] Discovery judge parse rate acceptable (judge-json-contract wave)
 - [ ] Linked from [README.md](./README.md) as **shipped**

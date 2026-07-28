@@ -3,11 +3,14 @@
 import uuid
 
 from app.constants.enums import (
+    FindingCategory,
+    FindingSeverity,
     GitHubFindingGroupState,
     GitHubJudgeOutcome,
     ResolutionMethod,
     ResolutionStatus,
 )
+from app.models.github_finding_group import GitHubFindingGroupORM
 from app.services.github_finding_closure import (
     COMPARE_FAILED_REASON,
     VERIFICATION_JUDGE_MAX_PER_RUN,
@@ -19,12 +22,20 @@ from app.services.github_finding_closure import (
     should_reopen_absent_and_addressed,
     should_skip_resolved_group_on_reconcile,
 )
-from app.constants.enums import FindingCategory, FindingSeverity
-from app.models.github_finding_group import GitHubFindingGroupORM
 
 
 def test_should_close_absent_and_addressed_when_addressed_and_absent():
     assert should_close_absent_and_addressed(
+        state=GitHubFindingGroupState.active,
+        fingerprint_in_current_run=False,
+        resolution_status=ResolutionStatus.addressed,
+        closure_blocked_reason=None,
+    )
+
+
+def test_should_not_close_when_group_already_resolved():
+    assert not should_close_absent_and_addressed(
+        state=GitHubFindingGroupState.resolved,
         fingerprint_in_current_run=False,
         resolution_status=ResolutionStatus.addressed,
         closure_blocked_reason=None,
@@ -33,6 +44,7 @@ def test_should_close_absent_and_addressed_when_addressed_and_absent():
 
 def test_should_not_close_when_fingerprint_in_run():
     assert not should_close_absent_and_addressed(
+        state=GitHubFindingGroupState.active,
         fingerprint_in_current_run=True,
         resolution_status=ResolutionStatus.addressed,
         closure_blocked_reason=None,
@@ -41,6 +53,7 @@ def test_should_not_close_when_fingerprint_in_run():
 
 def test_should_not_close_when_compare_failed():
     assert not should_close_absent_and_addressed(
+        state=GitHubFindingGroupState.active,
         fingerprint_in_current_run=False,
         resolution_status=ResolutionStatus.addressed,
         closure_blocked_reason=COMPARE_FAILED_REASON,
@@ -58,6 +71,7 @@ def test_closure_fields_for_absent_and_addressed():
 
 def test_should_not_close_when_other_block_reason():
     assert not should_close_absent_and_addressed(
+        state=GitHubFindingGroupState.active,
         fingerprint_in_current_run=False,
         resolution_status=ResolutionStatus.addressed,
         closure_blocked_reason="judge_failed",

@@ -44,11 +44,14 @@ class VerificationJudgeResult:
 
 def should_close_absent_and_addressed(
     *,
+    state: GitHubFindingGroupState,
     fingerprint_in_current_run: bool,
     resolution_status: ResolutionStatus | None,
     closure_blocked_reason: str | None,
 ) -> bool:
     """FR-Q3: absent fingerprint + addressed on prior revision, compare succeeded."""
+    if state != GitHubFindingGroupState.active:
+        return False
     if fingerprint_in_current_run:
         return False
     if resolution_status != ResolutionStatus.addressed:
@@ -222,7 +225,7 @@ async def apply_pass2_closure_for_review_run(
             select(GitHubFindingGroupORM).where(
                 GitHubFindingGroupORM.pull_request_id == revision.pull_request_id,
                 GitHubFindingGroupORM.last_seen_revision_id == prior_revision.id,
-                GitHubFindingGroupORM.state != GitHubFindingGroupState.superseded,
+                GitHubFindingGroupORM.state == GitHubFindingGroupState.active,
             )
         )
     )
@@ -230,6 +233,7 @@ async def apply_pass2_closure_for_review_run(
     closed = 0
     for group in groups:
         if not should_close_absent_and_addressed(
+            state=group.state,
             fingerprint_in_current_run=group.fingerprint in fingerprints_in_run,
             resolution_status=group.resolution_status,
             closure_blocked_reason=group.closure_blocked_reason,
@@ -363,6 +367,8 @@ async def verify_still_open_escalation_groups(
                     system_prompt=anthropic_review.VERIFICATION_JUDGE_SYSTEM_PROMPT,
                 )
                 outcome_str, notes = anthropic_review.parse_judge_outcome(raw)
+                if outcome_str == GitHubJudgeOutcome.modified.value:
+                    raise ValueError("verification_judge_outcome_modified")
             except (httpx.HTTPError, ValueError, ServiceUnavailableError) as exc:
                 logger.error(
                     "verification_judge_failed",
