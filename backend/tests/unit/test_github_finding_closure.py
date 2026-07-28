@@ -118,6 +118,15 @@ def test_apply_resolution_method_on_judge_dismiss_ignores_upheld():
 
 def test_should_reopen_absent_and_addressed_on_re_report():
     assert should_reopen_absent_and_addressed(
+        state=GitHubFindingGroupState.resolved,
+        resolution_method=ResolutionMethod.absent_and_addressed,
+        fingerprint_in_current_run=True,
+    )
+
+
+def test_should_not_reopen_when_group_active():
+    assert not should_reopen_absent_and_addressed(
+        state=GitHubFindingGroupState.active,
         resolution_method=ResolutionMethod.absent_and_addressed,
         fingerprint_in_current_run=True,
     )
@@ -125,6 +134,7 @@ def test_should_reopen_absent_and_addressed_on_re_report():
 
 def test_should_not_reopen_judge_dismissed():
     assert not should_reopen_absent_and_addressed(
+        state=GitHubFindingGroupState.resolved,
         resolution_method=ResolutionMethod.judge_dismissed,
         fingerprint_in_current_run=True,
     )

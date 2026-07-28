@@ -160,6 +160,7 @@ async def reconcile_review_run(session: AsyncSession, *, review_run_id: UUID) ->
                 exclude_group_id=group.id,
             )
         elif should_reopen_absent_and_addressed(
+            state=group.state,
             resolution_method=group.resolution_method,
             fingerprint_in_current_run=True,
         ):

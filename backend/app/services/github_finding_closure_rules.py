@@ -88,10 +88,13 @@ def apply_resolution_method_on_human_dismiss(
 
 def should_reopen_absent_and_addressed(
     *,
+    state: GitHubFindingGroupState,
     resolution_method: ResolutionMethod | None,
     fingerprint_in_current_run: bool,
 ) -> bool:
     """FR-Q13: re-report same fingerprint after heuristic-only closure."""
+    if state != GitHubFindingGroupState.resolved:
+        return False
     if resolution_method != ResolutionMethod.absent_and_addressed:
         return False
     return fingerprint_in_current_run
