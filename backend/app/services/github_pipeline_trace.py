@@ -514,6 +514,90 @@ async def record_judge_pipeline_step(
     )
 
 
+async def _get_publish_pipeline_step(
+    session: AsyncSession,
+    *,
+    pipeline_run_id: UUID,
+) -> GitHubPipelineStepORM | None:
+    return await session.scalar(
+        select(GitHubPipelineStepORM)
+        .where(
+            GitHubPipelineStepORM.pipeline_run_id == pipeline_run_id,
+            GitHubPipelineStepORM.step_type == PipelineStepType.publish,
+        )
+        .order_by(GitHubPipelineStepORM.created_at.asc())
+        .limit(1)
+    )
+
+
+async def _upsert_step_manifest(
+    session: AsyncSession,
+    *,
+    step_id: UUID,
+    updates: dict[str, Any],
+) -> None:
+    manifest_artifact = await _get_step_manifest_artifact(session, step_id=step_id)
+    manifest: dict[str, Any] = (
+        dict(manifest_artifact.content_json)
+        if manifest_artifact is not None and isinstance(manifest_artifact.content_json, dict)
+        else {}
+    )
+    manifest.update(updates)
+    if manifest_artifact is not None:
+        manifest_artifact.content_json = manifest
+    else:
+        await add_step_artifact(
+            session,
+            step_id=step_id,
+            kind=PipelineArtifactKind.manifest,
+            content_json=manifest,
+        )
+    await session.flush()
+
+
+async def record_generation_superseded_on_pipeline(
+    session: AsyncSession,
+    *,
+    review_run_id: UUID,
+) -> None:
+    pipeline_run = await get_pipeline_run_for_review_run(session, review_run_id=review_run_id)
+    if pipeline_run is None:
+        return
+    step = await _get_index_pipeline_step(session, pipeline_run_id=pipeline_run.id)
+    if step is None:
+        return
+    await _upsert_step_manifest(
+        session,
+        step_id=step.id,
+        updates={"generation_superseded_at": datetime.now(UTC).isoformat()},
+    )
+
+
+async def record_publish_skip_on_pipeline(
+    session: AsyncSession,
+    *,
+    review_run_id: UUID,
+    manifest_key: str,
+) -> None:
+    pipeline_run = await get_pipeline_run_for_review_run(session, review_run_id=review_run_id)
+    if pipeline_run is None:
+        return
+    step = await _get_publish_pipeline_step(session, pipeline_run_id=pipeline_run.id)
+    if step is None:
+        step = await _create_completed_step(
+            session,
+            pipeline_run_id=pipeline_run.id,
+            step_type=PipelineStepType.publish,
+            duration_ms=0,
+            status=PipelineStepStatus.completed,
+        )
+    await _upsert_step_manifest(
+        session,
+        step_id=step.id,
+        updates={manifest_key: True},
+    )
+
+
 async def record_publish_pipeline_step(
     session: AsyncSession,
     *,

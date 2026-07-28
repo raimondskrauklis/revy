@@ -189,6 +189,50 @@ async def test_find_review_thread_id_for_comment_skips_null_comment_nodes():
 
 
 @pytest.mark.asyncio
+async def test_find_review_thread_id_for_comment_falls_back_on_cache_miss():
+    client = AsyncMock()
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = {
+        "data": {
+            "repository": {
+                "pullRequest": {
+                    "reviewThreads": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "nodes": [
+                            {
+                                "id": "PRRT_miss",
+                                "comments": {
+                                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                                    "nodes": [{"databaseId": 77}],
+                                },
+                            }
+                        ],
+                    }
+                }
+            }
+        }
+    }
+    client.post = AsyncMock(return_value=response)
+
+    with patch(
+        "app.integrations.github_api._resolve_auth_headers",
+        AsyncMock(return_value={"Authorization": "Bearer t"}),
+    ):
+        thread_id = await github_api.find_review_thread_id_for_comment(
+            client,
+            github_installation_id=1,
+            owner="acme",
+            repo="demo",
+            pull_number=3,
+            comment_database_id=77,
+            thread_index={99: "PRRT_other"},
+        )
+
+    assert thread_id == "PRRT_miss"
+
+
+@pytest.mark.asyncio
 async def test_create_check_run_reuses_provided_auth_headers():
     client = AsyncMock()
     response = MagicMock()

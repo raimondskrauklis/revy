@@ -10,6 +10,7 @@ from app.core.exceptions import ServiceUnavailableError
 from app.integrations.moonshot_review import (
     _chat_completion_body,
     _extract_message_content,
+    complete_issue_comment_markdown,
     complete_review,
     parse_review_json,
 )
@@ -47,6 +48,7 @@ async def test_complete_review_returns_content():
     post_kwargs = client.post.call_args.kwargs
     body = post_kwargs["json"]
     assert body["model"] == "kimi-k2.7-code"
+    assert body["response_format"] == {"type": "json_object"}
     assert "temperature" not in body
     assert "thinking" not in body
     assert "max_completion_tokens" not in body
@@ -132,3 +134,41 @@ def test_extract_message_content_length_finish_reason():
         )
     assert exc.value.error_code == "llm_error"
     assert "truncated" in exc.value.message
+
+
+@pytest.mark.asyncio
+async def test_complete_issue_comment_markdown_returns_markdown_without_json_format():
+    payload = {
+        "choices": [{"message": {"content": "## Revy code review\n\n**Confidence score:** 4/5"}}],
+    }
+    response = MagicMock()
+    response.status_code = 200
+    response.raise_for_status = MagicMock()
+    response.json.return_value = payload
+    client = AsyncMock(spec=httpx.AsyncClient)
+    client.post = AsyncMock(return_value=response)
+
+    with patch("app.integrations.moonshot_review.settings") as mock_settings:
+        mock_settings.moonshot_api_key = "test-key"
+        mock_settings.revy_moonshot_model_for_profile.return_value = "kimi-k2.7-code"
+        mock_settings.revy_revision_timeout_seconds.return_value = 60.0
+        content = await complete_issue_comment_markdown(
+            client,
+            profile="standard",
+            user_prompt="format this",
+        )
+
+    assert content.startswith("## Revy code review")
+    body = client.post.call_args.kwargs["json"]
+    assert "response_format" not in body
+
+
+def test_chat_completion_body_json_response_false_omits_response_format():
+    body = _chat_completion_body(
+        model="moonshot-v1-8k",
+        profile="standard",
+        messages=[{"role": "user", "content": "x"}],
+        json_response=False,
+    )
+    assert "response_format" not in body
+    assert body["temperature"] == 0.2

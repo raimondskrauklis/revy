@@ -32,6 +32,9 @@ docs/review-pipeline/
   post-review-quality/                     ← v1.1+ gaps from PR #51 dogfood
     README.md
     POST_REVIEW_QUALITY_FINDINGS.md        ← ① next-wave baseline
+  review-generation-lifecycle/             ← snapshot semantics: HEAD-gate, supersede, no spill
+    README.md
+    REVIEW_GENERATION_LIFECYCLE_FINDINGS.md  ← ① baseline (PR #53 dogfood)
   REVIEW_PIPELINE_GREPTILE_PR26_EMAIL.md   ← archived Greptile PR #26 email (triage reference)
   REVIEW_PIPELINE_PRODUCT_PATTERNS.md      ← Greptile-style patterns → Revy phases (defer/future map)
   code-review-arch_perplexity_searcj_advice_only.md  ← external architecture notes (advice only)

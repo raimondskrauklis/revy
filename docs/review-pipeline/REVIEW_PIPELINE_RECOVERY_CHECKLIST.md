@@ -71,6 +71,13 @@
 - [ ] Staging smoke § post–review-quality re-run after deploy
 - [ ] Merge `docs/agent-work` → `main` (with doc sync bundle)
 
+### Track J — Generation lifecycle — **shipped** (PR #54, branch `feat/review-generation-lifecycle`)
+
+- [x] P0–P5 LOOP — HEAD gate, supersede, surface flush, coalesce, judge publish gate, trace fields
+- [ ] Merge PR [#54](https://github.com/raimondskrauklis/revy/pull/54) → `main`
+- [ ] Staging dogfood — two pushes ~8 s apart ([dogfood log](./review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md))
+- [ ] Optional tag `review-generation-lifecycle-v1` on `main`
+
 ---
 
 ## Completed tracks (archive)

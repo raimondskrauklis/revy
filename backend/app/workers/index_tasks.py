@@ -10,6 +10,7 @@ from app.core.database import get_db_context
 from app.core.logging import get_logger
 from app.models.github_index_job import GitHubIndexJobORM
 from app.models.github_pull_request import GitHubPullRequestRevisionORM
+from app.services.github_generation_lifecycle import is_authoritative_for_pull_request_head
 from app.services.github_indexing import mark_index_job_failed, run_index_job
 from app.services.github_pipeline_trace import (
     ensure_pipeline_run_for_index_job,
@@ -55,7 +56,10 @@ def index_pull_request_revision(self, index_job_id: str) -> None:
 
             if pending_job.trigger_source in _PIPELINE_TRIGGERS:
                 revision = await session.get(GitHubPullRequestRevisionORM, pending_job.revision_id)
-                if revision is not None:
+                if revision is not None and await is_authoritative_for_pull_request_head(
+                    session,
+                    revision_id=pending_job.revision_id,
+                ):
                     pipeline_run = await ensure_pipeline_run_for_index_job(
                         session,
                         job=pending_job,
@@ -72,6 +76,14 @@ def index_pull_request_revision(self, index_job_id: str) -> None:
                             github_check_run_id=github_check_run_id,
                         )
                     pipeline_run_id = pipeline_run.id
+                elif revision is not None:
+                    logger.info(
+                        "pipeline_index_skipped_not_authoritative",
+                        extra={
+                            "index_job_id": index_job_id,
+                            "revision_id": str(pending_job.revision_id),
+                        },
+                    )
 
         async with get_db_context() as session:
             started = time.monotonic()

@@ -29,12 +29,32 @@ SUMMARY_ROW_CAP = 50
 
 _JSON_FENCE_RE = re.compile(r"^```(?:json)?\s*\n?(.*?)\n?```\s*$", re.DOTALL | re.IGNORECASE)
 
+_LLM_ISSUE_COMMENT_JSON_KEYS = (
+    "body",
+    "comment",
+    "markdown",
+    "content",
+    "review_comment",
+    "issue_comment",
+)
 
-def normalize_llm_issue_comment(raw: str) -> str:
+
+def _looks_like_json_wrapper(text: str) -> bool:
+    stripped = text.strip()
+    if not stripped.startswith("{") or not stripped.endswith("}"):
+        return False
+    try:
+        payload = json.loads(stripped)
+    except json.JSONDecodeError:
+        return False
+    return isinstance(payload, dict) and any(k in payload for k in _LLM_ISSUE_COMMENT_JSON_KEYS)
+
+
+def normalize_llm_issue_comment(raw: str) -> str | None:
     """Strip JSON wrappers Moonshot sometimes returns instead of raw markdown."""
     text = raw.strip()
     if not text:
-        return text
+        return None
 
     fence_match = _JSON_FENCE_RE.match(text)
     if fence_match:
@@ -46,10 +66,11 @@ def normalize_llm_issue_comment(raw: str) -> str:
         except json.JSONDecodeError:
             return raw.strip()
         if isinstance(payload, dict):
-            for key in ("body", "comment", "markdown", "content"):
+            for key in _LLM_ISSUE_COMMENT_JSON_KEYS:
                 value = payload.get(key)
                 if isinstance(value, str) and value.strip():
                     return value.strip()
+            return None
 
     return raw.strip()
 
@@ -267,11 +288,7 @@ async def build_pr_review_comment(ctx: PublishFormatContext) -> str:
 
     active = _active_groups(ctx.groups)
     prompt = (
-        "Format a GitHub pull request review comment in markdown. "
-        "Return ONLY raw GitHub-flavored markdown — no JSON, no code fences, no {\"body\": ...} wrapper. "
-        "Sections: short narrative, confidence score, files needing attention (bullets), "
-        "findings severity table (no message column), metadata footer. "
-        "Do not use mermaid. Keep under 12000 characters.\n\n"
+        "Format the issue comment from this structured review context.\n\n"
         f"PR #{ctx.pull_request_number} revision {ctx.revision_number} head_sha={ctx.head_sha}\n"
         f"Confidence (use this value): {compute_confidence(ctx.groups)}/5\n"
         f"Resolution delta: {build_g9_resolution_prose(ctx.groups) or 'n/a'}\n"
@@ -283,18 +300,26 @@ async def build_pr_review_comment(ctx: PublishFormatContext) -> str:
         async with httpx.AsyncClient(
             timeout=float(settings.revy_revision_timeout_standard_seconds)
         ) as client:
-            raw = await moonshot_review.complete_review(
+            raw = await moonshot_review.complete_issue_comment_markdown(
                 client,
                 profile="standard",
                 user_prompt=prompt,
                 model_id=settings.revy_moonshot_model_for_profile("standard"),
             )
         text = normalize_llm_issue_comment(raw)
-        if text:
-            footer = _index_footer(ctx)
-            if footer and footer not in text:
-                text = f"{text}\n\n{footer}"
-            return text
+        if not text or _looks_like_json_wrapper(text):
+            logger.warning(
+                "github_publish_formatter_llm_unparsed_markdown",
+                extra={
+                    "pull_request_id": str(ctx.pull_request_id),
+                    "raw_prefix": raw.strip()[:200],
+                },
+            )
+            return fallback
+        footer = _index_footer(ctx)
+        if footer and footer not in text:
+            text = f"{text}\n\n{footer}"
+        return text
     except (httpx.HTTPError, ValueError, OSError, ServiceUnavailableError) as exc:
         logger.warning(
             "github_publish_formatter_llm_failed",

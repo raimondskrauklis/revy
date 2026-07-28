@@ -171,6 +171,7 @@ class GitHubReviewRunStatus(str, Enum):
     processing = "processing"
     completed = "completed"
     failed = "failed"
+    superseded = "superseded"
 
 
 class ReviewProfile(str, Enum):
@@ -238,3 +239,5 @@ class GitHubPublishJobStatus(str, Enum):
     processing = "processing"
     completed = "completed"
     failed = "failed"
+    skipped_not_head = "skipped_not_head"
+    skipped_superseded = "skipped_superseded"

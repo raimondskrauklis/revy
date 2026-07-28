@@ -118,6 +118,23 @@ def test_normalize_llm_issue_comment_unwraps_json_body():
     assert "Confidence score" in normalize_llm_issue_comment(wrapped)
 
 
+def test_normalize_llm_issue_comment_unwraps_review_comment_key():
+    wrapped = '{"review_comment":"## Pull Request Review\\n\\nNarrative here."}'
+    assert normalize_llm_issue_comment(wrapped) == "## Pull Request Review\n\nNarrative here."
+
+
+def test_normalize_llm_issue_comment_unknown_json_returns_none():
+    assert normalize_llm_issue_comment('{"findings":[]}') is None
+
+
+def test_looks_like_json_wrapper_only_known_keys():
+    from app.services.github_publish_formatter import _looks_like_json_wrapper
+
+    assert _looks_like_json_wrapper('{"review_comment":"## Hi"}') is True
+    assert _looks_like_json_wrapper('{"findings":[]}') is False
+    assert _looks_like_json_wrapper("## plain markdown") is False
+
+
 def test_normalize_llm_issue_comment_passes_through_markdown():
     markdown = "## Revy code review\n\nplain markdown"
     assert normalize_llm_issue_comment(markdown) == markdown
@@ -140,7 +157,7 @@ async def test_build_pr_review_comment_unwraps_json_body_from_moonshot():
         mock_settings.revy_moonshot_model_for_profile.return_value = "model"
         mock_settings.app_public_url = "https://app.revy.dev"
         with patch(
-            "app.services.github_publish_formatter.moonshot_review.complete_review",
+            "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
             AsyncMock(return_value=moonshot_json),
         ):
             result = await build_pr_review_comment(ctx)
@@ -148,6 +165,29 @@ async def test_build_pr_review_comment_unwraps_json_body_from_moonshot():
     assert result.startswith("## Code Review Summary")
     assert not result.startswith("{")
     assert "Confidence Score" in result
+
+
+@pytest.mark.asyncio
+async def test_build_pr_review_comment_falls_back_when_llm_returns_unparsed_json():
+    from app.services.github_publish_formatter import build_pr_review_comment
+
+    groups = [_group(severity=FindingSeverity.warning)]
+    ctx = _ctx(groups)
+    moonshot_json = '{"findings":[{"severity":"warning","title":"Issue"}]}'
+
+    with patch("app.services.github_publish_formatter.settings") as mock_settings:
+        mock_settings.reviewer_llm_enabled.return_value = True
+        mock_settings.revy_revision_timeout_standard_seconds = 60
+        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.app_public_url = "https://app.revy.dev"
+        with patch(
+            "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
+            AsyncMock(return_value=moonshot_json),
+        ):
+            result = await build_pr_review_comment(ctx)
+            expected = build_pr_review_comment_fallback(ctx)
+
+    assert result == expected
 
 
 def test_build_publish_format_result_splits_bodies():
@@ -189,7 +229,7 @@ async def test_build_pr_review_comment_moonshot_failure_returns_fallback():
         mock_settings.revy_moonshot_model_for_profile.return_value = "model"
         mock_settings.app_public_url = "https://app.revy.dev"
         with patch(
-            "app.services.github_publish_formatter.moonshot_review.complete_review",
+            "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
             AsyncMock(side_effect=httpx.HTTPError("moonshot down")),
         ):
             result = await build_pr_review_comment(ctx)

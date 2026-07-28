@@ -5,9 +5,14 @@ from __future__ import annotations
 from uuid import UUID
 
 from app.constants.enums import GitHubIndexJobTriggerSource
+from app.core.config import settings
 from app.core.database import get_db_context
 from app.core.logging import get_logger
 from app.models.github_webhook_delivery import GitHubWebhookDeliveryORM
+from app.services.github_generation_lifecycle import (
+    is_authoritative_for_pull_request_head,
+    supersede_active_generations_for_revision,
+)
 from app.services.github_indexing import enqueue_index_job
 from app.services.github_installations import apply_installation_webhook_event
 from app.services.github_pull_requests import (
@@ -21,6 +26,43 @@ from app.workers.async_runner import run_worker_async
 from app.workers.celery_app import celery_app
 
 logger = get_logger(__name__)
+
+
+async def _maybe_enqueue_autostart_pipeline_for_revision(
+    session,
+    *,
+    workspace_id: UUID,
+    revision_id: UUID,
+) -> UUID | None:
+    return await maybe_enqueue_pipeline_for_revision(
+        session,
+        workspace_id=workspace_id,
+        revision_id=revision_id,
+        trigger=GitHubIndexJobTriggerSource.autostart,
+    )
+
+
+@celery_app.task(name="app.workers.github_tasks.schedule_autostart_pipeline_for_revision")
+def schedule_autostart_pipeline_for_revision(revision_id: str, workspace_id: str) -> None:
+    async def _run() -> None:
+        revision_uuid = UUID(revision_id)
+        job_id: UUID | None = None
+        async with get_db_context() as session:
+            if not await is_authoritative_for_pull_request_head(session, revision_id=revision_uuid):
+                logger.info(
+                    "autostart_coalesce_stale_revision",
+                    extra={"revision_id": revision_id},
+                )
+                return
+            job_id = await _maybe_enqueue_autostart_pipeline_for_revision(
+                session,
+                workspace_id=UUID(workspace_id),
+                revision_id=revision_uuid,
+            )
+        if job_id is not None:
+            enqueue_index_job(job_id)
+
+    run_worker_async(_run())
 
 
 @celery_app.task(name="app.workers.github_tasks.process_github_event", bind=True, max_retries=3)
@@ -58,19 +100,34 @@ def process_github_event(self, delivery_id: str) -> None:
                     and result.new_revision
                     and result.action in {"opened", "synchronize"}
                 ):
-                    job_id = await maybe_enqueue_pipeline_for_revision(
-                        session,
-                        workspace_id=result.workspace_id,
-                        revision_id=result.revision_id,
-                        trigger=GitHubIndexJobTriggerSource.autostart,
-                    )
-                    if job_id is not None:
-                        index_job_ids.append(job_id)
+                    if (
+                        result.action == "synchronize"
+                        and settings.review_coalesce_seconds > 0
+                    ):
+                        schedule_autostart_pipeline_for_revision.apply_async(
+                            kwargs={
+                                "revision_id": str(result.revision_id),
+                                "workspace_id": str(result.workspace_id),
+                            },
+                            countdown=settings.review_coalesce_seconds,
+                        )
+                    else:
+                        job_id = await _maybe_enqueue_autostart_pipeline_for_revision(
+                            session,
+                            workspace_id=result.workspace_id,
+                            revision_id=result.revision_id,
+                        )
+                        if job_id is not None:
+                            index_job_ids.append(job_id)
                 return
 
             if event_type == "issue_comment":
                 intent = await apply_issue_comment_webhook_event(session, payload)
                 if intent is not None:
+                    await supersede_active_generations_for_revision(
+                        session,
+                        revision_id=intent.revision_id,
+                    )
                     job_id = await maybe_enqueue_pipeline_for_revision(
                         session,
                         workspace_id=intent.workspace_id,

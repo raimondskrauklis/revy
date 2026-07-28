@@ -1,8 +1,14 @@
 # Bugbot — review pipeline contract
 
-When reviewing **backend** changes that touch publish / formatter / pipeline code, treat these as authoritative:
+When reviewing **backend** changes that touch publish / formatter / pipeline / generation lifecycle code, treat these as authoritative:
 
-**GitHub surface hardening (active program):**
+**Review generation lifecycle (active program):**
+
+- [REVIEW_GENERATION_LIFECYCLE_EXECUTION.md](../docs/review-pipeline/review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_EXECUTION.md) — P0–P5 scope, gates, dogfood rubric
+- [REVIEW_GENERATION_LIFECYCLE_FINDINGS.md](../docs/review-pipeline/review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_FINDINGS.md) — RG-* gaps, snapshot semantics
+- [REVIEW_GENERATION_LIFECYCLE_GENERAL_PLAN.md](../docs/review-pipeline/review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_GENERAL_PLAN.md) — phase goals
+
+**GitHub surface hardening (shipped on `main`):**
 
 - [GITHUB_SURFACE_HARDENING_EXECUTION.md](../docs/review-pipeline/github-surface-hardening/GITHUB_SURFACE_HARDENING_EXECUTION.md) — P0–P4 scope, gates, dogfood rubric
 - [GITHUB_SURFACE_HARDENING_FINDINGS.md](../docs/review-pipeline/github-surface-hardening/GITHUB_SURFACE_HARDENING_FINDINGS.md) — GH-* gaps, Option A resolve
@@ -19,4 +25,4 @@ When reviewing **backend** changes that touch publish / formatter / pipeline cod
 - [CURSOR_AGENT_WORKFLOW.md](../docs/utils/CURSOR_AGENT_WORKFLOW.md) — roles + verbs quick ref
 - [agents/prompts/ROLES.md](../docs/review-pipeline/agents/prompts/ROLES.md) — master/reviewer boundaries
 
-**Program:** GitHub surface hardening on feature branch `feat/github-surface-hardening` — thread auto-resolve (GH-1), GraphQL scale, publish test harness.
+**Program:** Review generation lifecycle on feature branch `feat/review-generation-lifecycle` — HEAD-gated publish, supersede in-flight generations, full surface flush, optional coalesce. GitHub surface hardening (thread auto-resolve, GraphQL scale) shipped on `main` via PR #53.

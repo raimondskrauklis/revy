@@ -32,6 +32,7 @@ from app.models.github_pull_request import (
 )
 from app.models.github_repository import GitHubRepositoryORM
 from app.schemas.github_pull_request import GitHubPullRequestResponse
+from app.services.github_generation_lifecycle import supersede_stale_generations_for_new_revision
 from app.services.github_resolution_metrics import apply_resolution_status_for_synchronize
 
 logger = get_logger(__name__)
@@ -353,6 +354,11 @@ async def apply_pull_request_webhook_event(
             session,
             pull_request=pull_request,
             new_revision=new_revision,
+        )
+        await supersede_stale_generations_for_new_revision(
+            session,
+            pull_request_id=pull_request.id,
+            keep_revision_id=new_revision.id,
         )
         return PullRequestWebhookResult(
             workspace_id=repository.workspace_id,

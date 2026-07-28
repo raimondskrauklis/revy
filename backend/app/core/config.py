@@ -138,6 +138,21 @@ class Settings(BaseSettings):
     # Pipeline trace retention — review-quality O8
     pipeline_retention_days: int = 90
 
+    # Generation lifecycle — autostart coalesce before pipeline enqueue (0 = off, max 10)
+    review_coalesce_seconds: int = 0
+
+    @field_validator("review_coalesce_seconds", mode="after")
+    @classmethod
+    def _clamp_review_coalesce_seconds(cls, value: int) -> int:
+        clamped = max(0, min(10, value))
+        if clamped != value:
+            logger.warning(
+                "review_coalesce_seconds=%s clamped to %s (allowed range 0-10)",
+                value,
+                clamped,
+            )
+        return clamped
+
     # Review policy
     revy_default_review_profile: str = "standard"
     revy_revision_timeout_standard_seconds: int = 900

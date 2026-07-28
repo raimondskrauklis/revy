@@ -7,6 +7,7 @@ from uuid import UUID
 from app.constants.enums import GitHubReviewRunStatus, PipelineStepType
 from app.core.database import get_db_context
 from app.core.logging import get_logger
+from app.services.github_generation_lifecycle import is_review_run_superseded
 from app.services.github_pipeline_trace import (
     finalize_pipeline_github_check_failure,
     get_pipeline_run_for_review_run,
@@ -83,7 +84,8 @@ def review_pull_request_revision(self, review_run_id: str) -> None:
         async with get_db_context() as session:
             outcome = await run_review_run(session, review_run_id=UUID(review_run_id))
             run = outcome.run
-            await _record_review_pipeline_trace(session, review_run_id=run.id, outcome=outcome)
+            if not is_review_run_superseded(run):
+                await _record_review_pipeline_trace(session, review_run_id=run.id, outcome=outcome)
             await session.commit()
             logger.info(
                 "github_review_run_complete",
