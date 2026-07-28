@@ -7,6 +7,7 @@ from uuid import UUID
 from app.constants.enums import GitHubReviewRunStatus, PipelineStepType
 from app.core.database import get_db_context
 from app.core.logging import get_logger
+from app.services.github_generation_lifecycle import is_review_run_superseded
 from app.services.github_pipeline_trace import (
     finalize_pipeline_github_check_failure,
     get_pipeline_run_for_review_run,
@@ -14,7 +15,6 @@ from app.services.github_pipeline_trace import (
     record_retrieve_pipeline_step,
     record_review_pipeline_step,
 )
-from app.services.github_generation_lifecycle import is_review_run_superseded
 from app.services.github_review import mark_review_run_failed, run_review_run
 from app.workers.celery_app import celery_app
 from app.workers.task_retries import run_with_retryable_failure

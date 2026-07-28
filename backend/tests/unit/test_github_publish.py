@@ -2724,14 +2724,6 @@ async def test_run_publish_job_skipped_superseded_mid_flush_before_inline():
         repo_name="demo",
     )
 
-    superseded_run = GitHubReviewRunORM(
-        revision_id=job.revision_id,
-        workspace_id=job.workspace_id,
-        status=GitHubReviewRunStatus.superseded,
-        profile=ReviewProfile.standard,
-        provider="moonshot",
-    )
-
     refresh_calls = 0
 
     async def refresh_side_effect(obj):
