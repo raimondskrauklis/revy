@@ -22,11 +22,11 @@ each phase: implement → pytest gate → Bugbot → commit
 - **R5-Q3:** Escalation gate unchanged — `error`/`critical`, or `security` + `severity ≥ warning`; max 10/run; skip when `judge_llm_enabled()` false.
 - **No full PR diff to judge** — per-finding file patch capped (`JUDGE_FILE_PATCH_MAX_CHARS`, default 8192).
 - **J-8:** `fetch_compare_patches_by_file` in `github_compare_patches.py` — `revision.base_sha` → `revision.head_sha` (not resolution-metrics delta).
-- **J-4:** PR body via GitHub API at review time — **no** `body` DB column / migration in this program.
+- **J-4:** PR `body` on `github_pull_requests` via migration `0027` + webhook ingest — not per-review API fetch.
 - **J-10 v1:** `modified` outcome → `group.severity = warning` only; no message/title edits in this program.
 - **Gateway:** Do not re-implement — ship from `feat/anthropic-judge-gateway` if absent on `main`.
 - **i18n:** backend-only — no new frontend strings.
-- **Migrations:** none for P0–P3/P5; P4 uses GitHub API fetch — no `body` column on `github_pull_requests`.
+- **Migrations:** P4 adds `github_pull_requests.body` (`0027`) — hand-written Alembic; LOOP pause after P4.1.
 
 ## LOOP order
 

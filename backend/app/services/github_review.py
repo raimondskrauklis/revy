@@ -33,12 +33,7 @@ from app.core.exceptions import (
 from app.core.logging import get_logger
 from app.core.worker_retries import classify_transient_error
 from app.integrations import llm_dispatch, moonshot_review
-from app.integrations.github_api import (
-    CompareCommitsResult,
-    CompareFileChange,
-    compare_commits,
-    get_pull_request,
-)
+from app.integrations.github_api import CompareCommitsResult, CompareFileChange, compare_commits
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_index_job import GitHubIndexJobORM
 from app.models.github_installation import GitHubInstallationORM
@@ -617,39 +612,6 @@ async def _fetch_compare_for_review(
     return compare, None
 
 
-async def _fetch_pr_body_for_review(
-    session: AsyncSession,
-    *,
-    pull_request: GitHubPullRequestORM,
-) -> str | None:
-    repository = await session.get(GitHubRepositoryORM, pull_request.repository_id)
-    installation = await session.get(GitHubInstallationORM, pull_request.installation_id)
-    if repository is None or installation is None:
-        return None
-
-    owner, repo_name = repository.full_name.split("/", 1)
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        try:
-            payload = await get_pull_request(
-                client,
-                github_installation_id=installation.github_installation_id,
-                owner=owner,
-                repo=repo_name,
-                pull_number=pull_request.number,
-            )
-        except (httpx.HTTPError, NotFoundError, RateLimitedError, ServiceUnavailableError) as exc:
-            logger.warning(
-                "review_pr_body_fetch_failed",
-                extra={"pull_request_id": str(pull_request.id), "error": str(exc)},
-            )
-            return None
-
-    body = payload.get("body")
-    if isinstance(body, str) and body.strip():
-        return body
-    return None
-
-
 async def prepare_review_context(
     session: AsyncSession,
     *,
@@ -695,7 +657,7 @@ async def prepare_review_context(
         broaden_on_compare_failure=broaden_supplemental,
     )
 
-    pr_body = await _fetch_pr_body_for_review(session, pull_request=pull_request)
+    pr_body = pull_request.body
 
     prompt = _build_review_prompt(
         pr_title=pull_request.title,

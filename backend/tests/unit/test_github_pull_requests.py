@@ -83,6 +83,7 @@ def _pull_request_payload(*, action: str, head_sha: str = "abc123", draft: bool 
             "title": "Add feature",
             "state": "open",
             "draft": draft,
+            "body": "Fixes login bug",
             "html_url": "https://github.com/acme/demo/pull/7",
             "head": {"sha": head_sha, "ref": "feature"},
             "base": {"sha": "base000", "ref": "main"},
@@ -119,6 +120,55 @@ async def test_apply_pull_request_opened_persists_base_sha():
     revisions = [obj for obj in added if hasattr(obj, "base_sha")]
     assert len(revisions) == 1
     assert revisions[0].base_sha == "base000"
+
+
+@pytest.mark.asyncio
+async def test_apply_pull_request_opened_persists_body():
+    installation = _installation()
+    repository = _repository(installation)
+    session = _session_with_nested()
+    session.scalar = AsyncMock(side_effect=[installation, repository, None])
+    added: list[object] = []
+    session.add = MagicMock(side_effect=lambda obj: added.append(obj))
+    session.flush = AsyncMock()
+
+    await apply_pull_request_webhook_event(session, _pull_request_payload(action="opened"))
+
+    pull_requests = [obj for obj in added if isinstance(obj, GitHubPullRequestORM)]
+    assert len(pull_requests) == 1
+    assert pull_requests[0].body == "Fixes login bug"
+
+
+@pytest.mark.asyncio
+async def test_apply_pull_request_edited_updates_body():
+    installation = _installation()
+    repository = _repository(installation)
+    existing = GitHubPullRequestORM(
+        repository_id=repository.id,
+        workspace_id=repository.workspace_id,
+        installation_id=repository.installation_id,
+        github_pull_request_id=_PR_GITHUB_ID,
+        number=7,
+        title="Add feature",
+        state=GitHubPullRequestState.open,
+        head_sha="abc123",
+        head_ref="feature",
+        base_ref="main",
+        body="Old body",
+        revision_count=1,
+    )
+    existing.id = uuid.uuid4()
+
+    session = _session_with_nested()
+    session.scalar = AsyncMock(side_effect=[installation, repository, existing])
+    session.flush = AsyncMock()
+
+    payload = _pull_request_payload(action="edited")
+    payload["pull_request"]["body"] = "Updated description"
+
+    await apply_pull_request_webhook_event(session, payload)
+
+    assert existing.body == "Updated description"
 
 
 @pytest.mark.asyncio

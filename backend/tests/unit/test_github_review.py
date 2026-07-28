@@ -962,6 +962,37 @@ def test_build_review_prompt_orders_diff_before_supplemental():
     assert "helper context" in prompt
 
 
+def test_build_review_prompt_includes_pr_body_when_set():
+    prompt = github_review._build_review_prompt(
+        pr_title="Fix handler",
+        pr_body="Fixes #42",
+        head_sha="head123",
+        base_ref="main",
+        head_ref="feature",
+        index_mode=GitHubIndexMode.diff,
+        changed_files=["app/main.py"],
+        unified_diff="+change",
+        supplemental=[],
+    )
+    assert "PR body:" in prompt
+    assert "Fixes #42" in prompt
+
+
+def test_build_review_prompt_omits_pr_body_when_none():
+    prompt = github_review._build_review_prompt(
+        pr_title="Fix handler",
+        pr_body=None,
+        head_sha="head123",
+        base_ref="main",
+        head_ref="feature",
+        index_mode=GitHubIndexMode.diff,
+        changed_files=["app/main.py"],
+        unified_diff="+change",
+        supplemental=[],
+    )
+    assert "PR body:" not in prompt
+
+
 def test_retrieval_file_paths_excludes_tests_unless_pr_touches_tests():
     changed = frozenset({"app/main.py", "tests/unit/test_main.py"})
     assert "tests/unit/test_main.py" in github_review._retrieval_file_paths(changed)

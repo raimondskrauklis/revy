@@ -83,11 +83,11 @@
 
 ## P4 — Moonshot reviewer input (J-4)
 
-**Goal:** Primary reviewer sees PR description — fetch via GitHub API at `prepare_review_context` (no DB `body` column today).
+**Goal:** Primary reviewer sees PR description — persist `body` on `github_pull_requests` via webhook ingest.
 
-**Scope — in:** `get_pull_request` in `github_api.py`; `_fetch_pr_body_for_review`; wire into `_build_review_prompt` via existing `pr_body` + `PR_BODY_MAX_BYTES`.
+**Scope — in:** Alembic `body` column; `_extract_pr_fields` + `_upsert_pull_request`; `edited` webhook action; wire `pull_request.body` in `prepare_review_context`.
 
-**Scope — out:** `body` migration + webhook ingest; judge changes; index/retrieval changes.
+**Scope — out:** Per-review API fetch workaround; judge changes; index/retrieval changes.
 
 **Deliverables:** Review pipeline trace `prompt` includes PR body when present; unit test on `_build_review_prompt`.
 

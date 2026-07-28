@@ -48,7 +48,7 @@ Built in `prepare_review_context` → `_build_review_prompt` (`github_review.py`
 | Block | Content |
 |-------|---------|
 | Metadata | Title, `head_sha`, `base_ref…head_ref`, `index_mode` |
-| PR body | **Not passed today** — `pr_body=None`; `GitHubPullRequestORM` has no `body` column (P4: fetch via GitHub API at review time) |
+| PR body | **Not passed today** — `pr_body=None`; persist `body` on `github_pull_requests` via webhook (P4 migration `0027`) |
 | Changed files | List of paths from compare / index |
 | Unified diff | Primary signal — often **100k+ chars** on real PRs |
 | Supplemental | Top retrieval chunks per file (bounded) |
@@ -136,7 +136,7 @@ Moonshot may cite issues **without** `start_line` or on lines that don’t map c
 | J-1 | Judge never sees diff hunks — only post-hoc snippet | High | **Addressed** (P3) |
 | J-2 | ~47% judge-eligible findings lack `evidence_snippet` on staging | High | Open — staging validation (P5) |
 | J-3 | ~47% lack `start_line` — weak anchor for snippet extraction | Medium | Open — P2 |
-| J-4 | PR body not passed to Moonshot (`pr_body=None`; no DB body — fetch at review time in P4) | Low–medium | **Addressed** (P4) |
+| J-4 | PR body not passed to Moonshot (`pr_body=None`; no `body` column until migration `0027`) | Low–medium | **Addressed** (P4) — DB + webhook ingest |
 | J-5 | Judge system prompt — verifier role / scope boundary | Medium | **Addressed** (P1) |
 | J-6 | Pipeline trace stores judge `user_prompt` but not hunk for replay | Low | **Addressed** (P3) — `file_patch_chars` |
 | J-7 | No “Moonshot finding under test” framing in user prompt | Medium | **Addressed** (P1) |
@@ -192,7 +192,7 @@ Prioritized for a small follow-up phase (no change to R5-Q3 escalation gate):
 
 ### C. Reviewer (Moonshot) — separate from judge
 
-6. **Pass PR body to Moonshot** — `GET /pulls/{number}` at `prepare_review_context` (no DB column today); truncate with `PR_BODY_MAX_BYTES`.
+6. **Pass PR body to Moonshot** — `github_pull_requests.body` from webhook ingest; wire in `prepare_review_context` (migration `0027`).
 
 ### D. Model
 

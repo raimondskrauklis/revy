@@ -43,6 +43,7 @@ class GitHubPullRequestORM(TimestampedModel):
     head_ref: Mapped[str] = mapped_column(Text, nullable=False)
     base_ref: Mapped[str] = mapped_column(Text, nullable=False)
     html_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    body: Mapped[str | None] = mapped_column(Text, nullable=True)
     revision_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     is_draft: Mapped[bool] = mapped_column(
         Boolean,
