@@ -88,14 +88,14 @@ Judge escalation is **broken often on staging**: of judge-manifest candidates in
 
 | # | Deliverable | Notes |
 |---|-------------|--------|
-| **G1** | Failure observability | `raw_response_text` + `parse_error` on judge manifest candidates; structured log field |
-| **G2** | Anthropic structured output | `output_config.format` / `json_schema` on `judge_finding()` for gateway + direct paths |
-| **G3** | Snippet-first prompt policy | Skip `file_patch` when snippet present; tiered fallback + lower cap (~2k) |
-| **G4** | Light parse helper | Strip markdown fences, extract first JSON object — fallback when structured output unavailable |
-| **G5** | Optional single retry | Max 1 retry with validation error in prompt — only if G2+G4 still show failures in smoke |
-| **G6** | API smoke scripts | Extend `test_anthropic_judge_gateway.py` — plain vs structured vs 10k prompt |
-| **G7** | Unit tests | Parse helper, prompt assembly tiers, manifest failure fields |
-| **G8** | Staging validation memo | Human gate after deploy — same pattern as judge input quality |
+| **G1** | Failure observability | `raw_response_text` + `parse_error` on judge manifest candidates; structured log field | **Addressed** P1 |
+| **G2** | Anthropic structured output | `output_config.format` / `json_schema` on `judge_finding()` for gateway + direct paths | **Addressed** P3 (`revy_judge_structured_output`; off on RTU) |
+| **G3** | Snippet-first prompt policy | Skip `file_patch` when snippet present; tiered fallback + lower cap (~2k) | **Addressed** P2 |
+| **G4** | Light parse helper | Strip markdown fences, extract first JSON object — fallback when structured output unavailable | **Addressed** P3 |
+| **G5** | Optional single retry | Max 1 retry with validation error in prompt — only if G2+G4 still show failures in smoke | **Addressed** P4 (staging ≥95% skip not evaluated) |
+| **G6** | API smoke scripts | Extend `test_anthropic_judge_gateway.py` — plain vs structured vs 10k prompt | **Addressed** P0 |
+| **G7** | Unit tests | Parse helper, prompt assembly tiers, manifest failure fields | **Addressed** P1–P4 |
+| **G8** | Staging validation memo | Human gate after deploy — same pattern as judge input quality | **Pending** operator sign-off |
 
 ### Explicitly out of scope (v1)
 
@@ -179,12 +179,12 @@ Optional: one-off compare gateway vs direct when both keys present — confirm s
 
 | ID | Gap |
 |----|-----|
-| **JC-1** | No structured output on judge Messages API |
-| **JC-2** | Failure path discards response body in manifest |
-| **JC-3** | Redundant full-file `file_patch` when snippet exists |
-| **JC-4** | No shared `parse_llm_json_object` helper |
-| **JC-5** | Smoke script does not test structured output or large prompts |
-| **JC-6** | No staging validation memo for this wave |
+| **JC-1** | No structured output on judge Messages API | **Addressed** P3 |
+| **JC-2** | Failure path discards response body in manifest | **Addressed** P1 |
+| **JC-3** | Redundant full-file `file_patch` when snippet exists | **Addressed** P2 |
+| **JC-4** | No shared `parse_llm_json_object` helper | **Addressed** P3 |
+| **JC-5** | Smoke script does not test structured output or large prompts | **Addressed** P0 |
+| **JC-6** | No staging validation memo for this wave | **Stub** P5 — human gate pending |
 
 ---
 

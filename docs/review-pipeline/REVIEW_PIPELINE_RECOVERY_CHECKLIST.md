@@ -78,6 +78,13 @@
 - [ ] Staging dogfood — two pushes ~8 s apart ([dogfood log](./review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md))
 - [ ] Optional tag `review-generation-lifecycle-v1` on `main`
 
+### Track L — Judge JSON contract — **code-complete** (PR #58, `feat/judge-json-contract`)
+
+- [x] P0–P4 LOOP — observability, snippet-first, `parse_llm_json_object`, optional structured output, targeted retry
+- [x] Validation memo stub — [judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](./judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md)
+- [ ] Operator dogfood — ≥95% judge outcome persistence on staging PR
+- [ ] Merge PR [#58](https://github.com/raimondskrauklis/revy/pull/58) → `main`
+
 ### Track K — Finding resolution — **code-complete** (PR #57, `feat/finding-resolution`)
 
 - [x] P0–P5 LOOP — closure passes, FR-Q12 metrics, dismiss API, reviewer UI
@@ -85,7 +92,6 @@
 - [ ] Apply migration **`0028`** on staging
 - [ ] Operator dogfood — fix → push → metrics → thread resolve (§ P5.1 table)
 - [ ] Merge PR [#57](https://github.com/raimondskrauklis/revy/pull/57) → `main`
-- [ ] Start [judge-json-contract](./judge-json-contract/README.md) from `main` after merge
 
 ---
 
