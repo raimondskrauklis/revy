@@ -38,7 +38,7 @@ each phase: implement → pytest gate → Bugbot → local commit (operator push
 |-------|--------|-----------|--------|--------|
 | P0 — API smoke | Structured-output feasibility + smoke flags | [JUDGE_JSON_CONTRACT_P0_EXECUTION.md](./JUDGE_JSON_CONTRACT_P0_EXECUTION.md) | `b7cadcc` | done |
 | P1 — Observability | `raw_response_text` + `parse_error` on manifest | [JUDGE_JSON_CONTRACT_P1_EXECUTION.md](./JUDGE_JSON_CONTRACT_P1_EXECUTION.md) | `af32999` | done |
-| P2 — Snippet-first | Prompt tiers, lower patch cap | [JUDGE_JSON_CONTRACT_P2_EXECUTION.md](./JUDGE_JSON_CONTRACT_P2_EXECUTION.md) | — | pending |
+| P2 — Snippet-first | Prompt tiers, lower patch cap | [JUDGE_JSON_CONTRACT_P2_EXECUTION.md](./JUDGE_JSON_CONTRACT_P2_EXECUTION.md) | `9f8b7b3` | done |
 | P3 — Structured output | `json_schema` + `parse_llm_json_object` fallback | [JUDGE_JSON_CONTRACT_P3_EXECUTION.md](./JUDGE_JSON_CONTRACT_P3_EXECUTION.md) | — | pending |
 | P4 — Targeted retry | Max 1 retry on parse failure | [JUDGE_JSON_CONTRACT_P4_EXECUTION.md](./JUDGE_JSON_CONTRACT_P4_EXECUTION.md) | — | pending |
 | P5 — Staging + docs | Validation memo, program closeout | [JUDGE_JSON_CONTRACT_P5_EXECUTION.md](./JUDGE_JSON_CONTRACT_P5_EXECUTION.md) | — | pending |
