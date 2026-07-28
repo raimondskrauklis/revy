@@ -38,6 +38,7 @@ from app.services.model_policy import ModelRef, ModelRole, resolve_model
 logger = get_logger(__name__)
 
 JUDGE_MAX_PER_RUN = 10
+JUDGE_PROMPT_PATCH_MAX_CHARS = 2048
 
 _GROUNDING_WITH_EVIDENCE = (
     "Grounding (E2): Dismiss or weaken the finding if the claim is not entailed by "
@@ -104,6 +105,32 @@ def is_judge_candidate(*, severity: FindingSeverity, category: FindingCategory) 
     )
 
 
+def _truncate_judge_prompt_patch(patch: str) -> str:
+    if len(patch) <= JUDGE_PROMPT_PATCH_MAX_CHARS:
+        return patch
+    return patch[:JUDGE_PROMPT_PATCH_MAX_CHARS]
+
+
+def resolve_judge_prompt_file_patch(
+    evidence_snippet: str | None,
+    file_patch: str | None,
+) -> str | None:
+    """Snippet-first tier: omit patch when evidence excerpt is present."""
+    if not file_patch:
+        return None
+    if evidence_snippet and evidence_snippet.strip():
+        return None
+    return _truncate_judge_prompt_patch(file_patch)
+
+
+def judge_prompt_file_patch_chars(
+    evidence_snippet: str | None,
+    file_patch: str | None,
+) -> int | None:
+    prompt_patch = resolve_judge_prompt_file_patch(evidence_snippet, file_patch)
+    return len(prompt_patch) if prompt_patch else None
+
+
 def _build_judge_prompt(
     *,
     group: GitHubFindingGroupORM,
@@ -130,12 +157,13 @@ def _build_judge_prompt(
         parts.append(f"Line: {line_ref}")
     if suggestion:
         parts.append(f"Suggested fix: {suggestion}")
-    if file_patch:
+    prompt_patch = resolve_judge_prompt_file_patch(evidence_snippet, file_patch)
+    if prompt_patch:
         parts.extend(
             [
                 "",
                 "File diff (scoped):",
-                file_patch,
+                prompt_patch,
             ]
         )
     if evidence_snippet:
@@ -215,6 +243,7 @@ async def _run_judge_llm_loop(
             )
             evidence_snippet = finding.evidence_snippet or code_context.evidence_snippet
             file_patch = code_context.file_patch
+            patch_chars = judge_prompt_file_patch_chars(evidence_snippet, file_patch)
             user_prompt = _build_judge_prompt(
                 group=group,
                 evidence_snippet=evidence_snippet,
@@ -246,7 +275,7 @@ async def _run_judge_llm_loop(
                             group_id=group.id,
                             evidence_snippet=evidence_snippet,
                             user_prompt=user_prompt,
-                            file_patch_chars=len(file_patch) if file_patch else None,
+                            file_patch_chars=patch_chars,
                             exc=exc,
                         )
                     )
@@ -284,7 +313,7 @@ async def _run_judge_llm_loop(
                         user_prompt=user_prompt,
                         raw_response=raw,
                         outcome=outcome_str,
-                        file_patch_chars=len(file_patch) if file_patch else None,
+                        file_patch_chars=patch_chars,
                     )
                 )
             judged += 1

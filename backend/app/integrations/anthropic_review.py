@@ -310,8 +310,11 @@ def build_verification_judge_prompt(
         if end_line is not None and end_line != start_line:
             line_ref = f"{start_line}-{end_line}"
         parts.append(f"Line: {line_ref}")
-    if push_delta_patch:
-        parts.extend(["", "Push delta (since prior revision):", push_delta_patch])
+    from app.services.github_finding_judge import resolve_judge_prompt_file_patch
+
+    prompt_patch = resolve_judge_prompt_file_patch(evidence_snippet, push_delta_patch)
+    if prompt_patch:
+        parts.extend(["", "Push delta (since prior revision):", prompt_patch])
     if evidence_snippet:
         parts.extend(["", "Evidence excerpt:", evidence_snippet])
     return "\n".join(parts)

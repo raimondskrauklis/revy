@@ -82,6 +82,8 @@ Judge escalation is **broken often on staging**: of judge-manifest candidates in
 3. Judge `user_prompt` p50 **≤2k chars** when `start_line` + snippet present (down from 10k+ failure case).
 4. RG-6 warnings (`judge_candidate_unpublished_missing_outcome`) rare and only on genuine judge `dismissed`/policy cases — not parse noise.
 
+**P2 prompt metrics (post-deploy — operator fills):** After P2 ships, re-query staging judge manifests for `user_prompt` length and `file_patch_chars`. Expect p50 drop from ~10k (snippet + 8k patch) toward ~1k when snippet present; `file_patch_chars` null when snippet tier applies.
+
 ### Deliverables (for general plan)
 
 | # | Deliverable | Notes |

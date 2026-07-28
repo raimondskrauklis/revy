@@ -107,8 +107,31 @@ def test_build_verification_judge_prompt_includes_push_delta():
     )
     assert "push delta" in prompt.lower() or "Push delta" in prompt
     assert "Null deref" in prompt
-    assert "@@ -1 +1 @@" in prompt
+    assert "@@ -1 +1 @@" not in prompt
+    assert "old line" in prompt
     assert "upheld|dismissed" in VERIFICATION_JUDGE_SYSTEM_PROMPT
+
+
+def test_build_verification_judge_prompt_includes_patch_without_snippet():
+    from app.integrations.anthropic_review import build_verification_judge_prompt
+
+    group = type(
+        "Group",
+        (),
+        {
+            "title": "Bug",
+            "severity": "error",
+            "category": "bug",
+            "file_path": "app/x.py",
+            "message": "msg",
+        },
+    )()
+    prompt = build_verification_judge_prompt(
+        group=group,
+        push_delta_patch="@@ -1 +1 @@\n-old\n+new\n",
+        evidence_snippet=None,
+    )
+    assert "@@ -1 +1 @@" in prompt
 
 
 def test_judge_outcome_json_schema_matches_parse_judge_outcome():

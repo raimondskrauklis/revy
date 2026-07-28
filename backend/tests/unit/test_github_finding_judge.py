@@ -126,7 +126,7 @@ def test_build_judge_prompt_without_evidence_uses_conservative_grounding():
     assert "Judge conservatively" in prompt
 
 
-def test_build_judge_prompt_includes_file_patch():
+def test_build_judge_prompt_omits_file_patch_when_snippet_present():
     group = GitHubFindingGroupORM(
         workspace_id=uuid.uuid4(),
         pull_request_id=uuid.uuid4(),
@@ -144,8 +144,148 @@ def test_build_judge_prompt_includes_file_patch():
         evidence_snippet="snippet",
         file_patch="@@ -1 +1 @@\n+line\n",
     )
+    assert "File diff (scoped):" not in prompt
+    assert "snippet" in prompt
+
+
+def test_build_judge_prompt_includes_file_patch_when_no_snippet():
+    group = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=uuid.uuid4(),
+        fingerprint="abc",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Bug",
+        message="msg",
+        file_path="app/handler.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+    prompt = _build_judge_prompt(
+        group=group,
+        evidence_snippet=None,
+        file_patch="@@ -1 +1 @@\n+line\n",
+    )
     assert "File diff (scoped):" in prompt
     assert "+line" in prompt
+
+
+def test_build_judge_prompt_truncates_patch_at_prompt_cap():
+    from app.services.github_finding_judge import JUDGE_PROMPT_PATCH_MAX_CHARS
+
+    group = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=uuid.uuid4(),
+        fingerprint="abc",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Bug",
+        message="msg",
+        file_path="app/handler.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+    long_patch = "x" * (JUDGE_PROMPT_PATCH_MAX_CHARS + 500)
+    prompt = _build_judge_prompt(
+        group=group,
+        evidence_snippet=None,
+        file_patch=long_patch,
+    )
+    assert long_patch not in prompt
+    assert "x" * JUDGE_PROMPT_PATCH_MAX_CHARS in prompt
+
+
+@pytest.mark.asyncio
+async def test_run_judge_snippet_first_prompt_size_omits_large_patch():
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    group_id = uuid.uuid4()
+    huge_patch = "p" * 8192
+
+    run = GitHubReviewRunORM(
+        revision_id=uuid.uuid4(),
+        workspace_id=workspace_id,
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    run.id = review_run_id
+
+    group = GitHubFindingGroupORM(
+        workspace_id=workspace_id,
+        pull_request_id=uuid.uuid4(),
+        fingerprint="abc",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="RCE",
+        message="Remote code execution",
+        file_path="app/run.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+    group.id = group_id
+
+    finding = GitHubFindingORM(
+        review_run_id=review_run_id,
+        workspace_id=workspace_id,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="RCE",
+        message="Remote code execution",
+        file_path="app/run.py",
+        group_id=group_id,
+        evidence_snippet="if value is None:\n    raise ValueError",
+    )
+
+    revision = MagicMock()
+    revision.pull_request_id = uuid.uuid4()
+    revision.base_sha = "base"
+    revision.head_sha = "head"
+    pull_request = MagicMock()
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, group, revision, pull_request])
+    session.scalars = AsyncMock(return_value=[finding])
+    session.scalar = AsyncMock(return_value=None)
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    artifacts: list = []
+    captured_prompt: dict[str, str] = {}
+
+    async def _judge_side_effect(*_args, user_prompt: str, **_kwargs):
+        captured_prompt["user_prompt"] = user_prompt
+        return {"outcome": "dismissed", "notes": "false positive"}
+
+    code_context = MagicMock()
+    code_context.evidence_snippet = "fallback snippet"
+    code_context.file_patch = huge_patch
+
+    with patch("app.services.github_finding_judge.settings") as mock_settings:
+        mock_settings.judge_llm_enabled.return_value = True
+        mock_settings.revy_revision_timeout_standard_seconds = 900
+        with patch(
+            "app.services.github_finding_judge.resolve_model",
+            AsyncMock(return_value=ModelRef(provider="anthropic", model_id="claude-test")),
+        ):
+            with patch(
+                "app.services.github_finding_judge.resolve_judge_code_context",
+                return_value=code_context,
+            ):
+                with patch(
+                    "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
+                    AsyncMock(side_effect=_judge_side_effect),
+                ):
+                    await record_review_run_judge_status(
+                        session,
+                        review_run_id=review_run_id,
+                        artifacts_out=artifacts,
+                    )
+
+    assert len(captured_prompt["user_prompt"]) < 2500
+    assert huge_patch not in captured_prompt["user_prompt"]
+    assert len(artifacts) == 1
+    assert artifacts[0].file_patch_chars is None
 
 
 def test_judge_system_prompt_verifier_role():
