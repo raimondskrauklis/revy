@@ -164,6 +164,11 @@ class Settings(BaseSettings):
     revy_revision_timeout_deep_seconds: int = 1500
     revy_revision_timeout_critical_seconds: int = 1800
 
+    # Review prompt caps — RCX engineering context (wired in github_review P2)
+    revy_diff_max_bytes: int = 524288
+    revy_engineering_context_max_bytes: int = 32768
+    revy_pr_body_max_bytes: int = 4096
+
     @property
     def keycloak_token_issuer(self) -> str:
         """OIDC issuer (`iss`) for JWT validation — public URL when KEYCLOAK_URL is internal."""

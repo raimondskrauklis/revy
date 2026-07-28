@@ -1249,6 +1249,25 @@ def test_build_retrieval_manifest_includes_sc3_defaults():
     assert manifest["changed_symbols"] == []
 
 
+def test_build_retrieval_manifest_includes_engineering_context_defaults():
+    manifest = github_review.build_retrieval_manifest(
+        index_mode=GitHubIndexMode.diff,
+        changed_files=["app/main.py"],
+        diff_truncated=False,
+        omitted_files=[],
+        fallback_reason=None,
+        supplemental=[],
+    )
+
+    assert manifest["engineering_context_injected"] is False
+    assert manifest["engineering_context_bytes"] == 0
+    assert manifest["diff_max_bytes"] == 524288
+    assert manifest["unified_diff_bytes"] == 0
+    assert manifest["active_program"] is None
+    assert manifest["lock_ids_extracted"] == []
+    assert manifest["engineering_context_deduped_paths"] == []
+
+
 def test_review_run_polish_defaults():
     run = GitHubReviewRunORM(
         revision_id=uuid.uuid4(),
