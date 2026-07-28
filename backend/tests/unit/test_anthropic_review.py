@@ -109,3 +109,44 @@ def test_build_verification_judge_prompt_includes_push_delta():
     assert "Null deref" in prompt
     assert "@@ -1 +1 @@" in prompt
     assert "upheld|dismissed" in VERIFICATION_JUDGE_SYSTEM_PROMPT
+
+
+def test_judge_outcome_json_schema_matches_parse_judge_outcome():
+    schema = anthropic_review.judge_outcome_json_schema()
+    assert schema["required"] == ["outcome"]
+    outcome_enum = schema["properties"]["outcome"]["enum"]
+    for value in ("upheld", "dismissed", "modified"):
+        outcome, notes = anthropic_review.parse_judge_outcome(
+            {"outcome": value, "notes": "ok"}
+        )
+        assert outcome == value
+        assert notes == "ok"
+        assert value in outcome_enum
+
+
+@pytest.mark.asyncio
+async def test_post_structured_judge_smoke_sends_output_config():
+    payload = {"content": [{"text": json.dumps({"outcome": "dismissed", "notes": "n/a"})}]}
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = payload
+    client = AsyncMock(spec=httpx.AsyncClient)
+    client.post = AsyncMock(return_value=response)
+
+    with patch("app.integrations.anthropic_review.settings") as mock_settings:
+        mock_settings.anthropic_gateway_messages_url = "https://llm.ai.rtu.lv/v1/messages"
+        mock_settings.anthropic_auth_token = "rtu-token"
+        mock_settings.effective_anthropic_gateway_judge_model = "azure_ai/claude-opus-5"
+        mock_settings.revy_revision_timeout_standard_seconds = 30
+        profile = anthropic_review._gateway_profile("claude-sonnet-5")
+        assert profile is not None
+        text = await anthropic_review._post_structured_judge_smoke(
+            client,
+            profile,
+            user_prompt="judge this",
+        )
+
+    assert json.loads(text)["outcome"] == "dismissed"
+    body = client.post.await_args.kwargs["json"]
+    assert body["output_config"]["format"]["type"] == "json_schema"
+    assert body["output_config"]["format"]["schema"]["required"] == ["outcome"]

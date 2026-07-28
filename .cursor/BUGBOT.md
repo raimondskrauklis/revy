@@ -33,8 +33,14 @@ When reviewing **backend** changes that touch publish / formatter / pipeline / g
 
 **Program:** Judge input quality on feature branch `feat/judge-input-quality` — scoped judge context, verifier prompts, Moonshot PR body fetch. Review generation lifecycle shipped on `main` via PR #54.
 
-**Finding resolution (active program):**
+**Finding resolution (shipped on `main`):**
 
 - [FINDING_RESOLUTION_EXECUTION.md](../docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_EXECUTION.md) — P0–P5 scope, closure passes, FR-Q12
 - [FINDING_RESOLUTION_FINDINGS.md](../docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_FINDINGS.md) — FR-* gaps, multi-pass model
 - [FINDING_RESOLUTION_GENERAL_PLAN.md](../docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_GENERAL_PLAN.md) — phase goals
+
+**Judge JSON contract (active program):**
+
+- [JUDGE_JSON_CONTRACT_EXECUTION.md](../docs/review-pipeline/judge-json-contract/waves/JUDGE_JSON_CONTRACT_EXECUTION.md) — P0–P5 scope, structured output, observability
+- [JUDGE_JSON_CONTRACT_FINDINGS.md](../docs/review-pipeline/judge-json-contract/JUDGE_JSON_CONTRACT_FINDINGS.md) — JC-* gaps, staging metrics
+- [JUDGE_JSON_CONTRACT_GENERAL_PLAN.md](../docs/review-pipeline/judge-json-contract/JUDGE_JSON_CONTRACT_GENERAL_PLAN.md) — phase goals

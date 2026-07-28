@@ -192,6 +192,24 @@ DB connect: [DATABASE_CONNECTION_GUIDE.md](../../utils/DATABASE_CONNECTION_GUIDE
 
 ---
 
+## P0 smoke results (operator)
+
+**Date:** _pending operator run_  
+**Script:** `backend/scripts/test_anthropic_judge_gateway.py`
+
+| Path | `--structured` | Result | Notes |
+|------|----------------|--------|-------|
+| RTU gateway (`ANTHROPIC_BASE_URL`) | no | _pending_ | Plain prompt JSON |
+| RTU gateway | yes | _pending_ | `output_config.format` json_schema |
+| Direct API (`ANTHROPIC_API_KEY`) | no | _pending_ | Only if direct configured |
+| Direct API | yes | _pending_ | Only if direct configured |
+| `--chars 1000` | no | _pending_ | Prompt size sweep |
+| `--chars 10000` | no | _pending_ | Reproduces staging bloat |
+
+**P3 lock:** set `revy_judge_structured_output=True` only when gateway structured row = pass.
+
+---
+
 ## Next steps
 
 1. ~~Merge finding-resolution PR (code + these docs).~~ ✓ merged #57 (`a73c9ff`).

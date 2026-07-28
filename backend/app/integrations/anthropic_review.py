@@ -153,17 +153,21 @@ async def _post_anthropic_messages(
     user_prompt: str,
     max_tokens: int,
     timeout_seconds: float,
+    output_config: dict | None = None,
 ) -> str:
     headers = {**_anthropic_base_headers(), **profile.auth_headers}
+    body: dict[str, object] = {
+        "model": profile.model_id,
+        "max_tokens": max_tokens,
+        "system": system,
+        "messages": [{"role": "user", "content": user_prompt}],
+    }
+    if output_config is not None:
+        body["output_config"] = output_config
     response = await client.post(
         profile.messages_url,
         headers=headers,
-        json={
-            "model": profile.model_id,
-            "max_tokens": max_tokens,
-            "system": system,
-            "messages": [{"role": "user", "content": user_prompt}],
-        },
+        json=body,
         timeout=timeout_seconds,
     )
     response.raise_for_status()
@@ -321,3 +325,49 @@ def parse_judge_outcome(raw: dict) -> tuple[str, str | None]:
         raise ValueError("judge_outcome_invalid")
     notes = raw.get("notes")
     return outcome, notes.strip() if isinstance(notes, str) and notes.strip() else None
+
+
+def judge_outcome_json_schema() -> dict[str, object]:
+    """JSON schema for judge structured-output smoke (P0) and production wiring (P3)."""
+    return {
+        "type": "object",
+        "properties": {
+            "outcome": {
+                "type": "string",
+                "enum": ["upheld", "dismissed", "modified"],
+            },
+            "notes": {"type": "string"},
+        },
+        "required": ["outcome"],
+        "additionalProperties": False,
+    }
+
+
+def judge_structured_output_config() -> dict[str, object]:
+    return {
+        "format": {
+            "type": "json_schema",
+            "schema": judge_outcome_json_schema(),
+        }
+    }
+
+
+async def _post_structured_judge_smoke(
+    client: httpx.AsyncClient,
+    profile: _AnthropicProfile,
+    *,
+    user_prompt: str,
+    system_prompt: str | None = None,
+    max_tokens: int = 1024,
+    timeout_seconds: float | None = None,
+) -> str:
+    """P0 smoke — structured judge JSON via output_config (promoted in P3)."""
+    return await _post_anthropic_messages(
+        client,
+        profile,
+        system=system_prompt or JUDGE_SYSTEM_PROMPT,
+        user_prompt=user_prompt,
+        max_tokens=max_tokens,
+        timeout_seconds=timeout_seconds or settings.revy_revision_timeout_standard_seconds,
+        output_config=judge_structured_output_config(),
+    )
