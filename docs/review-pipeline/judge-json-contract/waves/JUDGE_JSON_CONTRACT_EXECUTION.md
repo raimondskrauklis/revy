@@ -41,7 +41,7 @@ each phase: implement → pytest gate → Bugbot → local commit (operator push
 | P2 — Snippet-first | Prompt tiers, lower patch cap | [JUDGE_JSON_CONTRACT_P2_EXECUTION.md](./JUDGE_JSON_CONTRACT_P2_EXECUTION.md) | `9f8b7b3` | done |
 | P3 — Structured output | `json_schema` + `parse_llm_json_object` fallback | [JUDGE_JSON_CONTRACT_P3_EXECUTION.md](./JUDGE_JSON_CONTRACT_P3_EXECUTION.md) | `24dd54e` | done |
 | P4 — Targeted retry | Max 1 retry on parse failure | [JUDGE_JSON_CONTRACT_P4_EXECUTION.md](./JUDGE_JSON_CONTRACT_P4_EXECUTION.md) | `60eb2ca` | done |
-| P5 — Staging + docs | Validation memo, program closeout | [JUDGE_JSON_CONTRACT_P5_EXECUTION.md](./JUDGE_JSON_CONTRACT_P5_EXECUTION.md) | `90ac5c4` | code-complete — human gate pending |
+| P5 — Staging + docs | Validation memo, program closeout | [JUDGE_JSON_CONTRACT_P5_EXECUTION.md](./JUDGE_JSON_CONTRACT_P5_EXECUTION.md) | `9514ec2` | code-complete — human gate pending |
 
 **Peer review:** execution-peer-review complete (2026-07-28) — P1 integration-layer + P4.4 skip fixes applied.
 
