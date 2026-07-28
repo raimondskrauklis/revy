@@ -5,8 +5,11 @@ from __future__ import annotations
 import time
 from uuid import UUID
 
+from sqlalchemy import select
+
 from app.core.database import get_db_context
 from app.core.logging import get_logger
+from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.services.github_finding_closure import (
     apply_pass2_closure_for_review_run,
@@ -22,8 +25,10 @@ from app.services.github_pipeline_trace import (
     finalize_pipeline_github_check_for_review_run,
     get_pipeline_run_for_review_run,
     record_judge_pipeline_step,
+    record_reconcile_pipeline_step,
 )
 from app.services.github_publish import enqueue_publish_for_review_run
+from app.services.github_resolution_metrics import compute_resolution_transitions
 from app.workers.async_runner import run_worker_async
 from app.workers.celery_app import celery_app
 
@@ -66,11 +71,47 @@ def reconcile_review_run_task(self, review_run_id: str) -> None:
             )
             verification_ms = int((time.monotonic() - verification_started) * 1000)
 
+            review_run = await session.get(GitHubReviewRunORM, UUID(review_run_id))
+            resolution_pass: dict[str, object] | None = None
+            if review_run is not None:
+                current_revision = await session.get(
+                    GitHubPullRequestRevisionORM,
+                    review_run.revision_id,
+                )
+                if current_revision is not None:
+                    prior_revision = await session.scalar(
+                        select(GitHubPullRequestRevisionORM).where(
+                            GitHubPullRequestRevisionORM.pull_request_id
+                            == current_revision.pull_request_id,
+                            GitHubPullRequestRevisionORM.revision_number
+                            == current_revision.revision_number - 1,
+                        )
+                    )
+                    if prior_revision is not None:
+                        pull_request = await session.get(
+                            GitHubPullRequestORM,
+                            current_revision.pull_request_id,
+                        )
+                        if pull_request is not None:
+                            resolution_pass = await compute_resolution_transitions(
+                                session,
+                                pull_request=pull_request,
+                                prior_revision=prior_revision,
+                                current_revision=current_revision,
+                            )
+
             pipeline_run = await get_pipeline_run_for_review_run(
                 session,
                 review_run_id=UUID(review_run_id),
             )
             if pipeline_run is not None:
+                await record_reconcile_pipeline_step(
+                    session,
+                    pipeline_run_id=pipeline_run.id,
+                    group_count=len(group_ids),
+                    duration_ms=max(reconcile_ms + pass2_ms, 0),
+                    resolution_pass=resolution_pass,
+                )
                 await record_judge_pipeline_step(
                     session,
                     pipeline_run_id=pipeline_run.id,
@@ -81,7 +122,6 @@ def reconcile_review_run_task(self, review_run_id: str) -> None:
                     verification_candidates=verification_result.artifacts,
                 )
 
-            review_run = await session.get(GitHubReviewRunORM, UUID(review_run_id))
             if review_run is not None and is_review_run_superseded(review_run):
                 logger.info(
                     "publish_enqueue_skipped_superseded",

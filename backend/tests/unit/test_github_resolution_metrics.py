@@ -9,6 +9,7 @@ from app.constants.enums import (
     FindingCategory,
     FindingSeverity,
     GitHubFindingGroupState,
+    ResolutionMethod,
     ResolutionStatus,
 )
 from app.integrations.github_api import CompareCommitsResult, CompareFileChange
@@ -269,3 +270,172 @@ async def test_apply_resolution_status_for_synchronize_stamps_compare_failed():
     assert updated == 1
     assert group.resolution_status == ResolutionStatus.still_open
     assert group.closure_blocked_reason == "compare_failed"
+
+
+def test_build_resolution_pass_manifest_counts_transitions():
+    prior_revision_id = uuid.uuid4()
+    current_revision_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+
+    addressed = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint="a",
+        state=GitHubFindingGroupState.resolved,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Fixed",
+        message="M",
+        file_path="app/a.py",
+        last_seen_revision_id=prior_revision_id,
+        resolution_method=ResolutionMethod.absent_and_addressed,
+        resolved_at_revision_id=current_revision_id,
+    )
+    judge_dismissed = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint="b",
+        state=GitHubFindingGroupState.resolved,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Dismissed",
+        message="M",
+        file_path="app/b.py",
+        last_seen_revision_id=prior_revision_id,
+        resolution_method=ResolutionMethod.judge_dismissed,
+        resolved_at_revision_id=current_revision_id,
+    )
+    still_open = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint="c",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Open",
+        message="M",
+        file_path="app/c.py",
+        last_seen_revision_id=prior_revision_id,
+        resolution_status=ResolutionStatus.still_open,
+    )
+    compare_failed = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint="d",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Blocked",
+        message="M",
+        file_path="app/d.py",
+        last_seen_revision_id=prior_revision_id,
+        resolution_status=ResolutionStatus.still_open,
+        closure_blocked_reason="compare_failed",
+    )
+    pre_sync_resolved = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint="e",
+        state=GitHubFindingGroupState.resolved,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Old",
+        message="M",
+        file_path="app/e.py",
+        last_seen_revision_id=prior_revision_id,
+        resolution_method=ResolutionMethod.judge_dismissed,
+        resolved_at_revision_id=uuid.uuid4(),
+    )
+
+    manifest = github_resolution_metrics.build_resolution_pass_manifest(
+        [addressed, judge_dismissed, still_open, compare_failed, pre_sync_resolved],
+        prior_revision_id=prior_revision_id,
+        current_revision_id=current_revision_id,
+    )
+
+    assert manifest["transitions_addressed"] == 1
+    assert manifest["transitions_dismissed"]["judge_dismissed"] == 1
+    assert manifest["transition_count"] == 2
+    assert manifest["denominator_active_prior"] == 3
+    assert manifest["resolution_rate_pct"] == 66.7
+    assert manifest["compare_failed_count"] == 1
+
+
+def test_build_resolution_pass_manifest_includes_rereported_stamp_cohort():
+    prior_revision_id = uuid.uuid4()
+    current_revision_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+
+    rereported = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint="r",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Re-reported",
+        message="M",
+        file_path="app/r.py",
+        last_seen_revision_id=current_revision_id,
+        resolution_status=ResolutionStatus.still_open,
+    )
+
+    manifest = github_resolution_metrics.build_resolution_pass_manifest(
+        [rereported],
+        prior_revision_id=prior_revision_id,
+        current_revision_id=current_revision_id,
+    )
+
+    assert manifest["denominator_active_prior"] == 1
+    assert manifest["still_open_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_compute_resolution_transitions_queries_groups():
+    prior_revision_id = uuid.uuid4()
+    current_revision_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=1,
+        title="PR",
+        state="open",
+        head_sha="newsha",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=2,
+    )
+    pull_request.id = pull_request_id
+
+    prior_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="oldsha",
+        base_sha="base1",
+    )
+    prior_revision.id = prior_revision_id
+
+    current_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=2,
+        head_sha="newsha",
+        base_sha="base1",
+    )
+    current_revision.id = current_revision_id
+
+    session = AsyncMock()
+    session.scalars = AsyncMock(return_value=[])
+
+    manifest = await github_resolution_metrics.compute_resolution_transitions(
+        session,
+        pull_request=pull_request,
+        prior_revision=prior_revision,
+        current_revision=current_revision,
+    )
+
+    assert manifest["denominator_active_prior"] == 0
+    assert manifest["transition_count"] == 0

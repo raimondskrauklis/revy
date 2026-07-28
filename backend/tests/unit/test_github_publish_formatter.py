@@ -11,6 +11,7 @@ from app.constants.enums import (
     FindingSeverity,
     GitHubFindingGroupState,
     GitHubIndexMode,
+    ResolutionMethod,
     ResolutionStatus,
 )
 from app.models.github_finding_group import GitHubFindingGroupORM
@@ -21,6 +22,8 @@ from app.services.github_publish_formatter import (
     build_pr_review_comment_fallback,
     build_publish_format_result,
     compute_confidence,
+    count_resolution_status,
+    format_resolution_metrics_block,
     normalize_llm_issue_comment,
 )
 
@@ -74,12 +77,12 @@ def test_build_g9_resolution_prose_ignores_addressed_still_active():
 def test_build_g9_resolution_prose():
     groups = [
         _group(
-            resolution_status=ResolutionStatus.addressed,
-            state=GitHubFindingGroupState.superseded,
+            resolution_method=ResolutionMethod.absent_and_addressed,
+            state=GitHubFindingGroupState.resolved,
             fingerprint="a",
         ),
         _group(
-            resolution_status=ResolutionStatus.judge_dismissed,
+            resolution_method=ResolutionMethod.judge_dismissed,
             state=GitHubFindingGroupState.resolved,
             fingerprint="b",
         ),
@@ -87,6 +90,73 @@ def test_build_g9_resolution_prose():
     prose = build_g9_resolution_prose(groups)
     assert "fixed since last push" in prose
     assert "dismissed by judge" in prose
+
+
+def test_count_resolution_status_uses_resolution_method():
+    groups = [
+        _group(
+            resolution_method=ResolutionMethod.absent_and_addressed,
+            state=GitHubFindingGroupState.resolved,
+            fingerprint="a",
+        ),
+        _group(
+            resolution_method=ResolutionMethod.verification_dismissed,
+            state=GitHubFindingGroupState.resolved,
+            fingerprint="b",
+        ),
+        _group(
+            resolution_status=ResolutionStatus.still_open,
+            state=GitHubFindingGroupState.active,
+            fingerprint="c",
+        ),
+    ]
+    counts = count_resolution_status(groups)
+    assert counts[ResolutionStatus.addressed.value] == 1
+    assert counts[ResolutionMethod.verification_dismissed.value] == 1
+    assert counts[ResolutionStatus.still_open.value] == 1
+
+
+def test_format_resolution_metrics_block():
+    block = format_resolution_metrics_block(
+        {
+            "resolution_rate_pct": 50.0,
+            "transition_count": 1,
+            "denominator_active_prior": 2,
+            "transitions_addressed": 1,
+            "transitions_dismissed": {"judge_dismissed": 0, "verification_dismissed": 0},
+            "still_open_count": 1,
+            "compare_failed_count": 0,
+        }
+    )
+    assert "Resolution rate" in block
+    assert "Closed as fixed" in block
+    assert "Still open" in block
+
+
+def test_build_pr_review_comment_fallback_includes_resolution_metrics_block():
+    groups = [
+        _group(
+            resolution_method=ResolutionMethod.absent_and_addressed,
+            state=GitHubFindingGroupState.resolved,
+        ),
+    ]
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=42,
+        head_sha="abc123",
+        revision_number=2,
+        groups=groups,
+        resolution_metrics_manifest={
+            "resolution_rate_pct": 100.0,
+            "transition_count": 1,
+            "denominator_active_prior": 1,
+            "transitions_addressed": 1,
+            "transitions_dismissed": {},
+            "compare_failed_count": 0,
+        },
+    )
+    markdown = build_pr_review_comment_fallback(ctx)
+    assert "Resolution metrics (this push)" in markdown
 
 
 def test_build_check_run_summary_is_compact():
@@ -99,8 +169,8 @@ def test_build_check_run_summary_is_compact():
 def test_build_pr_review_comment_fallback_includes_g9_and_metadata():
     groups = [
         _group(
-            resolution_status=ResolutionStatus.addressed,
-            state=GitHubFindingGroupState.superseded,
+            resolution_method=ResolutionMethod.absent_and_addressed,
+            state=GitHubFindingGroupState.resolved,
         ),
     ]
     markdown = build_pr_review_comment_fallback(_ctx(groups))
@@ -145,7 +215,22 @@ async def test_build_pr_review_comment_unwraps_json_body_from_moonshot():
     from app.services.github_publish_formatter import build_pr_review_comment
 
     groups = [_group(severity=FindingSeverity.warning)]
-    ctx = _ctx(groups)
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=42,
+        head_sha="abc123",
+        revision_number=2,
+        groups=groups,
+        resolution_metrics_manifest={
+            "resolution_rate_pct": 100.0,
+            "transition_count": 1,
+            "denominator_active_prior": 1,
+            "transitions_addressed": 1,
+            "transitions_dismissed": {},
+            "compare_failed_count": 0,
+            "still_open_count": 0,
+        },
+    )
     moonshot_json = (
         '{"body":"## Code Review Summary\\n\\nTwo warnings on this revision.\\n\\n'
         '## Confidence Score\\n\\n4/5"}'
@@ -165,6 +250,7 @@ async def test_build_pr_review_comment_unwraps_json_body_from_moonshot():
     assert result.startswith("## Code Review Summary")
     assert not result.startswith("{")
     assert "Confidence Score" in result
+    assert "Resolution metrics (this push)" in result
 
 
 @pytest.mark.asyncio
@@ -203,8 +289,8 @@ def test_build_pr_review_comment_fallback_greptile_shape():
         _group(severity=FindingSeverity.warning, file_path="app/a.py", fingerprint="a"),
         _group(severity=FindingSeverity.error, file_path="app/b.py", fingerprint="b"),
         _group(
-            resolution_status=ResolutionStatus.addressed,
-            state=GitHubFindingGroupState.superseded,
+            resolution_method=ResolutionMethod.absent_and_addressed,
+            state=GitHubFindingGroupState.resolved,
             fingerprint="c",
         ),
     ]

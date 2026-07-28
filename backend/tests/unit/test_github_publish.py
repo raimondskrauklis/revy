@@ -53,26 +53,30 @@ def _publish_formatter_defaults(request):
         AsyncMock(return_value=None),
     ):
         with patch(
-            "app.services.github_publish._fetch_prior_completed_publish_jobs",
-            AsyncMock(return_value=[]),
+            "app.services.github_publish.get_resolution_metrics_for_review_run",
+            AsyncMock(return_value=None),
         ):
-            with resolve_ctx:
-                with patch(
-                    "app.services.github_publish.github_api.build_review_thread_comment_index",
-                    AsyncMock(return_value={}),
-                ):
+            with patch(
+                "app.services.github_publish._fetch_prior_completed_publish_jobs",
+                AsyncMock(return_value=[]),
+            ):
+                with resolve_ctx:
                     with patch(
-                        "app.services.github_publish.build_publish_format_result_async",
-                        AsyncMock(
-                            return_value=PublishFormatResult(
-                                check_summary="## Revy review\n\n**Confidence:** 5/5",
-                                issue_comment="## Revy code review\n\nfull narrative",
-                                confidence=5,
-                                summary_json={"confidence": 5, "active_count": 0, "resolution": {}},
-                            )
-                        ),
+                        "app.services.github_publish.github_api.build_review_thread_comment_index",
+                        AsyncMock(return_value={}),
                     ):
-                        yield
+                        with patch(
+                            "app.services.github_publish.build_publish_format_result_async",
+                            AsyncMock(
+                                return_value=PublishFormatResult(
+                                    check_summary="## Revy review\n\n**Confidence:** 5/5",
+                                    issue_comment="## Revy code review\n\nfull narrative",
+                                    confidence=5,
+                                    summary_json={"confidence": 5, "active_count": 0, "resolution": {}},
+                                )
+                            ),
+                        ):
+                            yield
 
 
 def test_compute_check_conclusion_neutral_on_critical():

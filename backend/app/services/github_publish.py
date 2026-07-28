@@ -40,6 +40,7 @@ from app.services.github_pipeline_trace import (
     finalize_pipeline_github_check_failure,
     finalize_pipeline_github_check_neutral,
     get_pipeline_run_for_review_run,
+    get_resolution_metrics_for_review_run,
     link_publish_job_to_pipeline,
     record_publish_pipeline_step,
     record_publish_skip_on_pipeline,
@@ -975,6 +976,10 @@ async def _build_publish_surface(
         workspace_id=job.workspace_id,
         revision_id=job.revision_id,
     )
+    resolution_metrics_manifest = await get_resolution_metrics_for_review_run(
+        session,
+        review_run_id=job.review_run_id,
+    )
     formatted = await build_publish_format_result_async(
         PublishFormatContext(
             pull_request_id=pull_request.id,
@@ -984,6 +989,7 @@ async def _build_publish_surface(
             groups=groups,
             index_mode=index_job.index_mode if index_job is not None else None,
             fallback_reason=index_job.fallback_reason if index_job is not None else None,
+            resolution_metrics_manifest=resolution_metrics_manifest,
         )
     )
     prior_jobs = await _fetch_prior_completed_publish_jobs(

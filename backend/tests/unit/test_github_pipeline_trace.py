@@ -33,8 +33,10 @@ from app.services.github_pipeline_trace import (
     ensure_pipeline_run_for_index_job,
     finalize_pipeline_github_check_neutral,
     get_pipeline_trace_for_review_run,
+    get_resolution_metrics_for_review_run,
     purge_old_pipeline_artifacts,
     record_index_pipeline_step,
+    record_reconcile_pipeline_step,
     record_review_pipeline_step,
     start_pipeline_github_check,
 )
@@ -454,3 +456,72 @@ async def test_record_judge_pipeline_step_includes_verification_manifest():
     assert manifest_artifact.content_json["verification_judged_count"] == 1
     assert len(manifest_artifact.content_json["verification_candidates"]) == 1
     assert manifest_artifact.content_json["verification_group_ids"]
+
+
+@pytest.mark.asyncio
+async def test_record_reconcile_pipeline_step_writes_resolution_pass():
+    pipeline_run_id = uuid.uuid4()
+    resolution_pass = {
+        "transition_count": 2,
+        "denominator_active_prior": 4,
+        "resolution_rate_pct": 50.0,
+    }
+
+    session = AsyncMock()
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    await record_reconcile_pipeline_step(
+        session,
+        pipeline_run_id=pipeline_run_id,
+        group_count=3,
+        duration_ms=50,
+        resolution_pass=resolution_pass,
+    )
+
+    manifest_artifact = next(
+        call.args[0]
+        for call in session.add.call_args_list
+        if getattr(call.args[0], "kind", None) == PipelineArtifactKind.manifest
+    )
+    assert manifest_artifact.content_json["linked_group_count"] == 3
+    assert manifest_artifact.content_json["resolution_pass"] == resolution_pass
+
+
+@pytest.mark.asyncio
+async def test_get_resolution_metrics_for_review_run_reads_reconcile_manifest():
+    review_run_id = uuid.uuid4()
+    pipeline_run_id = uuid.uuid4()
+    step_id = uuid.uuid4()
+    resolution_pass = {"resolution_rate_pct": 75.0, "transition_count": 3}
+
+    pipeline_run = GitHubPipelineRunORM(
+        workspace_id=uuid.uuid4(),
+        review_run_id=review_run_id,
+        head_sha="abc",
+    )
+    pipeline_run.id = pipeline_run_id
+
+    reconcile_step = GitHubPipelineStepORM(
+        pipeline_run_id=pipeline_run_id,
+        step_type=PipelineStepType.reconcile,
+        status=PipelineStepStatus.completed,
+        duration_ms=10,
+    )
+    reconcile_step.id = step_id
+
+    manifest_artifact = GitHubPipelineArtifactORM(
+        step_id=step_id,
+        kind=PipelineArtifactKind.manifest,
+        content_json={"linked_group_count": 1, "resolution_pass": resolution_pass},
+    )
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[pipeline_run, reconcile_step, manifest_artifact])
+
+    result = await get_resolution_metrics_for_review_run(
+        session,
+        review_run_id=review_run_id,
+    )
+
+    assert result == resolution_pass

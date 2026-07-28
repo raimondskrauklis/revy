@@ -11,6 +11,8 @@ from app.constants.enums import (
     FindingCategory,
     FindingSeverity,
     GitHubFindingGroupState,
+    ResolutionMethod,
+    ResolutionStatus,
 )
 from app.core.pagination import CursorMeta, CursorParams, CursorResponse
 from app.schemas.github_review import ReconciledFindingResponse
@@ -35,6 +37,10 @@ async def test_get_reconciled_findings_returns_page():
         message="Unsanitized",
         file_path="app/db.py",
         last_seen_revision_id=revision_id,
+        resolution_status=ResolutionStatus.addressed,
+        resolution_method=ResolutionMethod.absent_and_addressed,
+        resolved_at_revision_id=revision_id,
+        closure_blocked_reason=None,
         created_at=now,
         updated_at=now,
     )
@@ -64,3 +70,4 @@ async def test_get_reconciled_findings_returns_page():
 
     assert len(response.data.items) == 1
     assert response.data.items[0].title == "SQLi"
+    assert response.data.items[0].resolution_method == ResolutionMethod.absent_and_addressed
