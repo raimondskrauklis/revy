@@ -4,14 +4,17 @@ from sqlalchemy import inspect
 
 from app.constants.enums import (
     GitHubIndexMode,
+    JudgePurpose,
     PipelineArtifactKind,
     PipelineStepStatus,
     PipelineStepType,
+    ResolutionMethod,
     ResolutionStatus,
 )
 from app.models import (
     GitHubCodeChunkORM,
     GitHubFindingGroupORM,
+    GitHubFindingJudgeOutcomeORM,
     GitHubFindingORM,
     GitHubIndexJobORM,
     GitHubPipelineArtifactORM,
@@ -30,6 +33,8 @@ def test_review_quality_enums_values():
     assert PipelineArtifactKind.raw_response.value == "raw_response"
     assert PipelineStepStatus.pending.value == "pending"
     assert ResolutionStatus.judge_dismissed.value == "judge_dismissed"
+    assert ResolutionMethod.absent_and_addressed.value == "absent_and_addressed"
+    assert JudgePurpose.verification.value == "verification"
 
 
 def test_review_quality_tables_registered():
@@ -82,6 +87,12 @@ def test_finding_and_group_quality_columns():
     group_columns = {column.name for column in inspect(GitHubFindingGroupORM).columns}
     assert "evidence_snippet" in finding_columns
     assert "resolution_status" in group_columns
+    assert {"resolution_method", "resolved_at_revision_id", "closure_blocked_reason"} <= group_columns
+
+
+def test_judge_outcome_has_judge_purpose():
+    columns = {column.name for column in inspect(GitHubFindingJudgeOutcomeORM).columns}
+    assert "judge_purpose" in columns
 
 
 def test_code_chunk_and_publish_job_quality_columns():

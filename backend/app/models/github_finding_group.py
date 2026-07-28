@@ -11,6 +11,7 @@ from app.constants.enums import (
     FindingCategory,
     FindingSeverity,
     GitHubFindingGroupState,
+    ResolutionMethod,
     ResolutionStatus,
 )
 from app.models.base import TimestampedModel
@@ -50,3 +51,10 @@ class GitHubFindingGroupORM(TimestampedModel):
         nullable=False,
     )
     resolution_status: Mapped[ResolutionStatus | None] = mapped_column(String(length=32), nullable=True)
+    resolution_method: Mapped[ResolutionMethod | None] = mapped_column(String(length=32), nullable=True)
+    resolved_at_revision_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("github_pull_request_revisions.id"),
+        nullable=True,
+    )
+    closure_blocked_reason: Mapped[str | None] = mapped_column(Text, nullable=True)

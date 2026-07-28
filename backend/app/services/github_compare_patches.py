@@ -1,5 +1,5 @@
 # backend/app/services/github_compare_patches.py
-"""GitHub compare patches for judge scoped context — J-8."""
+"""GitHub compare patches — shared helper for judge and resolution metrics."""
 from __future__ import annotations
 
 import httpx
@@ -15,16 +15,16 @@ from app.models.github_repository import GitHubRepositoryORM
 logger = get_logger(__name__)
 
 
-async def fetch_compare_patches_by_file(
+async def fetch_compare_patches(
     session: AsyncSession,
     *,
     pull_request: GitHubPullRequestORM,
-    revision: GitHubPullRequestRevisionORM,
+    base_sha: str | None,
+    head_sha: str | None,
+    log_event: str = "compare_patches_failed",
 ) -> dict[str, str]:
-    """Load per-file patches for a revision (same base/head pair as review ingest)."""
-    base_sha = revision.base_sha
-    head_sha = revision.head_sha
-    if not base_sha or not head_sha:
+    """Load per-file patches for a base/head SHA pair."""
+    if not base_sha or not head_sha or base_sha == head_sha:
         return {}
 
     repository = await session.get(GitHubRepositoryORM, pull_request.repository_id)
@@ -45,13 +45,30 @@ async def fetch_compare_patches_by_file(
             )
         except (httpx.HTTPError, OSError, NotFoundError, RateLimitedError, ServiceUnavailableError) as exc:
             logger.warning(
-                "judge_compare_patches_failed",
+                log_event,
                 extra={
                     "pull_request_id": str(pull_request.id),
-                    "revision_id": str(revision.id),
+                    "base_sha": base_sha,
+                    "head_sha": head_sha,
                     "error": str(exc),
                 },
             )
             return {}
 
     return {item.filename: item.patch for item in compare.files if item.patch}
+
+
+async def fetch_compare_patches_by_file(
+    session: AsyncSession,
+    *,
+    pull_request: GitHubPullRequestORM,
+    revision: GitHubPullRequestRevisionORM,
+) -> dict[str, str]:
+    """Load per-file patches for a revision (same base/head pair as review ingest)."""
+    return await fetch_compare_patches(
+        session,
+        pull_request=pull_request,
+        base_sha=revision.base_sha,
+        head_sha=revision.head_sha,
+        log_event="judge_compare_patches_failed",
+    )
