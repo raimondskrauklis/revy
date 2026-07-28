@@ -13,7 +13,7 @@ from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
 from app.services.github_compare_patches import ComparePatchesResult, fetch_compare_patches
-from app.services.github_finding_closure import COMPARE_FAILED_REASON
+from app.services.github_finding_closure_rules import COMPARE_FAILED_REASON
 
 _HUNK_HEADER_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 

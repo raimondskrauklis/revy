@@ -31,7 +31,7 @@ from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullReque
 from app.models.github_repository import GitHubRepositoryORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.schemas.github_review import ReconciledFindingResponse
-from app.services.github_finding_closure import (
+from app.services.github_finding_closure_rules import (
     reopen_fields_for_re_report,
     should_reopen_absent_and_addressed,
     should_skip_resolved_group_on_reconcile,

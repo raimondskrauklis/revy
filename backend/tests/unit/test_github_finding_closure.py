@@ -12,11 +12,13 @@ from app.constants.enums import (
 )
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.services.github_finding_closure import (
-    COMPARE_FAILED_REASON,
     VERIFICATION_JUDGE_MAX_PER_RUN,
+    is_verification_escalation_candidate,
+)
+from app.services.github_finding_closure_rules import (
+    COMPARE_FAILED_REASON,
     apply_resolution_method_on_judge_dismiss,
     closure_fields_for_absent_and_addressed,
-    is_verification_escalation_candidate,
     reopen_fields_for_re_report,
     should_close_absent_and_addressed,
     should_reopen_absent_and_addressed,

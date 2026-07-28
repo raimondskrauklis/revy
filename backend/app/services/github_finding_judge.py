@@ -29,7 +29,7 @@ from app.models.github_finding_judge_outcome import GitHubFindingJudgeOutcomeORM
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.services.github_compare_patches import fetch_compare_patches_by_file
-from app.services.github_finding_closure import apply_resolution_method_on_judge_dismiss
+from app.services.github_finding_closure_rules import apply_resolution_method_on_judge_dismiss
 from app.services.github_finding_reconcile import severity_rank
 from app.services.github_review import resolve_judge_code_context
 from app.services.model_policy import ModelRef, ModelRole, resolve_model
