@@ -112,11 +112,60 @@ Source: [PRODUCT_PATTERNS](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md), [code-review
 | **Generator exploratory + filter precise** | Bugbot agentic loop | **Adopt philosophy** — bots may be noisy if context layer 1–2 present | Don't over-constrain hosted Bugbot format (RC-D23) |
 | **Shuffled-diff majority voting** | Bugbot | **Reject v1** — eval only | Noise reduction via context, not multi-pass |
 | **Incremental context index** | Chunk-hash embed | **Defer** R9 | Product retrieval, not PR bot |
-| **Auto-ingest CLAUDE.md / .cursor/rules** | Greptile marketing | **Defer** — Revy has `.cursor/rules` for **dev agents**, not review policy | Don't conflate |
+| **Auto-ingest CLAUDE.md / .cursor/rules** | Greptile v3 auto-detect | **Partial** — detects dev-agent rules, **not** program findings/smoke unless in `files.json` | Explains #58 `format.name` miss |
 | **Learn from PR comments** | Greptile memory | **Future** R8+ | Out of RCX v1 |
 | **Active slice / phase pointer** | Implicit in good teams | **Adopt RC2** — one-line active program in `BUGBOT.md` + manifest | RCX-G3 |
 
 **Insight:** Industry tools separate **exploration** (generators) from **precision** (filters + policy). Revy's missing piece for **dogfood PR bots** is the **policy/filter input** (layers 1–2), not another review pass.
+
+---
+
+## External research (web, verified 2026-07-29)
+
+Vendor docs and context-engineering literature — **adopt / defer / reject** for RCX.
+
+### Greptile ([config reference](https://www.greptile.com/docs/code-review/greptile-config-reference), [customization](https://www.greptile.com/docs/code-review/customization-overview))
+
+| Finding | Implication for Revy |
+|---------|-------------------|
+| **`.greptile/` folder** is now recommended: `config.json` + `rules.md` + `files.json`, **cascading** per directory | Align RC3 with vendor — monorepo `backend/.greptile/` later; today root `files.json` is valid legacy shape |
+| **`files.json` accumulates** from parent configs (child adds, does not replace) | Same noise risk as `BUGBOT.md` — active program trim still required (RC2) |
+| **`scope` globs** on each file entry | **Already used** — `backend/**`; matches vendor best practice |
+| **`context.repos`** — read related repos during review | **Defer** — Revy dogfood is single-repo |
+| **Priority:** org-enforced dashboard rules → `.greptile/` → `greptile.json` | Parallels Bugbot Team Rules — dashboard can override repo files |
+| **v3 agentic** — recursive codebase search, git history, graph index ([v3 blog](https://www.greptile.com/blog/greptile-v3-agentic-code-review)) | Structural layer (SC8), not RCX; Greptile explores widely but still needs **locked decisions** in `files.json` |
+| **Auto-detect** `CLAUDE.md`, `.cursor/rules` ([changelog](https://www.greptile.com/changelog)) | Dev-agent conventions ≠ program execution findings — **does not replace** wiring `JUDGE_JSON_CONTRACT_FINDINGS.md` |
+| **MCP server** — manage custom context from editor | **Defer** — interesting for operator workflow, not P0 |
+| **Memory** from past PR comments | **Defer** R8+ — same row as PRODUCT_PATTERNS |
+
+### Cursor Bugbot ([docs](https://cursor.com/docs/bugbot))
+
+| Finding | Implication for Revy |
+|---------|-------------------|
+| **Separate from `.cursor/rules`** — rules steer coding agent, not reviewer | Confirms RCX scope: `BUGBOT.md` ≠ `.cursor/rules`; don't duplicate AGENTS content |
+| **Merge order:** Team Rules → repo rules (learned + manual) → **`BUGBOT.md`** (root + nested, walk upward from changed files) → User Rules | **Answers RCX-Q2 partially** — hosted `revybot` **does** read repo `BUGBOT.md` on `main`, but **Team Rules win** if they conflict |
+| **Nested** `backend/.cursor/BUGBOT.md` included when reviewing backend paths | **Adopt RC3** — path-scoped active program block without loading full corpus |
+| **Caps:** 30k chars/rule, **100k combined** rules per review | **New constraint** — long `BUGBOT.md` + six program link lists may truncate; need **slim active block** + manifest (RCX-G1) |
+| **`@cursor remember [fact]`** on PR → learned repo rule | **Adopt for disposition** — operator can teach P3 lock after smoke; not a substitute for findings doc |
+| **Custom effort** level — natural-language routing for infra/backend PRs | Dogfood tip for program PRs touching `anthropic_review.py` |
+| **Must merge to `main`** before hosted review sees `BUGBOT.md` changes | Same as our LOOP — context updates ship with program merge |
+| **Does not read** `.cursor/rules` | Engineering context must live in `BUGBOT.md` or dashboard rules explicitly |
+
+### Context engineering (industry, non-vendor)
+
+Sources: [Packmind playbook](https://packmind.com/context-engineering-ai-coding/context-engineering-playbook/), [design.dev guide](https://design.dev/guides/context-engineering/).
+
+| Pattern | Adopt for RCX? |
+|---------|----------------|
+| **Path / file-type scoped rules** — only apply where relevant | **Yes** — RC1 + nested `BUGBOT.md` / Greptile `scope` |
+| **Short imperative rules** (~25 words) + code examples | **Yes** — top of `BUGBOT.md`: “**Never** recommend `format.name` on RTU gateway (JC P3 lock)” |
+| **`AGENTS.md` as cross-tool SSOT** | **Defer** — Revy uses program `findings` + `execution`; optional thin `AGENTS.md` pointer later |
+| **Lost in the middle** — critical context at **start and end** of instruction file | **Yes** — active program + lock IDs at **top** of `BUGBOT.md`; links below |
+| **Some tools read only first ~4k chars** of review instructions (Copilot-class) | **Yes** — active lock block must fit in first screen |
+| **Drift audit** — compare context files to codebase quarterly | **Adopt** — peer-review + post-ship gap pass on program closeout |
+| **Policy as code in git** — reviewers read same versioned policy | **Yes** — RCX-D1; RC4 productizes later |
+
+**RCX-Q2 update:** Hosted Bugbot **can** consume repo context via `BUGBOT.md` (and nested files). Gap is **content design** (noise, missing smoke, char cap), not absence of a hook. **Team dashboard rules** may still override — verify what's configured on `raimondskrauklis/revy`.
 
 ---
 
@@ -170,7 +219,7 @@ Source: [PRODUCT_PATTERNS](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md), [code-review
 
 | # | Deliverable | Notes |
 |---|-------------|--------|
-| **RCX-G1** | Shared context manifest | Parse/generate from `.greptile/files.json`; optional `active_program` field |
+| **RCX-G1** | Shared context manifest | Parse `.greptile/files.json`; **generate slim `BUGBOT.md` header** (locks + active program under 4k) |
 | **RCX-G2** | Hosted Bugbot / revybot dogfood wiring | Cursor team rules or manifest injection — verify dashboard precedence |
 | **RCX-G3** | Active program pointer | Top of `BUGBOT.md` + manifest; RC2 |
 | **RCX-G4** | Findings smoke section contract | Standard table (operator); link from manifest |
@@ -195,6 +244,10 @@ Source: [PRODUCT_PATTERNS](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md), [code-review
 | **RCX-8** | Hosted vs local Bugbot precedence unclear | ROLES.md dashboard override; RC-D23 |
 | **RCX-9** | No disposition contract for lock+cite replies | Babysit ad hoc |
 | **RCX-10** | Product judge fixed in #58; **PR review bots** still prompt-only policy | Symmetric context gap |
+| **RCX-11** | Bugbot **100k combined rule cap** — six-program `BUGBOT.md` may truncate | [Cursor Bugbot docs](https://cursor.com/docs/bugbot) |
+| **RCX-12** | **Team Rules** precede repo `BUGBOT.md` — dashboard may override dogfood wiring | Same precedence class as Greptile org rules |
+| **RCX-13** | Greptile v3 auto-ingest ≠ program findings — `files.json` still manual per program | #58 `format.name` |
+| **RCX-14** | No **short lock block** at top of review instructions | Industry lost-in-the-middle + 4k limits |
 
 ---
 
@@ -203,8 +256,8 @@ Source: [PRODUCT_PATTERNS](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md), [code-review
 | Q# | Question | Status | Resolution |
 |----|----------|--------|------------|
 | **RCX-Q1** | Is `.greptile/files.json` the manifest SSOT? | **proposed** | Yes — RCX-D1/D2; generate Bugbot header from it |
-| **RCX-Q2** | Can Cursor hosted Bugbot read generated manifest? | **open** | Spike RCX-G2 — dashboard rules vs repo file |
-| **RCX-Q3** | RC1 subset per program vs global trim? | **open** | Active program only in v1; full corpus behind flag |
+| **RCX-Q2** | Can hosted Bugbot read engineering context? | **partial** | **Yes** via `BUGBOT.md` + nested files; Team Rules override; 100k cap — slim active block + manifest |
+| **RCX-Q3** | RC1 subset per program vs global trim? | **proposed** | Active program only in v1; full corpus via `files.json` scope or nested Greptile |
 | **RCX-Q4** | Inject engineering context into Moonshot prompt in v1? | **open** | RCX-G8 — likely RC5 not RCX P0 |
 | **RCX-Q5** | Merge with RQ-RC-1 or separate program? | **proposed** | RCX = engineering context program; RQ-RC-1 items fold in |
 
@@ -256,7 +309,9 @@ Source: [PRODUCT_PATTERNS](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md), [code-review
 | Structural sibling | [REVIEW_QUALITY_STRUCTURAL_CONTEXT.md](../review-quality/REVIEW_QUALITY_STRUCTURAL_CONTEXT.md) |
 | Product pattern map | [REVIEW_PIPELINE_PRODUCT_PATTERNS.md](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md) |
 | Industry depth | [code-review-arch_perplexity_searcj_advice_only.md](../code-review-arch_perplexity_searcj_advice_only.md) |
-| Greptile config | `.greptile/files.json` |
+| Greptile config | https://www.greptile.com/docs/code-review/greptile-config-reference |
+| Bugbot rules | https://cursor.com/docs/bugbot |
+| Context engineering | https://packmind.com/context-engineering-ai-coding/context-engineering-playbook/ |
 | Bugbot contract | `.cursor/BUGBOT.md` |
 | Review context code | `backend/app/services/github_review.py` (`prepare_review_context`) |
 | Judge prompts | `backend/app/services/github_finding_judge.py`, `judge_prompt_context.py` |
