@@ -1,20 +1,21 @@
 # Review engineering context — program index
 
-**Status:** **findings only** — [judge-json-contract](../judge-json-contract/README.md) merged (#58); next: `create-general-plan` from findings.
+**Status:** **findings expanded** (2026-07-29) — discuss → `create-general-plan`.
 
-**Problem:** Greptile and Bugbot get execution + findings via RC0 wiring; **revybot** does not — contract drift and false positives on program PRs (PR #58: `format.name`, P3 lock).
+**Problem:** Engineering context (locked decisions, execution contract, operator smoke) is wired for Greptile + local Bugbot only. **Hosted `revybot[bot]`** and the **Revy product pipeline** (Moonshot/judge) lack the same intent layer → false positives and generic API advice (PR #58).
 
 | Doc | Purpose |
 |-----|---------|
-| [REVIEW_ENGINEERING_CONTEXT_FINDINGS.md](./REVIEW_ENGINEERING_CONTEXT_FINDINGS.md) | Baseline — where we are, RCX gaps, locked decisions |
+| [REVIEW_ENGINEERING_CONTEXT_FINDINGS.md](./REVIEW_ENGINEERING_CONTEXT_FINDINGS.md) | Baseline — reviewer channels, context layers, industry patterns, RCX gaps |
 
-**Authority:** [REVIEW_QUALITY_REVIEW_CONTEXT.md](../review-quality/REVIEW_QUALITY_REVIEW_CONTEXT.md) (RC0–RC6) · [REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md](../REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md)
+**Authority:** [REVIEW_QUALITY_REVIEW_CONTEXT.md](../review-quality/REVIEW_QUALITY_REVIEW_CONTEXT.md) (RC0–RC6) · [REVIEW_PIPELINE_PRODUCT_PATTERNS.md](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md)
 
 **Related programs**
 
 | Program | Link |
 |---------|------|
 | Review quality (RC track) | [review-quality/README.md](../review-quality/README.md) |
-| Judge JSON contract (active) | [judge-json-contract/README.md](../judge-json-contract/README.md) |
+| Structural context (sibling) | [REVIEW_QUALITY_STRUCTURAL_CONTEXT.md](../review-quality/REVIEW_QUALITY_STRUCTURAL_CONTEXT.md) |
+| Judge JSON contract (shipped) | [judge-json-contract/README.md](../judge-json-contract/README.md) |
 
-**Next step:** `create-general-plan` from findings; wire revybot engineering context (RCX program).
+**Next step:** Discuss findings → `create-general-plan` → dogfood manifest (RCX-G1) before RC4 product DB.

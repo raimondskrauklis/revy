@@ -86,9 +86,10 @@
 - [ ] Operator dogfood — ≥95% judge outcome persistence on staging PR
 - [ ] Sign-off validation memo
 
-### Track M — Review engineering context — **findings only**
+### Track M — Review engineering context — **findings expanded**
 
 - [x] Findings doc — [review-engineering-context/REVIEW_ENGINEERING_CONTEXT_FINDINGS.md](./review-engineering-context/REVIEW_ENGINEERING_CONTEXT_FINDINGS.md)
+- [ ] Discuss RCX-Q1–Q5 + scope
 - [ ] `create-general-plan` from findings
 
 ### Track K — Finding resolution — **code-complete** (PR #57, `feat/finding-resolution`)

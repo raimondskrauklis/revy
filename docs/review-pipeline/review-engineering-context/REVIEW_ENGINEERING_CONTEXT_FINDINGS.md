@@ -1,109 +1,183 @@
 # Review engineering context — findings
 
-**Date:** 2026-07-29  
-**Purpose:** Baseline for wiring **intent** (locked decisions, execution contract) into **all** PR reviewers — especially **revybot** — not only Greptile and Cursor Bugbot. **No execution steps.**
+**Date:** 2026-07-29 (expanded)  
+**Purpose:** Baseline for wiring **intent** (locked decisions, execution contract, operator evidence) into **all** reviewers — PR bots and the Revy product pipeline — not only Greptile and Cursor Bugbot. **No execution steps.**
 
-**Status:** Findings only — after judge-json-contract. See [README.md](./README.md).
+**Status:** Findings expanded — ready for `create-general-plan` + discussion. [judge-json-contract](../judge-json-contract/README.md) merged (#58, `9a7b5cb`); staging deploy done, **no post-deploy judge runs yet** (validation memo pending dogfood).
 
-**Evidence:** PR [#58](https://github.com/raimondskrauklis/revy/pull/58) dogfood; [REVIEW_QUALITY_REVIEW_CONTEXT.md](../review-quality/REVIEW_QUALITY_REVIEW_CONTEXT.md); live RTU structured-output smoke (2026-07-29).
+**Evidence:** PR [#58](https://github.com/raimondskrauklis/revy/pull/58) dogfood; [REVIEW_QUALITY_REVIEW_CONTEXT.md](../review-quality/REVIEW_QUALITY_REVIEW_CONTEXT.md); [REVIEW_PIPELINE_PRODUCT_PATTERNS.md](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md); [code-review-arch_perplexity_searcj_advice_only.md](../code-review-arch_perplexity_searcj_advice_only.md); live RTU smoke (2026-07-29).
 
 ---
 
 ## Summary
 
-**Context is king.** Greptile cites program docs because `.greptile/files.json` injects execution + findings on every review. Cursor Bugbot gets the same via `.cursor/BUGBOT.md`. **revybot** (GitHub “Revy” check) reviews diff + repo only — no engineering context — so it gives **generic API advice** that contradicts locked program decisions.
+**Context is king** — but Revy currently wires it **unevenly**. Greptile and Cursor Bugbot get program docs via RC0 (`.greptile/files.json`, `.cursor/BUGBOT.md`). **Hosted GitHub Bugbot** (`revybot[bot]`) and the **Revy product pipeline** (Moonshot review + Anthropic judge) do **not** get the same engineering context — so they fall back to generic API lore and miss locked program decisions.
 
-Example on PR #58:
+PR #58 is the canonical failure mode: Greptile recommended `format.name` (wrong for RTU); `revybot` questioned `output_config` vs `output` (wrong — gateway accepts `output_config`; failure is feature unsupported). Operator smoke locked P3. **Neither bot had operator evidence; revybot had no program docs at all.**
 
-| Reviewer | Structured-output comment | Ground truth |
-|----------|---------------------------|--------------|
-| **Greptile** | Add `format.name` to `judge_structured_output_config` | Wrong for RTU — workspace rejects structured outputs; `name` is **extra input** |
-| **revybot** | `output_config` envelope may be wrong (`output` vs `output_config`) | Wrong — gateway accepts `output_config`; failure is feature unsupported |
-| **Operator smoke** | — | `structured_outputs not supported in your workspace`; plain JSON works |
-
-Greptile had **partial** context (program docs, not live smoke). revybot had **no** program context. Both missed the P3 lock in findings until operator ran smoke.
+This program is the **RC track extension** (RCX): dogfood wiring first, then product (`workspace_review_policy` / RC4–RC6). **Structural context** (call graph, SC8) stays a sibling program — both layers are required.
 
 ---
 
-## Where we are
+## Terminology
 
-### Context wiring today
+| Term | Meaning |
+|------|---------|
+| **Engineering context** | What this PR/program must implement — execution contract, findings locks, operator smoke |
+| **Structural context** | Who calls X, impact beyond diff — [REVIEW_QUALITY_STRUCTURAL_CONTEXT.md](../review-quality/REVIEW_QUALITY_STRUCTURAL_CONTEXT.md) |
+| **Operational context** | Live API/workspace results (RTU smoke, staging SQL) — first-class, not optional appendix |
+| **Active program pointer** | Which slice is current (RC2) — reduces noise from 6+ shipped programs in `BUGBOT.md` |
+| **revybot** | Hosted **Cursor Bugbot** on GitHub (`revybot[bot]`) — distinct from local Task Bugbot subagent |
+| **RCX** | Review engineering context program IDs (this doc) |
 
-| Reviewer | Mechanism | Gets execution + findings? | Gets live operator smoke? |
-|----------|-----------|----------------------------|---------------------------|
-| **Greptile** | `.greptile/files.json` + `scope` | Yes (when wired per program) | Only if findings doc updated |
-| **Cursor Bugbot** | `.cursor/BUGBOT.md` links | Yes (when wired per program) | Same |
-| **revybot** | None | **No** | **No** |
-| **Revy product** (Moonshot pipeline) | `prepare_review_context` | Code/PR only | N/A |
+---
 
-RC0 shipped Greptile + Bugbot for dogfood ([REVIEW_QUALITY_REVIEW_CONTEXT.md](../review-quality/REVIEW_QUALITY_REVIEW_CONTEXT.md)). RC4 (`.revy/rules` in DB) and RC5 (pipeline inject locked Q#) are **open** — product path, not repo file clone.
+## Reviewer channels (verified)
 
-### Dogfood signal (PR #58)
+| Channel | Mechanism | Engineering context today | Structural context | Operational evidence |
+|---------|-----------|---------------------------|------------------|----------------------|
+| **Greptile** | `.greptile/files.json` + `scope` | **Partial** — wired paths; stale multi-program list | Vendor graph (external) | Only if findings updated manually |
+| **Cursor local Bugbot** | Task subagent + brief + `BUGBOT.md` | **Yes** when master passes contract § | Diff only | Master reads thinking export (RC-D23) |
+| **Hosted GitHub Bugbot** | `revybot[bot]` + `.cursor/BUGBOT.md` on `main` | **Weak** — appended to Cursor default; no path-scoped slice | Diff only | **No** |
+| **Revy product — Moonshot** | `prepare_review_context` → `_build_review_prompt` | **No** — PR title/body + diff + RAG chunks only | R3/R4 retrieval only | N/A |
+| **Revy product — judge** | `_build_judge_prompt` / verification prompt | **Partial** — snippet-first tier (shipped #58); no workspace policy | Scoped patch/snippet | Parse retry + manifest (shipped #58) |
+
+**Verified paths:** `.greptile/files.json` (15 program entries, all `backend/**`); `.cursor/BUGBOT.md` (lists judge-input-quality, generation-lifecycle, hardening, review-quality, finding-resolution, judge-json-contract — **no active pointer**); `github_review.py:754` `prepare_review_context` — no policy/rules injection.
+
+---
+
+## Context layers (target model)
+
+```text
+  Priority (highest wins on conflict)
+  ───────────────────────────────────
+  1. Locked decision IDs     JC-D*, FR-Q*, RC-D* in findings
+  2. Operator smoke / staging SQL   P0 matrix, validation memo
+  3. Execution contract      active phase file + gates
+  4. General plan / README   phase goals, out-of-scope
+  5. Generic API / training prior   LOWEST — must not override 1–2
+```
+
+| Layer | Question | v1 dogfood | Target (RCX) |
+|-------|----------|------------|--------------|
+| **Engineering** | What should this PR implement? | Greptile + local Bugbot | All PR bots + product inject |
+| **Operational** | What did live API/DB prove? | Manual findings tables | Same manifest as engineering |
+| **Structural** | Who calls X? Blast radius? | SC3 manifest; RQ-STRUCT-1 | Graph agent (SC8) |
+| **Temporal** | Which program phase is active? | Manual README edits | RC2 pointer in one file |
+| **PR-scoped** | What changed in this diff? | All channels get diff | Unchanged |
+
+---
+
+## Problem statement (expanded)
+
+1. **Intent drift** — hosted `revybot` flags code matching **locked** decisions (P3 structured-output lock, RTU gateway shape).
+2. **Incomplete context even where wired** — Greptile has findings docs but not **operator smoke** until human updates findings (P0 matrix on #58 after operator run).
+3. **Context noise** — `files.json` + `BUGBOT.md` list **every shipped program**; reviewers cite wrong phase (RC2 gap).
+4. **Triple maintenance** — each new program: Greptile JSON + Bugbot MD + (missing) revybot/hosted path; phase-execution RC0 covers two only.
+5. **Product gap** — customer repos won't have `.greptile/`; Moonshot/judge must get policy from DB (RC4–RC5), not vendor files.
+6. **Same failure class as judge-json-contract** — prompt-only contract without structured context → parse/contract failures; PR review bots exhibit **advice hallucination** when engineering context missing (symmetric problem, different surface).
+7. **Disposition friction** — closing bot threads requires **locked ID + evidence** reply; no standard helper (RCX-G5).
+
+---
+
+## What exists vs genuinely new
+
+| Asset | Status | Reuse notes |
+|-------|--------|-------------|
+| RC0 wiring (Greptile + Bugbot links) | **Shipped** RQ0 | Extend, don't fork |
+| `.greptile/files.json` schema | **Shipped** | Single source candidate for RCX-G1 |
+| `BUGBOT.md` | **Shipped** | Stale program list; needs RC2 block at top |
+| `REVIEW_QUALITY_REVIEW_CONTEXT.md` | **Strategy doc** | RC1–RC6 ladder; RCX implements RC1–RC2 + revybot |
+| `OUTPUT_FORMAT.md` + babysit skill | **Shipped** | Disposition + VALIDATE/CLOSE verbs |
+| `prepare_review_context` | **Shipped** | Injection point for RC5 product path |
+| `workspace_review_policy` DB | **Not built** | RC4 — post-dogfood |
+| Hosted Bugbot dashboard rules | **External** | May override repo `BUGBOT.md` — document precedence (ROLES.md) |
+
+**Trap:** Hand-copying `files.json` paths into a second revybot config **will drift** (RCX-D2).
+
+---
+
+## Industry patterns (distilled)
+
+Source: [PRODUCT_PATTERNS](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md), [code-review-arch advice](../code-review-arch_perplexity_searcj_advice_only.md), Greptile docs. **Adopt / defer / reject for Revy:**
+
+| Pattern | Industry | Revy verdict | RCX relevance |
+|---------|----------|--------------|---------------|
+| **Config-driven rules in repo** | `.greptile/rules`, cascading dirs | **Adopt dogfood** — already `files.json`; add RC3 per-dir later | RCX-G1 manifest |
+| **Planning doc injection** | Greptile `files.json` descriptions | **Adopt** — extend to hosted Bugbot + product | Core program |
+| **Repo graph at review time** | Greptile graph + agent swarm | **Defer** — SC8; not RCX | Sibling SC program |
+| **Custom YAML rules per tenant** | Ellipsis/CodeRabbit | **Defer product** — RC4 DB EN+LV | Post-dogfood |
+| **Evidence attached at generation** | Snippet link per finding | **Partial** — judge snippet-first shipped; PR bots need claim→lock citation | Align with R5 grounding |
+| **Grounding / entailment judge** | Layer 3 filter | **Shipped** R5 judge; extend to **bot disposition** (human cites lock) | RCX-G5 |
+| **Generator exploratory + filter precise** | Bugbot agentic loop | **Adopt philosophy** — bots may be noisy if context layer 1–2 present | Don't over-constrain hosted Bugbot format (RC-D23) |
+| **Shuffled-diff majority voting** | Bugbot | **Reject v1** — eval only | Noise reduction via context, not multi-pass |
+| **Incremental context index** | Chunk-hash embed | **Defer** R9 | Product retrieval, not PR bot |
+| **Auto-ingest CLAUDE.md / .cursor/rules** | Greptile marketing | **Defer** — Revy has `.cursor/rules` for **dev agents**, not review policy | Don't conflate |
+| **Learn from PR comments** | Greptile memory | **Future** R8+ | Out of RCX v1 |
+| **Active slice / phase pointer** | Implicit in good teams | **Adopt RC2** — one-line active program in `BUGBOT.md` + manifest | RCX-G3 |
+
+**Insight:** Industry tools separate **exploration** (generators) from **precision** (filters + policy). Revy's missing piece for **dogfood PR bots** is the **policy/filter input** (layers 1–2), not another review pass.
+
+---
+
+## Dogfood evidence
+
+### PR #58 (judge-json-contract)
 
 | Signal | Result |
 |--------|--------|
-| Greptile confidence | 4/5 — cites missing `format.name` from program shape, not RTU workspace |
-| revybot | Useful hygiene (smoke script `--prompt-file`, `compare-direct` exit) + false-positive API warnings |
-| Operator RTU smoke | Locks P3: parse helper + snippet-first; structured output off on gateway |
-| Resolution | Disposition comments need **locked decision + live evidence** — neither bot had both |
+| Greptile confidence | 5/5 — still cited `format.name` (P2) from schema shape, not RTU workspace |
+| Hosted revybot | Useful hygiene + **false-positive API** warnings (`output_config`, circular import) |
+| Local Bugbot | Caught real issues; fixed before merge |
+| Operator RTU smoke | Locks P3 — structured output off on gateway |
+| Staging | #58 deployed; **no new judge runs** yet — validation metrics TBD on latest runs only |
 
-### Two context layers (unchanged)
+### PR #50 (review-quality RC0)
 
-| Layer | Question | v1 dogfood | Target |
-|-------|----------|------------|--------|
-| **Engineering context** (this program) | What should this PR implement? | Greptile + Bugbot only | revybot + customer Revy |
-| **Structural context** | Who calls X? Impact beyond diff? | SC3 manifest; RQ-STRUCT-1 | Graph + agent (SC8) |
-
-Both matter. This program is **engineering context** only.
-
----
-
-## Problem statement
-
-1. **Intent drift** — revybot flags code that matches a **locked** program decision because it never sees findings/execution.
-2. **Duplicate maintenance risk** — copying `.greptile/files.json` to a second hand-edited file will drift.
-3. **Incomplete Greptile context** — `files.json` does not auto-include operator smoke results; findings must be updated manually (P0 matrix on #58).
-4. **Customer gap** — customer repos will not have `.greptile/`; product must own policy (RC4), not vendor config.
+| Signal | Result |
+|--------|--------|
+| RC-D3 | **Pass** — Greptile cited AS1 on `index_mode` when wired |
+| RC-D20 | Greptile 👀 = ack only, not comprehension |
 
 ---
 
-## Locked decisions (discussion 2026-07-29)
+## Locked decisions
 
 | ID | Decision |
 |----|----------|
-| **RCX-D1** | **Single source of truth** — one doc set per active program (execution + findings + general plan); all reviewers consume the **same** paths, not forked copies. |
-| **RCX-D2** | **Do not duplicate Greptile JSON by hand** — revybot integration reads the same paths as `.greptile/files.json` (or a shared manifest generated from it). |
-| **RCX-D3** | **Operator evidence is first-class** — smoke matrices, live API errors, and P3 locks belong in findings; reviewers should prefer findings over generic API lore. |
-| **RCX-D4** | **Dogfood first** — wire revybot on this repo before RC4 DB productization. |
-| **RCX-D5** | **Out of scope v1** — replacing Greptile; full structural graph (SC8); auto-sync from every LOOP commit without human findings touch. |
+| **RCX-D1** | **Single source of truth** — one doc set per active program; all reviewers consume the **same** paths. |
+| **RCX-D2** | **Do not duplicate Greptile JSON by hand** — shared manifest from `.greptile/files.json` (or generated wrapper). |
+| **RCX-D3** | **Operator evidence is first-class** — smoke matrices, live API errors, staging SQL belong in findings; priority layer 2. |
+| **RCX-D4** | **Dogfood first** — wire hosted `revybot` + tighten Greptile/Bugbot noise before RC4 DB. |
+| **RCX-D5** | **Out of scope v1** — replacing Greptile; SC8 graph; auto-sync every LOOP commit without human findings touch. |
+| **RCX-D6** | **Latest-run metrics only** — staging validation and operational context use post-deploy window (`--since`), not full history. |
+| **RCX-D7** | **Context over format** — hosted/local Bugbot output shape is not the gate; locked decisions + evidence are (RC-D23). |
 
 ---
 
-## What we need to achieve
+## Success criteria (dogfood)
 
-### Success criteria (dogfood)
+1. Hosted `revybot` cites **locked IDs** (JC-D*, P3 lock) when flagging contract issues — same bar as Greptile RC-D3 on PR #50.
+2. Hosted `revybot` does **not** recommend changes that contradict findings (e.g. `format.name` on RTU).
+3. One findings smoke update visible to **Greptile + Bugbot + hosted path** without three edits.
+4. **Active program pointer** — reviewers stop citing shipped programs (judge-input-quality on #58-scale PRs).
+5. False-positive rate on program PRs drops vs PR #58 baseline (operator-tracked).
+6. Disposition template: thread reply = lock ID + smoke/sql evidence (babysit).
 
-1. revybot inline/check review cites **locked IDs** (e.g. JC-D*, P3 lock) when flagging contract issues — same bar as Greptile RC-D3 on PR #50.
-2. revybot does **not** recommend changes that contradict findings (e.g. `format.name` on RTU gateway).
-3. One update to findings smoke matrix is visible to **Greptile + Bugbot + revybot** without editing three configs.
-4. False-positive rate on program PRs drops vs PR #58 baseline (operator-tracked).
+---
 
-### Deliverables (for future general plan)
+## Deliverables (for general plan)
 
 | # | Deliverable | Notes |
 |---|-------------|--------|
-| **RCX-G1** | Shared context manifest | Parse `.greptile/files.json` or thin wrapper; revybot prompt injection |
-| **RCX-G2** | revybot dogfood wiring | Hosted check reads manifest + diff scope |
-| **RCX-G3** | Active program pointer | Which slice is “active” (RC2) — avoid stale multi-program noise |
-| **RCX-G4** | Findings smoke section contract | Standard table for operator RTU/direct results |
-| **RCX-G5** | Disposition helpers | Babysit: link finding ID + smoke evidence in thread replies |
-| **RCX-G6** | RC4 spike | `workspace_review_policy` shape — EN+LV; post-dogfood |
-
-### Explicitly out of scope (v1)
-
-- Vendor Greptile config in **customer** repos (product owns via DB)
-- Embedding / vector index of docs
-- Auto-closing bot threads without human disposition
+| **RCX-G1** | Shared context manifest | Parse/generate from `.greptile/files.json`; optional `active_program` field |
+| **RCX-G2** | Hosted Bugbot / revybot dogfood wiring | Cursor team rules or manifest injection — verify dashboard precedence |
+| **RCX-G3** | Active program pointer | Top of `BUGBOT.md` + manifest; RC2 |
+| **RCX-G4** | Findings smoke section contract | Standard table (operator); link from manifest |
+| **RCX-G5** | Disposition helpers | Babysit: lock ID + evidence in thread replies |
+| **RCX-G6** | RC1 path-scoped subsets | `backend/**` → active program docs only, not full corpus |
+| **RCX-G7** | RC4 spike | `workspace_review_policy` shape EN+LV — post-dogfood |
+| **RCX-G8** | RC5 product inject | `prepare_review_context` + judge prompts read workspace policy rows |
 
 ---
 
@@ -111,30 +185,88 @@ Both matter. This program is **engineering context** only.
 
 | ID | Gap | Evidence |
 |----|-----|----------|
-| **RCX-1** | revybot has no engineering context | PR #58 `format.name` / `output_config` false positives |
-| **RCX-2** | Greptile lacks live smoke unless findings updated | P0 matrix filled after operator run, not before |
-| **RCX-3** | Three manual wires per program (Greptile, Bugbot, revybot TBD) | phase-execution RC0 only covers two |
-| **RCX-4** | `BUGBOT.md` lists many shipped programs — context noise | RC2 active pointer not automated |
-| **RCX-5** | Customer repos need DB policy, not `.greptile/` | [PRODUCT_PATTERNS](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md) |
+| **RCX-1** | Hosted `revybot` has no engineering context | PR #58 API false positives |
+| **RCX-2** | Greptile lacks live smoke unless findings updated | P0 matrix after operator run |
+| **RCX-3** | Three+ manual wires per program | phase-execution RC0 = 2 channels |
+| **RCX-4** | `BUGBOT.md` / `files.json` context noise | 6+ shipped programs listed |
+| **RCX-5** | Customer repos need DB policy | PRODUCT_PATTERNS — no `.greptile/` |
+| **RCX-6** | Moonshot review has no workspace/program policy | `prepare_review_context` — diff+RAG only |
+| **RCX-7** | No context priority / conflict rule encoded | Bots override locks with generic API advice |
+| **RCX-8** | Hosted vs local Bugbot precedence unclear | ROLES.md dashboard override; RC-D23 |
+| **RCX-9** | No disposition contract for lock+cite replies | Babysit ad hoc |
+| **RCX-10** | Product judge fixed in #58; **PR review bots** still prompt-only policy | Symmetric context gap |
 
 ---
 
-## Reproduce (PR #58)
+## Decisions registry (open)
 
-```bash
-# Plain judge — pass
-cd backend && pipenv run sh -c 'python -m scripts.test_anthropic_judge_gateway'
+| Q# | Question | Status | Resolution |
+|----|----------|--------|------------|
+| **RCX-Q1** | Is `.greptile/files.json` the manifest SSOT? | **proposed** | Yes — RCX-D1/D2; generate Bugbot header from it |
+| **RCX-Q2** | Can Cursor hosted Bugbot read generated manifest? | **open** | Spike RCX-G2 — dashboard rules vs repo file |
+| **RCX-Q3** | RC1 subset per program vs global trim? | **open** | Active program only in v1; full corpus behind flag |
+| **RCX-Q4** | Inject engineering context into Moonshot prompt in v1? | **open** | RCX-G8 — likely RC5 not RCX P0 |
+| **RCX-Q5** | Merge with RQ-RC-1 or separate program? | **proposed** | RCX = engineering context program; RQ-RC-1 items fold in |
 
-# Structured — fail (workspace)
-cd backend && pipenv run sh -c 'python -m scripts.test_anthropic_judge_gateway --structured'
-```
+---
 
-See [JUDGE_JSON_CONTRACT_FINDINGS.md](../judge-json-contract/JUDGE_JSON_CONTRACT_FINDINGS.md) § P0 smoke results.
+## Edge cases
+
+- **Dashboard rules override repo `BUGBOT.md`** — dogfood changes may not affect hosted `revybot` until team settings updated.
+- **Frontend program PRs** — `scope: ["backend/**"]` excludes `frontend/**`; RC3 cascading rules needed later.
+- **Docs-only PRs** — bots may still fire; active pointer prevents wrong backend contract citations.
+- **Conflicting locks** — two programs' findings disagree; need active pointer + human resolution (no auto-merge of locks).
+
+---
+
+## Devil's advocate
+
+- **Manifest may not fix hosted Bugbot** if Cursor ignores repo files — program becomes Greptile-only + local Bugbot improvement.
+- **More context can increase noise** — RC1 subset mandatory before adding more docs.
+- **Product RC4 duplicates Greptile** for customers — must prove DB policy > vendor files for tenancy/audit.
+- **Operator evidence rots** — smoke tables need dates; stale smoke is worse than none (RCX-D3 discipline).
+
+---
+
+## Parking lot
+
+- Auto-generate `BUGBOT.md` from manifest on each program closeout.
+- Link validation memo metrics into findings operational layer.
+- Eval: shuffled-diff voting for Moonshot (reject v1 — see industry table).
+- RC6 `read_planning_doc` agent tool — pairs with SC8.
+
+---
+
+## Experiment / verification
+
+| Pass/fail | Measure |
+|-----------|---------|
+| **Pass** | On next program PR, hosted `revybot` does not recommend `format.name`-class contradictions |
+| **Pass** | Greptile/revybot cite `JC-D*` or P3 lock in at least one relevant thread |
+| **Pass** | Single manifest edit updates all wired channels |
+| **Fail → RC1** | Reviewer cites wrong shipped program (e.g. judge-input-quality on unrelated PR) |
+
+---
+
+## References
+
+| Source | Path |
+|--------|------|
+| RC strategy | [REVIEW_QUALITY_REVIEW_CONTEXT.md](../review-quality/REVIEW_QUALITY_REVIEW_CONTEXT.md) |
+| Structural sibling | [REVIEW_QUALITY_STRUCTURAL_CONTEXT.md](../review-quality/REVIEW_QUALITY_STRUCTURAL_CONTEXT.md) |
+| Product pattern map | [REVIEW_PIPELINE_PRODUCT_PATTERNS.md](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md) |
+| Industry depth | [code-review-arch_perplexity_searcj_advice_only.md](../code-review-arch_perplexity_searcj_advice_only.md) |
+| Greptile config | `.greptile/files.json` |
+| Bugbot contract | `.cursor/BUGBOT.md` |
+| Review context code | `backend/app/services/github_review.py` (`prepare_review_context`) |
+| Judge prompts | `backend/app/services/github_finding_judge.py`, `judge_prompt_context.py` |
+| Agent roles | [agents/prompts/ROLES.md](../agents/prompts/ROLES.md) |
+| Judge-json parallel | [JUDGE_JSON_CONTRACT_FINDINGS.md](../judge-json-contract/JUDGE_JSON_CONTRACT_FINDINGS.md) |
 
 ---
 
 ## Next steps
 
-1. Finish **judge-json-contract** (P3–P5) on current branch — do not block on this program.
-2. `create-general-plan` from this findings doc when revybot wiring becomes priority.
-3. Spike **RCX-G1** — revybot reads `.greptile/files.json` paths for active `backend/**` PRs.
+1. **Discuss** — RCX-Q1–Q5, scope of P0 (dogfood manifest vs product inject).
+2. `create-general-plan` from this doc.
+3. Staging validation — re-run metrics on **latest runs only** after first post-#58 dogfood PR (separate track L).
