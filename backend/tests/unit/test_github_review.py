@@ -772,6 +772,30 @@ def test_normalize_finding_start_line():
     assert github_review.normalize_finding_start_line("abc") is None
 
 
+def test_normalize_finding_end_line():
+    assert github_review.normalize_finding_end_line(12) == 12
+    assert github_review.normalize_finding_end_line("15") == 15
+    assert github_review.normalize_finding_end_line(0) is None
+    assert github_review.normalize_finding_end_line("abc") is None
+
+
+def test_parse_finding_row_accepts_string_end_line():
+    parsed, reason = github_review._parse_finding_row(
+        {
+            "severity": "warning",
+            "category": "bug",
+            "title": "t",
+            "message": "m",
+            "start_line": "10",
+            "end_line": "12",
+        }
+    )
+    assert reason is None
+    assert parsed is not None
+    assert parsed["start_line"] == 10
+    assert parsed["end_line"] == 12
+
+
 def test_normalize_patch_file_key():
     assert github_review.normalize_patch_file_key("./app/main.py") == "app/main.py"
     assert github_review.normalize_patch_file_key("app\\main.py") == "app/main.py"
@@ -848,6 +872,42 @@ def test_extract_evidence_from_patch_context_in_window_still_includes_removed():
     assert "-    first_removed()" in snippet
     assert "-    second_removed()" in snippet
     assert "new_call" in snippet
+
+
+def test_extract_evidence_from_patch_spacer_in_window_does_not_drop_pending_minus():
+    """Context between - and + in the window must not clear pending removed lines."""
+    spacer_lines = "\n".join(f" spacer{i}" for i in range(76))
+    patch = f"""@@ -1,100 +1,100 @@
+-removed_at_old_2()
+{spacer_lines}
++added_at_new_79()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=79)
+    assert snippet is not None
+    assert "-removed_at_old_2()" in snippet
+    assert "added_at_new_79" in snippet
+
+
+def test_extract_evidence_from_patch_duplicate_removed_lines_preserved():
+    patch = """@@ -1,3 +1,1 @@
+-    dup()
+-    dup()
++    one()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=1)
+    assert snippet is not None
+    assert snippet.count("dup()") == 2
+
+
+def test_extract_evidence_from_patch_minus_in_old_window_when_plus_outside_new_window():
+    patch = """@@ -94,1 +54,1 @@
+-removed_at_old_95()
++added_at_new_55()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=95)
+    assert snippet is not None
+    assert "-removed_at_old_95()" in snippet
+    assert "added_at_new_55" not in snippet
 
 
 def test_resolve_judge_code_context_returns_snippet_and_patch():

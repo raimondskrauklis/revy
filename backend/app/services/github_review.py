@@ -128,6 +128,16 @@ def normalize_finding_start_line(raw: Any) -> int | None:
     return value
 
 
+def normalize_finding_end_line(raw: Any) -> int | None:
+    if isinstance(raw, int):
+        value = raw
+    elif isinstance(raw, str) and raw.strip().isdigit():
+        value = int(raw.strip())
+    else:
+        return None
+    return normalize_end_line(value)
+
+
 def normalize_patch_file_key(file_path: str) -> str:
     """Normalize file paths for patches_by_file lookup (compare filename keys)."""
     normalized = file_path.replace("\\", "/").strip()
@@ -278,6 +288,7 @@ def extract_evidence_from_patch(
     old_line = 0
     new_line = 0
     pending_minus: list[str] = []
+    pending_minus_old_lines: list[int] = []
 
     for line in patch.splitlines():
         hunk_match = _HUNK_HEADER_RE.match(line)
@@ -285,6 +296,7 @@ def extract_evidence_from_patch(
             old_line = int(hunk_match.group(1)) - 1
             new_line = int(hunk_match.group(2)) - 1
             pending_minus = []
+            pending_minus_old_lines = []
             continue
         if line.startswith("\\"):
             continue
@@ -292,24 +304,31 @@ def extract_evidence_from_patch(
             old_line += 1
             minus_snippet = f"-{line[1:]}"
             pending_minus.append(minus_snippet)
-            if target_start <= old_line <= target_end:
-                collected.append(minus_snippet)
+            pending_minus_old_lines.append(old_line)
         elif line.startswith("+"):
             new_line += 1
             if target_start <= new_line <= target_end:
-                for minus_snippet in pending_minus:
-                    if minus_snippet not in collected:
-                        collected.append(minus_snippet)
+                collected.extend(pending_minus)
                 pending_minus = []
+                pending_minus_old_lines = []
                 collected.append(line[1:])
             else:
+                for minus_snippet, minus_old_line in zip(
+                    pending_minus, pending_minus_old_lines, strict=True
+                ):
+                    if target_start <= minus_old_line <= target_end:
+                        collected.append(minus_snippet)
                 pending_minus = []
+                pending_minus_old_lines = []
         elif line.startswith(" "):
             old_line += 1
             new_line += 1
-            pending_minus = []
             if target_start <= new_line <= target_end:
                 collected.append(line[1:])
+
+    for minus_snippet, minus_old_line in zip(pending_minus, pending_minus_old_lines, strict=True):
+        if target_start <= minus_old_line <= target_end:
+            collected.append(minus_snippet)
 
     if not collected:
         return None
@@ -690,8 +709,8 @@ def _parse_finding_row(raw: dict) -> tuple[dict | None, str | None]:
     file_path = raw.get("file_path")
     start_line = raw.get("start_line")
     end_line = raw.get("end_line")
-    normalized_end_line = normalize_end_line(int(end_line) if isinstance(end_line, int) else None)
     normalized_start_line = normalize_finding_start_line(start_line)
+    normalized_end_line = normalize_finding_end_line(end_line)
 
     parsed_file_path = (
         file_path.strip() if isinstance(file_path, str) and file_path.strip() else None
