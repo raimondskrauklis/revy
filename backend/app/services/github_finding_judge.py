@@ -23,6 +23,7 @@ from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError, ValidationError
 from app.core.logging import get_logger
 from app.integrations import anthropic_review, llm_dispatch
+from app.integrations.judge_llm_errors import JudgeParseError, judge_failure_trace_fields
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_finding_judge_outcome import GitHubFindingJudgeOutcomeORM
@@ -32,6 +33,10 @@ from app.services.github_compare_patches import fetch_compare_patches_by_file
 from app.services.github_finding_closure_rules import apply_resolution_method_on_judge_dismiss
 from app.services.github_finding_reconcile import severity_rank
 from app.services.github_review import resolve_judge_code_context
+from app.services.judge_prompt_context import (
+    judge_prompt_file_patch_chars,
+    resolve_judge_prompt_file_patch,
+)
 from app.services.model_policy import ModelRef, ModelRole, resolve_model
 
 logger = get_logger(__name__)
@@ -56,6 +61,108 @@ class JudgeCandidateArtifact:
     raw_response: dict[str, Any] | None
     outcome: str | None
     file_patch_chars: int | None = None
+    raw_response_text: str | None = None
+    parse_error: str | None = None
+    retry_count: int = 0
+
+
+_JUDGE_RETRY_SCHEMA_REMINDER = (
+    'Return JSON only: {"outcome":"upheld|dismissed|modified","notes":"brief rationale"}'
+)
+
+
+async def call_judge_with_optional_retry(
+    client: httpx.AsyncClient,
+    *,
+    model_ref: ModelRef,
+    user_prompt: str,
+    timeout_seconds: float,
+    system_prompt: str | None = None,
+) -> tuple[dict[str, Any], int]:
+    """Call judge LLM once; on parse contract failure, retry once with schema reminder."""
+
+    def _is_parse_contract_error(exc: BaseException) -> bool:
+        if isinstance(exc, JudgeParseError):
+            return True
+        return isinstance(exc, ValueError) and str(exc) == "judge_outcome_invalid"
+
+    try:
+        raw = await llm_dispatch.call_judge_llm(
+            client,
+            model_ref=model_ref,
+            user_prompt=user_prompt,
+            timeout_seconds=timeout_seconds,
+            system_prompt=system_prompt,
+        )
+        anthropic_review.parse_judge_outcome(raw)
+        return raw, 0
+    except Exception as exc:
+        if not _is_parse_contract_error(exc):
+            raise
+        parse_error = getattr(exc, "code", str(exc))
+        retry_prompt = (
+            f"{user_prompt}\n\n"
+            f"Previous judge response failed parse ({parse_error}). "
+            f"{_JUDGE_RETRY_SCHEMA_REMINDER}"
+        )
+        try:
+            raw = await llm_dispatch.call_judge_llm(
+                client,
+                model_ref=model_ref,
+                user_prompt=retry_prompt,
+                timeout_seconds=timeout_seconds,
+                system_prompt=system_prompt,
+            )
+            anthropic_review.parse_judge_outcome(raw)
+            return raw, 1
+        except Exception as retry_exc:
+            if not _is_parse_contract_error(retry_exc):
+                raise
+            if (
+                isinstance(exc, JudgeParseError)
+                and isinstance(retry_exc, JudgeParseError)
+                and exc.response_text
+            ):
+                retry_exc.response_text = exc.response_text
+            retry_exc.judge_retry_count = 1
+            raise
+
+
+def _judge_failure_log_extra(group_id: UUID, exc: Exception) -> dict[str, object]:
+    raw_response_text, parse_error, response_chars = judge_failure_trace_fields(exc)
+    extra: dict[str, object] = {
+        "group_id": str(group_id),
+        "error": parse_error,
+    }
+    if response_chars is not None:
+        extra["response_chars"] = response_chars
+    if raw_response_text is not None:
+        extra["parse_error"] = parse_error
+        extra["raw_response_text"] = raw_response_text
+    return extra
+
+
+def _judge_failure_artifact(
+    *,
+    group_id: UUID,
+    evidence_snippet: str | None,
+    user_prompt: str,
+    file_patch_chars: int | None,
+    exc: Exception,
+    retry_count: int = 0,
+) -> JudgeCandidateArtifact:
+    raw_response_text, parse_error, _ = judge_failure_trace_fields(exc)
+    return JudgeCandidateArtifact(
+        group_id=group_id,
+        evidence_snippet=evidence_snippet,
+        user_prompt=user_prompt,
+        raw_response=None,
+        raw_response_text=raw_response_text,
+        parse_error=parse_error,
+        outcome=None,
+        file_patch_chars=file_patch_chars,
+        retry_count=retry_count,
+    )
 
 
 def is_judge_candidate(*, severity: FindingSeverity, category: FindingCategory) -> bool:
@@ -93,15 +200,16 @@ def _build_judge_prompt(
         parts.append(f"Line: {line_ref}")
     if suggestion:
         parts.append(f"Suggested fix: {suggestion}")
-    if file_patch:
+    prompt_patch = resolve_judge_prompt_file_patch(evidence_snippet, file_patch)
+    if prompt_patch:
         parts.extend(
             [
                 "",
                 "File diff (scoped):",
-                file_patch,
+                prompt_patch,
             ]
         )
-    if evidence_snippet:
+    if evidence_snippet and evidence_snippet.strip():
         parts.extend(
             [
                 "",
@@ -178,6 +286,7 @@ async def _run_judge_llm_loop(
             )
             evidence_snippet = finding.evidence_snippet or code_context.evidence_snippet
             file_patch = code_context.file_patch
+            patch_chars = judge_prompt_file_patch_chars(evidence_snippet, file_patch)
             user_prompt = _build_judge_prompt(
                 group=group,
                 evidence_snippet=evidence_snippet,
@@ -189,9 +298,10 @@ async def _run_judge_llm_loop(
             raw: dict[str, Any] | None = None
             outcome_str: str | None = None
             notes: str | None = None
+            retry_count = 0
 
             try:
-                raw = await llm_dispatch.call_judge_llm(
+                raw, retry_count = await call_judge_with_optional_retry(
                     client,
                     model_ref=model_ref,
                     user_prompt=user_prompt,
@@ -201,19 +311,19 @@ async def _run_judge_llm_loop(
             except (httpx.HTTPError, ValueError, ServiceUnavailableError) as exc:
                 logger.error(
                     "github_finding_judge_failed",
-                    extra={"group_id": str(group.id), "error": str(exc)},
+                    extra=_judge_failure_log_extra(group.id, exc),
                 )
                 if artifacts_out is not None:
                     artifacts_out.append(
-                        JudgeCandidateArtifact(
+                        _judge_failure_artifact(
                             group_id=group.id,
                             evidence_snippet=evidence_snippet,
                             user_prompt=user_prompt,
-                            raw_response=None,
-                            outcome=None,
-                            file_patch_chars=len(file_patch) if file_patch else None,
+                            file_patch_chars=patch_chars,
+                            exc=exc,
+                            retry_count=getattr(exc, "judge_retry_count", retry_count),
                         )
-                )
+                    )
                 continue
 
             outcome = GitHubJudgeOutcome(outcome_str)
@@ -248,7 +358,8 @@ async def _run_judge_llm_loop(
                         user_prompt=user_prompt,
                         raw_response=raw,
                         outcome=outcome_str,
-                        file_patch_chars=len(file_patch) if file_patch else None,
+                        file_patch_chars=patch_chars,
+                        retry_count=retry_count,
                     )
                 )
             judged += 1

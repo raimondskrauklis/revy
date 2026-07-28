@@ -74,6 +74,21 @@
       "path": "docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_GENERAL_PLAN.md",
       "description": "Finding resolution general plan — P0–P5 phases",
       "scope": ["backend/**"]
+    },
+    {
+      "path": "docs/review-pipeline/judge-json-contract/waves/JUDGE_JSON_CONTRACT_EXECUTION.md",
+      "description": "Judge JSON contract — LOOP P0–P5, structured output, observability",
+      "scope": ["backend/**"]
+    },
+    {
+      "path": "docs/review-pipeline/judge-json-contract/JUDGE_JSON_CONTRACT_FINDINGS.md",
+      "description": "Judge JSON contract baseline — JC gaps, staging metrics",
+      "scope": ["backend/**"]
+    },
+    {
+      "path": "docs/review-pipeline/judge-json-contract/JUDGE_JSON_CONTRACT_GENERAL_PLAN.md",
+      "description": "Judge JSON contract general plan — P0–P5 phases",
+      "scope": ["backend/**"]
     }
   ]
 }

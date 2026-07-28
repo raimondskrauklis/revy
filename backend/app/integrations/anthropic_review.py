@@ -11,9 +11,13 @@ import httpx
 from app.constants.enums import stored_enum_value
 from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError
+from app.integrations.judge_llm_errors import parse_judge_payload
+from app.services.judge_prompt_context import resolve_judge_prompt_file_patch
 
 ANTHROPIC_DIRECT_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_VERSION = "2023-06-01"
+# P0 smoke lock — RTU gateway returns structured_outputs not supported (findings § P0).
+JUDGE_GATEWAY_STRUCTURED_OUTPUT_SUPPORTED = False
 
 logger = logging.getLogger(__name__)
 
@@ -153,17 +157,21 @@ async def _post_anthropic_messages(
     user_prompt: str,
     max_tokens: int,
     timeout_seconds: float,
+    output_config: dict | None = None,
 ) -> str:
     headers = {**_anthropic_base_headers(), **profile.auth_headers}
+    body: dict[str, object] = {
+        "model": profile.model_id,
+        "max_tokens": max_tokens,
+        "system": system,
+        "messages": [{"role": "user", "content": user_prompt}],
+    }
+    if output_config is not None:
+        body["output_config"] = output_config
     response = await client.post(
         profile.messages_url,
         headers=headers,
-        json={
-            "model": profile.model_id,
-            "max_tokens": max_tokens,
-            "system": system,
-            "messages": [{"role": "user", "content": user_prompt}],
-        },
+        json=body,
         timeout=timeout_seconds,
     )
     response.raise_for_status()
@@ -184,6 +192,7 @@ async def _post_with_profile_fallback(
     user_prompt: str,
     max_tokens: int,
     timeout_seconds: float,
+    output_config: dict | None = None,
 ) -> str:
     if not profiles:
         raise ServiceUnavailableError(
@@ -194,6 +203,114 @@ async def _post_with_profile_fallback(
     for index, profile in enumerate(profiles):
         try:
             return await _post_anthropic_messages(
+                client,
+                profile,
+                system=system,
+                user_prompt=user_prompt,
+                max_tokens=max_tokens,
+                timeout_seconds=timeout_seconds,
+                output_config=output_config,
+            )
+        except (httpx.HTTPError, ServiceUnavailableError) as exc:
+            last_exc = exc
+            if index < len(profiles) - 1:
+                logger.warning(
+                    "anthropic_profile_failed_trying_fallback",
+                    extra={
+                        "profile": profile.label,
+                        "model_id": profile.model_id,
+                        "error": str(exc),
+                    },
+                )
+    if last_exc is not None:
+        raise last_exc
+    raise ServiceUnavailableError(
+        message="Anthropic API is not configured",
+        error_code="llm_disabled",
+    )
+
+
+def _profile_supports_structured_output(profile: _AnthropicProfile) -> bool:
+    if not settings.revy_judge_structured_output:
+        return False
+    if profile.label == "gateway":
+        return JUDGE_GATEWAY_STRUCTURED_OUTPUT_SUPPORTED
+    return True
+
+
+async def _post_judge_messages_for_profile(
+    client: httpx.AsyncClient,
+    profile: _AnthropicProfile,
+    *,
+    system: str,
+    user_prompt: str,
+    max_tokens: int,
+    timeout_seconds: float,
+) -> str:
+    if not _profile_supports_structured_output(profile):
+        return await _post_anthropic_messages(
+            client,
+            profile,
+            system=system,
+            user_prompt=user_prompt,
+            max_tokens=max_tokens,
+            timeout_seconds=timeout_seconds,
+        )
+    try:
+        return await _post_anthropic_messages(
+            client,
+            profile,
+            system=system,
+            user_prompt=user_prompt,
+            max_tokens=max_tokens,
+            timeout_seconds=timeout_seconds,
+            output_config=judge_structured_output_config(),
+        )
+    except httpx.HTTPStatusError as exc:
+        if exc.response is not None and exc.response.status_code == 400:
+            body = exc.response.text.lower()
+            if any(
+                marker in body
+                for marker in (
+                    "structured_output",
+                    "structured output",
+                    "output_config",
+                    "json_schema",
+                )
+            ):
+                logger.warning(
+                    "anthropic_structured_output_unsupported_fallback_plain",
+                    extra={"profile": profile.label, "model_id": profile.model_id},
+                )
+                return await _post_anthropic_messages(
+                    client,
+                    profile,
+                    system=system,
+                    user_prompt=user_prompt,
+                    max_tokens=max_tokens,
+                    timeout_seconds=timeout_seconds,
+                )
+        raise
+
+
+async def _post_judge_with_profile_fallback(
+    client: httpx.AsyncClient,
+    profiles: list[_AnthropicProfile],
+    *,
+    system: str,
+    user_prompt: str,
+    max_tokens: int,
+    timeout_seconds: float,
+) -> str:
+    if not profiles:
+        raise ServiceUnavailableError(
+            message="Anthropic API is not configured",
+            error_code="llm_disabled",
+        )
+    last_exc: Exception | None = None
+    for index, profile in enumerate(profiles):
+        try:
+            return await _post_judge_messages_for_profile(
                 client,
                 profile,
                 system=system,
@@ -267,7 +384,7 @@ async def judge_finding(
 ) -> dict:
     _require_judge_anthropic_enabled()
     profiles = _judge_profiles(model_id)
-    text = await _post_with_profile_fallback(
+    text = await _post_judge_with_profile_fallback(
         client,
         profiles,
         system=system_prompt or JUDGE_SYSTEM_PROMPT,
@@ -275,10 +392,7 @@ async def judge_finding(
         max_tokens=1024,
         timeout_seconds=timeout_seconds or settings.revy_revision_timeout_standard_seconds,
     )
-    payload = json.loads(text)
-    if not isinstance(payload, dict):
-        raise ValueError("judge_json_not_object")
-    return payload
+    return parse_judge_payload(text)
 
 
 def build_verification_judge_prompt(
@@ -308,9 +422,10 @@ def build_verification_judge_prompt(
         if end_line is not None and end_line != start_line:
             line_ref = f"{start_line}-{end_line}"
         parts.append(f"Line: {line_ref}")
-    if push_delta_patch:
-        parts.extend(["", "Push delta (since prior revision):", push_delta_patch])
-    if evidence_snippet:
+    prompt_patch = resolve_judge_prompt_file_patch(evidence_snippet, push_delta_patch)
+    if prompt_patch:
+        parts.extend(["", "Push delta (since prior revision):", prompt_patch])
+    if evidence_snippet and evidence_snippet.strip():
         parts.extend(["", "Evidence excerpt:", evidence_snippet])
     return "\n".join(parts)
 
@@ -321,3 +436,51 @@ def parse_judge_outcome(raw: dict) -> tuple[str, str | None]:
         raise ValueError("judge_outcome_invalid")
     notes = raw.get("notes")
     return outcome, notes.strip() if isinstance(notes, str) and notes.strip() else None
+
+
+def judge_outcome_json_schema() -> dict[str, object]:
+    """JSON schema for judge structured-output smoke (P0) and production wiring (P3)."""
+    return {
+        "type": "object",
+        "properties": {
+            "outcome": {
+                "type": "string",
+                "enum": ["upheld", "dismissed", "modified"],
+            },
+            "notes": {"type": "string"},
+        },
+        "required": ["outcome"],
+        "additionalProperties": False,
+    }
+
+
+def judge_structured_output_config() -> dict[str, object]:
+    # GA Anthropic shape: type + schema only (no format.name). RTU/LiteLLM gateway
+    # rejects structured_outputs entirely; adding name is an extra field on that path.
+    return {
+        "format": {
+            "type": "json_schema",
+            "schema": judge_outcome_json_schema(),
+        }
+    }
+
+
+async def _post_structured_judge_smoke(
+    client: httpx.AsyncClient,
+    profile: _AnthropicProfile,
+    *,
+    user_prompt: str,
+    system_prompt: str | None = None,
+    max_tokens: int = 1024,
+    timeout_seconds: float | None = None,
+) -> str:
+    """P0 smoke — structured judge JSON via output_config (promoted in P3)."""
+    return await _post_anthropic_messages(
+        client,
+        profile,
+        system=system_prompt or JUDGE_SYSTEM_PROMPT,
+        user_prompt=user_prompt,
+        max_tokens=max_tokens,
+        timeout_seconds=timeout_seconds or settings.revy_revision_timeout_standard_seconds,
+        output_config=judge_structured_output_config(),
+    )

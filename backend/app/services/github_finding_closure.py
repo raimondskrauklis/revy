@@ -25,7 +25,7 @@ from app.core.exceptions import (
     ValidationError,
 )
 from app.core.logging import get_logger
-from app.integrations import anthropic_review, llm_dispatch
+from app.integrations import anthropic_review
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_finding_judge_outcome import GitHubFindingJudgeOutcomeORM
@@ -44,8 +44,15 @@ from app.services.github_finding_closure_rules import (  # noqa: F401
     should_reopen_absent_and_addressed,
     should_skip_resolved_group_on_reconcile,
 )
+from app.services.github_finding_judge import (
+    JudgeCandidateArtifact,
+    _judge_failure_artifact,
+    _judge_failure_log_extra,
+    call_judge_with_optional_retry,
+)
 from app.services.github_finding_reconcile import _ensure_pull_request_access
 from app.services.github_review import resolve_judge_code_context
+from app.services.judge_prompt_context import judge_prompt_file_patch_chars
 from app.services.model_policy import ModelRole, resolve_model
 
 logger = get_logger(__name__)
@@ -176,7 +183,6 @@ async def verify_still_open_escalation_groups(
 ) -> VerificationJudgeResult:
     """Pass 3: verification judge on FR-Q11 escalation groups (cap 5/run)."""
     from app.services.github_compare_patches import fetch_compare_patches
-    from app.services.github_finding_judge import JudgeCandidateArtifact
 
     if not settings.judge_llm_enabled():
         return VerificationJudgeResult(judged_count=0, artifacts=[])
@@ -275,12 +281,17 @@ async def verify_still_open_escalation_groups(
                 start_line=finding.start_line if finding is not None else None,
                 end_line=finding.end_line if finding is not None else None,
             )
+            patch_chars = judge_prompt_file_patch_chars(
+                evidence_snippet,
+                push_delta_patch or None,
+            )
             raw: dict[str, Any] | None = None
             outcome_str: str | None = None
             notes: str | None = None
+            retry_count = 0
 
             try:
-                raw = await llm_dispatch.call_judge_llm(
+                raw, retry_count = await call_judge_with_optional_retry(
                     client,
                     model_ref=model_ref,
                     user_prompt=user_prompt,
@@ -293,16 +304,16 @@ async def verify_still_open_escalation_groups(
             except (httpx.HTTPError, ValueError, ServiceUnavailableError) as exc:
                 logger.error(
                     "verification_judge_failed",
-                    extra={"group_id": str(group.id), "error": str(exc)},
+                    extra=_judge_failure_log_extra(group.id, exc),
                 )
                 artifacts.append(
-                    JudgeCandidateArtifact(
+                    _judge_failure_artifact(
                         group_id=group.id,
                         evidence_snippet=evidence_snippet,
                         user_prompt=user_prompt,
-                        raw_response=None,
-                        outcome=None,
-                        file_patch_chars=len(push_delta_patch) if push_delta_patch else None,
+                        file_patch_chars=patch_chars,
+                        exc=exc,
+                        retry_count=getattr(exc, "judge_retry_count", retry_count),
                     )
                 )
                 continue
@@ -335,7 +346,8 @@ async def verify_still_open_escalation_groups(
                     user_prompt=user_prompt,
                     raw_response=raw,
                     outcome=outcome_str,
-                    file_patch_chars=len(push_delta_patch) if push_delta_patch else None,
+                    file_patch_chars=patch_chars,
+                    retry_count=retry_count,
                 )
             )
             judged += 1
