@@ -7,6 +7,7 @@ import re
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
+from typing import Any
 from uuid import UUID
 
 import httpx
@@ -66,9 +67,16 @@ PR_BODY_MAX_BYTES = 4 * 1024
 FINDING_LIST_DEFAULT_LIMIT = 100
 FINDING_LIST_MAX_LIMIT = 500
 EVIDENCE_SNIPPET_MAX_CHARS = 2048
-EVIDENCE_CONTEXT_LINES = 5
-_HUNK_HEADER_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
+EVIDENCE_CONTEXT_LINES = 15
+JUDGE_FILE_PATCH_MAX_CHARS = 8192
+_HUNK_HEADER_RE = re.compile(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@")
 _FULL_INDEX_PROFILES = frozenset({ReviewProfile.deep, ReviewProfile.critical})
+
+
+@dataclass(frozen=True)
+class JudgeCodeContext:
+    evidence_snippet: str | None
+    file_patch: str | None
 
 
 @dataclass(frozen=True)
@@ -106,6 +114,56 @@ def _truncate_utf8(text: str, max_bytes: int) -> str:
     if len(encoded) <= max_bytes:
         return text
     return encoded[:max_bytes].decode("utf-8", errors="ignore")
+
+
+def normalize_finding_start_line(raw: Any) -> int | None:
+    if isinstance(raw, int):
+        value = raw
+    elif isinstance(raw, str) and raw.strip().isdigit():
+        value = int(raw.strip())
+    else:
+        return None
+    if value <= 0:
+        return None
+    return value
+
+
+def normalize_finding_end_line(raw: Any) -> int | None:
+    if isinstance(raw, int):
+        value = raw
+    elif isinstance(raw, str) and raw.strip().isdigit():
+        value = int(raw.strip())
+    else:
+        return None
+    return normalize_end_line(value)
+
+
+def normalize_patch_file_key(file_path: str) -> str:
+    """Normalize file paths for patches_by_file lookup (compare filename keys)."""
+    normalized = file_path.replace("\\", "/").strip()
+    if normalized.startswith("./"):
+        normalized = normalized[2:]
+    return normalized
+
+
+def lookup_patch_for_file(
+    patches_by_file: dict[str, str],
+    file_path: str | None,
+) -> str | None:
+    if not file_path:
+        return None
+    direct = patches_by_file.get(file_path)
+    if direct is not None:
+        return direct
+    normalized = normalize_patch_file_key(file_path)
+    if normalized != file_path:
+        direct = patches_by_file.get(normalized)
+        if direct is not None:
+            return direct
+    for key, patch in patches_by_file.items():
+        if normalize_patch_file_key(key) == normalized:
+            return patch
+    return None
 
 
 def _is_test_path(file_path: str) -> bool:
@@ -216,6 +274,47 @@ def _build_review_prompt(
     return "\n".join(parts)
 
 
+def _flush_pending_minus_in_old_window(
+    flushed_orphan_minus: list[str],
+    flushed_orphan_old_lines: list[int],
+    pending_minus: list[str],
+    pending_minus_old_lines: list[int],
+    *,
+    target_start: int,
+    target_end: int,
+) -> None:
+    for minus_snippet, minus_old_line in zip(pending_minus, pending_minus_old_lines, strict=True):
+        if target_start <= minus_old_line <= target_end:
+            flushed_orphan_minus.append(minus_snippet)
+            flushed_orphan_old_lines.append(minus_old_line)
+
+
+def _merge_flushed_orphans_into_collected(
+    collected: list[str],
+    flushed_orphan_minus: list[str],
+    flushed_orphan_old_lines: list[int],
+    collected_plus_new_lines: list[int],
+    *,
+    start_line: int,
+    target_start: int,
+    target_end: int,
+    discard_when_no_plus: bool,
+    max_orphan_line_distance: int = 1,
+) -> None:
+    for minus_snippet, minus_old_line in zip(flushed_orphan_minus, flushed_orphan_old_lines, strict=True):
+        if not (target_start <= minus_old_line <= target_end):
+            continue
+        if not collected_plus_new_lines:
+            if discard_when_no_plus and abs(minus_old_line - start_line) > max_orphan_line_distance:
+                continue
+            collected.append(minus_snippet)
+            continue
+        orphan_distance = abs(minus_old_line - start_line)
+        plus_distance = min(abs(plus_line - start_line) for plus_line in collected_plus_new_lines)
+        if orphan_distance < plus_distance:
+            collected.append(minus_snippet)
+
+
 def extract_evidence_from_patch(
     patch: str,
     *,
@@ -223,29 +322,150 @@ def extract_evidence_from_patch(
     context: int = EVIDENCE_CONTEXT_LINES,
     max_chars: int = EVIDENCE_SNIPPET_MAX_CHARS,
 ) -> str | None:
-    """Extract new-file lines around start_line from a unified diff patch."""
+    """Extract lines around start_line (new-file line numbers) from a unified diff patch."""
     target_start = max(1, start_line - context)
     target_end = start_line + context
     collected: list[str] = []
+    old_line = 0
     new_line = 0
+    pending_minus: list[str] = []
+    pending_minus_old_lines: list[int] = []
+    flushed_orphan_minus: list[str] = []
+    flushed_orphan_old_lines: list[int] = []
+    collected_plus_new_lines: list[int] = []
+    last_kind: str | None = None
+    hunk_saw_plus = False
 
     for line in patch.splitlines():
         hunk_match = _HUNK_HEADER_RE.match(line)
         if hunk_match is not None:
-            new_line = int(hunk_match.group(1)) - 1
+            if not hunk_saw_plus:
+                _flush_pending_minus_in_old_window(
+                    flushed_orphan_minus,
+                    flushed_orphan_old_lines,
+                    pending_minus,
+                    pending_minus_old_lines,
+                    target_start=target_start,
+                    target_end=target_end,
+                )
+                _merge_flushed_orphans_into_collected(
+                    collected,
+                    flushed_orphan_minus,
+                    flushed_orphan_old_lines,
+                    collected_plus_new_lines,
+                    start_line=start_line,
+                    target_start=target_start,
+                    target_end=target_end,
+                    discard_when_no_plus=True,
+                )
+            else:
+                _flush_pending_minus_in_old_window(
+                    flushed_orphan_minus,
+                    flushed_orphan_old_lines,
+                    pending_minus,
+                    pending_minus_old_lines,
+                    target_start=target_start,
+                    target_end=target_end,
+                )
+                _merge_flushed_orphans_into_collected(
+                    collected,
+                    flushed_orphan_minus,
+                    flushed_orphan_old_lines,
+                    collected_plus_new_lines,
+                    start_line=start_line,
+                    target_start=target_start,
+                    target_end=target_end,
+                    discard_when_no_plus=True,
+                )
+            pending_minus = []
+            pending_minus_old_lines = []
+            flushed_orphan_minus = []
+            flushed_orphan_old_lines = []
+            collected_plus_new_lines = []
+            hunk_saw_plus = False
+            old_line = int(hunk_match.group(1)) - 1
+            new_line = int(hunk_match.group(2)) - 1
+            last_kind = "hunk"
             continue
         if line.startswith("\\"):
             continue
-        if line.startswith("+"):
-            new_line += 1
-            if target_start <= new_line <= target_end:
-                collected.append(line[1:])
-        elif line.startswith("-"):
+        if not line:
             continue
+        if line.startswith("-"):
+            if last_kind in {"space", "plus"}:
+                _flush_pending_minus_in_old_window(
+                    flushed_orphan_minus,
+                    flushed_orphan_old_lines,
+                    pending_minus,
+                    pending_minus_old_lines,
+                    target_start=target_start,
+                    target_end=target_end,
+                )
+                pending_minus = []
+                pending_minus_old_lines = []
+            old_line += 1
+            minus_snippet = f"-{line[1:]}"
+            pending_minus.append(minus_snippet)
+            pending_minus_old_lines.append(old_line)
+            last_kind = "minus"
+        elif line.startswith("+"):
+            hunk_saw_plus = True
+            new_line += 1
+            if target_start <= new_line <= target_end:
+                collected.extend(pending_minus)
+                pending_minus = []
+                pending_minus_old_lines = []
+                collected.append(line[1:])
+                collected_plus_new_lines.append(new_line)
+            else:
+                _flush_pending_minus_in_old_window(
+                    flushed_orphan_minus,
+                    flushed_orphan_old_lines,
+                    pending_minus,
+                    pending_minus_old_lines,
+                    target_start=target_start,
+                    target_end=target_end,
+                )
+                pending_minus = []
+                pending_minus_old_lines = []
+            last_kind = "plus"
         elif line.startswith(" "):
+            old_line += 1
             new_line += 1
             if target_start <= new_line <= target_end:
                 collected.append(line[1:])
+            last_kind = "space"
+
+    _flush_pending_minus_in_old_window(
+        flushed_orphan_minus,
+        flushed_orphan_old_lines,
+        pending_minus,
+        pending_minus_old_lines,
+        target_start=target_start,
+        target_end=target_end,
+    )
+    if not hunk_saw_plus:
+        _merge_flushed_orphans_into_collected(
+            collected,
+            flushed_orphan_minus,
+            flushed_orphan_old_lines,
+            collected_plus_new_lines,
+            start_line=start_line,
+            target_start=target_start,
+            target_end=target_end,
+            discard_when_no_plus=False,
+        )
+    else:
+        _merge_flushed_orphans_into_collected(
+            collected,
+            flushed_orphan_minus,
+            flushed_orphan_old_lines,
+            collected_plus_new_lines,
+            start_line=start_line,
+            target_start=target_start,
+            target_end=target_end,
+            discard_when_no_plus=False,
+        )
 
     if not collected:
         return None
@@ -263,19 +483,48 @@ def resolve_evidence_snippet(
     if not file_path:
         return None
 
-    patch = patches_by_file.get(file_path)
+    patch = lookup_patch_for_file(patches_by_file, file_path)
     if patch and start_line is not None:
         snippet = extract_evidence_from_patch(patch, start_line=start_line, max_chars=max_chars)
         if snippet:
             return snippet
 
     supplemental = supplemental_top_by_file.get(file_path)
+    if supplemental is None and file_path:
+        normalized = normalize_patch_file_key(file_path)
+        supplemental = supplemental_top_by_file.get(normalized)
+        if supplemental is None:
+            for key, hit in supplemental_top_by_file.items():
+                if normalize_patch_file_key(key) == normalized:
+                    supplemental = hit
+                    break
     if supplemental is not None:
         return _truncate_utf8(supplemental.hit.content, max_chars)
 
     if patch:
         return _truncate_utf8(patch, max_chars)
     return None
+
+
+def resolve_judge_code_context(
+    *,
+    file_path: str | None,
+    start_line: int | None,
+    patches_by_file: dict[str, str],
+    supplemental_top_by_file: dict[str, ScopedChunkHit],
+    snippet_max_chars: int = EVIDENCE_SNIPPET_MAX_CHARS,
+    patch_max_chars: int = JUDGE_FILE_PATCH_MAX_CHARS,
+) -> JudgeCodeContext:
+    evidence_snippet = resolve_evidence_snippet(
+        file_path=file_path,
+        start_line=start_line,
+        patches_by_file=patches_by_file,
+        supplemental_top_by_file=supplemental_top_by_file,
+        max_chars=snippet_max_chars,
+    )
+    raw_patch = lookup_patch_for_file(patches_by_file, file_path)
+    file_patch = _truncate_utf8(raw_patch, patch_max_chars) if raw_patch else None
+    return JudgeCodeContext(evidence_snippet=evidence_snippet, file_patch=file_patch)
 
 
 def build_retrieval_manifest(
@@ -547,9 +796,11 @@ async def prepare_review_context(
         broaden_on_compare_failure=broaden_supplemental,
     )
 
+    pr_body = pull_request.body
+
     prompt = _build_review_prompt(
         pr_title=pull_request.title,
-        pr_body=None,
+        pr_body=pr_body,
         head_sha=revision.head_sha,
         base_ref=pull_request.base_ref,
         head_ref=pull_request.head_ref,
@@ -595,10 +846,8 @@ def _parse_finding_row(raw: dict) -> tuple[dict | None, str | None]:
     file_path = raw.get("file_path")
     start_line = raw.get("start_line")
     end_line = raw.get("end_line")
-    normalized_end_line = normalize_end_line(int(end_line) if isinstance(end_line, int) else None)
-    normalized_start_line = int(start_line) if isinstance(start_line, int) else None
-    if normalized_start_line == 0:
-        normalized_start_line = None
+    normalized_start_line = normalize_finding_start_line(start_line)
+    normalized_end_line = normalize_finding_end_line(end_line)
 
     parsed_file_path = (
         file_path.strip() if isinstance(file_path, str) and file_path.strip() else None

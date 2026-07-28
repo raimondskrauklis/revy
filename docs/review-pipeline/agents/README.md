@@ -45,7 +45,7 @@ Next RQ
 
 | | |
 |-|-|
-| **Distill** | Parallel Greptile/Bugbot runs → findings → Revy features; **skim Bugbot transcripts** after each spin; durable rows in learnings — raw exports in `chain_of_thoughts/` when worth keeping |
+| **Distill** | Parallel Greptile/Bugbot runs → findings → Revy features; **skim Bugbot transcripts** after each spin; durable rows in learnings — raw exports in `chain_of_thoughts/` when worth keeping ([RC-D23 distill](./chain_of_thoughts/cursor_bugbot_judge_p56_evidence_close.md)) |
 | **Iterate** | Fix → re-Bugbot → push; multi-pass is normal (RC-D8), not one-shot |
 | **Pause** | Migration / staging gates are features |
 | **Awesome for us** | Greptile-shaped GitHub UX (RQ7) is the bar — see PR #50 visual gap |
@@ -61,7 +61,7 @@ Next RQ
 | [prompts/ROLES.md](./prompts/ROLES.md) | Human / master / reviewer — who talks, who gates |
 | [prompts/](./prompts/) | Distilled implement vs review, output format, per-RQ blocks |
 | [PROMPTS.md](./PROMPTS.md) | Copy-paste Bugbot shells (points at `prompts/`) |
-| [chain_of_thoughts/](./chain_of_thoughts/) | Committed Bugbot gate + Cursor chat exports (evidence archive; add selectively) |
+| [chain_of_thoughts/](./chain_of_thoughts/) | Committed Bugbot gate + Cursor chat exports (evidence archive; add selectively) · [judge P56 CLOSE distill](./chain_of_thoughts/cursor_bugbot_judge_p56_evidence_close.md) |
 
 **Skills (gates):** [phase-execution](../../../.cursor/skills/phase-execution/SKILL.md) · [ship-changes](../../../.cursor/skills/ship-changes/SKILL.md) · [babysit-pr](../../../.cursor/skills/babysit-pr/SKILL.md)
 

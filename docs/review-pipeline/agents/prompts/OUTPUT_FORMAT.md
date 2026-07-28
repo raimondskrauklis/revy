@@ -1,74 +1,72 @@
-# Bugbot output format (distilled)
+# Bugbot output — context over format
 
-**Index:** [prompts/README.md](./README.md) · Paste the **Pass** section below into Custom Instructions.
+**Index:** [prompts/README.md](./README.md)
 
-Smart reviewer + good context needs **shape**, not length. Prevents “199 lines of thinking → 1 line clean” without audit trail (RC-D14).
+**Principle (RC-D23):** We want **reasoning and trace quality**, not a specific handoff shape. Local `Task(subagent_type=bugbot)` often returns platform XML (`<answer>`, `<bug>`) or a one-line “no bugs” — **accept that**. Do not fight OUTPUT_FORMAT in Custom Instructions.
+
+| Who | Owns what |
+|-----|-----------|
+| **Reviewer subagent** | Trace code; challenge mechanism; any output format the platform allows |
+| **Master** | Read **thinking export** when answer is thin; synthesize gate decision for human; optional tables below are **master templates**, not subagent requirements |
+
+Smart reviewer + good context needs **depth**, not markdown tables. Archive thinking when useful — [chain_of_thoughts/](../chain_of_thoughts/).
+
+**Two runtimes:** Hosted GitHub Bugbot (`BUGBOT.md` on `main`, append-only) vs local Task subagent — [distill § RC-D23](../chain_of_thoughts/cursor_bugbot_judge_p56_evidence_close.md).
 
 ---
 
-## Pass 1 — FIND or VALIDATE
+## Custom Instructions (paste to subagent)
 
-Append to Custom Instructions.
+**Keep brief:** `VERB` + `SCOPE` + failure path + contract §. **Do not** demand table shape — platform XML wins.
 
-**FIND** (phase gate):
+### FIND (phase gate)
 
 ```text
 PASS: 1 (find)
-Report ALL actionable bugs introduced by the diff.
-Format each: severity (high|medium|low) · file:line · one-line title · 2–3 sentence why.
-Cite locked FINDINGS/EXECUTION IDs when applicable (e.g. G10, C1, O2).
-Do not report pre-existing issues outside the diff unless the diff worsens them.
-REQUIRED output (always): Findings table + Deferred table + Scope note (§ RQn).
-Use markdown tables; if platform XML conflicts, put tables in Description/details.
-Deferred required even when findings non-empty — log hypotheses considered but not filed (RC-D16, RC-D19).
-Do not answer only "no bugs" without Findings + Deferred + Scope note.
+Report actionable bugs introduced by the diff.
+Trace code; cite file:line and mechanism.
+Cite locked FINDINGS/EXECUTION IDs when applicable.
+Out of scope: pre-existing issues unless this diff worsens them.
+Any output format is fine — XML, bullets, prose.
 ```
 
-**VALIDATE** (babysit pass 1):
+### VALIDATE (babysit pass 1)
 
 ```text
 PASS: 1 (validate)
-Prove Greptile's proposed fix — trace the VALIDATE path; read/grep as needed.
-Challenge the mechanism; do not rubber-stamp the thread.
-Format findings: severity · file:line · title · why (same as FIND).
-REQUIRED output (always): Findings table + Deferred table + Scope note (Greptile thread + VALIDATE path).
-Use markdown tables; if platform XML conflicts, put tables in Description/details.
-Do not answer only "confirmed" without Findings + Deferred + Scope note.
+VALIDATE: <fn → failure path>
+Prove or break the claim — trace the path; do not rubber-stamp.
+Greptile/revybot thread: <verbatim or summary>
+Any output format is fine.
 ```
 
-**Expected sections (FIND):**
-
-1. **Findings** — table or bullets (empty allowed if truly none)
-2. **Deferred** — **always required** — hypotheses considered but not filed (RC-D16); not only when findings empty
-3. **Scope note** — one line: which EXECUTION § RQn reviewed
-
-**Platform note (RC-D19):** Cursor Bugbot may prefer system XML over your table request. Still emit Findings + Deferred + Scope note — master reads UI thinking export when Deferred is missing ([ui_7](../chain_of_thoughts/cursor_bugbot_form_ui_7.txt)).
-
-**Expected sections (VALIDATE):** Findings + Deferred (always) + scope note = Greptile thread + VALIDATE path.
-
----
-
-## Pass 2+ — CLOSE
-
-Append to Custom Instructions:
+### CLOSE (pass 2+)
 
 ```text
 PASS: 2 (closure)
-Prior pass 1 findings (list IDs/titles from handoff).
-Verify each is fixed in the current diff — mark CLOSED or STILL OPEN.
-Report NEW actionable bugs only (not re-listed pass 1 items unless STILL OPEN).
-REQUIRED: "Deferred" table — issues considered in review but NOT filed as bugs:
-  columns: severity · topic · why deferred (pre-existing | out of scope | parking | needs product decision)
-Do not answer only "no bugs" without Closed + Deferred tables.
+Prior findings: <list from master handoff>
+Mark each CLOSED or STILL OPEN with evidence in your reasoning.
+New actionable bugs only.
+Any output format is fine.
 ```
 
-**Expected sections:**
+Append from [PHASES.md](./PHASES.md) § RQn for FIND only.
 
-| Section | Required |
-|---------|----------|
-| **Pass 1 closure** | Each item → CLOSED or STILL OPEN + evidence |
-| **New findings** | Only net-new bugs (empty allowed if truly none) |
-| **Deferred** | **Always required** — even when new findings empty — captures “talked itself out” items worth human scan |
+---
+
+## Master synthesis (after subagent returns)
+
+Use these sections when briefing the **human** — write them yourself from subagent answer **+ thinking export**:
+
+| Section | Purpose |
+|---------|---------|
+| **Findings / closure** | What to fix or CLOSED items |
+| **Deferred** | Hypotheses traced but not filed (RC-D16) — often only visible in thinking |
+| **Scope note** | § RQn or Greptile thread + path traced |
+
+If subagent says “no bugs” but thinking explored edge cases → master records Deferred rows; gate stays green only when reasoning supports it.
+
+**When to export thinking:** Non-trivial gate, empty XML answer, or distill candidate → `chain_of_thoughts/` · [judge P56 example](../chain_of_thoughts/cursor_bugbot_judge_p56_evidence_close.md).
 
 ---
 
@@ -97,7 +95,7 @@ REVIEW_QUALITY_EXECUTION.md § RQn
 
 ---
 
-## Example deferred rows
+## Example master Deferred rows (templates)
 
 ### RQ4 pass 2 (closure)
 
@@ -106,18 +104,24 @@ REVIEW_QUALITY_EXECUTION.md § RQn
 | low | Draft PR leaves G10 check `in_progress` | Pre-existing; needs `neutral` finalize (RQ7/G10 parking) |
 | — | — | Fixed in follow-up commit: embed fail partial commit; review enqueue G10 |
 
-### Greptile babysit pass (RC-D16 — pass 1, findings empty)
+### Greptile babysit (RC-D16)
 
 Source: [local_bugbot_from_ui_2](../chain_of_thoughts/local_bugbot_from_ui_2) · commit `71e4911`.
 
 | Sev | Topic | Why deferred |
-|-----|-------|--------------|
+|-----|-------|----------------|
 | low | Worker dies after TX1, before TX2 | Celery redelivery; not introduced by split |
 | medium | Migration supersede → publish before reconcile → green check | One-shot deploy; D10-M accepted |
 | low | Duplicate Celery → second GitHub check | Pre-existing race |
-| low | Re-dispatch on completed job → orphan check | Pre-existing; split does not worsen |
-| low | Draft/closed PR G10 stuck `in_progress` | Parking — RQ7 |
-| low | Bulk supersede `UPDATE` table lock | One-shot migration |
+
+### Judge P56 evidence CLOSE (RC-D23)
+
+Source: [cursor_bugbot_1.txt](../chain_of_thoughts/cursor_bugbot_1.txt) · [ui8](../chain_of_thoughts/cursor_bugbot_from_ui8.txt).
+
+| Sev | Topic | Why deferred |
+|-----|-------|----------------|
+| low | old_line vs new_line window | Design tension in `extract_evidence_from_patch`; document or dual anchor later |
+| — | **Gate read** | ~140 lines thinking CLOSED prior finding; XML answer empty — **master used thinking**, not XML |
 
 ---
 
@@ -133,21 +137,7 @@ Custom Instructions:
   OUT OF SCOPE: <one line>
   <PHASES § RQn — FIND only>
   <Greptile verbatim — VALIDATE only>
-  <OUTPUT_FORMAT tail>
+  <OUTPUT_FORMAT pass block — no table requirements>
 ```
 
----
-
-## When to archive thinking
-
-If **Deferred** contains a row that later becomes a fix or RC-D# learning → export UI thinking to `chain_of_thoughts/` and link from [DOGFOOD](../../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md). Thin exports (`cursor_bugbot_rq4_pass_6.md`) are insufficient alone.
-
-### Bugbot pass 1 — format compliance (RC-D19)
-
-Source: [cursor_bugbot_form_ui_7.txt](../chain_of_thoughts/cursor_bugbot_form_ui_7.txt) · RQ9 FIND on `docs/agent-work`.
-
-| Sev | Topic | Why deferred / learning |
-|-----|-------|-------------------------|
-| — | **Output shape** | Rich thinking (~230 lines) but no Deferred table + no Scope note in final output; platform XML won over table request (L165) |
-| — | **Master action** | Read thinking export when Deferred missing; pass 2 CLOSE on process compliance |
-| — | **Value retained** | Medium finding (draft smoke vs `maybe_enqueue`) still landed — reasoning ≠ handoff |
+**Legacy note (RC-D19):** Earlier gates asked subagents for Findings + Deferred tables; platform XML overrode that. **Do not re-litigate** — master reads thinking instead.

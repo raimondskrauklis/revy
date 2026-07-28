@@ -46,6 +46,7 @@ _PULL_REQUEST_ACTIONS = frozenset({
     "reopened",
     "converted_to_draft",
     "ready_for_review",
+    "edited",
 })
 _REVIEW_ACTIONS = frozenset({"submitted", "edited", "dismissed"})
 _REVY_REVIEW_COMMAND = re.compile(r"@revy\s+review\b", re.IGNORECASE)
@@ -115,6 +116,8 @@ def _extract_pr_fields(pull_request: dict[str, Any]) -> dict[str, Any] | None:
         return None
 
     html_url = pull_request.get("html_url")
+    body_raw = pull_request.get("body")
+    body = body_raw if isinstance(body_raw, str) and body_raw.strip() else None
     return {
         "github_pull_request_id": raw_id,
         "number": number,
@@ -125,6 +128,7 @@ def _extract_pr_fields(pull_request: dict[str, Any]) -> dict[str, Any] | None:
         "base_ref": base_ref,
         "base_sha": base_sha,
         "html_url": html_url if isinstance(html_url, str) else None,
+        "body": body,
         "is_draft": pull_request.get("draft") is True,
     }
 
@@ -271,6 +275,7 @@ async def _upsert_pull_request(
     existing.html_url = fields["html_url"]
     existing.number = fields["number"]
     existing.is_draft = fields["is_draft"]
+    existing.body = fields.get("body")
 
     if create_revision and fields["head_sha"] != existing.head_sha:
         revision = await _append_revision(
@@ -367,6 +372,15 @@ async def apply_pull_request_webhook_event(
             action=action,
         )
 
+    if action == "edited":
+        await _upsert_pull_request(
+            session,
+            repository=repository,
+            fields=fields,
+            create_revision=False,
+        )
+        return None
+
     if action in {"closed", "reopened", "converted_to_draft", "ready_for_review"}:
         existing = await _find_pull_request(
             session,
@@ -386,6 +400,7 @@ async def apply_pull_request_webhook_event(
         existing.title = fields["title"]
         existing.html_url = fields["html_url"]
         existing.is_draft = fields["is_draft"]
+        existing.body = fields.get("body")
         await session.flush()
 
     return None

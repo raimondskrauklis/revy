@@ -90,7 +90,7 @@ Patterns that worked on PR #50 (Composer-class parent):
 
 **Do not** spawn Bugbot in parallel with implementation — **sequential:** code complete → Bugbot → fix → **re-Bugbot if blockers** → push.
 
-**Pass 2+ output:** require **Closed** + **Deferred** tables — not only “no bugs” ([OUTPUT_FORMAT.md](./prompts/OUTPUT_FORMAT.md), RC-D14).
+**Pass 2+ gate:** master reads thinking export; clean reasoning + no open blockers — not subagent table shape ([OUTPUT_FORMAT.md](./prompts/OUTPUT_FORMAT.md), RC-D23).
 
 **Iterative expectation:** each Bugbot pass after fixes may surface **new** bugs on the same diff (lifecycle, cross-file). That is correct behavior — same as Greptile multi-pass on PRs. See [RQ1 local Bugbot §](../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#iterative-agent-review--rq1-local-bugbot) and RC-D8 in [learnings](../REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md).
 

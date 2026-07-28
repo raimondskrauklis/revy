@@ -230,6 +230,32 @@ async def compare_commits(
     return CompareCommitsResult(files=tuple(files))
 
 
+async def get_pull_request(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+    owner: str,
+    repo: str,
+    pull_number: int,
+    auth_headers: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    headers = await _resolve_auth_headers(
+        client,
+        github_installation_id=github_installation_id,
+        auth_headers=auth_headers,
+    )
+    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/pulls/{pull_number}"
+    response = await client.get(url, headers=headers)
+    response.raise_for_status()
+    data = response.json()
+    if not isinstance(data, dict):
+        raise ServiceUnavailableError(
+            message="GitHub pull request response invalid",
+            error_code="github_pull_invalid",
+        )
+    return data
+
+
 CHECK_RUN_NAME = "Revy"
 
 

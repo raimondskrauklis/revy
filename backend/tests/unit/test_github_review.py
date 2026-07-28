@@ -765,6 +765,48 @@ def test_build_unified_diff_truncates_largest_files_first():
     assert "large.py" not in diff
 
 
+def test_normalize_finding_start_line():
+    assert github_review.normalize_finding_start_line(12) == 12
+    assert github_review.normalize_finding_start_line("15") == 15
+    assert github_review.normalize_finding_start_line(0) is None
+    assert github_review.normalize_finding_start_line("abc") is None
+
+
+def test_normalize_finding_end_line():
+    assert github_review.normalize_finding_end_line(12) == 12
+    assert github_review.normalize_finding_end_line("15") == 15
+    assert github_review.normalize_finding_end_line(0) is None
+    assert github_review.normalize_finding_end_line("abc") is None
+
+
+def test_parse_finding_row_accepts_string_end_line():
+    parsed, reason = github_review._parse_finding_row(
+        {
+            "severity": "warning",
+            "category": "bug",
+            "title": "t",
+            "message": "m",
+            "start_line": "10",
+            "end_line": "12",
+        }
+    )
+    assert reason is None
+    assert parsed is not None
+    assert parsed["start_line"] == 10
+    assert parsed["end_line"] == 12
+
+
+def test_normalize_patch_file_key():
+    assert github_review.normalize_patch_file_key("./app/main.py") == "app/main.py"
+    assert github_review.normalize_patch_file_key("app\\main.py") == "app/main.py"
+
+
+def test_lookup_patch_for_file_normalized_key():
+    patches = {"app/main.py": "@@ patch\n+line\n"}
+    assert github_review.lookup_patch_for_file(patches, "./app/main.py") == patches["app/main.py"]
+    assert github_review.lookup_patch_for_file(patches, "app\\main.py") == patches["app/main.py"]
+
+
 def test_extract_evidence_from_patch_around_line():
     patch = """@@ -10,3 +10,4 @@
  def foo():
@@ -775,6 +817,241 @@ def test_extract_evidence_from_patch_around_line():
     snippet = github_review.extract_evidence_from_patch(patch, start_line=12)
     assert snippet is not None
     assert "new_call" in snippet
+
+
+def test_extract_evidence_from_patch_includes_removed_line():
+    patch = """@@ -10,3 +10,4 @@
+ def foo():
+-    old()
++    new_call()
+     return x
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=11)
+    assert snippet is not None
+    assert "-    old()" in snippet
+
+
+def test_extract_evidence_from_patch_multiple_consecutive_removed_lines():
+    patch = """@@ -10,4 +10,2 @@
+ def foo():
+-    first_removed()
+-    second_removed()
++    new_call()
+     return x
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=12)
+    assert snippet is not None
+    assert "-    first_removed()" in snippet
+    assert "-    second_removed()" in snippet
+    assert "new_call" in snippet
+
+
+def test_extract_evidence_from_patch_removal_only_hunk():
+    patch = """@@ -8,3 +8,0 @@
+-    only_removed()
+-    also_removed()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=9)
+    assert snippet is not None
+    assert "-    only_removed()" in snippet
+    assert "-    also_removed()" in snippet
+
+
+def test_extract_evidence_from_patch_context_in_window_still_includes_removed():
+    """Context lines in the window must not hide removed-line evidence (revybot #56)."""
+    patch = """@@ -10,4 +10,4 @@
+ def foo():
+     unchanged_context()
+-    first_removed()
+-    second_removed()
++    new_call()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=12)
+    assert snippet is not None
+    assert "unchanged_context()" in snippet
+    assert "-    first_removed()" in snippet
+    assert "-    second_removed()" in snippet
+    assert "new_call" in snippet
+
+
+def test_extract_evidence_from_patch_spacer_in_window_does_not_drop_pending_minus():
+    """Context between - and + in the window must not clear pending removed lines."""
+    spacer_lines = "\n".join(f" spacer{i}" for i in range(76))
+    patch = f"""@@ -1,100 +1,100 @@
+-removed_at_old_2()
+{spacer_lines}
++added_at_new_79()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=79)
+    assert snippet is not None
+    assert "-removed_at_old_2()" in snippet
+    assert "added_at_new_79" in snippet
+
+
+def test_extract_evidence_from_patch_duplicate_removed_lines_preserved():
+    patch = """@@ -1,3 +1,1 @@
+-    dup()
+-    dup()
++    one()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=1)
+    assert snippet is not None
+    assert snippet.count("dup()") == 2
+
+
+def test_extract_evidence_from_patch_minus_in_old_window_when_plus_outside_new_window():
+    patch = """@@ -94,1 +54,1 @@
+-removed_at_old_95()
++added_at_new_55()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=95)
+    assert snippet is not None
+    assert "-removed_at_old_95()" in snippet
+    assert "added_at_new_55" not in snippet
+
+
+def test_extract_evidence_from_patch_unrelated_minus_not_paired_with_later_plus():
+    patch = """@@ -1,4 +1,4 @@
+- unrelated_old()
+ context()
+- target_old()
++ target_new()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=3)
+    assert snippet is not None
+    assert "- unrelated_old()" not in snippet
+    assert "- target_old()" in snippet
+    assert "target_new" in snippet
+
+
+def test_extract_evidence_from_patch_hunk_boundary_flushes_orphan_minus():
+    patch = """@@ -1,1 +1,1 @@
+- orphan_in_hunk1()
+@@ -94,1 +55,1 @@
+- removed_at_old_95()
++ added_at_new_55()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=55)
+    assert snippet is not None
+    assert "orphan_in_hunk1" not in snippet
+    assert "- removed_at_old_95()" in snippet
+    assert "added_at_new_55" in snippet
+
+
+def test_extract_evidence_from_patch_empty_line_in_hunk():
+    patch = """@@ -1,3 +1,3 @@
+-removed()
+ 
++added()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=2)
+    assert snippet is not None
+    assert "-removed()" in snippet
+    assert "added" in snippet
+
+
+def test_extract_evidence_from_patch_old_new_line_drift_in_hunk():
+    patch = """@@ -95,1 +55,1 @@
+-removed_at_old_95()
++added_at_new_55()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=55)
+    assert snippet is not None
+    assert "-removed_at_old_95()" in snippet
+    assert "added_at_new_55" in snippet
+
+
+def test_extract_evidence_from_patch_orphan_deletion_before_separate_change():
+    patch = """@@ -5,1 +5,1 @@
+- orphan_delete_old_5()
+ context()
+- target_old()
++ target_new()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=5)
+    assert snippet is not None
+    assert "- orphan_delete_old_5()" in snippet
+
+
+def test_extract_evidence_from_patch_cross_hunk_orphan_does_not_leak():
+    patch = """@@ -4,2 +4,1 @@
+- unrelated_hunk1_old_5()
+ context()
+@@ -50,2 +10,2 @@
+- target_old()
++ target_new()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=11)
+    assert snippet is not None
+    assert "unrelated_hunk1" not in snippet
+    assert "- target_old()" in snippet
+    assert "target_new" in snippet
+
+
+def test_extract_evidence_from_patch_removal_only_hunk_with_separate_minus_groups():
+    patch = """@@ -5,3 +5,1 @@
+- first_orphan()
+ context()
+- second_orphan()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=5)
+    assert snippet is not None
+    assert "- first_orphan()" in snippet
+    assert "- second_orphan()" in snippet
+
+
+def test_extract_evidence_from_patch_multi_hunk_minus_in_old_window_plus_outside_window():
+    patch = """@@ -1,1 +1,1 @@
+- stray_in_hunk1()
+@@ -94,1 +54,1 @@
+- removed_at_old_95()
++ added_at_new_55()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=95)
+    assert snippet is not None
+    assert "stray_in_hunk1" not in snippet
+    assert "- removed_at_old_95()" in snippet
+    assert "added_at_new_55" not in snippet
+
+
+def test_resolve_judge_code_context_returns_snippet_and_patch():
+    patches = {
+        "app/main.py": "@@ -1,1 +1,2 @@\n-old\n+new_line\n",
+    }
+    ctx = github_review.resolve_judge_code_context(
+        file_path="app/main.py",
+        start_line=1,
+        patches_by_file=patches,
+        supplemental_top_by_file={},
+        patch_max_chars=100,
+    )
+    assert ctx.evidence_snippet is not None
+    assert "new_line" in ctx.evidence_snippet
+    assert ctx.file_patch is not None
+    assert "new_line" in ctx.file_patch
+
+
+def test_resolve_judge_code_context_lineless_still_has_patch():
+    patches = {"src/handler.py": "@@ -0,0 +1,3 @@\n+line1\n+line2\n"}
+    ctx = github_review.resolve_judge_code_context(
+        file_path="src/handler.py",
+        start_line=None,
+        patches_by_file=patches,
+        supplemental_top_by_file={},
+    )
+    assert ctx.file_patch is not None
+    assert "line1" in ctx.file_patch
+
+
+def test_resolve_judge_code_context_missing_patch():
+    ctx = github_review.resolve_judge_code_context(
+        file_path="missing.py",
+        start_line=1,
+        patches_by_file={},
+        supplemental_top_by_file={},
+    )
+    assert ctx.evidence_snippet is None
+    assert ctx.file_patch is None
 
 
 def test_resolve_evidence_snippet_prefers_diff_over_supplemental():
@@ -890,6 +1167,37 @@ def test_build_review_prompt_orders_diff_before_supplemental():
     assert diff_pos < supplemental_pos
     assert "@@ patch @@" in prompt
     assert "helper context" in prompt
+
+
+def test_build_review_prompt_includes_pr_body_when_set():
+    prompt = github_review._build_review_prompt(
+        pr_title="Fix handler",
+        pr_body="Fixes #42",
+        head_sha="head123",
+        base_ref="main",
+        head_ref="feature",
+        index_mode=GitHubIndexMode.diff,
+        changed_files=["app/main.py"],
+        unified_diff="+change",
+        supplemental=[],
+    )
+    assert "PR body:" in prompt
+    assert "Fixes #42" in prompt
+
+
+def test_build_review_prompt_omits_pr_body_when_none():
+    prompt = github_review._build_review_prompt(
+        pr_title="Fix handler",
+        pr_body=None,
+        head_sha="head123",
+        base_ref="main",
+        head_ref="feature",
+        index_mode=GitHubIndexMode.diff,
+        changed_files=["app/main.py"],
+        unified_diff="+change",
+        supplemental=[],
+    )
+    assert "PR body:" not in prompt
 
 
 def test_retrieval_file_paths_excludes_tests_unless_pr_touches_tests():

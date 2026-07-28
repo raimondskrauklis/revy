@@ -3,7 +3,7 @@
 **Index:** [agents/README.md](./README.md) · **Distilled prompts:** [prompts/README.md](./prompts/README.md) · **LOOP:** [ORCHESTRATION.md](./ORCHESTRATION.md)
 
 Per-RQ Custom Instructions live in **[prompts/PHASES.md](./prompts/PHASES.md)**.  
-Response shape (pass 1 vs pass 2 + **Deferred** table): **[prompts/OUTPUT_FORMAT.md](./prompts/OUTPUT_FORMAT.md)**.
+Response shape: **[prompts/OUTPUT_FORMAT.md](./prompts/OUTPUT_FORMAT.md)** — context over format; master synthesizes from thinking.
 
 ---
 
@@ -20,10 +20,10 @@ VERB: FIND | VALIDATE | CLOSE
 SCOPE: <files>
 VALIDATE: <fn → failure path>   # VALIDATE only — stops Greptile anchoring (RC-D17)
 OUT OF SCOPE: <one line>
-OUTPUT: Findings + Deferred + Scope note (always) — see OUTPUT_FORMAT.md
+Any output format fine — master reads thinking if answer thin (RC-D23)
 <PHASES § RQn — FIND only>
 <Greptile verbatim — VALIDATE only>
-<OUTPUT_FORMAT tail>
+<OUTPUT_FORMAT pass block>
 ```
 
 **VALIDATE** must name a failure path to trace — not "protect diagnostics."  

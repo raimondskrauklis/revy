@@ -11,7 +11,7 @@ Thin routers for **smart agents with good context**. Verbose prompts are not the
 | Problem | Fix |
 |---------|-----|
 | Same model, two jobs (ship code vs find bugs) | [TWO_AGENTS.md](./TWO_AGENTS.md) — different task → different reasoning |
-| Bugbot “thought 3 bugs, reported 0” | [OUTPUT_FORMAT.md](./OUTPUT_FORMAT.md) — pass 2 must emit **closed** + **deferred** tables |
+| Bugbot “thought 3 bugs, reported 0” | Master reads **thinking export**; gate on reasoning — [OUTPUT_FORMAT § context over format](./OUTPUT_FORMAT.md) |
 | Re-pasting long Custom Instructions every gate | [PHASES.md](./PHASES.md) — one distilled block per RQn |
 | Thinking trace is gold, final line is not | [chain_of_thoughts/](../chain_of_thoughts/) — archive UI exports; distill rows in [DOGFOOD](../../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md) |
 
@@ -49,15 +49,15 @@ Agent won't infer the track — master must set VERB in the brief. Wrong verb = 
 ## Gate sequence (phase LOOP)
 
 ```text
-Pass 1 — FIND     Custom Instructions: PHASES § RQn + OUTPUT_FORMAT (Findings + Deferred + Scope note always)
+Pass 1 — FIND     Custom Instructions: PHASES § RQn + VERB (no table shape fight)
 Fix blockers
-Pass 2 — CLOSE    “Verify pass 1 closed; NEW bugs only; REQUIRED deferred table”
+Pass 2 — CLOSE    Verify pass 1 closed; master reads thinking if answer thin
 Fix blockers (if any)
 Pass 3+ — repeat until clean
 commit → push → Greptile (post-push, different axis)
 ```
 
-See RC-D14 in [DOGFOOD_PR50 § RQ4 pass 2](../../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#rq4-bugbot-pass-2--closure-vs-thinking-trace-rc-d14). RC-D16: pass 1 also requires Deferred when empty — [§](../../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#greptile-babysit-vs-bugbot-depth-rc-d16).
+See RC-D14 in [DOGFOOD_PR50 § RQ4 pass 2](../../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#rq4-bugbot-pass-2--closure-vs-thinking-trace-rc-d14). RC-D23: context over format — [OUTPUT_FORMAT](./OUTPUT_FORMAT.md).
 
 ---
 
@@ -82,7 +82,7 @@ Greptile = post-push contract. Bugbot = pre-push adversarial. Never skip Bugbot 
 | [ROLES.md](./ROLES.md) | Human / master / reviewer — who talks to whom |
 | [../../../utils/CURSOR_AGENT_WORKFLOW.md](../../../utils/CURSOR_AGENT_WORKFLOW.md) | **Quick ref** — attach first in new chats |
 | [TWO_AGENTS.md](./TWO_AGENTS.md) | Onboarding; why implementer misses what reviewer catches |
-| [OUTPUT_FORMAT.md](./OUTPUT_FORMAT.md) | Every Bugbot invoke — paste tail into Custom Instructions |
+| [OUTPUT_FORMAT.md](./OUTPUT_FORMAT.md) | VERB pass blocks for Custom Instructions — no table fight |
 | [PHASES.md](./PHASES.md) | Per-RQ Custom Instructions body |
 | [PROMPTS.md](../PROMPTS.md) | Full subagent shell (path, Diff, + PHASES + OUTPUT_FORMAT) |
 

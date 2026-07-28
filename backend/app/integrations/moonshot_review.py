@@ -21,6 +21,7 @@ REVIEW_SYSTEM_PROMPT = (
     '"security|bug|performance|maintainability|other","title":"…","message":"…",'
     '"file_path":"optional/path","start_line":0,"end_line":0,'
     '"suggestion":"optional single-line replacement or omit"}]}. '
+    "start_line and end_line are new-file (post-change) line numbers in the diff. "
     "Include suggestion only for a concrete single-line fix on an anchored line; "
     "one physical line only — omit for architectural or multi-hunk fixes. "
     "Do not include style or lint findings. Return only valid JSON. "

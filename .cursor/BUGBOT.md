@@ -1,8 +1,14 @@
 # Bugbot — review pipeline contract
 
-When reviewing **backend** changes that touch publish / formatter / pipeline / generation lifecycle code, treat these as authoritative:
+When reviewing **backend** changes that touch publish / formatter / pipeline / generation lifecycle / judge code, treat these as authoritative:
 
-**Review generation lifecycle (active program):**
+**Judge input quality (active program):**
+
+- [JUDGE_INPUT_QUALITY_EXECUTION.md](../docs/review-pipeline/judge/waves/JUDGE_INPUT_QUALITY_EXECUTION.md) — P0–P5 scope, gates, J-8 patch reload
+- [JUDGE_INPUT_INVESTIGATION_FINDINGS.md](../docs/review-pipeline/judge/JUDGE_INPUT_INVESTIGATION_FINDINGS.md) — J-* gaps, find→verify thesis
+- [JUDGE_INPUT_QUALITY_GENERAL_PLAN.md](../docs/review-pipeline/judge/JUDGE_INPUT_QUALITY_GENERAL_PLAN.md) — phase goals
+
+**Review generation lifecycle (shipped on `main`):**
 
 - [REVIEW_GENERATION_LIFECYCLE_EXECUTION.md](../docs/review-pipeline/review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_EXECUTION.md) — P0–P5 scope, gates, dogfood rubric
 - [REVIEW_GENERATION_LIFECYCLE_FINDINGS.md](../docs/review-pipeline/review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_FINDINGS.md) — RG-* gaps, snapshot semantics
@@ -25,4 +31,4 @@ When reviewing **backend** changes that touch publish / formatter / pipeline / g
 - [CURSOR_AGENT_WORKFLOW.md](../docs/utils/CURSOR_AGENT_WORKFLOW.md) — roles + verbs quick ref
 - [agents/prompts/ROLES.md](../docs/review-pipeline/agents/prompts/ROLES.md) — master/reviewer boundaries
 
-**Program:** Review generation lifecycle on feature branch `feat/review-generation-lifecycle` — HEAD-gated publish, supersede in-flight generations, full surface flush, optional coalesce. GitHub surface hardening (thread auto-resolve, GraphQL scale) shipped on `main` via PR #53.
+**Program:** Judge input quality on feature branch `feat/judge-input-quality` — scoped judge context, verifier prompts, Moonshot PR body fetch. Review generation lifecycle shipped on `main` via PR #54.
