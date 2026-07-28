@@ -26,13 +26,13 @@ each phase: implement → pytest gate → Bugbot → commit (operator pushes; P5
 - **SC coexistence:** `engineering_context_*` keys on same retrieve manifest as SC3 fields — no second manifest.
 - **Module owner:** `app/services/engineering_context/` — parser (P0), loader+extract (P1), consumed by Moonshot (P2) and judge (P4).
 - **P5 sign-off:** Requires P2–P4 on staging + deliberate dogfood PR (`--since` window non-empty).
-- **Bugbot:** manual maintenance this program — not P0 Greptile/Bugbot generator scope.
+- **P0 does not touch `.greptile/files.json`** — Greptile generator is P3; P0 adds SSOT path-exists validation (`engineering_context/validate.py`).
 
 ## LOOP order
 
 | Phase | Focus | Execution | Status |
 |-------|--------|-----------|--------|
-| P0 — Foundations | Migration `0029`, caps, SSOT schema, manifest contract | [REVIEW_ENGINEERING_CONTEXT_P0_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P0_EXECUTION.md) | pending |
+| P0 — Foundations | Migration `0029`, SSOT, caps (settings only), path-exists CI | [REVIEW_ENGINEERING_CONTEXT_P0_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P0_EXECUTION.md) | pending |
 | P1 — Loader + extract | `fetch_repository_file_at_sha`, lock/smoke parser | [REVIEW_ENGINEERING_CONTEXT_P1_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P1_EXECUTION.md) | pending |
 | P2 — Moonshot inject | `prepare_review_context`, populate metrics | [REVIEW_ENGINEERING_CONTEXT_P2_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P2_EXECUTION.md) | pending |
 | P3 — Greptile sync | SSOT trim + generate `files.json` | [REVIEW_ENGINEERING_CONTEXT_P3_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P3_EXECUTION.md) | pending |

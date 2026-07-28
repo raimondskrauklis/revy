@@ -7,31 +7,35 @@ Phase **P0** of [REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md](../REVIEW_ENGINEERI
 ## Decisions locked for P0
 
 - SSOT path: `.greptile/review-context.json` — shape: `active_program` (string) + `programs[]` with `id`, `scope` (globs), `paths[]` (`path`, `description`).
-- Initial SSOT lists **review-engineering-context** program only (3 docs: execution, findings, general plan paths).
+- Initial SSOT: `active_program: "review-engineering-context"`; **exactly 3 paths:**
+  - `docs/review-pipeline/review-engineering-context/waves/REVIEW_ENGINEERING_CONTEXT_EXECUTION.md`
+  - `docs/review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_FINDINGS.md`
+  - `docs/review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md`
 - `context_stats` JSONB nullable on `github_review_runs` — keys per general plan P0 (denormalized snapshot contract).
 - Retrieve manifest adds keys with defaults: `engineering_context_injected=false`, `engineering_context_bytes=0`, `diff_max_bytes`, `unified_diff_bytes=0`, `active_program=null`, `lock_ids_extracted=[]`, `engineering_context_deduped_paths=[]` — populated in P2.
 - Config env: `REVY_DIFF_MAX_BYTES` (default 524288), `REVY_ENGINEERING_CONTEXT_MAX_BYTES` (default 32768), `REVY_PR_BODY_MAX_BYTES` (default 4096).
-- `github_review.py` still uses module constants in P0 — **wire config reads in P2**; P0 only adds settings + tests.
+- **Settings exist in P0; `github_review.py` keeps module constants until P2** — no behavior change from caps until P2.1.
+- **P0 does not touch `.greptile/files.json`** — RCX-D11; Greptile sync is **P3** only.
 
 ## PR review context (first commit)
 
-- **Greptile:** add `review-engineering-context/**` to generated `files.json` in P3 — P0 adds SSOT only; optional minimal Greptile entry for program PR if needed for dogfood (paths under `docs/review-pipeline/review-engineering-context/**`, `scope: ["backend/**"]`).
+- **Greptile:** **deferred to P3** (generated `files.json`). P0 ships SSOT + Bugbot only.
 - **Bugbot:** `.cursor/BUGBOT.md` — add RCX program links + active program line `review-engineering-context`.
 
 ## Out of scope for P0
 
 - GitHub file fetch → **P1**
 - Moonshot inject → **P2**
-- `files.json` generator → **P3**
+- `files.json` generator / edit → **P3**
 - Judge → **P4**
 
 ---
 
 ## P0.1 — Migration `0029_review_context_stats`
 
-**What:** Hand-written Alembic revision — `context_stats JSONB NULL` on `github_review_runs`.
+**What:** Hand-written Alembic revision — `context_stats JSONB NULL` on `github_review_runs`; add ORM mapped column on `GitHubReviewRunORM` **in this subphase only**.
 
-**Files:** `backend/alembic/versions/2026_07_29_1200_0029_review_context_stats.py`, `backend/app/models/github_review_run.py`
+**Files:** `backend/alembic/versions/2026_07_29_1200_0029_review_context_stats.py`, `backend/app/models/github_review_run.py`, `backend/tests/unit/test_github_review_run_model.py`
 
 **Deliverable:**
 
@@ -40,15 +44,13 @@ cd backend && pipenv run alembic upgrade head
 pipenv run pytest tests/unit/test_github_review_run_model.py -q
 ```
 
-Create `test_github_review_run_model.py` asserting `context_stats` column on ORM if no existing test.
-
 **LOOP pause:** operator runs migration on staging after merge.
 
 ---
 
 ## P0.2 — Config caps
 
-**What:** Add settings to `config.py` + `.env.example`; unit test defaults (524288 / 32768 / 4096).
+**What:** Add settings to `config.py` + `.env.example`; unit test defaults (524288 / 32768 / 4096). **Do not wire into `github_review.py` yet.**
 
 **Files:** `backend/app/core/config.py`, `backend/.env.example`, `backend/tests/unit/test_engineering_context_config.py`
 
@@ -62,7 +64,7 @@ cd backend && pipenv run pytest tests/unit/test_engineering_context_config.py -q
 
 ## P0.3 — `engineering_context` module + SSOT parser
 
-**What:** Create `app/services/engineering_context/` — `manifest.py` (parse/validate SSOT JSON), `types.py` (`ReviewContextManifest`, `ProgramEntry`); load from bytes/string; validate active_program references a program id.
+**What:** Create `app/services/engineering_context/` — `manifest.py` (parse/validate SSOT JSON), `types.py` (`ReviewContextManifest`, `ProgramEntry`); validate `active_program` references a `programs[].id`; commit `.greptile/review-context.json` with locked 3 paths above.
 
 **Files:** `backend/app/services/engineering_context/__init__.py`, `manifest.py`, `types.py`, `backend/tests/unit/test_engineering_context_manifest.py`, `.greptile/review-context.json`
 
@@ -75,11 +77,11 @@ python -m json.tool .greptile/review-context.json > /dev/null
 
 ---
 
-## P0.4 — Retrieve manifest + `context_stats` contract
+## P0.4 — Retrieve manifest + `context_stats` contract (code only)
 
-**What:** Add `engineering_context_manifest_defaults()` helper; merge into `build_retrieval_manifest` return dict; add `ContextStats` typed dict / pydantic model for `github_review_runs.context_stats` column; ORM field on `GitHubReviewRunORM`.
+**What:** Add `engineering_context_manifest_defaults()` + `ContextStats` shape in `engineering_context/stats.py`; merge defaults into `build_retrieval_manifest` return dict. **No ORM edits** (P0.1 owns model).
 
-**Files:** `backend/app/services/github_review.py`, `backend/app/services/engineering_context/stats.py`, `backend/app/models/github_review_run.py`, `backend/tests/unit/test_github_review.py`
+**Files:** `backend/app/services/github_review.py`, `backend/app/services/engineering_context/stats.py`, `backend/tests/unit/test_github_review.py`
 
 **Deliverable:**
 
@@ -89,11 +91,25 @@ cd backend && pipenv run pytest tests/unit/test_github_review.py -k "retrieval_m
 
 ---
 
-## P0.5 — Staging script + PR review context
+## P0.5 — SSOT path-exists validation
 
-**What:** Extend `judge_json_contract_staging_metrics.py` to aggregate `context_stats` from `github_review_runs` when column populated; add Greptile/Bugbot RCX wiring per PR review context above.
+**What:** `validate_review_context_paths_exist(manifest, repo_root: Path) -> list[str]` — returns missing paths; pytest walks repo from workspace root; wire into phase gate (fail if SSOT points at missing files).
 
-**Files:** `backend/scripts/judge_json_contract_staging_metrics.py`, `.greptile/files.json` (minimal RCX entry if not deferred to P3), `.cursor/BUGBOT.md`, `docs/utils/BACKEND_SCRIPTS_RUNBOOK.md`
+**Files:** `backend/app/services/engineering_context/validate.py`, `backend/tests/unit/test_engineering_context_validate.py`
+
+**Deliverable:**
+
+```bash
+cd backend && pipenv run pytest tests/unit/test_engineering_context_validate.py -q
+```
+
+---
+
+## P0.6 — Staging script + PR review context
+
+**What:** Extend `judge_json_contract_staging_metrics.py` to aggregate `context_stats` from `github_review_runs` when column populated; Bugbot RCX wiring per PR review context above.
+
+**Files:** `backend/scripts/judge_json_contract_staging_metrics.py`, `.cursor/BUGBOT.md`, `docs/utils/BACKEND_SCRIPTS_RUNBOOK.md`
 
 **Deliverable:**
 
@@ -108,7 +124,7 @@ python -m json.tool .greptile/review-context.json > /dev/null
 
 ```bash
 pipenv run ruff check app/services/engineering_context/ app/models/github_review_run.py app/core/config.py
-pipenv run pytest tests/unit/test_engineering_context_manifest.py tests/unit/test_github_review.py -k "retrieval_manifest or context_stats" tests/unit/test_engineering_context_config.py tests/unit/test_github_review_run_model.py -q
+pipenv run pytest tests/unit/test_engineering_context_manifest.py tests/unit/test_engineering_context_validate.py tests/unit/test_github_review.py -k "retrieval_manifest or context_stats" tests/unit/test_engineering_context_config.py tests/unit/test_github_review_run_model.py -q
 ```
 
 **Deploy:** ship migration `0029` before P2 dogfood on staging.

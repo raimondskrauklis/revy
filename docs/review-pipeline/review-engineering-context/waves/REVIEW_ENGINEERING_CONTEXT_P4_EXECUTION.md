@@ -6,8 +6,9 @@ Phase **P4** of [REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md](../REVIEW_ENGINEERI
 
 ## Decisions locked for P4
 
-- Reuse `build_engineering_context_pack` (or cached pack per review run if already built in P2 — prefer single fetch per run: pass pack from review task into judge task via review_run metadata or re-fetch with same SHA; **re-fetch acceptable** if simpler).
-- Add bounded lock block to judge user prompt in `judge_prompt_context.py` or `_build_judge_prompt` — max 2k chars from `extracted_text`; do not change outcome schema or `parse_judge_outcome`.
+- **No cached pack from Moonshot** — judge path **re-fetches** via `build_engineering_context_pack` (same as P2) using `compare_commits` for `changed_files` + `omitted_files` + `patches_by_file` (mirror `fetch_compare_patches_by_file` / judge patch fetch at `record_review_run_judge_status`).
+- Judge lock block: **max 2048 chars** from `extracted_text` (tighter than Moonshot `revy_engineering_context_max_bytes` default 32k — intentional).
+- Wire into `_build_judge_prompt` in `github_finding_judge.py` and helpers in `judge_prompt_context.py`.
 - Optional judge manifest field per candidate: `lock_ids_cited: list[str]` when block included.
 - No change to snippet-first policy (JC-D4) or judge-json-contract persistence gates.
 
@@ -20,7 +21,7 @@ Phase **P4** of [REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md](../REVIEW_ENGINEERI
 
 ## P4.1 — Judge prompt lock section
 
-**What:** `format_judge_engineering_context(pack) -> str | None`; append after evidence snippet tier, before patch fallback rules.
+**What:** `format_judge_engineering_context(pack, *, max_chars=2048) -> str | None`; integrate in `_build_judge_prompt` after evidence snippet tier, before patch fallback.
 
 **Files:** `backend/app/services/judge_prompt_context.py`, `backend/app/services/github_finding_judge.py`
 
@@ -34,9 +35,9 @@ cd backend && pipenv run pytest tests/unit/test_github_finding_judge.py -k "judg
 
 ## P4.2 — Wire pack into judge escalation path
 
-**What:** On judge run, resolve `head_sha` from revision; call pack builder when scope matches; skip silently when pack empty.
+**What:** In judge escalation (`record_review_run_judge_status` / `_run_judge_llm_loop` entry): resolve installation/owner/repo; `compare_commits` for changed + omitted files; call `build_engineering_context_pack`; pass into prompt builder.
 
-**Files:** `backend/app/services/github_finding_judge.py`, `backend/app/workers/review_tasks.py` (if needed)
+**Files:** `backend/app/services/github_finding_judge.py`, `backend/app/services/github_compare_patches.py` (reuse if applicable)
 
 **Deliverable:**
 

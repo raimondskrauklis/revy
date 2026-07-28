@@ -6,11 +6,14 @@ Phase **P2** of [REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md](../REVIEW_ENGINEERI
 
 ## Decisions locked for P2
 
-- Replace `DIFF_MAX_BYTES` / `PR_BODY_MAX_BYTES` module constants usage in `github_review.py` with `settings.revy_diff_max_bytes` / `settings.revy_pr_body_max_bytes`.
-- Call `build_engineering_context_pack` when installation + repo + head_sha available; pass `changed_files`, `omitted_files`, `patches_by_file` for dedupe.
+- Replace `DIFF_MAX_BYTES` / `PR_BODY_MAX_BYTES` module constants in `github_review.py` with `settings.revy_diff_max_bytes` / `settings.revy_pr_body_max_bytes`.
+- **Repo context for pack builder:** add `_resolve_github_repo_for_revision(session, revision, pull_request) -> (installation, owner, repo, client)` — mirror lookup in `_fetch_compare_for_review` (`github_review.py:722–736`). `prepare_review_context` calls it before `build_engineering_context_pack`.
+- Call `build_engineering_context_pack` with installation, owner, repo, client, `head_sha`, `changed_files`, `omitted_files`, `patches_by_file`.
 - **Dedupe (RCX-D12):** for each manifest path `p`, skip appending full fetched MD to inject body when `p in changed_files` and `p not in omitted_files` and compare patch exists; **always** include merged `extracted_text` (locks/smoke).
 - `_build_review_prompt`: new section `Engineering context (authoritative):` before `Unified diff`; instruction line: treat engineering block over generic API prior.
-- After `prepare_review_context` in review worker: persist `context_stats` on `GitHubReviewRunORM` before Moonshot call; retrieve-step manifest merged in `record_retrieve_pipeline_step` (existing hook after context pack built).
+- **`ReviewContextPack.manifest` is fully built inside `prepare_review_context`** (engineering fields included). `record_retrieve_pipeline_step` in `review_tasks.py` persists that manifest unchanged after `run_review_run` returns.
+- **`context_stats` ORM persist in `run_review_run`** (`github_review.py` ~975) after `prepare_review_context`, before Moonshot LLM call — not in `review_tasks.py`.
+- Extend `build_retrieval_manifest` without breaking `test_build_retrieval_manifest_includes_sc3_defaults` (SC3 stub fields preserved).
 - `engineering_context_injected=true` when pack has non-empty `extracted_text` or non-deduped body.
 
 ## Out of scope for P2
@@ -62,11 +65,11 @@ cd backend && pipenv run pytest tests/unit/test_github_review.py -k "build_revie
 
 ---
 
-## P2.4 — Wire `prepare_review_context`
+## P2.4 — Wire `prepare_review_context` + repo resolution
 
-**What:** Fetch pack at `head_sha`; pass block into prompt builder; handle loader errors (empty pack, log, `engineering_context_injected=false`).
+**What:** Implement `_resolve_github_repo_for_revision`; call `build_engineering_context_pack` inside `prepare_review_context`; attach pack to `ReviewContextPack` (new field or parallel return); handle loader errors (`engineering_context_injected=false`).
 
-**Files:** `backend/app/services/github_review.py`, `backend/app/workers/review_tasks.py` (if stats persist on run), `backend/tests/unit/test_github_review.py`
+**Files:** `backend/app/services/github_review.py`, `backend/tests/unit/test_github_review.py`
 
 **Deliverable:**
 
@@ -78,14 +81,15 @@ cd backend && pipenv run pytest tests/unit/test_github_review.py -k "prepare_rev
 
 ## P2.5 — Manifest + `context_stats` populate
 
-**What:** Merge engineering fields into `build_retrieval_manifest`; `record_retrieve_pipeline_step` receives populated dict; helper `build_context_stats(pack, prompt_chars, diff_meta) -> dict` writes ORM column.
+**What:** Merge engineering fields in `build_retrieval_manifest` inside `prepare_review_context`; `build_context_stats(pack, prompt_chars, diff_meta)`; persist `review_run.context_stats` in `run_review_run` after context prepare.
 
-**Files:** `backend/app/services/engineering_context/stats.py`, `backend/app/services/github_pipeline_trace.py`, `backend/tests/unit/test_github_pipeline_trace.py`
+**Files:** `backend/app/services/engineering_context/stats.py`, `backend/app/services/github_review.py`, `backend/tests/unit/test_github_pipeline_trace.py`, `backend/tests/unit/test_github_review.py`
 
 **Deliverable:**
 
 ```bash
-cd backend && pipenv run pytest tests/unit/test_github_pipeline_trace.py tests/unit/test_github_review.py -k "context_stats or engineering_context" -q
+cd backend && pipenv run pytest tests/unit/test_github_review.py -k "retrieval_manifest_includes_sc3_defaults or context_stats or engineering_context" -q
+pipenv run pytest tests/unit/test_github_pipeline_trace.py -q
 ```
 
 ---

@@ -8,8 +8,8 @@ Phase **P5** of [REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md](../REVIEW_ENGINEERI
 
 - Sign-off requires: `engineering_context_injected` > 0 on scoped runs, diff truncated % < 5%, omitted `.md` runs = 0 (post-cap), judge path includes locks on escalation PR if triggered.
 - Use `--since` = RCX deploy timestamp on staging (not full history).
-- Rename or split staging metrics script if review-context section grows (parking lot — optional subphase P5.2).
 - Manual **contradict locks %** — operator reviews published findings on dogfood PR; 0% target.
+- Staging metrics script rename deferred to post-program parking lot (keep `judge_json_contract_staging_metrics.py` for P5).
 
 ## Out of scope for P5
 
@@ -20,21 +20,25 @@ Phase **P5** of [REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md](../REVIEW_ENGINEERI
 
 ## P5.1 — Validation memo stub
 
-**What:** Create `REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md` — deploy status, metrics tables (pre-filled baseline from findings), sign-off row.
+**What:** Create `REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md` — deploy status, metrics tables (pre-filled baseline from findings), sign-off row, **dogfood trigger steps:**
+
+1. Deploy `feat/review-engineering-context` to staging (alembic `0029`).
+2. Open/merge dogfood PR with `backend/**` changes.
+3. Trigger review: workspace autostart **or** PR comment `@revy review`.
+4. Confirm `revy/review` check completes on latest `head_sha`.
+5. Run metrics script with `--since <deploy-iso>`.
 
 **Files:** `docs/review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md`
 
-**Deliverable:** Memo exists with baseline row from 2026-07-29 and empty post-deploy columns.
+**Deliverable:** Memo exists with baseline row from 2026-07-29, trigger steps, empty post-deploy columns.
 
 ---
 
 ## P5.2 — Deploy + dogfood PR (human gate)
 
-**What:** Deploy `feat/review-engineering-context` to staging; merge dogfood PR touching `backend/**` with RCX docs; trigger `@revy review` or autostart.
+**What:** Execute trigger steps in validation memo.
 
-**Files:** (ops — no code)
-
-**Deliverable (human gate):** At least one completed review run in `--since` window.
+**Deliverable (human gate):** At least one completed review run in `--since` window with `context_stats` populated.
 
 ---
 
@@ -54,7 +58,7 @@ cd backend && DATABASE_SSL_INSECURE=1 pipenv run sh -c 'python -m scripts.judge_
 
 ## P5.4 — Doc sync
 
-**What:** Update program README execution table (Done + sha); recovery checklist Track M row; general plan status; findings status.
+**What:** Update program README execution table (Done + sha); recovery checklist Track M row; general plan status; findings status; PRODUCT_PATTERNS planning-doc row.
 
 | Doc | Change |
 |-----|--------|
@@ -63,12 +67,12 @@ cd backend && DATABASE_SSL_INSECURE=1 pipenv run sh -c 'python -m scripts.judge_
 | [REVIEW_ENGINEERING_CONTEXT_FINDINGS.md](../REVIEW_ENGINEERING_CONTEXT_FINDINGS.md) | Status: shipped |
 | [REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md](../REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md) | Status: done |
 | [../../REVIEW_PIPELINE_RECOVERY_CHECKLIST.md](../../REVIEW_PIPELINE_RECOVERY_CHECKLIST.md) | Track M — RCX shipped |
-| [../../REVIEW_PIPELINE_PRODUCT_PATTERNS.md](../../REVIEW_PIPELINE_PRODUCT_PATTERNS.md) | Planning-doc row → shipped dogfood |
+| [../../REVIEW_PIPELINE_PRODUCT_PATTERNS.md](../../REVIEW_PIPELINE_PRODUCT_PATTERNS.md) | Planning-doc inject row → **shipped** dogfood |
 
 **Deliverable:**
 
 ```bash
-grep -l "review-engineering-context" docs/review-pipeline/README.md docs/review-pipeline/REVIEW_PIPELINE_RECOVERY_CHECKLIST.md
+grep -l "review-engineering-context" docs/review-pipeline/README.md docs/review-pipeline/REVIEW_PIPELINE_RECOVERY_CHECKLIST.md docs/review-pipeline/REVIEW_PIPELINE_PRODUCT_PATTERNS.md
 ```
 
 ---
@@ -76,7 +80,7 @@ grep -l "review-engineering-context" docs/review-pipeline/README.md docs/review-
 **Phase gate** (from `backend/`):
 
 ```bash
-pipenv run pytest tests/unit/test_engineering_context_manifest.py tests/unit/test_engineering_context_pack.py tests/unit/test_github_review.py -q
+pipenv run pytest tests/unit/test_engineering_context_manifest.py tests/unit/test_engineering_context_pack.py tests/unit/test_github_review.py tests/unit/test_github_finding_judge.py -q
 ```
 
 **Human gate:** P5.2 + P5.3 complete — operator sign-off in validation memo.
