@@ -7,6 +7,7 @@ import httpx
 import pytest
 
 from app.core.exceptions import ServiceUnavailableError
+from app.integrations import anthropic_review
 from app.integrations.anthropic_review import complete_review, parse_review_json
 
 
@@ -21,6 +22,43 @@ async def test_complete_review_disabled_raises():
 
 
 @pytest.mark.asyncio
+async def test_judge_finding_falls_back_to_direct_when_gateway_fails():
+    gateway_response = MagicMock()
+    gateway_response.raise_for_status = MagicMock(side_effect=httpx.HTTPStatusError(
+        "gateway down",
+        request=MagicMock(),
+        response=MagicMock(status_code=503),
+    ))
+    direct_response = MagicMock()
+    direct_response.raise_for_status = MagicMock()
+    direct_response.json.return_value = {
+        "content": [{"text": json.dumps({"outcome": "upheld", "notes": "ok"})}]
+    }
+    client = AsyncMock(spec=httpx.AsyncClient)
+    client.post = AsyncMock(side_effect=[gateway_response, direct_response])
+
+    with patch("app.integrations.anthropic_review.settings") as mock_settings:
+        mock_settings.anthropic_gateway_enabled = True
+        mock_settings.anthropic_gateway_messages_url = "https://llm.ai.rtu.lv/v1/messages"
+        mock_settings.anthropic_auth_token = "rtu-token"
+        mock_settings.effective_anthropic_gateway_judge_model = "azure_ai/claude-opus-5"
+        mock_settings.anthropic_direct_enabled = True
+        mock_settings.anthropic_api_key = "direct-key"
+        mock_settings.revy_anthropic_model = "claude-sonnet-5"
+        mock_settings.revy_revision_timeout_standard_seconds = 30
+        result = await anthropic_review.judge_finding(client, user_prompt="judge this")
+
+    assert result["outcome"] == "upheld"
+    assert client.post.await_count == 2
+    gateway_call = client.post.await_args_list[0]
+    direct_call = client.post.await_args_list[1]
+    assert gateway_call.args[0] == "https://llm.ai.rtu.lv/v1/messages"
+    assert "Bearer" in gateway_call.kwargs["headers"]["Authorization"]
+    assert direct_call.args[0] == anthropic_review.ANTHROPIC_DIRECT_MESSAGES_URL
+    assert direct_call.kwargs["headers"]["x-api-key"] == "direct-key"
+
+
+@pytest.mark.asyncio
 async def test_complete_review_returns_content():
     payload = {"content": [{"text": json.dumps({"findings": []})}]}
     response = MagicMock()
@@ -30,8 +68,10 @@ async def test_complete_review_returns_content():
     client.post = AsyncMock(return_value=response)
 
     with patch("app.integrations.anthropic_review.settings") as mock_settings:
+        mock_settings.anthropic_direct_enabled = True
         mock_settings.anthropic_api_key = "test-key"
         mock_settings.revy_anthropic_model = "claude-sonnet-5"
+        mock_settings.revy_revision_timeout_standard_seconds = 30
         content = await complete_review(client, user_prompt="review")
 
     assert json.loads(content)["findings"] == []

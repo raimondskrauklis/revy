@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 import json
+import logging
+from dataclasses import dataclass
 
 import httpx
 
 from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError
 
-ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
+ANTHROPIC_DIRECT_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_VERSION = "2023-06-01"
+
+logger = logging.getLogger(__name__)
 
 REVIEW_SYSTEM_PROMPT = (
     "You are a senior code reviewer. Return a single JSON object with shape "
@@ -25,13 +29,177 @@ REVIEW_SYSTEM_PROMPT = (
     "only to validate cross-file impact."
 )
 
+JUDGE_SYSTEM_PROMPT = (
+    "You are an expert code review judge. Given a finding, decide whether it should be "
+    "upheld, dismissed as a false positive, or modified. Return JSON only: "
+    '{"outcome":"upheld|dismissed|modified","notes":"brief rationale"}'
+)
 
-def _require_anthropic_enabled() -> None:
-    if not settings.anthropic_api_key or not settings.anthropic_api_key.strip():
+
+@dataclass(frozen=True, slots=True)
+class _AnthropicProfile:
+    messages_url: str
+    auth_headers: dict[str, str]
+    model_id: str
+    label: str
+
+
+def _anthropic_base_headers() -> dict[str, str]:
+    return {
+        "anthropic-version": ANTHROPIC_VERSION,
+        "Content-Type": "application/json",
+    }
+
+
+def _direct_profile(model_id: str) -> _AnthropicProfile | None:
+    api_key = settings.anthropic_api_key
+    if not api_key or not api_key.strip():
+        return None
+    return _AnthropicProfile(
+        messages_url=ANTHROPIC_DIRECT_MESSAGES_URL,
+        auth_headers={"x-api-key": api_key.strip()},
+        model_id=model_id,
+        label="direct",
+    )
+
+
+def _gateway_profile(fallback_model_id: str) -> _AnthropicProfile | None:
+    messages_url = settings.anthropic_gateway_messages_url
+    token = settings.anthropic_auth_token
+    if not messages_url or not token or not token.strip():
+        return None
+    model_id = settings.effective_anthropic_gateway_judge_model or fallback_model_id
+    return _AnthropicProfile(
+        messages_url=messages_url,
+        auth_headers={"Authorization": f"Bearer {token.strip()}"},
+        model_id=model_id,
+        label="gateway",
+    )
+
+
+def _judge_profiles(model_id: str | None) -> list[_AnthropicProfile]:
+    resolved_model = model_id or settings.revy_anthropic_model
+    profiles: list[_AnthropicProfile] = []
+    gateway = _gateway_profile(resolved_model)
+    if gateway is not None:
+        profiles.append(gateway)
+    direct = _direct_profile(resolved_model)
+    if direct is not None:
+        profiles.append(direct)
+    return profiles
+
+
+def _require_anthropic_direct_enabled() -> None:
+    if not settings.anthropic_direct_enabled:
         raise ServiceUnavailableError(
             message="Anthropic API is not configured",
             error_code="llm_disabled",
         )
+
+
+def _require_judge_anthropic_enabled() -> None:
+    if not settings.anthropic_gateway_enabled and not settings.anthropic_direct_enabled:
+        raise ServiceUnavailableError(
+            message="Anthropic judge API is not configured",
+            error_code="llm_disabled",
+        )
+
+
+def _extract_message_text(data: dict) -> str:
+    content_blocks = data.get("content")
+    if not isinstance(content_blocks, list) or not content_blocks:
+        raise ServiceUnavailableError(
+            message="Anthropic response invalid",
+            error_code="llm_error",
+        )
+    first = content_blocks[0]
+    if not isinstance(first, dict):
+        raise ServiceUnavailableError(
+            message="Anthropic response invalid",
+            error_code="llm_error",
+        )
+    text = first.get("text")
+    if not isinstance(text, str) or not text.strip():
+        raise ServiceUnavailableError(
+            message="Anthropic response invalid",
+            error_code="llm_error",
+        )
+    return text
+
+
+async def _post_anthropic_messages(
+    client: httpx.AsyncClient,
+    profile: _AnthropicProfile,
+    *,
+    system: str,
+    user_prompt: str,
+    max_tokens: int,
+    timeout_seconds: float,
+) -> str:
+    headers = {**_anthropic_base_headers(), **profile.auth_headers}
+    response = await client.post(
+        profile.messages_url,
+        headers=headers,
+        json={
+            "model": profile.model_id,
+            "max_tokens": max_tokens,
+            "system": system,
+            "messages": [{"role": "user", "content": user_prompt}],
+        },
+        timeout=timeout_seconds,
+    )
+    response.raise_for_status()
+    data = response.json()
+    if not isinstance(data, dict):
+        raise ServiceUnavailableError(
+            message="Anthropic response invalid",
+            error_code="llm_error",
+        )
+    return _extract_message_text(data)
+
+
+async def _post_with_profile_fallback(
+    client: httpx.AsyncClient,
+    profiles: list[_AnthropicProfile],
+    *,
+    system: str,
+    user_prompt: str,
+    max_tokens: int,
+    timeout_seconds: float,
+) -> str:
+    if not profiles:
+        raise ServiceUnavailableError(
+            message="Anthropic API is not configured",
+            error_code="llm_disabled",
+        )
+    last_exc: Exception | None = None
+    for index, profile in enumerate(profiles):
+        try:
+            return await _post_anthropic_messages(
+                client,
+                profile,
+                system=system,
+                user_prompt=user_prompt,
+                max_tokens=max_tokens,
+                timeout_seconds=timeout_seconds,
+            )
+        except (httpx.HTTPError, ServiceUnavailableError) as exc:
+            last_exc = exc
+            if index < len(profiles) - 1:
+                logger.warning(
+                    "anthropic_profile_failed_trying_fallback",
+                    extra={
+                        "profile": profile.label,
+                        "model_id": profile.model_id,
+                        "error": str(exc),
+                    },
+                )
+    if last_exc is not None:
+        raise last_exc
+    raise ServiceUnavailableError(
+        message="Anthropic API is not configured",
+        error_code="llm_disabled",
+    )
 
 
 async def complete_review(
@@ -41,50 +209,21 @@ async def complete_review(
     model_id: str | None = None,
     timeout_seconds: float | None = None,
 ) -> str:
-    _require_anthropic_enabled()
-    api_key = settings.anthropic_api_key
-    if not api_key:
+    _require_anthropic_direct_enabled()
+    profile = _direct_profile(model_id or settings.revy_anthropic_model)
+    if profile is None:
         raise ServiceUnavailableError(
             message="Anthropic API is not configured",
             error_code="llm_disabled",
         )
-
-    response = await client.post(
-        ANTHROPIC_API_URL,
-        headers={
-            "x-api-key": api_key,
-            "anthropic-version": ANTHROPIC_VERSION,
-            "Content-Type": "application/json",
-        },
-        json={
-            "model": model_id or settings.revy_anthropic_model,
-            "max_tokens": 4096,
-            "system": REVIEW_SYSTEM_PROMPT,
-            "messages": [{"role": "user", "content": user_prompt}],
-        },
-        timeout=timeout_seconds or settings.revy_revision_timeout_standard_seconds,
+    return await _post_anthropic_messages(
+        client,
+        profile,
+        system=REVIEW_SYSTEM_PROMPT,
+        user_prompt=user_prompt,
+        max_tokens=4096,
+        timeout_seconds=timeout_seconds or settings.revy_revision_timeout_standard_seconds,
     )
-    response.raise_for_status()
-    data = response.json()
-    content_blocks = data.get("content")
-    if not isinstance(content_blocks, list) or not content_blocks:
-        raise ServiceUnavailableError(
-            message="Anthropic review response invalid",
-            error_code="llm_error",
-        )
-    first = content_blocks[0]
-    if not isinstance(first, dict):
-        raise ServiceUnavailableError(
-            message="Anthropic review response invalid",
-            error_code="llm_error",
-        )
-    text = first.get("text")
-    if not isinstance(text, str) or not text.strip():
-        raise ServiceUnavailableError(
-            message="Anthropic review response invalid",
-            error_code="llm_error",
-        )
-    return text
 
 
 def parse_review_json(raw: str) -> list[dict]:
@@ -100,13 +239,6 @@ def parse_review_json(raw: str) -> list[dict]:
     return [item for item in findings if isinstance(item, dict)]
 
 
-JUDGE_SYSTEM_PROMPT = (
-    "You are an expert code review judge. Given a finding, decide whether it should be "
-    "upheld, dismissed as a false positive, or modified. Return JSON only: "
-    '{"outcome":"upheld|dismissed|modified","notes":"brief rationale"}'
-)
-
-
 async def judge_finding(
     client: httpx.AsyncClient,
     *,
@@ -114,49 +246,16 @@ async def judge_finding(
     model_id: str | None = None,
     timeout_seconds: float | None = None,
 ) -> dict:
-    _require_anthropic_enabled()
-    api_key = settings.anthropic_api_key
-    if not api_key:
-        raise ServiceUnavailableError(
-            message="Anthropic API is not configured",
-            error_code="llm_disabled",
-        )
-
-    response = await client.post(
-        ANTHROPIC_API_URL,
-        headers={
-            "x-api-key": api_key,
-            "anthropic-version": ANTHROPIC_VERSION,
-            "Content-Type": "application/json",
-        },
-        json={
-            "model": model_id or settings.revy_anthropic_model,
-            "max_tokens": 1024,
-            "system": JUDGE_SYSTEM_PROMPT,
-            "messages": [{"role": "user", "content": user_prompt}],
-        },
-        timeout=timeout_seconds or settings.revy_revision_timeout_standard_seconds,
+    _require_judge_anthropic_enabled()
+    profiles = _judge_profiles(model_id)
+    text = await _post_with_profile_fallback(
+        client,
+        profiles,
+        system=JUDGE_SYSTEM_PROMPT,
+        user_prompt=user_prompt,
+        max_tokens=1024,
+        timeout_seconds=timeout_seconds or settings.revy_revision_timeout_standard_seconds,
     )
-    response.raise_for_status()
-    data = response.json()
-    content_blocks = data.get("content")
-    if not isinstance(content_blocks, list) or not content_blocks:
-        raise ServiceUnavailableError(
-            message="Anthropic judge response invalid",
-            error_code="llm_error",
-        )
-    first = content_blocks[0]
-    if not isinstance(first, dict):
-        raise ServiceUnavailableError(
-            message="Anthropic judge response invalid",
-            error_code="llm_error",
-        )
-    text = first.get("text")
-    if not isinstance(text, str) or not text.strip():
-        raise ServiceUnavailableError(
-            message="Anthropic judge response invalid",
-            error_code="llm_error",
-        )
     payload = json.loads(text)
     if not isinstance(payload, dict):
         raise ValueError("judge_json_not_object")

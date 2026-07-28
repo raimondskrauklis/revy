@@ -78,6 +78,8 @@ def _provider_credentials_configured(
     if normalized == "moonshot":
         return bool(settings.moonshot_api_key and settings.moonshot_api_key.strip())
     if normalized == "anthropic":
+        if role == ModelRole.judge:
+            return settings.anthropic_gateway_enabled or settings.anthropic_direct_enabled
         return bool(settings.anthropic_api_key and settings.anthropic_api_key.strip())
     if normalized == "bedrock":
         if not (settings.aws_region or "").strip():

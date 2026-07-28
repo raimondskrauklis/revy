@@ -66,6 +66,9 @@ def _build_judge_prompt(
     *,
     group: GitHubFindingGroupORM,
     evidence_snippet: str | None,
+    start_line: int | None = None,
+    end_line: int | None = None,
+    suggestion: str | None = None,
 ) -> str:
     parts = [
         f"Title: {group.title}",
@@ -74,6 +77,13 @@ def _build_judge_prompt(
         f"File: {group.file_path or 'n/a'}",
         f"Message: {group.message}",
     ]
+    if start_line is not None:
+        line_ref = str(start_line)
+        if end_line is not None and end_line != start_line:
+            line_ref = f"{start_line}-{end_line}"
+        parts.append(f"Line: {line_ref}")
+    if suggestion:
+        parts.append(f"Suggested fix: {suggestion}")
     if evidence_snippet:
         parts.extend(
             [
@@ -145,6 +155,9 @@ async def _run_judge_llm_loop(
             user_prompt = _build_judge_prompt(
                 group=group,
                 evidence_snippet=finding.evidence_snippet,
+                start_line=finding.start_line,
+                end_line=finding.end_line,
+                suggestion=finding.suggestion,
             )
             raw: dict[str, Any] | None = None
             outcome_str: str | None = None
