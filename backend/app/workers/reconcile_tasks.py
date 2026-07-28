@@ -93,6 +93,7 @@ def reconcile_review_run_task(self, review_run_id: str) -> None:
                             current_revision.pull_request_id,
                         )
                         if pull_request is not None:
+                            await session.flush()
                             resolution_pass = await compute_resolution_transitions(
                                 session,
                                 pull_request=pull_request,

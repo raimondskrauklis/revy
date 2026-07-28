@@ -269,19 +269,18 @@ async def post_dismiss_finding_group(
         group_id=group_id,
     )
 
+    metadata: dict[str, str] = {"pull_request_id": str(pull_request_id)}
     if body.reason:
-        await record_audit(
-            session,
-            actor_user_id=current_user.user_id,
-            workspace_id=workspace_id,
-            action="finding_group.dismissed",
-            resource_type="github_finding_group",
-            resource_id=str(group.id),
-            metadata={
-                "pull_request_id": str(pull_request_id),
-                "reason": body.reason,
-            },
-        )
+        metadata["reason"] = body.reason
+    await record_audit(
+        session,
+        actor_user_id=current_user.user_id,
+        workspace_id=workspace_id,
+        action="finding_group.dismissed",
+        resource_type="github_finding_group",
+        resource_id=str(group.id),
+        metadata=metadata,
+    )
 
     await session.commit()
     return SuccessResponse(data=ReconciledFindingResponse.model_validate(group))
