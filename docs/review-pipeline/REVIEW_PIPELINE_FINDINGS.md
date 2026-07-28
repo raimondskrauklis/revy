@@ -87,7 +87,7 @@ Revy code does not replace GitHub App registration. Use these before expecting w
 | **GitHub optional at runtime** | Empty `GITHUB_WEBHOOK_SECRET` → webhooks disabled; empty App id/key → full sync disabled |
 | **OAuth install UI** | Not shipped — manual register (P4) until later phase |
 | **`heavy_job`** | Routed in `celery_app.py` but undefined — SaaS carryover |
-| **Judge without Anthropic** | R5 reconcile completes; judge skipped when `ANTHROPIC_API_KEY` unset (R5-Q3) |
+| **Judge without Anthropic** | R5 reconcile completes; judge skipped when no judge LLM path (`judge_llm_enabled()` — direct API key or gateway) (R5-Q3) |
 | **Skipped planning on R0/R1** | Code shipped first; general plans + findings updated retroactively — **do not repeat for R2+** |
 | **Retrospective PR review** | Audit PR pattern (never merge) + fix PRs — see [agent checklist](./REVIEW_PIPELINE_RECOVERY_CHECKLIST.md) § Revy review QA |
 
@@ -173,7 +173,7 @@ Source of truth: `backend/app/constants/enums.py`. String values are stored in P
 | R8-Q7 | Manual index isolation | **locked** | Admin `POST …/index` sets `trigger_source=manual`; index-complete does **not** auto-enqueue review |
 | R5-Q1 | Fingerprint algorithm | **locked** | `sha256(workspace_id ‖ pull_request_id ‖ file_path ‖ category ‖ normalize(message)[:500])` — scoped per PR |
 | R5-Q2 | Reconciliation schema + API | **locked** | `github_finding_groups` (`pull_request_id` FK, fingerprint unique per PR); `github_findings.group_id`; states `active` \| `superseded` \| `resolved`; API `GET …/findings/reconciled` |
-| R5-Q3 | Judge trigger policy | **locked** | Judge when `severity ∈ {error, critical}` OR (`category = security` AND `severity ≥ warning`); max 10 calls/run; skip judge when `ANTHROPIC_API_KEY` unset (reconcile still completes) |
+| R5-Q3 | Judge trigger policy | **locked** | Judge when `severity ∈ {error, critical}` OR (`category = security` AND `severity ≥ warning`); max 10 calls/run; skip judge when `judge_llm_enabled()` is false (no direct `ANTHROPIC_API_KEY` and no gateway `ANTHROPIC_BASE_URL` + token — reconcile still completes) |
 | R6-Q1 | Idempotent publish | **locked** | Update **check run** in place per `head_sha`; update stored PR summary comment in place when `publish_job` has `github_comment_id` — no new top-level comment per re-review (comment strategy detail in R6 execution) |
 | R6-Q2 | Merge readiness v1 | **locked** | Check run `conclusion`: `failure` if any active `error` or `critical`; `success` if none; `neutral` if only `warning`/`info`; optional R7 badge — **no** numeric 0–5 score v1 |
 | R6-Q3 | Suggested fix text | **shipped** | `suggestion` on finding row; GitHub `` ```suggestion `` block when line-accurate (polish wave) |

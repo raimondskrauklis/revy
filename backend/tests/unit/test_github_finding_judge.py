@@ -43,6 +43,37 @@ def test_is_judge_candidate_info_bug_false():
     )
 
 
+def test_judge_candidate_loader_filters_on_finding_severity_category():
+    """_load_judge_candidates gates on finding row fields, not group-only fields."""
+    finding_severity = FindingSeverity.error
+    finding_category = FindingCategory.bug
+    assert is_judge_candidate(severity=finding_severity, category=finding_category)
+    group = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=uuid.uuid4(),
+        fingerprint="abc",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Mismatch title",
+        message="msg",
+        file_path="app/a.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+    finding = GitHubFindingORM(
+        workspace_id=group.workspace_id,
+        review_run_id=uuid.uuid4(),
+        severity=finding_severity,
+        category=finding_category,
+        title="Err",
+        message="msg",
+        file_path="app/a.py",
+        group_id=group.id,
+    )
+    assert is_judge_candidate(severity=finding.severity, category=finding.category)
+    assert finding.severity != group.severity
+
+
 def test_build_judge_prompt_includes_evidence_and_grounding():
     group = GitHubFindingGroupORM(
         workspace_id=uuid.uuid4(),

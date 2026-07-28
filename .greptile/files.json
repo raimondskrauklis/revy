@@ -1,6 +1,21 @@
 {
   "files": [
     {
+      "path": "docs/review-pipeline/judge/waves/JUDGE_INPUT_QUALITY_EXECUTION.md",
+      "description": "Judge input quality — LOOP P0–P5, J-8 compare reload, verifier prompts",
+      "scope": ["backend/**"]
+    },
+    {
+      "path": "docs/review-pipeline/judge/JUDGE_INPUT_INVESTIGATION_FINDINGS.md",
+      "description": "Judge baseline — Moonshot vs judge context, J-* gaps",
+      "scope": ["backend/**"]
+    },
+    {
+      "path": "docs/review-pipeline/judge/JUDGE_INPUT_QUALITY_GENERAL_PLAN.md",
+      "description": "Judge input quality general plan — find→verify thesis",
+      "scope": ["backend/**"]
+    },
+    {
       "path": "docs/review-pipeline/review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_EXECUTION.md",
       "description": "Review generation lifecycle — LOOP order P0–P5, locked decisions, phase gates",
       "scope": ["backend/**"]

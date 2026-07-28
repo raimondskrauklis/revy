@@ -67,8 +67,15 @@ FINDING_LIST_DEFAULT_LIMIT = 100
 FINDING_LIST_MAX_LIMIT = 500
 EVIDENCE_SNIPPET_MAX_CHARS = 2048
 EVIDENCE_CONTEXT_LINES = 5
-_HUNK_HEADER_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
+JUDGE_FILE_PATCH_MAX_CHARS = 8192
+_HUNK_HEADER_RE = re.compile(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@")
 _FULL_INDEX_PROFILES = frozenset({ReviewProfile.deep, ReviewProfile.critical})
+
+
+@dataclass(frozen=True)
+class JudgeCodeContext:
+    evidence_snippet: str | None
+    file_patch: str | None
 
 
 @dataclass(frozen=True)
@@ -106,6 +113,34 @@ def _truncate_utf8(text: str, max_bytes: int) -> str:
     if len(encoded) <= max_bytes:
         return text
     return encoded[:max_bytes].decode("utf-8", errors="ignore")
+
+
+def normalize_patch_file_key(file_path: str) -> str:
+    """Normalize file paths for patches_by_file lookup (compare filename keys)."""
+    normalized = file_path.replace("\\", "/").strip()
+    if normalized.startswith("./"):
+        normalized = normalized[2:]
+    return normalized
+
+
+def lookup_patch_for_file(
+    patches_by_file: dict[str, str],
+    file_path: str | None,
+) -> str | None:
+    if not file_path:
+        return None
+    direct = patches_by_file.get(file_path)
+    if direct is not None:
+        return direct
+    normalized = normalize_patch_file_key(file_path)
+    if normalized != file_path:
+        direct = patches_by_file.get(normalized)
+        if direct is not None:
+            return direct
+    for key, patch in patches_by_file.items():
+        if normalize_patch_file_key(key) == normalized:
+            return patch
+    return None
 
 
 def _is_test_path(file_path: str) -> bool:
@@ -223,33 +258,66 @@ def extract_evidence_from_patch(
     context: int = EVIDENCE_CONTEXT_LINES,
     max_chars: int = EVIDENCE_SNIPPET_MAX_CHARS,
 ) -> str | None:
-    """Extract new-file lines around start_line from a unified diff patch."""
+    """Extract lines around start_line (new-file line numbers) from a unified diff patch."""
     target_start = max(1, start_line - context)
     target_end = start_line + context
     collected: list[str] = []
+    old_line = 0
     new_line = 0
+    pending_minus: str | None = None
 
     for line in patch.splitlines():
         hunk_match = _HUNK_HEADER_RE.match(line)
         if hunk_match is not None:
-            new_line = int(hunk_match.group(1)) - 1
+            old_line = int(hunk_match.group(1)) - 1
+            new_line = int(hunk_match.group(2)) - 1
+            pending_minus = None
             continue
         if line.startswith("\\"):
             continue
-        if line.startswith("+"):
+        if line.startswith("-"):
+            old_line += 1
+            pending_minus = f"-{line[1:]}"
+        elif line.startswith("+"):
             new_line += 1
             if target_start <= new_line <= target_end:
+                if pending_minus is not None:
+                    collected.append(pending_minus)
+                pending_minus = None
                 collected.append(line[1:])
-        elif line.startswith("-"):
-            continue
+            else:
+                pending_minus = None
         elif line.startswith(" "):
+            old_line += 1
             new_line += 1
+            pending_minus = None
             if target_start <= new_line <= target_end:
                 collected.append(line[1:])
 
-    if not collected:
+    if collected:
+        return _truncate_utf8("\n".join(collected), max_chars)
+
+    # Removal-only hunks: no new-file lines in window — anchor on old-file line numbers.
+    removal_lines: list[str] = []
+    old_line = 0
+    for line in patch.splitlines():
+        hunk_match = _HUNK_HEADER_RE.match(line)
+        if hunk_match is not None:
+            old_line = int(hunk_match.group(1)) - 1
+            continue
+        if line.startswith("\\"):
+            continue
+        if line.startswith("-"):
+            old_line += 1
+            if target_start <= old_line <= target_end:
+                removal_lines.append(f"-{line[1:]}")
+        elif line.startswith(" ") or line.startswith("+"):
+            if line.startswith(" "):
+                old_line += 1
+
+    if not removal_lines:
         return None
-    return _truncate_utf8("\n".join(collected), max_chars)
+    return _truncate_utf8("\n".join(removal_lines), max_chars)
 
 
 def resolve_evidence_snippet(
@@ -263,7 +331,7 @@ def resolve_evidence_snippet(
     if not file_path:
         return None
 
-    patch = patches_by_file.get(file_path)
+    patch = lookup_patch_for_file(patches_by_file, file_path)
     if patch and start_line is not None:
         snippet = extract_evidence_from_patch(patch, start_line=start_line, max_chars=max_chars)
         if snippet:
@@ -276,6 +344,27 @@ def resolve_evidence_snippet(
     if patch:
         return _truncate_utf8(patch, max_chars)
     return None
+
+
+def resolve_judge_code_context(
+    *,
+    file_path: str | None,
+    start_line: int | None,
+    patches_by_file: dict[str, str],
+    supplemental_top_by_file: dict[str, ScopedChunkHit],
+    snippet_max_chars: int = EVIDENCE_SNIPPET_MAX_CHARS,
+    patch_max_chars: int = JUDGE_FILE_PATCH_MAX_CHARS,
+) -> JudgeCodeContext:
+    evidence_snippet = resolve_evidence_snippet(
+        file_path=file_path,
+        start_line=start_line,
+        patches_by_file=patches_by_file,
+        supplemental_top_by_file=supplemental_top_by_file,
+        max_chars=snippet_max_chars,
+    )
+    raw_patch = lookup_patch_for_file(patches_by_file, file_path)
+    file_patch = _truncate_utf8(raw_patch, patch_max_chars) if raw_patch else None
+    return JudgeCodeContext(evidence_snippet=evidence_snippet, file_patch=file_patch)
 
 
 def build_retrieval_manifest(

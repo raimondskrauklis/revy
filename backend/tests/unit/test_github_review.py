@@ -765,6 +765,17 @@ def test_build_unified_diff_truncates_largest_files_first():
     assert "large.py" not in diff
 
 
+def test_normalize_patch_file_key():
+    assert github_review.normalize_patch_file_key("./app/main.py") == "app/main.py"
+    assert github_review.normalize_patch_file_key("app\\main.py") == "app/main.py"
+
+
+def test_lookup_patch_for_file_normalized_key():
+    patches = {"app/main.py": "@@ patch\n+line\n"}
+    assert github_review.lookup_patch_for_file(patches, "./app/main.py") == patches["app/main.py"]
+    assert github_review.lookup_patch_for_file(patches, "app\\main.py") == patches["app/main.py"]
+
+
 def test_extract_evidence_from_patch_around_line():
     patch = """@@ -10,3 +10,4 @@
  def foo():
@@ -775,6 +786,58 @@ def test_extract_evidence_from_patch_around_line():
     snippet = github_review.extract_evidence_from_patch(patch, start_line=12)
     assert snippet is not None
     assert "new_call" in snippet
+
+
+def test_extract_evidence_from_patch_includes_removed_line():
+    patch = """@@ -10,3 +10,4 @@
+ def foo():
+-    old()
++    new_call()
+     return x
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=11)
+    assert snippet is not None
+    assert "-    old()" in snippet
+
+
+def test_resolve_judge_code_context_returns_snippet_and_patch():
+    patches = {
+        "app/main.py": "@@ -1,1 +1,2 @@\n-old\n+new_line\n",
+    }
+    ctx = github_review.resolve_judge_code_context(
+        file_path="app/main.py",
+        start_line=1,
+        patches_by_file=patches,
+        supplemental_top_by_file={},
+        patch_max_chars=100,
+    )
+    assert ctx.evidence_snippet is not None
+    assert "new_line" in ctx.evidence_snippet
+    assert ctx.file_patch is not None
+    assert "new_line" in ctx.file_patch
+
+
+def test_resolve_judge_code_context_lineless_still_has_patch():
+    patches = {"src/handler.py": "@@ -0,0 +1,3 @@\n+line1\n+line2\n"}
+    ctx = github_review.resolve_judge_code_context(
+        file_path="src/handler.py",
+        start_line=None,
+        patches_by_file=patches,
+        supplemental_top_by_file={},
+    )
+    assert ctx.file_patch is not None
+    assert "line1" in ctx.file_patch
+
+
+def test_resolve_judge_code_context_missing_patch():
+    ctx = github_review.resolve_judge_code_context(
+        file_path="missing.py",
+        start_line=1,
+        patches_by_file={},
+        supplemental_top_by_file={},
+    )
+    assert ctx.evidence_snippet is None
+    assert ctx.file_patch is None
 
 
 def test_resolve_evidence_snippet_prefers_diff_over_supplemental():
