@@ -134,6 +134,29 @@ def test_build_verification_judge_prompt_includes_patch_without_snippet():
     assert "@@ -1 +1 @@" in prompt
 
 
+def test_build_verification_judge_prompt_whitespace_only_snippet_omits_evidence():
+    from app.integrations.anthropic_review import build_verification_judge_prompt
+
+    group = type(
+        "Group",
+        (),
+        {
+            "title": "Bug",
+            "severity": "error",
+            "category": "bug",
+            "file_path": "app/x.py",
+            "message": "msg",
+        },
+    )()
+    prompt = build_verification_judge_prompt(
+        group=group,
+        push_delta_patch="@@ -1 +1 @@\n-old\n+new\n",
+        evidence_snippet="   ",
+    )
+    assert "Evidence excerpt:" not in prompt
+    assert "Push delta" in prompt
+
+
 def test_judge_outcome_json_schema_matches_parse_judge_outcome():
     schema = anthropic_review.judge_outcome_json_schema()
     assert schema["required"] == ["outcome"]
@@ -226,10 +249,12 @@ async def test_judge_finding_parses_fenced_json_body():
 @pytest.mark.asyncio
 async def test_judge_finding_structured_output_falls_back_on_400():
     structured_response = MagicMock()
+    structured_response.status_code = 400
+    structured_response.text = "structured_outputs not supported in your workspace"
     structured_response.raise_for_status.side_effect = httpx.HTTPStatusError(
         "bad request",
         request=MagicMock(),
-        response=MagicMock(status_code=400),
+        response=structured_response,
     )
     plain_response = MagicMock()
     plain_response.raise_for_status = MagicMock()
@@ -258,6 +283,44 @@ async def test_judge_finding_structured_output_falls_back_on_400():
     assert client.post.await_count == 2
     assert "output_config" in client.post.await_args_list[0].kwargs["json"]
     assert "output_config" not in client.post.await_args_list[1].kwargs["json"]
+
+
+@pytest.mark.asyncio
+async def test_judge_finding_structured_output_does_not_fallback_on_unrelated_400():
+    bad_response = MagicMock()
+    bad_response.status_code = 400
+    bad_response.text = "invalid model id"
+    bad_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+        "bad request",
+        request=MagicMock(),
+        response=bad_response,
+    )
+    client = AsyncMock(spec=httpx.AsyncClient)
+    client.post = AsyncMock(return_value=bad_response)
+    direct_profile = anthropic_review._AnthropicProfile(
+        messages_url=anthropic_review.ANTHROPIC_DIRECT_MESSAGES_URL,
+        auth_headers={"x-api-key": "direct-key"},
+        model_id="claude-sonnet-5",
+        label="direct",
+    )
+
+    with (
+        patch("app.integrations.anthropic_review.settings") as mock_settings,
+        patch(
+            "app.integrations.anthropic_review._judge_profiles",
+            return_value=[direct_profile],
+        ),
+        patch(
+            "app.integrations.anthropic_review._profile_supports_structured_output",
+            return_value=True,
+        ),
+        pytest.raises(httpx.HTTPStatusError),
+    ):
+        mock_settings.revy_judge_structured_output = True
+        mock_settings.revy_revision_timeout_standard_seconds = 30
+        await anthropic_review.judge_finding(client, user_prompt="judge this")
+
+    assert client.post.await_count == 1
 
 
 @pytest.mark.asyncio

@@ -159,6 +159,29 @@ def test_build_judge_prompt_omits_file_patch_when_snippet_present():
     assert "snippet" in prompt
 
 
+def test_build_judge_prompt_whitespace_only_snippet_omits_evidence_and_includes_patch():
+    group = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=uuid.uuid4(),
+        fingerprint="abc",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Bug",
+        message="msg",
+        file_path="app/handler.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+    prompt = _build_judge_prompt(
+        group=group,
+        evidence_snippet="   ",
+        file_patch="@@ -1 +1 @@\n+line\n",
+    )
+    assert "Evidence (code excerpt" not in prompt
+    assert "File diff (scoped):" in prompt
+    assert "Judge conservatively" in prompt
+
+
 def test_build_judge_prompt_includes_file_patch_when_no_snippet():
     group = GitHubFindingGroupORM(
         workspace_id=uuid.uuid4(),
@@ -182,7 +205,7 @@ def test_build_judge_prompt_includes_file_patch_when_no_snippet():
 
 
 def test_build_judge_prompt_truncates_patch_at_prompt_cap():
-    from app.services.github_finding_judge import JUDGE_PROMPT_PATCH_MAX_CHARS
+    from app.services.judge_prompt_context import JUDGE_PROMPT_PATCH_MAX_CHARS
 
     group = GitHubFindingGroupORM(
         workspace_id=uuid.uuid4(),
@@ -939,6 +962,61 @@ async def test_call_judge_with_optional_retry_retries_parse_failure():
     assert raw["outcome"] == "dismissed"
     assert retry_count == 1
     assert call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_call_judge_with_optional_retry_does_not_retry_unrelated_value_error():
+    from app.services.github_finding_judge import call_judge_with_optional_retry
+
+    client = AsyncMock()
+    call_judge = AsyncMock(side_effect=ValueError("unrelated"))
+
+    with patch(
+        "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
+        call_judge,
+    ):
+        with pytest.raises(ValueError, match="unrelated"):
+            await call_judge_with_optional_retry(
+                client,
+                model_ref=ModelRef(provider="anthropic", model_id="claude-test"),
+                user_prompt="judge",
+                timeout_seconds=30.0,
+            )
+
+    assert call_judge.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_call_judge_with_optional_retry_preserves_first_parse_body_on_double_fail():
+    from app.integrations.judge_llm_errors import JudgeParseError
+    from app.services.github_finding_judge import call_judge_with_optional_retry
+
+    client = AsyncMock()
+    call_count = 0
+
+    async def _judge_side_effect(*_args, **_kwargs):
+        nonlocal call_count
+        call_count += 1
+        raise JudgeParseError(
+            "judge_json_invalid",
+            response_text=f"attempt-{call_count}",
+        )
+
+    with patch(
+        "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
+        AsyncMock(side_effect=_judge_side_effect),
+    ):
+        with pytest.raises(JudgeParseError) as exc_info:
+            await call_judge_with_optional_retry(
+                client,
+                model_ref=ModelRef(provider="anthropic", model_id="claude-test"),
+                user_prompt="judge",
+                timeout_seconds=30.0,
+            )
+
+    assert call_count == 2
+    assert exc_info.value.response_text == "attempt-1"
+    assert exc_info.value.judge_retry_count == 1
 
 
 @pytest.mark.asyncio

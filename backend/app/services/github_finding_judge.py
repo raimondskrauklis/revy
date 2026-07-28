@@ -23,7 +23,7 @@ from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError, ValidationError
 from app.core.logging import get_logger
 from app.integrations import anthropic_review, llm_dispatch
-from app.integrations.judge_llm_errors import judge_failure_trace_fields
+from app.integrations.judge_llm_errors import JudgeParseError, judge_failure_trace_fields
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_finding_judge_outcome import GitHubFindingJudgeOutcomeORM
@@ -33,12 +33,15 @@ from app.services.github_compare_patches import fetch_compare_patches_by_file
 from app.services.github_finding_closure_rules import apply_resolution_method_on_judge_dismiss
 from app.services.github_finding_reconcile import severity_rank
 from app.services.github_review import resolve_judge_code_context
+from app.services.judge_prompt_context import (
+    judge_prompt_file_patch_chars,
+    resolve_judge_prompt_file_patch,
+)
 from app.services.model_policy import ModelRef, ModelRole, resolve_model
 
 logger = get_logger(__name__)
 
 JUDGE_MAX_PER_RUN = 10
-JUDGE_PROMPT_PATCH_MAX_CHARS = 2048
 
 _GROUNDING_WITH_EVIDENCE = (
     "Grounding (E2): Dismiss or weaken the finding if the claim is not entailed by "
@@ -77,6 +80,12 @@ async def call_judge_with_optional_retry(
     system_prompt: str | None = None,
 ) -> tuple[dict[str, Any], int]:
     """Call judge LLM once; on parse contract failure, retry once with schema reminder."""
+
+    def _is_parse_contract_error(exc: BaseException) -> bool:
+        if isinstance(exc, JudgeParseError):
+            return True
+        return isinstance(exc, ValueError) and str(exc) == "judge_outcome_invalid"
+
     try:
         raw = await llm_dispatch.call_judge_llm(
             client,
@@ -87,7 +96,9 @@ async def call_judge_with_optional_retry(
         )
         anthropic_review.parse_judge_outcome(raw)
         return raw, 0
-    except ValueError as exc:
+    except Exception as exc:
+        if not _is_parse_contract_error(exc):
+            raise
         parse_error = getattr(exc, "code", str(exc))
         retry_prompt = (
             f"{user_prompt}\n\n"
@@ -104,7 +115,15 @@ async def call_judge_with_optional_retry(
             )
             anthropic_review.parse_judge_outcome(raw)
             return raw, 1
-        except ValueError as retry_exc:
+        except Exception as retry_exc:
+            if not _is_parse_contract_error(retry_exc):
+                raise
+            if (
+                isinstance(exc, JudgeParseError)
+                and isinstance(retry_exc, JudgeParseError)
+                and exc.response_text
+            ):
+                retry_exc.response_text = exc.response_text
             retry_exc.judge_retry_count = 1
             raise
 
@@ -155,32 +174,6 @@ def is_judge_candidate(*, severity: FindingSeverity, category: FindingCategory) 
     )
 
 
-def _truncate_judge_prompt_patch(patch: str) -> str:
-    if len(patch) <= JUDGE_PROMPT_PATCH_MAX_CHARS:
-        return patch
-    return patch[:JUDGE_PROMPT_PATCH_MAX_CHARS]
-
-
-def resolve_judge_prompt_file_patch(
-    evidence_snippet: str | None,
-    file_patch: str | None,
-) -> str | None:
-    """Snippet-first tier: omit patch when evidence excerpt is present."""
-    if not file_patch:
-        return None
-    if evidence_snippet and evidence_snippet.strip():
-        return None
-    return _truncate_judge_prompt_patch(file_patch)
-
-
-def judge_prompt_file_patch_chars(
-    evidence_snippet: str | None,
-    file_patch: str | None,
-) -> int | None:
-    prompt_patch = resolve_judge_prompt_file_patch(evidence_snippet, file_patch)
-    return len(prompt_patch) if prompt_patch else None
-
-
 def _build_judge_prompt(
     *,
     group: GitHubFindingGroupORM,
@@ -216,7 +209,7 @@ def _build_judge_prompt(
                 prompt_patch,
             ]
         )
-    if evidence_snippet:
+    if evidence_snippet and evidence_snippet.strip():
         parts.extend(
             [
                 "",

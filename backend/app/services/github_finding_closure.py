@@ -49,10 +49,10 @@ from app.services.github_finding_judge import (
     _judge_failure_artifact,
     _judge_failure_log_extra,
     call_judge_with_optional_retry,
-    judge_prompt_file_patch_chars,
 )
 from app.services.github_finding_reconcile import _ensure_pull_request_access
 from app.services.github_review import resolve_judge_code_context
+from app.services.judge_prompt_context import judge_prompt_file_patch_chars
 from app.services.model_policy import ModelRole, resolve_model
 
 logger = get_logger(__name__)

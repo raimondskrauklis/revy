@@ -12,6 +12,7 @@ from app.constants.enums import stored_enum_value
 from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError
 from app.integrations.judge_llm_errors import parse_judge_payload
+from app.services.judge_prompt_context import resolve_judge_prompt_file_patch
 
 ANTHROPIC_DIRECT_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_VERSION = "2023-06-01"
@@ -267,18 +268,28 @@ async def _post_judge_messages_for_profile(
         )
     except httpx.HTTPStatusError as exc:
         if exc.response is not None and exc.response.status_code == 400:
-            logger.warning(
-                "anthropic_structured_output_unsupported_fallback_plain",
-                extra={"profile": profile.label, "model_id": profile.model_id},
-            )
-            return await _post_anthropic_messages(
-                client,
-                profile,
-                system=system,
-                user_prompt=user_prompt,
-                max_tokens=max_tokens,
-                timeout_seconds=timeout_seconds,
-            )
+            body = exc.response.text.lower()
+            if any(
+                marker in body
+                for marker in (
+                    "structured_output",
+                    "structured output",
+                    "output_config",
+                    "json_schema",
+                )
+            ):
+                logger.warning(
+                    "anthropic_structured_output_unsupported_fallback_plain",
+                    extra={"profile": profile.label, "model_id": profile.model_id},
+                )
+                return await _post_anthropic_messages(
+                    client,
+                    profile,
+                    system=system,
+                    user_prompt=user_prompt,
+                    max_tokens=max_tokens,
+                    timeout_seconds=timeout_seconds,
+                )
         raise
 
 
@@ -411,12 +422,10 @@ def build_verification_judge_prompt(
         if end_line is not None and end_line != start_line:
             line_ref = f"{start_line}-{end_line}"
         parts.append(f"Line: {line_ref}")
-    from app.services.github_finding_judge import resolve_judge_prompt_file_patch
-
     prompt_patch = resolve_judge_prompt_file_patch(evidence_snippet, push_delta_patch)
     if prompt_patch:
         parts.extend(["", "Push delta (since prior revision):", prompt_patch])
-    if evidence_snippet:
+    if evidence_snippet and evidence_snippet.strip():
         parts.extend(["", "Evidence excerpt:", evidence_snippet])
     return "\n".join(parts)
 
