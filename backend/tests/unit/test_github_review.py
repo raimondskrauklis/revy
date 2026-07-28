@@ -910,6 +910,110 @@ def test_extract_evidence_from_patch_minus_in_old_window_when_plus_outside_new_w
     assert "added_at_new_55" not in snippet
 
 
+def test_extract_evidence_from_patch_unrelated_minus_not_paired_with_later_plus():
+    patch = """@@ -1,4 +1,4 @@
+- unrelated_old()
+ context()
+- target_old()
++ target_new()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=3)
+    assert snippet is not None
+    assert "- unrelated_old()" not in snippet
+    assert "- target_old()" in snippet
+    assert "target_new" in snippet
+
+
+def test_extract_evidence_from_patch_hunk_boundary_flushes_orphan_minus():
+    patch = """@@ -1,1 +1,1 @@
+- orphan_in_hunk1()
+@@ -94,1 +55,1 @@
+- removed_at_old_95()
++ added_at_new_55()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=55)
+    assert snippet is not None
+    assert "orphan_in_hunk1" not in snippet
+    assert "- removed_at_old_95()" in snippet
+    assert "added_at_new_55" in snippet
+
+
+def test_extract_evidence_from_patch_empty_line_in_hunk():
+    patch = """@@ -1,3 +1,3 @@
+-removed()
+ 
++added()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=2)
+    assert snippet is not None
+    assert "-removed()" in snippet
+    assert "added" in snippet
+
+
+def test_extract_evidence_from_patch_old_new_line_drift_in_hunk():
+    patch = """@@ -95,1 +55,1 @@
+-removed_at_old_95()
++added_at_new_55()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=55)
+    assert snippet is not None
+    assert "-removed_at_old_95()" in snippet
+    assert "added_at_new_55" in snippet
+
+
+def test_extract_evidence_from_patch_orphan_deletion_before_separate_change():
+    patch = """@@ -5,1 +5,1 @@
+- orphan_delete_old_5()
+ context()
+- target_old()
++ target_new()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=5)
+    assert snippet is not None
+    assert "- orphan_delete_old_5()" in snippet
+
+
+def test_extract_evidence_from_patch_cross_hunk_orphan_does_not_leak():
+    patch = """@@ -4,2 +4,1 @@
+- unrelated_hunk1_old_5()
+ context()
+@@ -50,2 +10,2 @@
+- target_old()
++ target_new()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=11)
+    assert snippet is not None
+    assert "unrelated_hunk1" not in snippet
+    assert "- target_old()" in snippet
+    assert "target_new" in snippet
+
+
+def test_extract_evidence_from_patch_removal_only_hunk_with_separate_minus_groups():
+    patch = """@@ -5,3 +5,1 @@
+- first_orphan()
+ context()
+- second_orphan()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=5)
+    assert snippet is not None
+    assert "- first_orphan()" in snippet
+    assert "- second_orphan()" in snippet
+
+
+def test_extract_evidence_from_patch_multi_hunk_minus_in_old_window_plus_outside_window():
+    patch = """@@ -1,1 +1,1 @@
+- stray_in_hunk1()
+@@ -94,1 +54,1 @@
+- removed_at_old_95()
++ added_at_new_55()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=95)
+    assert snippet is not None
+    assert "stray_in_hunk1" not in snippet
+    assert "- removed_at_old_95()" in snippet
+    assert "added_at_new_55" not in snippet
+
+
 def test_resolve_judge_code_context_returns_snippet_and_patch():
     patches = {
         "app/main.py": "@@ -1,1 +1,2 @@\n-old\n+new_line\n",

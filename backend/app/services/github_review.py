@@ -274,6 +274,47 @@ def _build_review_prompt(
     return "\n".join(parts)
 
 
+def _flush_pending_minus_in_old_window(
+    flushed_orphan_minus: list[str],
+    flushed_orphan_old_lines: list[int],
+    pending_minus: list[str],
+    pending_minus_old_lines: list[int],
+    *,
+    target_start: int,
+    target_end: int,
+) -> None:
+    for minus_snippet, minus_old_line in zip(pending_minus, pending_minus_old_lines, strict=True):
+        if target_start <= minus_old_line <= target_end:
+            flushed_orphan_minus.append(minus_snippet)
+            flushed_orphan_old_lines.append(minus_old_line)
+
+
+def _merge_flushed_orphans_into_collected(
+    collected: list[str],
+    flushed_orphan_minus: list[str],
+    flushed_orphan_old_lines: list[int],
+    collected_plus_new_lines: list[int],
+    *,
+    start_line: int,
+    target_start: int,
+    target_end: int,
+    discard_when_no_plus: bool,
+    max_orphan_line_distance: int = 1,
+) -> None:
+    for minus_snippet, minus_old_line in zip(flushed_orphan_minus, flushed_orphan_old_lines, strict=True):
+        if not (target_start <= minus_old_line <= target_end):
+            continue
+        if not collected_plus_new_lines:
+            if discard_when_no_plus and abs(minus_old_line - start_line) > max_orphan_line_distance:
+                continue
+            collected.append(minus_snippet)
+            continue
+        orphan_distance = abs(minus_old_line - start_line)
+        plus_distance = min(abs(plus_line - start_line) for plus_line in collected_plus_new_lines)
+        if orphan_distance < plus_distance:
+            collected.append(minus_snippet)
+
+
 def extract_evidence_from_patch(
     patch: str,
     *,
@@ -289,46 +330,142 @@ def extract_evidence_from_patch(
     new_line = 0
     pending_minus: list[str] = []
     pending_minus_old_lines: list[int] = []
+    flushed_orphan_minus: list[str] = []
+    flushed_orphan_old_lines: list[int] = []
+    collected_plus_new_lines: list[int] = []
+    last_kind: str | None = None
+    hunk_saw_plus = False
 
     for line in patch.splitlines():
         hunk_match = _HUNK_HEADER_RE.match(line)
         if hunk_match is not None:
-            old_line = int(hunk_match.group(1)) - 1
-            new_line = int(hunk_match.group(2)) - 1
+            if not hunk_saw_plus:
+                _flush_pending_minus_in_old_window(
+                    flushed_orphan_minus,
+                    flushed_orphan_old_lines,
+                    pending_minus,
+                    pending_minus_old_lines,
+                    target_start=target_start,
+                    target_end=target_end,
+                )
+                _merge_flushed_orphans_into_collected(
+                    collected,
+                    flushed_orphan_minus,
+                    flushed_orphan_old_lines,
+                    collected_plus_new_lines,
+                    start_line=start_line,
+                    target_start=target_start,
+                    target_end=target_end,
+                    discard_when_no_plus=True,
+                )
+            else:
+                _flush_pending_minus_in_old_window(
+                    flushed_orphan_minus,
+                    flushed_orphan_old_lines,
+                    pending_minus,
+                    pending_minus_old_lines,
+                    target_start=target_start,
+                    target_end=target_end,
+                )
+                _merge_flushed_orphans_into_collected(
+                    collected,
+                    flushed_orphan_minus,
+                    flushed_orphan_old_lines,
+                    collected_plus_new_lines,
+                    start_line=start_line,
+                    target_start=target_start,
+                    target_end=target_end,
+                    discard_when_no_plus=True,
+                )
             pending_minus = []
             pending_minus_old_lines = []
+            flushed_orphan_minus = []
+            flushed_orphan_old_lines = []
+            collected_plus_new_lines = []
+            hunk_saw_plus = False
+            old_line = int(hunk_match.group(1)) - 1
+            new_line = int(hunk_match.group(2)) - 1
+            last_kind = "hunk"
             continue
         if line.startswith("\\"):
             continue
+        if not line:
+            continue
         if line.startswith("-"):
+            if last_kind in {"space", "plus"}:
+                _flush_pending_minus_in_old_window(
+                    flushed_orphan_minus,
+                    flushed_orphan_old_lines,
+                    pending_minus,
+                    pending_minus_old_lines,
+                    target_start=target_start,
+                    target_end=target_end,
+                )
+                pending_minus = []
+                pending_minus_old_lines = []
             old_line += 1
             minus_snippet = f"-{line[1:]}"
             pending_minus.append(minus_snippet)
             pending_minus_old_lines.append(old_line)
+            last_kind = "minus"
         elif line.startswith("+"):
+            hunk_saw_plus = True
             new_line += 1
             if target_start <= new_line <= target_end:
                 collected.extend(pending_minus)
                 pending_minus = []
                 pending_minus_old_lines = []
                 collected.append(line[1:])
+                collected_plus_new_lines.append(new_line)
             else:
-                for minus_snippet, minus_old_line in zip(
-                    pending_minus, pending_minus_old_lines, strict=True
-                ):
-                    if target_start <= minus_old_line <= target_end:
-                        collected.append(minus_snippet)
+                _flush_pending_minus_in_old_window(
+                    flushed_orphan_minus,
+                    flushed_orphan_old_lines,
+                    pending_minus,
+                    pending_minus_old_lines,
+                    target_start=target_start,
+                    target_end=target_end,
+                )
                 pending_minus = []
                 pending_minus_old_lines = []
+            last_kind = "plus"
         elif line.startswith(" "):
             old_line += 1
             new_line += 1
             if target_start <= new_line <= target_end:
                 collected.append(line[1:])
+            last_kind = "space"
 
-    for minus_snippet, minus_old_line in zip(pending_minus, pending_minus_old_lines, strict=True):
-        if target_start <= minus_old_line <= target_end:
-            collected.append(minus_snippet)
+    _flush_pending_minus_in_old_window(
+        flushed_orphan_minus,
+        flushed_orphan_old_lines,
+        pending_minus,
+        pending_minus_old_lines,
+        target_start=target_start,
+        target_end=target_end,
+    )
+    if not hunk_saw_plus:
+        _merge_flushed_orphans_into_collected(
+            collected,
+            flushed_orphan_minus,
+            flushed_orphan_old_lines,
+            collected_plus_new_lines,
+            start_line=start_line,
+            target_start=target_start,
+            target_end=target_end,
+            discard_when_no_plus=False,
+        )
+    else:
+        _merge_flushed_orphans_into_collected(
+            collected,
+            flushed_orphan_minus,
+            flushed_orphan_old_lines,
+            collected_plus_new_lines,
+            start_line=start_line,
+            target_start=target_start,
+            target_end=target_end,
+            discard_when_no_plus=False,
+        )
 
     if not collected:
         return None
