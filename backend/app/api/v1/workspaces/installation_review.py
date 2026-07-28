@@ -18,12 +18,14 @@ from app.schemas.common import SuccessResponse
 from app.schemas.github_pipeline import PipelineRunResponse
 from app.schemas.github_publish import GitHubPublishJobResponse
 from app.schemas.github_review import (
+    DismissFindingGroupRequest,
     GitHubFindingListResponse,
     GitHubReviewRunResponse,
     ReconciledFindingResponse,
     ReviewTriggerRequest,
 )
 from app.services.audit_service import record_audit
+from app.services.github_finding_closure import dismiss_finding_group
 from app.services.github_finding_reconcile import list_reconciled_finding_groups
 from app.services.github_indexing import (
     enqueue_index_job,
@@ -239,6 +241,50 @@ async def get_reconciled_findings(
         params=params,
     )
     return SuccessResponse(data=page)
+
+
+@router.post(
+    "/{workspace_id}/repositories/{repository_id}/pull-requests/{pull_request_id}/finding-groups/{group_id}/dismiss",
+    response_model=SuccessResponse[ReconciledFindingResponse],
+)
+async def post_dismiss_finding_group(
+    workspace_id: UUID,
+    repository_id: UUID,
+    pull_request_id: UUID,
+    group_id: UUID,
+    body: DismissFindingGroupRequest,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> SuccessResponse[ReconciledFindingResponse]:
+    require_permission(current_user, Permission.admin_users)
+    require_same_workspace(current_user, workspace_id)
+    if current_user.user_id is None:
+        raise ForbiddenError(message="User not provisioned")
+
+    group = await dismiss_finding_group(
+        session,
+        workspace_id=workspace_id,
+        repository_id=repository_id,
+        pull_request_id=pull_request_id,
+        group_id=group_id,
+    )
+
+    if body.reason:
+        await record_audit(
+            session,
+            actor_user_id=current_user.user_id,
+            workspace_id=workspace_id,
+            action="finding_group.dismissed",
+            resource_type="github_finding_group",
+            resource_id=str(group.id),
+            metadata={
+                "pull_request_id": str(pull_request_id),
+                "reason": body.reason,
+            },
+        )
+
+    await session.commit()
+    return SuccessResponse(data=ReconciledFindingResponse.model_validate(group))
 
 
 @router.post(

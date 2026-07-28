@@ -18,7 +18,12 @@ from app.constants.enums import (
     ResolutionStatus,
 )
 from app.core.config import settings
-from app.core.exceptions import ServiceUnavailableError, ValidationError
+from app.core.exceptions import (
+    ConflictError,
+    NotFoundError,
+    ServiceUnavailableError,
+    ValidationError,
+)
 from app.core.logging import get_logger
 from app.integrations import anthropic_review, llm_dispatch
 from app.models.github_finding import GitHubFindingORM
@@ -30,6 +35,7 @@ from app.models.github_review_run import GitHubReviewRunORM
 # Re-export pure rules for existing callers.
 from app.services.github_finding_closure_rules import (  # noqa: F401
     COMPARE_FAILED_REASON,
+    apply_resolution_method_on_human_dismiss,
     apply_resolution_method_on_judge_dismiss,
     apply_resolution_method_on_verification_dismiss,
     closure_fields_for_absent_and_addressed,
@@ -38,6 +44,7 @@ from app.services.github_finding_closure_rules import (  # noqa: F401
     should_reopen_absent_and_addressed,
     should_skip_resolved_group_on_reconcile,
 )
+from app.services.github_finding_reconcile import _ensure_pull_request_access
 from app.services.github_review import resolve_judge_code_context
 from app.services.model_policy import ModelRole, resolve_model
 
@@ -335,3 +342,47 @@ async def verify_still_open_escalation_groups(
 
     await session.flush()
     return VerificationJudgeResult(judged_count=judged, artifacts=artifacts)
+
+
+async def dismiss_finding_group(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    repository_id: UUID,
+    pull_request_id: UUID,
+    group_id: UUID,
+) -> GitHubFindingGroupORM:
+    """Human dismiss — FR-Q5 / P4.1."""
+    await _ensure_pull_request_access(
+        session,
+        workspace_id=workspace_id,
+        repository_id=repository_id,
+        pull_request_id=pull_request_id,
+    )
+    group = await session.get(GitHubFindingGroupORM, group_id)
+    if (
+        group is None
+        or group.workspace_id != workspace_id
+        or group.pull_request_id != pull_request_id
+    ):
+        raise NotFoundError("Finding group not found")
+    if group.state != GitHubFindingGroupState.active:
+        raise ConflictError(
+            message="Finding group is not active",
+            error_code="group_not_active",
+        )
+
+    head_revision = await session.scalar(
+        select(GitHubPullRequestRevisionORM)
+        .where(GitHubPullRequestRevisionORM.pull_request_id == pull_request_id)
+        .order_by(GitHubPullRequestRevisionORM.revision_number.desc())
+        .limit(1)
+    )
+    if head_revision is None:
+        raise NotFoundError("Pull request revision not found")
+
+    fields = apply_resolution_method_on_human_dismiss(resolved_at_revision_id=head_revision.id)
+    for key, value in fields.items():
+        setattr(group, key, value)
+    await session.flush()
+    return group

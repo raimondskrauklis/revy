@@ -95,6 +95,7 @@ class PublishFormatContext:
     index_mode: GitHubIndexMode | str | None = None
     fallback_reason: str | None = None
     resolution_metrics_manifest: dict[str, object] | None = None
+    pr_active_groups: list[GitHubFindingGroupORM] | None = None
 
 
 @dataclass(frozen=True)
@@ -231,23 +232,51 @@ def _severity_table_rows(groups: list[GitHubFindingGroupORM]) -> list[str]:
     return rows
 
 
+def format_summary_comment(
+    *,
+    generation_groups: list[GitHubFindingGroupORM],
+    pr_active_groups: list[GitHubFindingGroupORM],
+) -> str:
+    """FR-Q7 two-block summary: this generation + PR-level still open."""
+    generation_active = _active_groups(generation_groups)
+    pr_active = _active_groups(pr_active_groups)
+
+    lines = [
+        "### This generation",
+        "",
+    ]
+    if generation_active:
+        lines.extend(_severity_table_rows(generation_groups))
+        if len(generation_active) > SUMMARY_ROW_CAP:
+            lines.extend(["", f"_Showing {SUMMARY_ROW_CAP} of {len(generation_active)} findings._"])
+    else:
+        lines.append("No publishable findings this generation.")
+
+    lines.extend(["", "### Still open on PR", ""])
+    if pr_active:
+        lines.extend(_severity_table_rows(pr_active_groups))
+        if len(pr_active) > SUMMARY_ROW_CAP:
+            lines.extend(["", f"_Showing {SUMMARY_ROW_CAP} of {len(pr_active)} findings._"])
+    else:
+        lines.append("No open findings on this pull request.")
+
+    return "\n".join(lines)
+
+
 def build_check_run_summary(ctx: PublishFormatContext) -> str:
     """G3 compact body for GitHub check run output."""
-    active = _active_groups(ctx.groups)
     confidence = compute_confidence(ctx.groups)
+    pr_active = ctx.pr_active_groups if ctx.pr_active_groups is not None else ctx.groups
     lines = [
         "## Revy review",
         "",
         f"**Confidence:** {confidence}/5",
         "",
+        format_summary_comment(
+            generation_groups=ctx.groups,
+            pr_active_groups=pr_active,
+        ),
     ]
-    if not active:
-        lines.append("No files require special attention.")
-        return "\n".join(lines)
-
-    lines.extend(_severity_table_rows(ctx.groups))
-    if len(active) > SUMMARY_ROW_CAP:
-        lines.extend(["", f"_Showing {SUMMARY_ROW_CAP} of {len(active)} findings._"])
     return "\n".join(lines)
 
 

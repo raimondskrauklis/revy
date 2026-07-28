@@ -24,6 +24,7 @@ from app.services.github_publish_formatter import (
     compute_confidence,
     count_resolution_status,
     format_resolution_metrics_block,
+    format_summary_comment,
     normalize_llm_issue_comment,
 )
 
@@ -157,6 +158,59 @@ def test_build_pr_review_comment_fallback_includes_resolution_metrics_block():
     )
     markdown = build_pr_review_comment_fallback(ctx)
     assert "Resolution metrics (this push)" in markdown
+
+
+def test_build_check_run_summary_two_block():
+    generation = [_group(severity=FindingSeverity.error, fingerprint="gen")]
+    prior_only = _group(
+        severity=FindingSeverity.warning,
+        fingerprint="prior",
+        file_path="app/legacy.py",
+    )
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=42,
+        head_sha="abc123",
+        revision_number=2,
+        groups=generation,
+        pr_active_groups=[*generation, prior_only],
+    )
+    markdown = build_check_run_summary(ctx)
+    assert "**Confidence:**" in markdown
+    assert "### This generation" in markdown
+    assert "### Still open on PR" in markdown
+    assert "app/legacy.py" in markdown
+
+
+def test_format_summary_comment_two_block():
+    generation = [_group(severity=FindingSeverity.error, fingerprint="gen")]
+    prior_only = _group(severity=FindingSeverity.warning, fingerprint="prior")
+    markdown = format_summary_comment(
+        generation_groups=generation,
+        pr_active_groups=[*generation, prior_only],
+    )
+    assert "### This generation" in markdown
+    assert "### Still open on PR" in markdown
+
+
+def test_build_pr_review_comment_fallback_generation_only_not_pr_block():
+    generation = [_group(severity=FindingSeverity.error, fingerprint="gen")]
+    prior_only = _group(
+        severity=FindingSeverity.warning,
+        fingerprint="prior",
+        file_path="app/legacy.py",
+    )
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=42,
+        head_sha="abc123",
+        revision_number=2,
+        groups=generation,
+        pr_active_groups=[*generation, prior_only],
+    )
+    markdown = build_pr_review_comment_fallback(ctx)
+    assert "app/legacy.py" not in markdown
+    assert "### Still open on PR" not in markdown
 
 
 def test_build_check_run_summary_is_compact():

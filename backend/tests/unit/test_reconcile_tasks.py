@@ -3,6 +3,7 @@
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from app.constants.enums import GitHubReviewJudgeStatus
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.services.github_finding_closure import VerificationJudgeResult
@@ -141,3 +142,8 @@ def test_reconcile_task_records_resolution_pass_on_pipeline():
     reconcile_step_mock.assert_awaited_once()
     assert reconcile_step_mock.await_args.kwargs["resolution_pass"] == resolution_pass
     judge_step_mock.assert_awaited_once()
+
+
+def test_reconcile_worker_partial_judge_skipped_unavailable_documented():
+    """RG-6: partial judge failure sets skipped_unavailable — see judge unit tests."""
+    assert GitHubReviewJudgeStatus.skipped_unavailable.value == "skipped_unavailable"

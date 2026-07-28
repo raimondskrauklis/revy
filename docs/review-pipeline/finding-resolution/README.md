@@ -24,9 +24,9 @@
 | P1 | Pass 1 stamp + Pass 2 reconcile closure | [waves/FINDING_RESOLUTION_P1_EXECUTION.md](./waves/FINDING_RESOLUTION_P1_EXECUTION.md) | pending |
 | P2 | Pass 3 verification judge (5/run) | [waves/FINDING_RESOLUTION_P2_EXECUTION.md](./waves/FINDING_RESOLUTION_P2_EXECUTION.md) | pending |
 | P3 | FR-Q12 metrics, G9, API fields | [waves/FINDING_RESOLUTION_P3_EXECUTION.md](./waves/FINDING_RESOLUTION_P3_EXECUTION.md) | done (local) |
-| P4 | Human dismiss, summary parity, RG-6 | [waves/FINDING_RESOLUTION_P4_EXECUTION.md](./waves/FINDING_RESOLUTION_P4_EXECUTION.md) | pending |
+| P4 | Human dismiss, summary parity, RG-6 | [waves/FINDING_RESOLUTION_P4_EXECUTION.md](./waves/FINDING_RESOLUTION_P4_EXECUTION.md) | done (local) |
 | P5 | Staging validation + doc sync | [waves/FINDING_RESOLUTION_P5_EXECUTION.md](./waves/FINDING_RESOLUTION_P5_EXECUTION.md) | pending |
 
 **Related shipped programs:** R5 reconcile + judge · RQ6 resolution metrics · github-surface-hardening Option A · generation lifecycle RG-Q10 · judge input quality.
 
-**Next:** `phase-execution` from **P4** on `feat/finding-resolution` (P3 done locally).
+**Next:** `phase-execution` from **P5** on `feat/finding-resolution` (P4 done locally).

@@ -609,6 +609,25 @@
       "headSha": "Head SHA",
       "revisions": "Revisions"
     },
+    "groupState": {
+      "active": "Active",
+      "superseded": "Superseded",
+      "resolved": "Resolved"
+    },
+    "resolution": {
+      "dismiss": "Dismiss",
+      "status": {
+        "addressed": "Addressed",
+        "still_open": "Still open",
+        "judge_dismissed": "Judge dismissed"
+      },
+      "method": {
+        "absent_and_addressed": "Fixed since last push",
+        "judge_dismissed": "Dismissed by judge",
+        "verification_dismissed": "Dismissed by verification",
+        "human_dismissed": "Dismissed by admin"
+      }
+    },
     "findings": {
       "empty": "No reconciled findings for this pull request.",
       "severity": "Severity",
@@ -616,7 +635,8 @@
       "state": "State",
       "title": "Title",
       "file": "File",
-      "message": "Message"
+      "message": "Message",
+      "actions": "Actions"
     },
     "severity": {
       "info": "Info",
@@ -631,11 +651,6 @@
       "style": "Style",
       "maintainability": "Maintainability",
       "other": "Other"
-    },
-    "groupState": {
-      "active": "Active",
-      "superseded": "Superseded",
-      "resolved": "Resolved"
     },
     "reviewRun": {
       "none": "No review run yet.",

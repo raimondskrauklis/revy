@@ -65,6 +65,20 @@ export async function fetchReconciledFindings(
   return await parseSuccess<CursorPage<ReconciledFinding>>(response);
 }
 
+export async function dismissFindingGroup(
+  workspaceId: string,
+  repositoryId: string,
+  pullRequestId: string,
+  groupId: string,
+  reason?: string,
+): Promise<ReconciledFinding> {
+  const response = await apiClient.post(
+    `/workspaces/${workspaceId}/repositories/${repositoryId}/pull-requests/${pullRequestId}/finding-groups/${groupId}/dismiss`,
+    { reason: reason ?? null },
+  );
+  return await parseSuccess<ReconciledFinding>(response);
+}
+
 export async function fetchReviewRun(
   workspaceId: string,
   repositoryId: string,

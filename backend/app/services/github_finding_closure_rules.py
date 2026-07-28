@@ -74,6 +74,18 @@ def apply_resolution_method_on_verification_dismiss(
     }
 
 
+def apply_resolution_method_on_human_dismiss(
+    *,
+    resolved_at_revision_id: UUID,
+) -> dict[str, object]:
+    return {
+        "state": GitHubFindingGroupState.resolved,
+        "resolution_method": ResolutionMethod.human_dismissed,
+        "resolved_at_revision_id": resolved_at_revision_id,
+        "closure_blocked_reason": None,
+    }
+
+
 def should_reopen_absent_and_addressed(
     *,
     resolution_method: ResolutionMethod | None,

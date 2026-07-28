@@ -23,6 +23,10 @@ class ReviewTriggerRequest(BaseModel):
     profile: ReviewProfile = ReviewProfile.standard
 
 
+class DismissFindingGroupRequest(BaseModel):
+    reason: str | None = None
+
+
 class GitHubReviewRunResponse(BaseModel):
     model_config = {"from_attributes": True}
 

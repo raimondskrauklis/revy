@@ -23,6 +23,14 @@ export type FindingCategory =
 
 export type FindingGroupState = 'active' | 'superseded' | 'resolved';
 
+export type ResolutionStatus = 'addressed' | 'still_open' | 'judge_dismissed';
+
+export type ResolutionMethod =
+  | 'absent_and_addressed'
+  | 'judge_dismissed'
+  | 'verification_dismissed'
+  | 'human_dismissed';
+
 export type MergeConclusion = 'success' | 'neutral' | 'failure';
 
 export interface GitHubRepository {
@@ -96,6 +104,10 @@ export interface ReconciledFinding {
   message: string;
   file_path: string | null;
   last_seen_revision_id: string;
+  resolution_status?: ResolutionStatus | null;
+  resolution_method?: ResolutionMethod | null;
+  resolved_at_revision_id?: string | null;
+  closure_blocked_reason?: string | null;
   created_at: string;
   updated_at: string;
 }
