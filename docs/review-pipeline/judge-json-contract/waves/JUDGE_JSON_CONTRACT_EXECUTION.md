@@ -37,7 +37,7 @@ each phase: implement → pytest gate → Bugbot → local commit (operator push
 | Phase | Focus | Execution | Commit | Status |
 |-------|--------|-----------|--------|--------|
 | P0 — API smoke | Structured-output feasibility + smoke flags | [JUDGE_JSON_CONTRACT_P0_EXECUTION.md](./JUDGE_JSON_CONTRACT_P0_EXECUTION.md) | `b7cadcc` | done |
-| P1 — Observability | `raw_response_text` + `parse_error` on manifest | [JUDGE_JSON_CONTRACT_P1_EXECUTION.md](./JUDGE_JSON_CONTRACT_P1_EXECUTION.md) | — | pending |
+| P1 — Observability | `raw_response_text` + `parse_error` on manifest | [JUDGE_JSON_CONTRACT_P1_EXECUTION.md](./JUDGE_JSON_CONTRACT_P1_EXECUTION.md) | — | in progress |
 | P2 — Snippet-first | Prompt tiers, lower patch cap | [JUDGE_JSON_CONTRACT_P2_EXECUTION.md](./JUDGE_JSON_CONTRACT_P2_EXECUTION.md) | — | pending |
 | P3 — Structured output | `json_schema` + `parse_llm_json_object` fallback | [JUDGE_JSON_CONTRACT_P3_EXECUTION.md](./JUDGE_JSON_CONTRACT_P3_EXECUTION.md) | — | pending |
 | P4 — Targeted retry | Max 1 retry on parse failure | [JUDGE_JSON_CONTRACT_P4_EXECUTION.md](./JUDGE_JSON_CONTRACT_P4_EXECUTION.md) | — | pending |
@@ -45,4 +45,4 @@ each phase: implement → pytest gate → Bugbot → local commit (operator push
 
 **Peer review:** execution-peer-review complete (2026-07-28) — P1 integration-layer + P4.4 skip fixes applied.
 
-**P0 calibration lock:** If RTU gateway rejects `output_config.format`, P3 ships `parse_llm_json_object` + P2 only until provider upgrade — document matrix in P0 gate output.
+**P0 calibration lock:** RTU gateway rejects structured output (400) — P3 ships `parse_llm_json_object` + P2 only; `revy_judge_structured_output` off on gateway. Plain JSON works (see findings § P0 smoke results).

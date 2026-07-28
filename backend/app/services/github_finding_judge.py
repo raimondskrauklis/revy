@@ -23,6 +23,7 @@ from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError, ValidationError
 from app.core.logging import get_logger
 from app.integrations import anthropic_review, llm_dispatch
+from app.integrations.judge_llm_errors import judge_failure_trace_fields
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_finding_judge_outcome import GitHubFindingJudgeOutcomeORM
@@ -56,6 +57,42 @@ class JudgeCandidateArtifact:
     raw_response: dict[str, Any] | None
     outcome: str | None
     file_patch_chars: int | None = None
+    raw_response_text: str | None = None
+    parse_error: str | None = None
+
+
+def _judge_failure_log_extra(group_id: UUID, exc: Exception) -> dict[str, object]:
+    raw_response_text, parse_error, response_chars = judge_failure_trace_fields(exc)
+    extra: dict[str, object] = {
+        "group_id": str(group_id),
+        "error": parse_error,
+    }
+    if response_chars is not None:
+        extra["response_chars"] = response_chars
+    if raw_response_text is not None:
+        extra["parse_error"] = parse_error
+    return extra
+
+
+def _judge_failure_artifact(
+    *,
+    group_id: UUID,
+    evidence_snippet: str | None,
+    user_prompt: str,
+    file_patch_chars: int | None,
+    exc: Exception,
+) -> JudgeCandidateArtifact:
+    raw_response_text, parse_error, _ = judge_failure_trace_fields(exc)
+    return JudgeCandidateArtifact(
+        group_id=group_id,
+        evidence_snippet=evidence_snippet,
+        user_prompt=user_prompt,
+        raw_response=None,
+        raw_response_text=raw_response_text,
+        parse_error=parse_error,
+        outcome=None,
+        file_patch_chars=file_patch_chars,
+    )
 
 
 def is_judge_candidate(*, severity: FindingSeverity, category: FindingCategory) -> bool:
@@ -201,19 +238,18 @@ async def _run_judge_llm_loop(
             except (httpx.HTTPError, ValueError, ServiceUnavailableError) as exc:
                 logger.error(
                     "github_finding_judge_failed",
-                    extra={"group_id": str(group.id), "error": str(exc)},
+                    extra=_judge_failure_log_extra(group.id, exc),
                 )
                 if artifacts_out is not None:
                     artifacts_out.append(
-                        JudgeCandidateArtifact(
+                        _judge_failure_artifact(
                             group_id=group.id,
                             evidence_snippet=evidence_snippet,
                             user_prompt=user_prompt,
-                            raw_response=None,
-                            outcome=None,
                             file_patch_chars=len(file_patch) if file_patch else None,
+                            exc=exc,
                         )
-                )
+                    )
                 continue
 
             outcome = GitHubJudgeOutcome(outcome_str)

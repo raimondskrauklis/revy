@@ -45,7 +45,7 @@ python -m json.tool .greptile/files.json > /dev/null
 
 **Files:** `backend/scripts/test_anthropic_judge_gateway.py`
 
-**Deliverable (non-gate):** `pipenv run sh -c 'python -m scripts.test_anthropic_judge_gateway --help'` prints flags.
+**Deliverable (non-gate):** See [BACKEND_SCRIPTS_RUNBOOK.md](../../../utils/BACKEND_SCRIPTS_RUNBOOK.md) — `pipenv run sh -c 'python -m scripts.test_anthropic_judge_gateway --help'`.
 
 ---
 
@@ -55,7 +55,7 @@ python -m json.tool .greptile/files.json > /dev/null
 
 **Files:** `backend/scripts/test_anthropic_judge_gateway.py`, `backend/app/integrations/anthropic_review.py`
 
-**Deliverable (non-gate):** Operator runs with RTU creds in `backend/.env`:
+**Deliverable (non-gate):** Operator runs with RTU creds in `backend/.env` — [BACKEND_SCRIPTS_RUNBOOK.md](../../../utils/BACKEND_SCRIPTS_RUNBOOK.md):
 
 ```bash
 cd backend && pipenv run sh -c 'python -m scripts.test_anthropic_judge_gateway --structured --print-raw'

@@ -129,16 +129,13 @@ Code: `anthropic_review.py` → `{ANTHROPIC_BASE_URL}/v1/messages`, gateway prof
 
 Add judge credentials to **local** `backend/.env` (gitignored) — same vars as staging worker. No deploy needed to validate API shape.
 
-From `backend/` (same `-m` pattern as `scripts.seed_bootstrap_super_admin`):
+**Runbook:** [BACKEND_SCRIPTS_RUNBOOK.md](../../utils/BACKEND_SCRIPTS_RUNBOOK.md) — `pipenv run sh -c 'python -m scripts.…'` from `backend/`.
+
+Quick copy:
 
 ```bash
-# Basic judge smoke
-pipenv run sh -c 'python -m scripts.test_anthropic_judge_gateway'
-
-# With flags (quote the whole command — pipenv parses bare `-m` as its own flag)
+cd backend
 pipenv run sh -c 'python -m scripts.test_anthropic_judge_gateway --structured --print-raw'
-pipenv run sh -c 'python -m scripts.test_anthropic_judge_gateway --compare-direct'
-pipenv run sh -c 'python -m scripts.test_anthropic_judge_gateway --chars 10000'
 ```
 
 **Planned extensions (G6 — implement in wave):**
@@ -199,22 +196,20 @@ DB connect: [DATABASE_CONNECTION_GUIDE.md](../../utils/DATABASE_CONNECTION_GUIDE
 
 ## P0 smoke results (operator)
 
-**Date:** 2026-07-29 (local `backend/.env`)  
-**Script:** `pipenv run sh -c 'python -m scripts.test_anthropic_judge_gateway …'` from `backend/`  
+**Date:** 2026-07-29 (local `backend/.env`, token refreshed)  
+**Runbook:** [BACKEND_SCRIPTS_RUNBOOK.md](../../utils/BACKEND_SCRIPTS_RUNBOOK.md)  
 **Env:** gateway `https://llm.ai.rtu.lv/v1/messages` · model `azure_ai/claude-sonnet-5` · direct API **not** configured
 
 | Path | `--structured` | Result | Notes |
 |------|----------------|--------|-------|
-| RTU gateway (`ANTHROPIC_BASE_URL`) | no | **fail** | HTTP **401 Unauthorized** — refresh `ANTHROPIC_AUTH_TOKEN` in `backend/.env` and re-run |
-| RTU gateway | yes | **fail** | Same 401 before structured body returned — feasibility **unknown** until auth works |
+| RTU gateway (`ANTHROPIC_BASE_URL`) | no | **pass** | `outcome=dismissed`, ~3.6s, 240-char prompt |
+| RTU gateway | yes | **fail** | HTTP **400 Bad Request** — gateway rejects `output_config` json_schema (or unsupported shape) |
 | Direct API (`ANTHROPIC_API_KEY`) | no | **n/a** | `anthropic_direct_enabled=False` locally |
 | Direct API | yes | **n/a** | Not configured |
-| `--chars 1000` | no | **fail** | 401 (prompt length OK: 1000 chars) |
-| `--chars 10000` | no | **fail** | 401 (prompt length OK: 10000 chars) |
+| `--chars 1000` | no | **pass** | `outcome=dismissed`, prompt len 1000 |
+| `--chars 10000` | no | **pass** | `outcome=dismissed`, prompt len 10000 |
 
-**Next iteration:** update RTU token → re-run matrix → fill pass/fail per row. On gateway structured **pass**, set P3 lock to enable `REVY_JUDGE_STRUCTURED_OUTPUT`; on **fail** (4xx/unsupported schema), P3 ships parse fallback + P2 only.
-
-**P3 lock (current):** `revy_judge_structured_output` stays **off** until gateway structured row = pass.
+**P3 lock (locked):** `revy_judge_structured_output` stays **off** on RTU gateway — P3 ships `parse_llm_json_object` + snippet-first prompts (P2); no API schema on gateway until provider supports it. Plain prompt JSON works at 240–10k chars.
 
 ---
 

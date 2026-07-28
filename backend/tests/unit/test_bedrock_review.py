@@ -68,6 +68,34 @@ async def test_judge_finding_returns_payload():
 
 
 @pytest.mark.asyncio
+async def test_judge_finding_raises_judge_parse_error_on_invalid_json():
+    from app.integrations.judge_llm_errors import JudgeParseError
+
+    payload = {
+        "output": {
+            "message": {
+                "content": [{"text": "prose only, no json"}],
+            },
+        },
+    }
+    with (
+        patch("app.integrations.bedrock_review.settings") as mock_settings,
+        patch("app.integrations.bedrock_review.asyncio.to_thread", new=AsyncMock(return_value=payload)),
+    ):
+        mock_settings.bedrock_enabled.return_value = True
+        mock_settings.aws_region = "eu-central-1"
+        mock_settings.revy_revision_timeout_standard_seconds = 900
+        with pytest.raises(JudgeParseError) as exc_info:
+            await judge_finding(
+                user_prompt="judge",
+                model_id="anthropic.claude-sonnet-4-20250514-v1:0",
+                region="eu-central-1",
+            )
+    assert exc_info.value.code == "judge_json_invalid"
+    assert "prose only" in exc_info.value.response_text
+
+
+@pytest.mark.asyncio
 async def test_complete_review_timeout_maps_to_service_unavailable():
     with (
         patch("app.integrations.bedrock_review.settings") as mock_settings,

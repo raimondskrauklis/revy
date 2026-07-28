@@ -665,6 +665,100 @@ async def test_run_judge_partial_llm_failure_skipped_unavailable():
 
 
 @pytest.mark.asyncio
+async def test_run_judge_parse_failure_captures_artifact():
+    from app.integrations.judge_llm_errors import JudgeParseError
+
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    group_id = uuid.uuid4()
+
+    run = GitHubReviewRunORM(
+        revision_id=uuid.uuid4(),
+        workspace_id=workspace_id,
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    run.id = review_run_id
+
+    group = GitHubFindingGroupORM(
+        workspace_id=workspace_id,
+        pull_request_id=uuid.uuid4(),
+        fingerprint="abc",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="RCE",
+        message="Remote code execution",
+        file_path="app/run.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+    group.id = group_id
+
+    finding = GitHubFindingORM(
+        review_run_id=review_run_id,
+        workspace_id=workspace_id,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="RCE",
+        message="Remote code execution",
+        file_path="app/run.py",
+        group_id=group_id,
+    )
+
+    revision = MagicMock()
+    revision.pull_request_id = uuid.uuid4()
+    revision.base_sha = "base"
+    revision.head_sha = "head"
+    pull_request = MagicMock()
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, group, revision, pull_request])
+    session.scalars = AsyncMock(return_value=[finding])
+    session.scalar = AsyncMock(return_value=None)
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    artifacts: list = []
+
+    with patch("app.services.github_finding_judge.settings") as mock_settings:
+        mock_settings.judge_llm_enabled.return_value = True
+        mock_settings.revy_revision_timeout_standard_seconds = 900
+        with patch(
+            "app.services.github_finding_judge.resolve_model",
+            AsyncMock(return_value=ModelRef(provider="anthropic", model_id="claude-test")),
+        ):
+            with patch(
+                "app.services.github_finding_judge.fetch_compare_patches_by_file",
+                AsyncMock(return_value={}),
+            ):
+                with patch(
+                    "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
+                    AsyncMock(
+                        side_effect=JudgeParseError(
+                            "judge_json_invalid",
+                            response_text='{"outcome": "oops"',
+                        )
+                    ),
+                ):
+                    judged = await record_review_run_judge_status(
+                        session,
+                        review_run_id=review_run_id,
+                        artifacts_out=artifacts,
+                    )
+
+    assert judged == 0
+    assert run.judge_status == GitHubReviewJudgeStatus.skipped_unavailable
+    assert len(artifacts) == 1
+    artifact = artifacts[0]
+    assert artifact.parse_error == "judge_json_invalid"
+    assert artifact.raw_response_text == '{"outcome": "oops"'
+    assert artifact.raw_response is None
+    assert artifact.outcome is None
+    session.add.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_record_judge_status_keeps_completed_when_no_candidates_but_outcomes_exist():
     review_run_id = uuid.uuid4()
     workspace_id = uuid.uuid4()

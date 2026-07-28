@@ -291,18 +291,22 @@ async def verify_still_open_escalation_groups(
                 if outcome_str == GitHubJudgeOutcome.modified.value:
                     raise ValueError("verification_judge_outcome_modified")
             except (httpx.HTTPError, ValueError, ServiceUnavailableError) as exc:
+                from app.services.github_finding_judge import (
+                    _judge_failure_artifact,
+                    _judge_failure_log_extra,
+                )
+
                 logger.error(
                     "verification_judge_failed",
-                    extra={"group_id": str(group.id), "error": str(exc)},
+                    extra=_judge_failure_log_extra(group.id, exc),
                 )
                 artifacts.append(
-                    JudgeCandidateArtifact(
+                    _judge_failure_artifact(
                         group_id=group.id,
                         evidence_snippet=evidence_snippet,
                         user_prompt=user_prompt,
-                        raw_response=None,
-                        outcome=None,
                         file_patch_chars=len(push_delta_patch) if push_delta_patch else None,
+                        exc=exc,
                     )
                 )
                 continue

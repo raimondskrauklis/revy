@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 from typing import Any
 
 import boto3
@@ -12,6 +11,7 @@ from botocore.exceptions import BotoCoreError, ClientError
 from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError
 from app.integrations.anthropic_review import JUDGE_SYSTEM_PROMPT, REVIEW_SYSTEM_PROMPT
+from app.integrations.judge_llm_errors import parse_judge_payload
 
 
 def _require_bedrock_configured(*, model_id: str, region: str | None) -> None:
@@ -138,7 +138,4 @@ async def judge_finding(
             error_code="llm_error",
         ) from exc
     text = _extract_text(response)
-    payload = json.loads(text)
-    if not isinstance(payload, dict):
-        raise ValueError("judge_json_not_object")
-    return payload
+    return parse_judge_payload(text)

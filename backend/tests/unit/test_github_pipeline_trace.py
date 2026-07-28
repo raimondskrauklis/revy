@@ -459,6 +459,47 @@ async def test_record_judge_pipeline_step_includes_verification_manifest():
 
 
 @pytest.mark.asyncio
+async def test_record_judge_pipeline_step_serializes_failure_fields():
+    from app.services.github_finding_judge import JudgeCandidateArtifact
+    from app.services.github_pipeline_trace import record_judge_pipeline_step
+
+    pipeline_run_id = uuid.uuid4()
+    session = AsyncMock()
+    session.scalar = AsyncMock(return_value=None)
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    failed_artifact = JudgeCandidateArtifact(
+        group_id=uuid.uuid4(),
+        evidence_snippet="snippet",
+        user_prompt="judge",
+        raw_response=None,
+        raw_response_text='{"broken": ',
+        parse_error="judge_json_invalid",
+        outcome=None,
+        file_patch_chars=100,
+    )
+
+    await record_judge_pipeline_step(
+        session,
+        pipeline_run_id=pipeline_run_id,
+        judged_count=0,
+        duration_ms=50,
+        candidates=[failed_artifact],
+    )
+
+    manifest_artifact = next(
+        call.args[0]
+        for call in session.add.call_args_list
+        if getattr(call.args[0], "kind", None) == PipelineArtifactKind.manifest
+    )
+    candidate = manifest_artifact.content_json["candidates"][0]
+    assert candidate["parse_error"] == "judge_json_invalid"
+    assert candidate["raw_response_text"] == '{"broken": '
+    assert candidate["raw_response"] is None
+
+
+@pytest.mark.asyncio
 async def test_record_reconcile_pipeline_step_writes_resolution_pass():
     pipeline_run_id = uuid.uuid4()
     resolution_pass = {

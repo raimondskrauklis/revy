@@ -11,6 +11,7 @@ import httpx
 from app.constants.enums import stored_enum_value
 from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError
+from app.integrations.judge_llm_errors import parse_judge_payload
 
 ANTHROPIC_DIRECT_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_VERSION = "2023-06-01"
@@ -279,10 +280,7 @@ async def judge_finding(
         max_tokens=1024,
         timeout_seconds=timeout_seconds or settings.revy_revision_timeout_standard_seconds,
     )
-    payload = json.loads(text)
-    if not isinstance(payload, dict):
-        raise ValueError("judge_json_not_object")
-    return payload
+    return parse_judge_payload(text)
 
 
 def build_verification_judge_prompt(

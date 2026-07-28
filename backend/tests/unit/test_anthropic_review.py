@@ -150,3 +150,36 @@ async def test_post_structured_judge_smoke_sends_output_config():
     body = client.post.await_args.kwargs["json"]
     assert body["output_config"]["format"]["type"] == "json_schema"
     assert body["output_config"]["format"]["schema"]["required"] == ["outcome"]
+
+
+def test_parse_judge_payload_invalid_json_raises_judge_parse_error():
+    from app.integrations.judge_llm_errors import JudgeParseError, parse_judge_payload
+
+    with pytest.raises(JudgeParseError) as exc_info:
+        parse_judge_payload("not-json {")
+    assert exc_info.value.code == "judge_json_invalid"
+    assert "not-json" in exc_info.value.response_text
+
+
+@pytest.mark.asyncio
+async def test_judge_finding_raises_judge_parse_error_on_invalid_json():
+    from app.integrations.judge_llm_errors import JudgeParseError
+
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = {"content": [{"text": "```not valid json```"}]}
+    client = AsyncMock(spec=httpx.AsyncClient)
+    client.post = AsyncMock(return_value=response)
+
+    with patch("app.integrations.anthropic_review.settings") as mock_settings:
+        mock_settings.anthropic_gateway_enabled = True
+        mock_settings.anthropic_gateway_messages_url = "https://llm.ai.rtu.lv/v1/messages"
+        mock_settings.anthropic_auth_token = "rtu-token"
+        mock_settings.effective_anthropic_gateway_judge_model = "azure_ai/claude-opus-5"
+        mock_settings.anthropic_direct_enabled = False
+        mock_settings.revy_revision_timeout_standard_seconds = 30
+        with pytest.raises(JudgeParseError) as exc_info:
+            await anthropic_review.judge_finding(client, user_prompt="judge this")
+
+    assert exc_info.value.code == "judge_json_invalid"
+    assert "```not valid json```" in exc_info.value.response_text
