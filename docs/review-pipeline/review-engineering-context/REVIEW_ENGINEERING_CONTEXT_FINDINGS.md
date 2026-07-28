@@ -268,6 +268,8 @@ Sources: [Packmind playbook](https://packmind.com/context-engineering-ai-coding/
 
 **Operator position (2026-07-29):** Spending is low — **do not optimize caps down** at the cost of dropped MD/diff on program PRs. Inject + higher diff cap are complementary (inject for locks off-diff; cap for co-committed docs in diff).
 
+---
+
 ## Moonshot inject (locked design — RCX-D8)
 
 **Algorithm (P0):**
@@ -316,6 +318,7 @@ Sources: [Packmind playbook](https://packmind.com/context-engineering-ai-coding/
 | **RCX-G6** | **Judge prompt reuse** | P1 | Share extracted locks with judge path where applicable |
 | **RCX-G7** | **Disposition helpers** | P2 | Babysit: lock ID + evidence in thread replies |
 | **RCX-G8** | **RC4 spike** | Post-dogfood | `workspace_review_policy` EN+LV — customer manifest in DB |
+| **RCX-G9** | **Validation metrics script** | P0 | Staging SQL + retrieval manifest fields for cap/inject decisions |
 
 **Deferred from P0:** `BUGBOT.md` generator, hosted Bugbot dashboard audit, nested `.greptile/` (RC3).
 
@@ -336,7 +339,7 @@ Sources: [Packmind playbook](https://packmind.com/context-engineering-ai-coding/
 | **RCX-9** | Bugbot stale/noisy context | PR #58; daily workflow — **not P0** |
 | **RCX-10** | No disposition contract | Babysit ad hoc |
 | **RCX-11** | Greptile v3 auto-ingest ≠ program findings | #58 `format.name` — needs manifest wiring |
-| **RCX-12** | No pipeline trace for inject | Operator cannot verify what Moonshot saw |
+| **RCX-12** | Retrieve manifest lacks inject/cap fields until RCX P0 | `engineering_context_*`, `diff_max_bytes` planned; script queries what exists today |
 
 ---
 
@@ -420,14 +423,79 @@ Sources: [Packmind playbook](https://packmind.com/context-engineering-ai-coding/
 
 ---
 
-## Experiment / verification
+---
+
+## Validation metrics (operator + RCX P0)
+
+**Rule (RCX-D6):** Use `--since` on post-deploy / post-RCX dogfood window only — not full staging history.
+
+**Script (today):** `backend/scripts/judge_json_contract_staging_metrics.py` — judge block + **review context block** (retrieve/review artifacts). Record in [JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](../judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) § Review context and here after each run.
+
+```bash
+cd backend
+DATABASE_SSL_INSECURE=1 pipenv run sh -c 'python -m scripts.judge_json_contract_staging_metrics --since 2026-07-29T00:00:00Z'
+DATABASE_SSL_INSECURE=1 pipenv run sh -c 'python -m scripts.judge_json_contract_staging_metrics --since 2026-07-29T00:00:00Z --json'
+```
+
+### Metrics matrix
+
+| Metric | Decision use | In DB today? | Source / field | Target (dogfood) |
+|--------|--------------|--------------|----------------|------------------|
+| **Diff truncated %** | Need RCX-D10 cap raise? | **Yes** | `retrieve` manifest `diff_truncated` | **<5%** program PRs; if higher → raise `DIFF_MAX_BYTES` |
+| **Omitted files p50 / p95** | How aggressive is 128 KB cap? | **Yes** | `omitted_files` array length | p95 **≤2** after cap raise |
+| **Runs with omitted `.md`** | Planning docs dropped from diff? | **Yes** (derived) | `omitted_files` paths ending `.md` | **0** on program PRs |
+| **Changed files count p50** | PR size baseline | **Yes** | `changed_files` length | informational |
+| **Retrieval hits p50** | RAG noise vs signal | **Yes** | `retrieval_hits` length | stable; spike → tune caps |
+| **Moonshot prompt p50 / p95** | Token spend + headroom (RCX-D10) | **Yes** | `review` artifact `prompt` `length(content_text)` | p95 **<400k** chars stored (512k artifact cap) |
+| **Compare fallback %** | Diff quality | **Yes** | `fallback_reason` on retrieve manifest | rare |
+| **Engineering inject present** | RCX-D8 shipped? | **No** — RCX P0 | `engineering_context_injected` (planned) | **100%** scoped program PRs |
+| **Engineering inject bytes p50** | Inject budget vs RCX-D10 | **No** — RCX P0 | `engineering_context_bytes` (planned) | bounded extract; generous cap OK |
+| **`diff_max_bytes` applied** | Audit config per run | **No** — RCX P0 | `diff_max_bytes` on retrieve manifest | logged = config value |
+| **`unified_diff_bytes`** | Cap sizing evidence | **No** — RCX P0 | `unified_diff_bytes` (planned) | informs 256 vs 512 KB choice |
+| **Deduped inject paths** | Avoid duplicate MD | **No** — RCX P0 | `engineering_context_deduped_paths` (planned) | non-zero when MD in diff |
+| **`active_program`** | RC1 trim working? | **No** — RCX P0 | manifest field | matches LOOP program |
+| **Lock IDs extracted count** | Extractor health | **No** — RCX P0 | `lock_ids_extracted` (planned) | ≥1 on program PRs with findings |
+| **Findings contradict locks %** | Quality gate | **No** — manual | operator review of published findings | **0%** on smoke PRs |
+| **Judge outcome persistence %** | Sibling track (judge) | **Yes** | judge manifest `outcome` | ≥95% — [judge validation](../judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) |
+| **LLM cost per review run** | RCX-D10 spend guard | **No** | future `usage` on review step | defer until billing row exists |
+
+**Legend:** **Yes** = queryable now from `github_pipeline_artifacts`; **No** = add in RCX P0 instrumentation (`build_retrieval_manifest` + inject path).
+
+### Post-RCX fill (operator table)
+
+| Metric | Baseline (pre-RCX) | Target | After RCX deploy | Date |
+|--------|-------------------|--------|------------------|------|
+| Diff truncated % | — | <5% | — | — |
+| Omitted `.md` runs | — | 0 | — | — |
+| `DIFF_MAX_BYTES` config | 128 KB | raised | — | — |
+| Engineering inject % | 0% | 100% scoped | — | — |
+| Inject bytes p50 | n/a | bounded | — | — |
+| Moonshot prompt p95 | — | <400k | — | — |
+| Contradict locks (manual) | — | 0% | — | — |
+| Sample `review_run_id` | — | — | — | — |
+
+### Pass/fail gates (RCX dogfood)
+
+| Pass | Fail → action |
+|------|----------------|
+| Retrieve manifest shows `engineering_context_injected=true` on program PR | RCX-D8 not wired — check manifest read |
+| No published finding contradicts locked ID on smoke PR | tighten extract or prompt instruction |
+| `omitted_files` has no `.md` after cap raise | raise `DIFF_MAX_BYTES` further or rely on inject |
+| Inject bytes p50 within budget; no full findings paste | fix extractor bounds |
+| Greptile + Revy share one manifest edit | drift — fix RCX-G5 |
+
+---
+
+## Experiment / verification (summary)
+
+See **Validation metrics** above for the full matrix. Quick checklist:
 
 | Pass/fail | Measure |
 |-----------|---------|
-| **Pass** | Pipeline trace shows engineering context block on program PR |
+| **Pass** | Retrieve manifest: `engineering_context_injected` + cap fields populated |
 | **Pass** | Moonshot findings do not contradict locked IDs when smoke in findings |
 | **Pass** | Single manifest edit updates Greptile + Revy inject |
-| **Pass** | Inject block under byte budget; no full findings paste |
+| **Pass** | Diff truncated % and omitted `.md` within targets (RCX-D10) |
 | **Fail → trim** | Greptile still loads >1 active program |
 
 ---

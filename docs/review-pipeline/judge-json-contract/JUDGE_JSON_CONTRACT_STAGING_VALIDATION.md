@@ -36,7 +36,20 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c 'python -m scripts.judge_json_contract_
 
 ## Success metrics
 
-### Baseline (all staging history — pre #58 deploy)
+### Review context (Moonshot / RCX — same script)
+
+**Queried:** retrieve-step manifest + review prompt artifacts. See [REVIEW_ENGINEERING_CONTEXT_FINDINGS.md](../review-engineering-context/REVIEW_ENGINEERING_CONTEXT_FINDINGS.md) § Validation metrics.
+
+| Metric | Baseline (pre-RCX) | Target | After RCX / cap raise |
+|--------|-------------------|--------|------------------------|
+| Diff truncated % | — | <5% program PRs | pending |
+| Omitted files p95 | — | ≤2 | pending |
+| Runs with omitted `.md` | — | 0 | pending |
+| Moonshot prompt p95 (chars) | — | <400k | pending |
+| `engineering_context_injected` runs | **0** (field not shipped) | 100% scoped | pending |
+| `DIFF_MAX_BYTES` config | 128 KB | raised (RCX-D10) | pending |
+
+### Judge contract (baseline)
 
 **Queried:** 2026-07-29 · `revy-staging`
 

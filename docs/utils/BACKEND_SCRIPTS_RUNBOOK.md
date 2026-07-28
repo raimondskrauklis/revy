@@ -98,7 +98,7 @@ Record results in findings § **P0 smoke results** before locking P3 structured 
 
 ## Judge staging metrics (`scripts.judge_json_contract_staging_metrics`)
 
-P5 validation aggregates on `revy-staging` — outcome persistence, prompt p50, `parse_error` / `retry_count` on manifests.
+P5 judge validation + **review context** aggregates on `revy-staging` — outcome persistence, prompt p50, diff truncation, omitted `.md`, Moonshot prompt size.
 
 ### Env
 
@@ -115,7 +115,7 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c 'python -m scripts.judge_json_contract_
 DATABASE_SSL_INSECURE=1 pipenv run sh -c 'python -m scripts.judge_json_contract_staging_metrics --since 2026-07-29T00:00:00Z --json'
 ```
 
-Record output in [JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](../review-pipeline/judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md).
+Record output in [JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](../review-pipeline/judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) (judge + review context tables) and [REVIEW_ENGINEERING_CONTEXT_FINDINGS.md](../review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_FINDINGS.md) § Post-RCX fill.
 
 ---
 

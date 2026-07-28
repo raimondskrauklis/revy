@@ -1,5 +1,5 @@
 # backend/scripts/judge_json_contract_staging_metrics.py
-"""Staging metrics for judge-json-contract P5 validation memo."""
+"""Staging metrics for judge-json-contract P5 and review-context validation."""
 from __future__ import annotations
 
 import argparse
@@ -79,6 +79,76 @@ LIMIT 10;
 
 _ALEMBIC_SQL = "SELECT version_num FROM alembic_version LIMIT 1;"
 
+_RETRIEVE_MANIFESTS_SQL = """
+WITH manifests AS (
+  SELECT rr.id AS review_run_id,
+         rr.created_at,
+         a.content_json
+  FROM github_pipeline_artifacts a
+  JOIN github_pipeline_steps s ON s.id = a.step_id
+  JOIN github_pipeline_runs pr ON pr.id = s.pipeline_run_id
+  JOIN github_review_runs rr ON rr.id = pr.review_run_id
+  WHERE s.step_type = 'retrieve'
+    AND a.kind = 'manifest'
+    AND rr.status = 'completed'
+    AND ($1::timestamptz IS NULL OR rr.created_at >= $1::timestamptz)
+)
+SELECT count(*)::int AS runs,
+       count(*) FILTER (
+         WHERE coalesce((content_json->>'diff_truncated')::boolean, false)
+       )::int AS diff_truncated_runs,
+       round(
+         100.0 * count(*) FILTER (
+           WHERE coalesce((content_json->>'diff_truncated')::boolean, false)
+         ) / nullif(count(*), 0),
+         1
+       ) AS diff_truncated_pct,
+       percentile_cont(0.5) WITHIN GROUP (
+         ORDER BY coalesce(jsonb_array_length(content_json->'omitted_files'), 0)
+       )::int AS omitted_files_p50,
+       percentile_cont(0.95) WITHIN GROUP (
+         ORDER BY coalesce(jsonb_array_length(content_json->'omitted_files'), 0)
+       )::int AS omitted_files_p95,
+       count(*) FILTER (
+         WHERE EXISTS (
+           SELECT 1
+           FROM jsonb_array_elements_text(
+             coalesce(content_json->'omitted_files', '[]'::jsonb)
+           ) AS path
+           WHERE path LIKE '%.md'
+         )
+       )::int AS runs_with_omitted_md,
+       percentile_cont(0.5) WITHIN GROUP (
+         ORDER BY coalesce(jsonb_array_length(content_json->'changed_files'), 0)
+       )::int AS changed_files_p50,
+       percentile_cont(0.5) WITHIN GROUP (
+         ORDER BY coalesce(jsonb_array_length(content_json->'retrieval_hits'), 0)
+       )::int AS retrieval_hits_p50,
+       count(*) FILTER (WHERE content_json->>'fallback_reason' IS NOT NULL)::int AS with_fallback_reason,
+       count(*) FILTER (
+         WHERE coalesce((content_json->>'engineering_context_injected')::boolean, false)
+       )::int AS engineering_context_injected_runs
+FROM manifests;
+"""
+
+_REVIEW_PROMPT_SQL = """
+SELECT count(*)::int AS prompt_artifacts,
+       percentile_cont(0.5) WITHIN GROUP (
+         ORDER BY length(coalesce(a.content_text, ''))
+       )::int AS prompt_chars_p50,
+       percentile_cont(0.95) WITHIN GROUP (
+         ORDER BY length(coalesce(a.content_text, ''))
+       )::int AS prompt_chars_p95
+FROM github_pipeline_artifacts a
+JOIN github_pipeline_steps s ON s.id = a.step_id
+JOIN github_pipeline_runs pr ON pr.id = s.pipeline_run_id
+JOIN github_review_runs rr ON rr.id = pr.review_run_id
+WHERE s.step_type = 'review'
+  AND a.kind = 'prompt'
+  AND rr.status = 'completed'
+  AND ($1::timestamptz IS NULL OR rr.created_at >= $1::timestamptz);
+"""
+
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Judge JSON contract staging metrics")
@@ -118,6 +188,8 @@ async def _fetch_metrics(since: datetime | None) -> dict[str, Any]:
         run_row = await conn.fetchrow(_CANDIDATE_RUNS_SQL)
         manifest_row = await conn.fetchrow(_MANIFEST_CANDIDATES_SQL, since)
         failures = await conn.fetch(_RECENT_FAILURES_SQL, since)
+        retrieve_row = await conn.fetchrow(_RETRIEVE_MANIFESTS_SQL, since)
+        prompt_row = await conn.fetchrow(_REVIEW_PROMPT_SQL, since)
         alembic_row = await conn.fetchrow(_ALEMBIC_SQL)
     finally:
         await conn.close()
@@ -136,6 +208,10 @@ async def _fetch_metrics(since: datetime | None) -> dict[str, Any]:
         "manifest_candidates": dict(manifest_row) if manifest_row else {},
         "outcome_persistence_pct": persistence_pct,
         "recent_failures": [dict(row) for row in failures],
+        "review_context": {
+            "retrieve_manifest": dict(retrieve_row) if retrieve_row else {},
+            "review_prompt": dict(prompt_row) if prompt_row else {},
+        },
     }
 
 
@@ -188,6 +264,29 @@ async def _run() -> int:
                 f"{row['parse_error']} | retry={row['retry_count']} | "
                 f"prompt={row['user_prompt_chars']} chars"
             )
+    review_ctx = metrics.get("review_context", {})
+    retrieve = review_ctx.get("retrieve_manifest", {})
+    prompt = review_ctx.get("review_prompt", {})
+    if retrieve or prompt:
+        print()
+        print("Review context (retrieve + Moonshot prompt):")
+        if retrieve:
+            print(f"  completed runs: {retrieve.get('runs', 0)}")
+            print(f"  diff_truncated: {retrieve.get('diff_truncated_runs', 0)} "
+                  f"({retrieve.get('diff_truncated_pct')}%)")
+            print(f"  omitted_files p50/p95: {retrieve.get('omitted_files_p50')}/"
+                  f"{retrieve.get('omitted_files_p95')}")
+            print(f"  runs_with_omitted_md: {retrieve.get('runs_with_omitted_md', 0)}")
+            print(f"  changed_files p50: {retrieve.get('changed_files_p50')}")
+            print(f"  retrieval_hits p50: {retrieve.get('retrieval_hits_p50')}")
+            print(f"  with_fallback_reason: {retrieve.get('with_fallback_reason', 0)}")
+            print(
+                f"  engineering_context_injected: "
+                f"{retrieve.get('engineering_context_injected_runs', 0)}"
+            )
+        if prompt:
+            print(f"  moonshot prompt p50/p95 chars: "
+                  f"{prompt.get('prompt_chars_p50')}/{prompt.get('prompt_chars_p95')}")
     return 0
 
 
