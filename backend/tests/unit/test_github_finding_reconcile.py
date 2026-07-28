@@ -10,6 +10,7 @@ from app.constants.enums import (
     FindingSeverity,
     GitHubFindingGroupState,
     GitHubReviewRunStatus,
+    ResolutionMethod,
     ReviewProfile,
 )
 from app.models.github_finding import GitHubFindingORM
@@ -356,6 +357,75 @@ async def test_reconcile_existing_group_supersedes_peers():
 
     assert group.last_seen_revision_id == revision_id
     assert peer.state == GitHubFindingGroupState.superseded
+
+
+@pytest.mark.asyncio
+async def test_reconcile_reopens_absent_and_addressed_on_re_report():
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+
+    run = GitHubReviewRunORM(
+        revision_id=revision_id,
+        workspace_id=workspace_id,
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    run.id = review_run_id
+
+    revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=2,
+        head_sha="def",
+    )
+    revision.id = revision_id
+
+    finding = GitHubFindingORM(
+        review_run_id=review_run_id,
+        workspace_id=workspace_id,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Edge",
+        message="Handle empty",
+        file_path="app/x.py",
+    )
+    finding.id = uuid.uuid4()
+
+    group = GitHubFindingGroupORM(
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint=compute_fingerprint(
+            workspace_id=workspace_id,
+            pull_request_id=pull_request_id,
+            file_path="app/x.py",
+            category=FindingCategory.bug,
+            title="Edge",
+            start_line=finding.start_line,
+        ),
+        state=GitHubFindingGroupState.resolved,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Edge",
+        message="Handle empty",
+        file_path="app/x.py",
+        last_seen_revision_id=uuid.uuid4(),
+        resolution_method=ResolutionMethod.absent_and_addressed,
+    )
+    group.id = uuid.uuid4()
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, revision])
+    session.scalars = AsyncMock(side_effect=[[finding], []])
+    session.scalar = AsyncMock(return_value=group)
+    session.flush = AsyncMock()
+
+    await reconcile_review_run(session, review_run_id=review_run_id)
+
+    assert group.state == GitHubFindingGroupState.active
+    assert group.resolution_method is None
+    assert group.last_seen_revision_id == revision_id
 
 
 @pytest.mark.asyncio

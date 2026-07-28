@@ -8,6 +8,10 @@ from uuid import UUID
 from app.core.database import get_db_context
 from app.core.logging import get_logger
 from app.models.github_review_run import GitHubReviewRunORM
+from app.services.github_finding_closure import (
+    apply_pass2_closure_for_review_run,
+    verify_still_open_escalation_groups,
+)
 from app.services.github_finding_judge import (
     JudgeCandidateArtifact,
     record_review_run_judge_status,
@@ -18,7 +22,6 @@ from app.services.github_pipeline_trace import (
     finalize_pipeline_github_check_for_review_run,
     get_pipeline_run_for_review_run,
     record_judge_pipeline_step,
-    record_reconcile_pipeline_step,
 )
 from app.services.github_publish import enqueue_publish_for_review_run
 from app.workers.async_runner import run_worker_async
@@ -38,32 +41,44 @@ def reconcile_review_run_task(self, review_run_id: str) -> None:
         async with get_db_context() as session:
             started = time.monotonic()
             group_ids = await reconcile_review_run(session, review_run_id=UUID(review_run_id))
-            reconcile_duration_ms = int((time.monotonic() - started) * 1000)
+            reconcile_ms = int((time.monotonic() - started) * 1000)
+
+            pass2_started = time.monotonic()
+            closed_count = await apply_pass2_closure_for_review_run(
+                session,
+                review_run_id=UUID(review_run_id),
+            )
+            pass2_ms = int((time.monotonic() - pass2_started) * 1000)
+
             judge_artifacts: list[JudgeCandidateArtifact] = []
+            judge_started = time.monotonic()
             judged = await record_review_run_judge_status(
                 session,
                 review_run_id=UUID(review_run_id),
                 artifacts_out=judge_artifacts,
             )
-            judge_duration_ms = int((time.monotonic() - started) * 1000) - reconcile_duration_ms
+            judge_ms = int((time.monotonic() - judge_started) * 1000)
+
+            verification_started = time.monotonic()
+            verification_result = await verify_still_open_escalation_groups(
+                session,
+                review_run_id=UUID(review_run_id),
+            )
+            verification_ms = int((time.monotonic() - verification_started) * 1000)
 
             pipeline_run = await get_pipeline_run_for_review_run(
                 session,
                 review_run_id=UUID(review_run_id),
             )
             if pipeline_run is not None:
-                await record_reconcile_pipeline_step(
-                    session,
-                    pipeline_run_id=pipeline_run.id,
-                    group_count=len(group_ids),
-                    duration_ms=reconcile_duration_ms,
-                )
                 await record_judge_pipeline_step(
                     session,
                     pipeline_run_id=pipeline_run.id,
                     judged_count=judged,
-                    duration_ms=max(judge_duration_ms, 0),
+                    duration_ms=max(judge_ms + verification_ms, 0),
                     candidates=judge_artifacts,
+                    verification_judged_count=verification_result.judged_count,
+                    verification_candidates=verification_result.artifacts,
                 )
 
             review_run = await session.get(GitHubReviewRunORM, UUID(review_run_id))
@@ -82,7 +97,11 @@ def reconcile_review_run_task(self, review_run_id: str) -> None:
                 extra={
                     "review_run_id": review_run_id,
                     "group_count": len(group_ids),
+                    "pass2_closed_count": closed_count,
                     "judge_outcomes": judged,
+                    "verification_outcomes": verification_result.judged_count,
+                    "reconcile_ms": reconcile_ms,
+                    "pass2_ms": pass2_ms,
                 },
             )
 

@@ -11,6 +11,7 @@ from app.constants.enums import (
     GitHubFindingGroupState,
     GitHubReviewJudgeStatus,
     GitHubReviewRunStatus,
+    ResolutionMethod,
     ReviewProfile,
 )
 from app.core.exceptions import ServiceUnavailableError, ValidationError
@@ -398,6 +399,7 @@ async def test_run_judge_dismissed_resolves_group():
     assert count == 1
     assert run.judge_status == GitHubReviewJudgeStatus.completed
     assert group.state == GitHubFindingGroupState.resolved
+    assert group.resolution_method == ResolutionMethod.judge_dismissed
 
 
 @pytest.mark.asyncio

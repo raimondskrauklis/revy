@@ -12,7 +12,8 @@ from app.constants.enums import GitHubFindingGroupState, ResolutionStatus
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
-from app.services.github_compare_patches import fetch_compare_patches
+from app.services.github_compare_patches import ComparePatchesResult, fetch_compare_patches
+from app.services.github_finding_closure import COMPARE_FAILED_REASON
 
 _HUNK_HEADER_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 
@@ -58,7 +59,7 @@ async def _fetch_compare_patches(
     pull_request: GitHubPullRequestORM,
     prior_revision: GitHubPullRequestRevisionORM,
     new_revision: GitHubPullRequestRevisionORM,
-) -> dict[str, str]:
+) -> ComparePatchesResult:
     return await fetch_compare_patches(
         session,
         pull_request=pull_request,
@@ -143,7 +144,7 @@ async def apply_resolution_status_for_synchronize(
         await session.flush()
         return 0
 
-    patches_by_file = await _fetch_compare_patches(
+    compare_result = await _fetch_compare_patches(
         session,
         pull_request=pull_request,
         prior_revision=prior_revision,
@@ -152,10 +153,17 @@ async def apply_resolution_status_for_synchronize(
 
     updated = 0
     for group in groups:
+        if compare_result.compare_failed:
+            group.closure_blocked_reason = COMPARE_FAILED_REASON
+            group.resolution_status = ResolutionStatus.still_open
+            updated += 1
+            continue
+
+        group.closure_blocked_reason = None
         start_line, end_line = await _latest_finding_lines(session, group_id=group.id)
         group.resolution_status = resolve_group_resolution_status(
             group=group,
-            patches_by_file=patches_by_file,
+            patches_by_file=compare_result.patches_by_file,
             start_line=start_line,
             end_line=end_line,
         )

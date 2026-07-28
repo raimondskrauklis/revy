@@ -171,7 +171,13 @@ async def test_apply_resolution_status_for_synchronize_updates_prior_groups():
 
     with patch(
         "app.services.github_resolution_metrics._fetch_compare_patches",
-        AsyncMock(return_value={"app/handler.py": compare.files[0].patch}),
+        AsyncMock(
+            return_value=type(
+                "CompareResult",
+                (),
+                {"patches_by_file": {"app/handler.py": compare.files[0].patch}, "compare_failed": False},
+            )()
+        ),
     ):
         with patch(
             "app.services.github_resolution_metrics._latest_finding_lines",
@@ -185,4 +191,81 @@ async def test_apply_resolution_status_for_synchronize_updates_prior_groups():
 
     assert updated == 1
     assert group.resolution_status == ResolutionStatus.addressed
+    assert group.closure_blocked_reason is None
     session.flush.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_apply_resolution_status_for_synchronize_stamps_compare_failed():
+    pull_request_id = uuid.uuid4()
+    prior_revision_id = uuid.uuid4()
+    new_revision_id = uuid.uuid4()
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=1,
+        title="PR",
+        state="open",
+        head_sha="newsha",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=2,
+    )
+    pull_request.id = pull_request_id
+
+    prior_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="oldsha",
+        base_sha="base1",
+    )
+    prior_revision.id = prior_revision_id
+
+    new_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=2,
+        head_sha="newsha",
+        base_sha="base1",
+    )
+    new_revision.id = new_revision_id
+
+    group = GitHubFindingGroupORM(
+        workspace_id=pull_request.workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Bug",
+        message="msg",
+        file_path="app/handler.py",
+        last_seen_revision_id=prior_revision_id,
+    )
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[prior_revision])
+    session.scalars = AsyncMock(return_value=[group])
+    session.flush = AsyncMock()
+
+    failed_result = type(
+        "CompareResult",
+        (),
+        {"patches_by_file": {}, "compare_failed": True},
+    )()
+
+    with patch(
+        "app.services.github_resolution_metrics._fetch_compare_patches",
+        AsyncMock(return_value=failed_result),
+    ):
+        updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
+            session,
+            pull_request=pull_request,
+            new_revision=new_revision,
+        )
+
+    assert updated == 1
+    assert group.resolution_status == ResolutionStatus.still_open
+    assert group.closure_blocked_reason == "compare_failed"

@@ -414,3 +414,43 @@ async def test_record_publish_skip_on_pipeline_writes_manifest_flag():
         if getattr(call.args[0], "kind", None) == PipelineArtifactKind.manifest
     )
     assert manifest_artifact.content_json["publish_skipped_not_head"] is True
+
+
+@pytest.mark.asyncio
+async def test_record_judge_pipeline_step_includes_verification_manifest():
+    from app.services.github_finding_judge import JudgeCandidateArtifact
+    from app.services.github_pipeline_trace import record_judge_pipeline_step
+
+    pipeline_run_id = uuid.uuid4()
+    session = AsyncMock()
+    session.scalar = AsyncMock(return_value=None)
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    verification_artifact = JudgeCandidateArtifact(
+        group_id=uuid.uuid4(),
+        evidence_snippet="snippet",
+        user_prompt="verify",
+        raw_response={"outcome": "dismissed"},
+        outcome="dismissed",
+        file_patch_chars=42,
+    )
+
+    await record_judge_pipeline_step(
+        session,
+        pipeline_run_id=pipeline_run_id,
+        judged_count=1,
+        duration_ms=100,
+        candidates=[],
+        verification_judged_count=1,
+        verification_candidates=[verification_artifact],
+    )
+
+    manifest_artifact = next(
+        call.args[0]
+        for call in session.add.call_args_list
+        if getattr(call.args[0], "kind", None) == PipelineArtifactKind.manifest
+    )
+    assert manifest_artifact.content_json["verification_judged_count"] == 1
+    assert len(manifest_artifact.content_json["verification_candidates"]) == 1
+    assert manifest_artifact.content_json["verification_group_ids"]

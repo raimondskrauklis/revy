@@ -8,7 +8,7 @@ Phase **P0** of [FINDING_RESOLUTION_GENERAL_PLAN.md](../FINDING_RESOLUTION_GENER
 
 - Migration `2026_07_28_1200_0028_finding_resolution_closure.py` — hand-written only.
 - `github_finding_groups`: `resolution_method` VARCHAR nullable; `resolved_at_revision_id` UUID FK nullable; `closure_blocked_reason` TEXT nullable.
-- `github_finding_judge_outcomes`: `judge_purpose` VARCHAR nullable, server default `discovery`; values from **`JudgePurpose` enum** (`discovery`, `verification`) — no string constants.
+- `github_finding_judge_outcomes`: `judge_purpose` VARCHAR NOT NULL, server default `discovery`; values from **`JudgePurpose` enum** (`discovery`, `verification`) — no string constants.
 - `ResolutionMethod` enum: `absent_and_addressed`, `judge_dismissed`, `verification_dismissed`, `human_dismissed`.
 - `fetch_compare_patches(session, pull_request, base_sha, head_sha)` in `github_compare_patches.py`; refactor existing callers to use it without behavior change in P0.
 - `github_finding_closure.py` — pure functions: `should_close_absent_and_addressed`, `apply_resolution_method_on_judge_dismiss`, etc. — no worker wiring in P0.

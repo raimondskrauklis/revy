@@ -50,6 +50,7 @@ async def call_judge_llm(
     model_ref: ModelRef,
     user_prompt: str,
     timeout_seconds: float,
+    system_prompt: str | None = None,
 ) -> dict:
     provider = model_ref.provider.strip().lower()
     if provider not in SUPPORTED_JUDGE_PROVIDERS:
@@ -63,6 +64,7 @@ async def call_judge_llm(
             user_prompt=user_prompt,
             model_id=model_ref.model_id,
             timeout_seconds=timeout_seconds,
+            system_prompt=system_prompt,
         )
     if provider == "bedrock":
         return await bedrock_review.judge_finding(
@@ -70,6 +72,7 @@ async def call_judge_llm(
             model_id=model_ref.model_id,
             region=model_ref.region,
             timeout_seconds=timeout_seconds,
+            system_prompt=system_prompt,
         )
     raise ServiceUnavailableError(
         message=f"Judge provider is not supported: {provider}",

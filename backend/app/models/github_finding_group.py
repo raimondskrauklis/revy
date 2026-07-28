@@ -54,7 +54,7 @@ class GitHubFindingGroupORM(TimestampedModel):
     resolution_method: Mapped[ResolutionMethod | None] = mapped_column(String(length=32), nullable=True)
     resolved_at_revision_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),
-        ForeignKey("github_pull_request_revisions.id"),
+        ForeignKey("github_pull_request_revisions.id", ondelete="SET NULL"),
         nullable=True,
     )
     closure_blocked_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
