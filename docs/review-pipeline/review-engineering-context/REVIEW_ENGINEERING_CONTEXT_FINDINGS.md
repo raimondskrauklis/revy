@@ -39,7 +39,7 @@ This program is the **RC track extension** (RCX): dogfood wiring first, then pro
 | **Greptile** | `.greptile/files.json` + `scope` | **Partial** — wired paths; stale multi-program list | Vendor graph (external) | Only if findings updated manually |
 | **Cursor local Bugbot** | Task subagent + brief + `BUGBOT.md` | **Yes** when master passes contract § | Diff only | Master reads thinking export (RC-D23) |
 | **Hosted GitHub Bugbot** | `revybot[bot]` + `.cursor/BUGBOT.md` on `main` | **Weak** — appended to Cursor default; no path-scoped slice | Diff only | **No** |
-| **Revy product — Moonshot** | `prepare_review_context` → `_build_review_prompt` | **No** — PR title/body + diff + RAG chunks only | R3/R4 retrieval only | N/A |
+| **Revy product — Moonshot** | `prepare_review_context` → `_build_review_prompt` | **Via PR diff** when plan `.md` ships with code; not via `files.json` | R3/R4 retrieval on changed paths | PR body + changed hunks only |
 | **Revy product — judge** | `_build_judge_prompt` / verification prompt | **Partial** — snippet-first tier (shipped #58); no workspace policy | Scoped patch/snippet | Parse retry + manifest (shipped #58) |
 
 **Verified paths:** `.greptile/files.json` (15 program entries, all `backend/**`); `.cursor/BUGBOT.md` (lists judge-input-quality, generation-lifecycle, hardening, review-quality, finding-resolution, judge-json-contract — **no active pointer**); `github_review.py:754` `prepare_review_context` — no policy/rules injection.
@@ -234,12 +234,12 @@ Sources: [Packmind playbook](https://packmind.com/context-engineering-ai-coding/
 
 | ID | Gap | Evidence |
 |----|-----|----------|
-| **RCX-1** | Hosted `revybot` has no engineering context | PR #58 API false positives |
+| **RCX-1** | Hosted `revybot` context is **stale/noisy** — not absent | PR #58 API false positives; `BUGBOT.md` lists 6 programs, stale active line |
 | **RCX-2** | Greptile lacks live smoke unless findings updated | P0 matrix after operator run |
 | **RCX-3** | Three+ manual wires per program | phase-execution RC0 = 2 channels |
 | **RCX-4** | `BUGBOT.md` / `files.json` context noise | 6+ shipped programs listed |
 | **RCX-5** | Customer repos need DB policy | PRODUCT_PATTERNS — no `.greptile/` |
-| **RCX-6** | Moonshot review has no workspace/program policy | `prepare_review_context` — diff+RAG only |
+| **RCX-6** | Moonshot has **no `files.json` wiring** — relies on co-commit diff discipline | `github_review.py:_build_review_prompt` — unified diff + changed_files |
 | **RCX-7** | No context priority / conflict rule encoded | Bots override locks with generic API advice |
 | **RCX-8** | Hosted vs local Bugbot precedence unclear | ROLES.md dashboard override; RC-D23 |
 | **RCX-9** | No disposition contract for lock+cite replies | Babysit ad hoc |
@@ -251,15 +251,109 @@ Sources: [Packmind playbook](https://packmind.com/context-engineering-ai-coding/
 
 ---
 
-## Decisions registry (open)
+---
+
+## Discussion resolutions (operator, 2026-07-29)
+
+Prior open questions — investigated against repo + vendor docs.
+
+### RCX-Q1 — Is `files.json` manifest SSOT?
+
+**Investigation (verified drift on `main`):**
+
+| Signal | `files.json` | `.cursor/BUGBOT.md` |
+|--------|--------------|---------------------|
+| Program doc paths | 15 entries (path + description + `scope`) | ~same programs as markdown links |
+| `REVIEW_QUALITY_FINDINGS.md` | **missing** | present |
+| `agents/prompts/` | **missing** | present |
+| Active program pointer | n/a | **stale** — still says `feat/judge-input-quality` |
+| `review-engineering-context/` | **missing** | **missing** |
+
+**Verdict:** `files.json` is the **better structured candidate** for Greptile + path list, but **not SSOT today** — files diverge. Bugbot cannot read `files.json` natively; only `.cursor/BUGBOT.md` text ([Cursor docs](https://cursor.com/docs/bugbot)).
+
+**Recommendation:** Introduce a thin **`review-context.manifest.json`** (or extend `files.json` with `active_program` + `locks[]`) that:
+1. Feeds Greptile `files.json` (generate or validate on commit)
+2. **Generates** the link block + active pointer in `BUGBOT.md` (not hand-edited)
+
+Do **not** assume `files.json` alone is SSOT without a generator test in CI (`json.tool` + path-exists check).
+
+### RCX-Q2 — Can hosted `revybot` consume a generated manifest?
+
+**Investigation:**
+
+| Mechanism | Verified? | Notes |
+|-----------|-----------|-------|
+| Repo `.cursor/BUGBOT.md` on `main` | **Yes** | Merged to base branch before review |
+| Nested `backend/.cursor/BUGBOT.md` | **Yes** | Walk upward from changed paths |
+| Reads `.greptile/files.json` | **No** | Greptile-only |
+| Team dashboard rules | **Unknown in repo** | Precedence **above** repo file — [docs](https://cursor.com/docs/bugbot) |
+| Markdown link follow → full doc body | **Assumption** | Internal chain-of-thought doc; **not** in Cursor docs — spike on next program PR |
+| 100k combined rule cap | **Yes** | Favors slim generated header + few links |
+
+**Verdict:** “Generated manifest” means **generated `BUGBOT.md`**, not a new file format Bugbot reads directly. **Operator action:** audit [cursor.com/dashboard/bugbot](https://cursor.com/dashboard/bugbot) for Team Rules that contradict P3 lock (RCX-G2).
+
+### RCX-Q3 — Why “full corpus”? We work on diff.
+
+**Reframe (operator correction accepted):**
+
+The noise problem is **not** “load entire repo docs.” It is:
+
+| Channel | What actually happens on `backend/**` PR |
+|---------|----------------------------------------|
+| **Moonshot** | Sees **diff hunks** + changed file list + PR body — co-committed `.md` **is** in diff ✓ |
+| **Greptile** | Reads **entire files** listed in `files.json` when `scope` matches — **all 15 programs** on every backend PR ✗ |
+| **Bugbot** | Reads `BUGBOT.md` + linked docs (if links followed) — **six program sections** always ✗ |
+
+**RC1 fix:** **Active program trim** in `files.json` + `BUGBOT.md` (3 files per program: execution, findings, general plan) — not a “full corpus flag.” Shipped programs drop out of active manifest when closed.
+
+### RCX-Q4 — Moonshot engineering context
+
+**Operator position:** Planning `.md` ships with code in the same PR → Moonshot already has intent via diff. **Agree with nuance.**
+
+**Verified** (`github_review.py:222–274`):
+
+```text
+_build_review_prompt → changed_files + unified_diff (primary) + pr_body + supplemental RAG
+```
+
+| Context source | Moonshot gets it when… |
+|----------------|------------------------|
+| Co-committed execution/findings `.md` | File appears in compare → **in unified diff** |
+| Operator smoke table in findings | Only if that `.md` file is in **this PR's diff** |
+| `files.json` wiring | **Never** — Greptile/Bugbot only |
+| Workspace DB policy (RC4) | **Never** today — customer path |
+
+**Discussion:**
+
+- **Dogfood:** Co-commit discipline is sufficient for Moonshot **for plan docs** — do not over-engineer RC5 inject in RCX v1.
+- **Still gap:** Operator smoke / locks updated **after** code PR (or in separate commit) → Moonshot on that PR may miss smoke. Mitigation: include smoke row in same PR as P0 findings update (existing LOOP habit).
+- **Product (RC4/RC5):** Customer repos won't co-commit Revy-style program docs — workspace policy inject remains **future**, not RCX P0.
+
+**RCX-Q4 resolution:** **Defer Moonshot inject to RC4/RC5** for dogfood; keep co-commit + PR body (RC2-lite). Revisit only if dogfood shows Moonshot missing locks when docs **are** in diff.
+
+### RCX-Q5 — Fold into RQ-RC-1 or standalone RCX?
+
+**Advice:** **Standalone RCX program**; **absorb RQ-RC-1 v1.1 scope** into it (RC1 active trim, RC2 pointer, RC3 nested `.greptile/` / `BUGBOT.md`).
+
+| Track | Scope | Fate |
+|-------|-------|------|
+| **RQ-RC-1** (review-quality post-v1) | RC1–RC3 dogfood wiring improvements | **Fold into RCX P0–P2** — same work, one LOOP |
+| **RCX** | Above + manifest generator + disposition + RC4 spike | **Active program** |
+| **RC4–RC6** (product) | DB policy, pipeline inject, agent tool | **Stay post-RCX dogfood** |
+
+Avoid two agents updating `BUGBOT.md` under different program names.
+
+---
+
+## Decisions registry
 
 | Q# | Question | Status | Resolution |
 |----|----------|--------|------------|
-| **RCX-Q1** | Is `.greptile/files.json` the manifest SSOT? | **proposed** | Yes — RCX-D1/D2; generate Bugbot header from it |
-| **RCX-Q2** | Can hosted Bugbot read engineering context? | **partial** | **Yes** via `BUGBOT.md` + nested files; Team Rules override; 100k cap — slim active block + manifest |
-| **RCX-Q3** | RC1 subset per program vs global trim? | **proposed** | Active program only in v1; full corpus via `files.json` scope or nested Greptile |
-| **RCX-Q4** | Inject engineering context into Moonshot prompt in v1? | **open** | RCX-G8 — likely RC5 not RCX P0 |
-| **RCX-Q5** | Merge with RQ-RC-1 or separate program? | **proposed** | RCX = engineering context program; RQ-RC-1 items fold in |
+| **RCX-Q1** | Is `files.json` manifest SSOT? | **locked** | **Near-SSOT with drift today** — introduce manifest + generator; CI path-exists; generate `BUGBOT.md` links |
+| **RCX-Q2** | Can hosted Bugbot read engineering context? | **locked** | **Yes** via generated `BUGBOT.md`; audit dashboard Team Rules; spike link-follow behavior |
+| **RCX-Q3** | RC1 trim — active program vs full corpus? | **locked** | **Active program only** — noise is multi-program `files.json` scope, not “full corpus”; Moonshot uses diff |
+| **RCX-Q4** | Moonshot inject in RCX v1? | **locked** | **Defer** — co-commit diff is dogfood path; RC4/RC5 for customers |
+| **RCX-Q5** | Merge with RQ-RC-1? | **locked** | **RCX standalone**; RQ-RC-1 v1.1 items fold into RCX P0–P2 |
 
 ---
 
@@ -322,6 +416,6 @@ Sources: [Packmind playbook](https://packmind.com/context-engineering-ai-coding/
 
 ## Next steps
 
-1. **Discuss** — RCX-Q1–Q5, scope of P0 (dogfood manifest vs product inject).
-2. `create-general-plan` from this doc.
-3. Staging validation — re-run metrics on **latest runs only** after first post-#58 dogfood PR (separate track L).
+1. **Operator:** Audit Cursor Bugbot dashboard Team Rules vs P3 lock (RCX-Q2).
+2. `create-general-plan` — RCX P0: manifest schema + trim to active program + generate `BUGBOT.md`.
+3. Staging validation — latest runs only after post-#58 dogfood (track L, separate).
