@@ -33,7 +33,7 @@ each phase: implement → pytest gate → Bugbot → commit (operator pushes; P5
 | Phase | Focus | Execution | Status |
 |-------|--------|-----------|--------|
 | P0 — Foundations | Migration `0029`, SSOT, caps (settings only), path-exists CI | [REVIEW_ENGINEERING_CONTEXT_P0_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P0_EXECUTION.md) | done |
-| P1 — Loader + extract | `fetch_repository_file_at_sha`, lock/smoke parser | [REVIEW_ENGINEERING_CONTEXT_P1_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P1_EXECUTION.md) | pending |
+| P1 — Loader + extract | `fetch_repository_file_at_sha`, lock/smoke parser | [REVIEW_ENGINEERING_CONTEXT_P1_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P1_EXECUTION.md) | done |
 | P2 — Moonshot inject | `prepare_review_context`, populate metrics | [REVIEW_ENGINEERING_CONTEXT_P2_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P2_EXECUTION.md) | pending |
 | P3 — Greptile sync | SSOT trim + generate `files.json` | [REVIEW_ENGINEERING_CONTEXT_P3_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P3_EXECUTION.md) | pending |
 | P4 — Judge reuse | Lock block in judge prompt | [REVIEW_ENGINEERING_CONTEXT_P4_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P4_EXECUTION.md) | pending |
