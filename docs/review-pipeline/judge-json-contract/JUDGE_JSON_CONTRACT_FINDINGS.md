@@ -129,11 +129,16 @@ Code: `anthropic_review.py` → `{ANTHROPIC_BASE_URL}/v1/messages`, gateway prof
 
 Add judge credentials to **local** `backend/.env` (gitignored) — same vars as staging worker. No deploy needed to validate API shape.
 
-From `backend/`:
+From `backend/` (same `-m` pattern as `scripts.seed_bootstrap_super_admin`):
 
 ```bash
-# Basic judge smoke (existing)
-pipenv run python scripts/test_anthropic_judge_gateway.py
+# Basic judge smoke
+pipenv run sh -c 'python -m scripts.test_anthropic_judge_gateway'
+
+# With flags (quote the whole command — pipenv parses bare `-m` as its own flag)
+pipenv run sh -c 'python -m scripts.test_anthropic_judge_gateway --structured --print-raw'
+pipenv run sh -c 'python -m scripts.test_anthropic_judge_gateway --compare-direct'
+pipenv run sh -c 'python -m scripts.test_anthropic_judge_gateway --chars 10000'
 ```
 
 **Planned extensions (G6 — implement in wave):**
@@ -194,19 +199,22 @@ DB connect: [DATABASE_CONNECTION_GUIDE.md](../../utils/DATABASE_CONNECTION_GUIDE
 
 ## P0 smoke results (operator)
 
-**Date:** _pending operator run_  
-**Script:** `backend/scripts/test_anthropic_judge_gateway.py`
+**Date:** 2026-07-29 (local `backend/.env`)  
+**Script:** `pipenv run sh -c 'python -m scripts.test_anthropic_judge_gateway …'` from `backend/`  
+**Env:** gateway `https://llm.ai.rtu.lv/v1/messages` · model `azure_ai/claude-sonnet-5` · direct API **not** configured
 
 | Path | `--structured` | Result | Notes |
 |------|----------------|--------|-------|
-| RTU gateway (`ANTHROPIC_BASE_URL`) | no | _pending_ | Plain prompt JSON |
-| RTU gateway | yes | _pending_ | `output_config.format` json_schema |
-| Direct API (`ANTHROPIC_API_KEY`) | no | _pending_ | Only if direct configured |
-| Direct API | yes | _pending_ | Only if direct configured |
-| `--chars 1000` | no | _pending_ | Prompt size sweep |
-| `--chars 10000` | no | _pending_ | Reproduces staging bloat |
+| RTU gateway (`ANTHROPIC_BASE_URL`) | no | **fail** | HTTP **401 Unauthorized** — refresh `ANTHROPIC_AUTH_TOKEN` in `backend/.env` and re-run |
+| RTU gateway | yes | **fail** | Same 401 before structured body returned — feasibility **unknown** until auth works |
+| Direct API (`ANTHROPIC_API_KEY`) | no | **n/a** | `anthropic_direct_enabled=False` locally |
+| Direct API | yes | **n/a** | Not configured |
+| `--chars 1000` | no | **fail** | 401 (prompt length OK: 1000 chars) |
+| `--chars 10000` | no | **fail** | 401 (prompt length OK: 10000 chars) |
 
-**P3 lock:** set `revy_judge_structured_output=True` only when gateway structured row = pass.
+**Next iteration:** update RTU token → re-run matrix → fill pass/fail per row. On gateway structured **pass**, set P3 lock to enable `REVY_JUDGE_STRUCTURED_OUTPUT`; on **fail** (4xx/unsupported schema), P3 ships parse fallback + P2 only.
+
+**P3 lock (current):** `revy_judge_structured_output` stays **off** until gateway structured row = pass.
 
 ---
 
