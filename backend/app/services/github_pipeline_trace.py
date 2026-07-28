@@ -560,6 +560,7 @@ async def record_judge_pipeline_step(
             "raw_response": item.raw_response,
             "raw_response_text": item.raw_response_text,
             "parse_error": item.parse_error,
+            "retry_count": item.retry_count,
             "outcome": item.outcome,
         }
         for item in (candidates or [])
@@ -573,6 +574,7 @@ async def record_judge_pipeline_step(
             "raw_response": item.raw_response,
             "raw_response_text": item.raw_response_text,
             "parse_error": item.parse_error,
+            "retry_count": item.retry_count,
             "outcome": item.outcome,
         }
         for item in (verification_candidates or [])

@@ -906,7 +906,120 @@ async def test_run_judge_parse_failure_captures_artifact():
     assert artifact.raw_response_text == '{"outcome": "oops"'
     assert artifact.raw_response is None
     assert artifact.outcome is None
+    assert artifact.retry_count == 1
     session.add.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_call_judge_with_optional_retry_retries_parse_failure():
+    from app.integrations.judge_llm_errors import JudgeParseError
+    from app.services.github_finding_judge import call_judge_with_optional_retry
+
+    client = AsyncMock()
+    call_count = 0
+
+    async def _judge_side_effect(*_args, **_kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise JudgeParseError("judge_json_invalid", response_text="not-json")
+        return {"outcome": "dismissed", "notes": "false positive"}
+
+    with patch(
+        "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
+        AsyncMock(side_effect=_judge_side_effect),
+    ):
+        raw, retry_count = await call_judge_with_optional_retry(
+            client,
+            model_ref=ModelRef(provider="anthropic", model_id="claude-test"),
+            user_prompt="judge",
+            timeout_seconds=30.0,
+        )
+
+    assert raw["outcome"] == "dismissed"
+    assert retry_count == 1
+    assert call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_run_judge_fenced_json_persists_outcome():
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    group_id = uuid.uuid4()
+
+    run = GitHubReviewRunORM(
+        revision_id=uuid.uuid4(),
+        workspace_id=workspace_id,
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    run.id = review_run_id
+
+    group = GitHubFindingGroupORM(
+        workspace_id=workspace_id,
+        pull_request_id=uuid.uuid4(),
+        fingerprint="abc",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="RCE",
+        message="Remote code execution",
+        file_path="app/run.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+    group.id = group_id
+
+    finding = GitHubFindingORM(
+        review_run_id=review_run_id,
+        workspace_id=workspace_id,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="RCE",
+        message="Remote code execution",
+        file_path="app/run.py",
+        group_id=group_id,
+    )
+
+    revision = MagicMock()
+    revision.pull_request_id = uuid.uuid4()
+    revision.base_sha = "base"
+    revision.head_sha = "head"
+    pull_request = MagicMock()
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, group, revision, pull_request])
+    session.scalars = AsyncMock(return_value=[finding])
+    session.scalar = AsyncMock(return_value=None)
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    artifacts: list = []
+
+    with patch("app.services.github_finding_judge.settings") as mock_settings:
+        mock_settings.judge_llm_enabled.return_value = True
+        mock_settings.revy_revision_timeout_standard_seconds = 900
+        with patch(
+            "app.services.github_finding_judge.resolve_model",
+            AsyncMock(return_value=ModelRef(provider="anthropic", model_id="claude-test")),
+        ):
+            with patch(
+                "app.services.github_finding_judge.fetch_compare_patches_by_file",
+                AsyncMock(return_value={}),
+            ):
+                with patch(
+                    "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
+                    AsyncMock(return_value={"outcome": "dismissed", "notes": "ok"}),
+                ):
+                    judged = await record_review_run_judge_status(
+                        session,
+                        review_run_id=review_run_id,
+                        artifacts_out=artifacts,
+                    )
+
+    assert judged == 1
+    assert artifacts[0].outcome == "dismissed"
+    assert artifacts[0].raw_response["outcome"] == "dismissed"
 
 
 @pytest.mark.asyncio

@@ -60,6 +60,53 @@ class JudgeCandidateArtifact:
     file_patch_chars: int | None = None
     raw_response_text: str | None = None
     parse_error: str | None = None
+    retry_count: int = 0
+
+
+_JUDGE_RETRY_SCHEMA_REMINDER = (
+    'Return JSON only: {"outcome":"upheld|dismissed|modified","notes":"brief rationale"}'
+)
+
+
+async def call_judge_with_optional_retry(
+    client: httpx.AsyncClient,
+    *,
+    model_ref: ModelRef,
+    user_prompt: str,
+    timeout_seconds: float,
+    system_prompt: str | None = None,
+) -> tuple[dict[str, Any], int]:
+    """Call judge LLM once; on parse contract failure, retry once with schema reminder."""
+    try:
+        raw = await llm_dispatch.call_judge_llm(
+            client,
+            model_ref=model_ref,
+            user_prompt=user_prompt,
+            timeout_seconds=timeout_seconds,
+            system_prompt=system_prompt,
+        )
+        anthropic_review.parse_judge_outcome(raw)
+        return raw, 0
+    except ValueError as exc:
+        parse_error = getattr(exc, "code", str(exc))
+        retry_prompt = (
+            f"{user_prompt}\n\n"
+            f"Previous judge response failed parse ({parse_error}). "
+            f"{_JUDGE_RETRY_SCHEMA_REMINDER}"
+        )
+        try:
+            raw = await llm_dispatch.call_judge_llm(
+                client,
+                model_ref=model_ref,
+                user_prompt=retry_prompt,
+                timeout_seconds=timeout_seconds,
+                system_prompt=system_prompt,
+            )
+            anthropic_review.parse_judge_outcome(raw)
+            return raw, 1
+        except ValueError as retry_exc:
+            retry_exc.judge_retry_count = 1
+            raise
 
 
 def _judge_failure_log_extra(group_id: UUID, exc: Exception) -> dict[str, object]:
@@ -83,6 +130,7 @@ def _judge_failure_artifact(
     user_prompt: str,
     file_patch_chars: int | None,
     exc: Exception,
+    retry_count: int = 0,
 ) -> JudgeCandidateArtifact:
     raw_response_text, parse_error, _ = judge_failure_trace_fields(exc)
     return JudgeCandidateArtifact(
@@ -94,6 +142,7 @@ def _judge_failure_artifact(
         parse_error=parse_error,
         outcome=None,
         file_patch_chars=file_patch_chars,
+        retry_count=retry_count,
     )
 
 
@@ -256,9 +305,10 @@ async def _run_judge_llm_loop(
             raw: dict[str, Any] | None = None
             outcome_str: str | None = None
             notes: str | None = None
+            retry_count = 0
 
             try:
-                raw = await llm_dispatch.call_judge_llm(
+                raw, retry_count = await call_judge_with_optional_retry(
                     client,
                     model_ref=model_ref,
                     user_prompt=user_prompt,
@@ -278,6 +328,7 @@ async def _run_judge_llm_loop(
                             user_prompt=user_prompt,
                             file_patch_chars=patch_chars,
                             exc=exc,
+                            retry_count=getattr(exc, "judge_retry_count", retry_count),
                         )
                     )
                 continue
@@ -315,6 +366,7 @@ async def _run_judge_llm_loop(
                         raw_response=raw,
                         outcome=outcome_str,
                         file_patch_chars=patch_chars,
+                        retry_count=retry_count,
                     )
                 )
             judged += 1

@@ -25,7 +25,7 @@ from app.core.exceptions import (
     ValidationError,
 )
 from app.core.logging import get_logger
-from app.integrations import anthropic_review, llm_dispatch
+from app.integrations import anthropic_review
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_finding_judge_outcome import GitHubFindingJudgeOutcomeORM
@@ -48,6 +48,7 @@ from app.services.github_finding_judge import (
     JudgeCandidateArtifact,
     _judge_failure_artifact,
     _judge_failure_log_extra,
+    call_judge_with_optional_retry,
     judge_prompt_file_patch_chars,
 )
 from app.services.github_finding_reconcile import _ensure_pull_request_access
@@ -287,9 +288,10 @@ async def verify_still_open_escalation_groups(
             raw: dict[str, Any] | None = None
             outcome_str: str | None = None
             notes: str | None = None
+            retry_count = 0
 
             try:
-                raw = await llm_dispatch.call_judge_llm(
+                raw, retry_count = await call_judge_with_optional_retry(
                     client,
                     model_ref=model_ref,
                     user_prompt=user_prompt,
@@ -311,6 +313,7 @@ async def verify_still_open_escalation_groups(
                         user_prompt=user_prompt,
                         file_patch_chars=patch_chars,
                         exc=exc,
+                        retry_count=getattr(exc, "judge_retry_count", retry_count),
                     )
                 )
                 continue
@@ -344,6 +347,7 @@ async def verify_still_open_escalation_groups(
                     raw_response=raw,
                     outcome=outcome_str,
                     file_patch_chars=patch_chars,
+                    retry_count=retry_count,
                 )
             )
             judged += 1
