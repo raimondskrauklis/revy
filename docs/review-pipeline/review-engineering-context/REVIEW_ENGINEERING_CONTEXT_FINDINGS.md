@@ -3,7 +3,7 @@
 **Date:** 2026-07-29 (platform reframed)  
 **Purpose:** Baseline for wiring **intent** (locked decisions, execution contract, operator evidence) into the **Revy product pipeline** — primarily Moonshot review generation — with Greptile as a **parallel validation channel** while we tune Revy. **No execution steps.**
 
-**Status:** Execution plans ready — `phase-execution` from P0. [judge-json-contract](../judge-json-contract/README.md) merged (#58, `9a7b5cb`); staging deploy done, **no post-deploy judge runs yet** (validation memo pending dogfood).
+**Program status:** Code shipped P0–P4; staging human gate pending — [REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md](./REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md)
 
 **Operator context:** Revy is built **primarily for dogfood on this repo** (solo operator workflow). Greptile and Bugbot remain part of daily PR practice and the whole review surface — but **this program's P0 target is Revy**, not tuning hosted/local Bugbot.
 

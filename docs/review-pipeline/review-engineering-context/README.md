@@ -17,9 +17,9 @@
 | P0 — Foundations | Migration `0029`, SSOT, caps (settings only), path-exists CI | [waves/REVIEW_ENGINEERING_CONTEXT_P0_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P0_EXECUTION.md) | done |
 | P1 — Loader + extract | [waves/REVIEW_ENGINEERING_CONTEXT_P1_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P1_EXECUTION.md) | done |
 | P2 — Moonshot inject | [waves/REVIEW_ENGINEERING_CONTEXT_P2_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P2_EXECUTION.md) | done |
-| P3 — Greptile sync | [waves/REVIEW_ENGINEERING_CONTEXT_P3_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P3_EXECUTION.md) | pending |
-| P4 — Judge reuse | [waves/REVIEW_ENGINEERING_CONTEXT_P4_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P4_EXECUTION.md) | pending |
-| P5 — Validation + closeout (+ P5.5 issue-comment narrative) | [waves/REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md) | pending |
+| P3 — Greptile sync | [waves/REVIEW_ENGINEERING_CONTEXT_P3_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P3_EXECUTION.md) | done |
+| P4 — Judge reuse | [waves/REVIEW_ENGINEERING_CONTEXT_P4_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P4_EXECUTION.md) | done |
+| P5 — Validation + closeout (+ P5.5 issue-comment narrative) | [waves/REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md) | human gate |
 
 **Branch:** `docs/judge-json-contract-staging-validation` — **docs + code ship in one PR** (agent context for Greptile/Bugbot).
 
@@ -28,3 +28,5 @@
 **Related:** [review-quality/README.md](../review-quality/README.md) · [judge-json-contract](../judge-json-contract/README.md)
 
 **Next step:** `phase-execution` → P0 (migration `0029` — LOOP pauses after P0.1).
+
+**Program status:** P0–P4 code shipped · P5 human gate pending (staging validation memo).

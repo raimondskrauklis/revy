@@ -1,94 +1,25 @@
 {
   "files": [
     {
-      "path": "docs/review-pipeline/judge/waves/JUDGE_INPUT_QUALITY_EXECUTION.md",
-      "description": "Judge input quality — LOOP P0–P5, J-8 compare reload, verifier prompts",
-      "scope": ["backend/**"]
+      "path": "docs/review-pipeline/review-engineering-context/waves/REVIEW_ENGINEERING_CONTEXT_EXECUTION.md",
+      "description": "RCX execution index — LOOP P0–P5, locked decisions",
+      "scope": [
+        "backend/**"
+      ]
     },
     {
-      "path": "docs/review-pipeline/judge/JUDGE_INPUT_INVESTIGATION_FINDINGS.md",
-      "description": "Judge baseline — Moonshot vs judge context, J-* gaps",
-      "scope": ["backend/**"]
+      "path": "docs/review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_FINDINGS.md",
+      "description": "RCX baseline — RCX-D*, validation metrics",
+      "scope": [
+        "backend/**"
+      ]
     },
     {
-      "path": "docs/review-pipeline/judge/JUDGE_INPUT_QUALITY_GENERAL_PLAN.md",
-      "description": "Judge input quality general plan — find→verify thesis",
-      "scope": ["backend/**"]
-    },
-    {
-      "path": "docs/review-pipeline/review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_EXECUTION.md",
-      "description": "Review generation lifecycle — LOOP order P0–P5, locked decisions, phase gates",
-      "scope": ["backend/**"]
-    },
-    {
-      "path": "docs/review-pipeline/review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_FINDINGS.md",
-      "description": "Generation lifecycle baseline — RG gaps, snapshot semantics, locked Q#",
-      "scope": ["backend/**"]
-    },
-    {
-      "path": "docs/review-pipeline/review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_GENERAL_PLAN.md",
-      "description": "General plan — HEAD gate, supersede, surface flush, coalesce",
-      "scope": ["backend/**"]
-    },
-    {
-      "path": "docs/review-pipeline/github-surface-hardening/GITHUB_SURFACE_HARDENING_EXECUTION.md",
-      "description": "GitHub surface hardening — LOOP order, locked decisions, phase gates (P0–P4)",
-      "scope": ["backend/**"]
-    },
-    {
-      "path": "docs/review-pipeline/github-surface-hardening/GITHUB_SURFACE_HARDENING_FINDINGS.md",
-      "description": "Hardening baseline — GH-1 thread resolve, GraphQL scale, test harness",
-      "scope": ["backend/**"]
-    },
-    {
-      "path": "docs/review-pipeline/github-surface-hardening/GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md",
-      "description": "General plan — hardening phases P0–P4",
-      "scope": ["backend/**"]
-    },
-    {
-      "path": "docs/review-pipeline/waves/REVIEW_QUALITY_EXECUTION.md",
-      "description": "Review-quality engine contract (RQ0–RQ9) — baseline for publish pipeline",
-      "scope": ["backend/**"]
-    },
-    {
-      "path": "docs/utils/CURSOR_AGENT_WORKFLOW.md",
-      "description": "Agent workflow quick ref — roles, verbs, gates",
-      "scope": ["backend/**"]
-    },
-    {
-      "path": "docs/review-pipeline/agents/prompts/ROLES.md",
-      "description": "Master/reviewer boundaries and FIND/VALIDATE/CLOSE verbs",
-      "scope": ["backend/**"]
-    },
-    {
-      "path": "docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_EXECUTION.md",
-      "description": "Finding resolution — LOOP P0–P5, closure passes, FR-Q12 metrics",
-      "scope": ["backend/**"]
-    },
-    {
-      "path": "docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_FINDINGS.md",
-      "description": "Finding resolution baseline — FR-Q gaps, multi-pass model",
-      "scope": ["backend/**"]
-    },
-    {
-      "path": "docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_GENERAL_PLAN.md",
-      "description": "Finding resolution general plan — P0–P5 phases",
-      "scope": ["backend/**"]
-    },
-    {
-      "path": "docs/review-pipeline/judge-json-contract/waves/JUDGE_JSON_CONTRACT_EXECUTION.md",
-      "description": "Judge JSON contract — LOOP P0–P5, structured output, observability",
-      "scope": ["backend/**"]
-    },
-    {
-      "path": "docs/review-pipeline/judge-json-contract/JUDGE_JSON_CONTRACT_FINDINGS.md",
-      "description": "Judge JSON contract baseline — JC gaps, staging metrics",
-      "scope": ["backend/**"]
-    },
-    {
-      "path": "docs/review-pipeline/judge-json-contract/JUDGE_JSON_CONTRACT_GENERAL_PLAN.md",
-      "description": "Judge JSON contract general plan — P0–P5 phases",
-      "scope": ["backend/**"]
+      "path": "docs/review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md",
+      "description": "RCX general plan — phases P0–P5",
+      "scope": [
+        "backend/**"
+      ]
     }
   ]
 }
