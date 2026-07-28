@@ -36,7 +36,7 @@ each phase: implement → pytest gate → Bugbot → local commit (operator push
 
 | Phase | Focus | Execution | Commit | Status |
 |-------|--------|-----------|--------|--------|
-| P0 — API smoke | Structured-output feasibility + smoke flags | [JUDGE_JSON_CONTRACT_P0_EXECUTION.md](./JUDGE_JSON_CONTRACT_P0_EXECUTION.md) | — | pending |
+| P0 — API smoke | Structured-output feasibility + smoke flags | [JUDGE_JSON_CONTRACT_P0_EXECUTION.md](./JUDGE_JSON_CONTRACT_P0_EXECUTION.md) | `b7cadcc` | done |
 | P1 — Observability | `raw_response_text` + `parse_error` on manifest | [JUDGE_JSON_CONTRACT_P1_EXECUTION.md](./JUDGE_JSON_CONTRACT_P1_EXECUTION.md) | — | pending |
 | P2 — Snippet-first | Prompt tiers, lower patch cap | [JUDGE_JSON_CONTRACT_P2_EXECUTION.md](./JUDGE_JSON_CONTRACT_P2_EXECUTION.md) | — | pending |
 | P3 — Structured output | `json_schema` + `parse_llm_json_object` fallback | [JUDGE_JSON_CONTRACT_P3_EXECUTION.md](./JUDGE_JSON_CONTRACT_P3_EXECUTION.md) | — | pending |
