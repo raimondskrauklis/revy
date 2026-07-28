@@ -277,60 +277,43 @@ def extract_evidence_from_patch(
     collected: list[str] = []
     old_line = 0
     new_line = 0
-    pending_minus: str | None = None
+    pending_minus: list[str] = []
 
     for line in patch.splitlines():
         hunk_match = _HUNK_HEADER_RE.match(line)
         if hunk_match is not None:
             old_line = int(hunk_match.group(1)) - 1
             new_line = int(hunk_match.group(2)) - 1
-            pending_minus = None
+            pending_minus = []
             continue
         if line.startswith("\\"):
             continue
         if line.startswith("-"):
             old_line += 1
-            pending_minus = f"-{line[1:]}"
+            minus_snippet = f"-{line[1:]}"
+            pending_minus.append(minus_snippet)
+            if target_start <= old_line <= target_end:
+                collected.append(minus_snippet)
         elif line.startswith("+"):
             new_line += 1
             if target_start <= new_line <= target_end:
-                if pending_minus is not None:
-                    collected.append(pending_minus)
-                pending_minus = None
+                for minus_snippet in pending_minus:
+                    if minus_snippet not in collected:
+                        collected.append(minus_snippet)
+                pending_minus = []
                 collected.append(line[1:])
             else:
-                pending_minus = None
+                pending_minus = []
         elif line.startswith(" "):
             old_line += 1
             new_line += 1
-            pending_minus = None
+            pending_minus = []
             if target_start <= new_line <= target_end:
                 collected.append(line[1:])
 
-    if collected:
-        return _truncate_utf8("\n".join(collected), max_chars)
-
-    # Removal-only hunks: no new-file lines in window — anchor on old-file line numbers.
-    removal_lines: list[str] = []
-    old_line = 0
-    for line in patch.splitlines():
-        hunk_match = _HUNK_HEADER_RE.match(line)
-        if hunk_match is not None:
-            old_line = int(hunk_match.group(1)) - 1
-            continue
-        if line.startswith("\\"):
-            continue
-        if line.startswith("-"):
-            old_line += 1
-            if target_start <= old_line <= target_end:
-                removal_lines.append(f"-{line[1:]}")
-        elif line.startswith(" ") or line.startswith("+"):
-            if line.startswith(" "):
-                old_line += 1
-
-    if not removal_lines:
+    if not collected:
         return None
-    return _truncate_utf8("\n".join(removal_lines), max_chars)
+    return _truncate_utf8("\n".join(collected), max_chars)
 
 
 def resolve_evidence_snippet(

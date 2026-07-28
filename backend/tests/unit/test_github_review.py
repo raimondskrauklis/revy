@@ -807,6 +807,49 @@ def test_extract_evidence_from_patch_includes_removed_line():
     assert "-    old()" in snippet
 
 
+def test_extract_evidence_from_patch_multiple_consecutive_removed_lines():
+    patch = """@@ -10,4 +10,2 @@
+ def foo():
+-    first_removed()
+-    second_removed()
++    new_call()
+     return x
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=12)
+    assert snippet is not None
+    assert "-    first_removed()" in snippet
+    assert "-    second_removed()" in snippet
+    assert "new_call" in snippet
+
+
+def test_extract_evidence_from_patch_removal_only_hunk():
+    patch = """@@ -8,3 +8,0 @@
+-    only_removed()
+-    also_removed()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=9)
+    assert snippet is not None
+    assert "-    only_removed()" in snippet
+    assert "-    also_removed()" in snippet
+
+
+def test_extract_evidence_from_patch_context_in_window_still_includes_removed():
+    """Context lines in the window must not hide removed-line evidence (revybot #56)."""
+    patch = """@@ -10,4 +10,4 @@
+ def foo():
+     unchanged_context()
+-    first_removed()
+-    second_removed()
++    new_call()
+"""
+    snippet = github_review.extract_evidence_from_patch(patch, start_line=12)
+    assert snippet is not None
+    assert "unchanged_context()" in snippet
+    assert "-    first_removed()" in snippet
+    assert "-    second_removed()" in snippet
+    assert "new_call" in snippet
+
+
 def test_resolve_judge_code_context_returns_snippet_and_patch():
     patches = {
         "app/main.py": "@@ -1,1 +1,2 @@\n-old\n+new_line\n",
