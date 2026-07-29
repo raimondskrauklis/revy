@@ -79,7 +79,7 @@ async def build_engineering_context_pack(
         pack.errors.append(exc.error_code or str(exc))
         return pack
 
-    if not program_applies_to_changed_files(program, changed_files):
+    if changed_files and not program_applies_to_changed_files(program, changed_files):
         return pack
 
     pack.active_program = manifest.active_program

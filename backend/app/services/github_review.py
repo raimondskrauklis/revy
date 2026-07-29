@@ -877,6 +877,7 @@ async def prepare_review_context(
             "active_program": engineering_pack.active_program,
             "lock_ids_extracted": list(engineering_pack.lock_ids),
             "engineering_context_deduped_paths": list(engineering_pack.deduped_paths),
+            "engineering_context_errors": list(engineering_pack.errors),
         }
         manifest = build_retrieval_manifest(
             index_mode=index_job.index_mode,

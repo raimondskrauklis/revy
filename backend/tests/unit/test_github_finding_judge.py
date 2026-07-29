@@ -19,20 +19,20 @@ from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
 from app.models.github_review_run import GitHubReviewRunORM
+from app.services.github_compare_patches import CompareReviewContext
 from app.services.github_finding_judge import (
     _build_judge_prompt,
     _judge_failure_log_extra,
     is_judge_candidate,
     record_review_run_judge_status,
 )
-from app.services.github_compare_patches import CompareReviewContext
 from app.services.model_policy import ModelRef
 
 
 @pytest.fixture(autouse=True)
 def _mock_fetch_compare_patches_for_judge():
-    from app.services.github_compare_patches import CompareReviewContext
     from app.services.engineering_context.pack import EngineeringContextPack
+    from app.services.github_compare_patches import CompareReviewContext
 
     compare_ctx = CompareReviewContext(
         patches_by_file={},

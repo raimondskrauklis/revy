@@ -19,6 +19,7 @@ class ContextStats(TypedDict, total=False):
     engineering_context_bytes: int
     engineering_context_deduped_paths: list[str]
     lock_ids_extracted: list[str]
+    engineering_context_errors: list[str]
     prompt_chars: int
 
 
@@ -39,6 +40,7 @@ def engineering_context_manifest_defaults(
         "active_program": None,
         "lock_ids_extracted": [],
         "engineering_context_deduped_paths": [],
+        "engineering_context_errors": [],
     }
 
 
@@ -54,6 +56,7 @@ def empty_context_stats() -> ContextStats:
         engineering_context_bytes=0,
         engineering_context_deduped_paths=[],
         lock_ids_extracted=[],
+        engineering_context_errors=[],
         prompt_chars=0,
     )
 
@@ -80,5 +83,6 @@ def build_context_stats(
         engineering_context_bytes=inject_bytes,
         engineering_context_deduped_paths=list(engineering_pack.deduped_paths),
         lock_ids_extracted=list(engineering_pack.lock_ids),
+        engineering_context_errors=list(engineering_pack.errors),
         prompt_chars=prompt_chars,
     )

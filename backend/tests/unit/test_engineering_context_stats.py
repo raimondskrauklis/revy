@@ -26,3 +26,4 @@ def test_build_context_stats_populates_engineering_fields():
     assert stats["engineering_context_deduped_paths"] == ["docs/a.md"]
     assert stats["omitted_md_count"] == 1
     assert stats["prompt_chars"] == 1200
+    assert stats["engineering_context_errors"] == []

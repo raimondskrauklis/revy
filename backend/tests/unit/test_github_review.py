@@ -869,6 +869,9 @@ async def test_prepare_review_context_populates_engineering_manifest():
     assert pack.manifest["lock_ids_extracted"] == ["RCX-D8"]
     assert pack.manifest["engineering_context_deduped_paths"] == ["docs/a.md"]
     assert "Engineering context (authoritative)" in pack.prompt
+
+
+def test_normalize_finding_start_line():
     assert github_review.normalize_finding_start_line(12) == 12
     assert github_review.normalize_finding_start_line("15") == 15
     assert github_review.normalize_finding_start_line(0) is None
@@ -1369,6 +1372,7 @@ def test_build_retrieval_manifest_includes_engineering_context_defaults():
     assert manifest["active_program"] is None
     assert manifest["lock_ids_extracted"] == []
     assert manifest["engineering_context_deduped_paths"] == []
+    assert manifest["engineering_context_errors"] == []
 
 
 def test_review_run_polish_defaults():
