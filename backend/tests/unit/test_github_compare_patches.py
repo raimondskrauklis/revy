@@ -7,7 +7,11 @@ import pytest
 
 from app.integrations.github_api import CompareCommitsResult, CompareFileChange
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
-from app.services.github_compare_patches import ComparePatchesResult, fetch_compare_patches, fetch_compare_patches_by_file
+from app.services.github_compare_patches import (
+    ComparePatchesResult,
+    fetch_compare_patches,
+    fetch_compare_patches_by_file,
+)
 
 
 def test_compare_patches_result_deleted_paths_default_empty():
