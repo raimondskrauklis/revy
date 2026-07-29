@@ -57,6 +57,14 @@ def test_evaluate_rcx_gate_fails_cross_check_mismatch():
     assert gate["passed"] is False
 
 
+def test_evaluate_rcx_gate_fails_reverse_cross_check_mismatch():
+    gate = _evaluate_rcx_gate(_metrics(engineering_injected_ctx=0, retrieve_injected=1))
+    cross = next(c for c in gate["checks"] if c["name"] == "retrieve_manifest_inject_cross_check")
+    assert cross["status"] == "FAIL"
+    assert "context_stats count 0" in cross["detail"]
+    assert gate["passed"] is False
+
+
 def test_evaluate_rcx_gate_inconclusive_zero_runs():
     gate = _evaluate_rcx_gate(_metrics(runs=0))
     assert gate["passed"] is True

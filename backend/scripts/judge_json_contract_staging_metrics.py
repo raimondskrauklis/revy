@@ -246,11 +246,17 @@ def _evaluate_rcx_gate(metrics: dict[str, Any]) -> dict[str, Any]:
                 "FAIL",
                 "context_stats injected but retrieve count 0",
             )
-        elif engineering_injected_ctx > 0:
+        elif retrieve_injected > 0 and engineering_injected_ctx == 0:
+            add(
+                "retrieve_manifest_inject_cross_check",
+                "FAIL",
+                "retrieve injected but context_stats count 0",
+            )
+        elif engineering_injected_ctx > 0 or retrieve_injected > 0:
             add(
                 "retrieve_manifest_inject_cross_check",
                 "PASS",
-                f"retrieve={retrieve_injected}",
+                f"retrieve={retrieve_injected}, context_stats={engineering_injected_ctx}",
             )
         else:
             add("retrieve_manifest_inject_cross_check", "INCONCLUSIVE", "no inject runs")

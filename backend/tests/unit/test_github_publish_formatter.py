@@ -82,6 +82,15 @@ def test_compute_confidence_ceiling_with_warnings_and_resolution_bonus():
     assert compute_confidence(groups) <= 4
 
 
+def test_confidence_rationale_four_without_resolution_omits_progress_claim():
+    from app.services.github_publish_formatter import _confidence_rationale
+
+    groups = [_group(severity=FindingSeverity.warning, fingerprint="w")]
+    rationale = _confidence_rationale(groups)
+    assert "Prior fixes" not in rationale
+    assert "some active findings remain" in rationale
+
+
 def test_build_g9_resolution_prose_ignores_addressed_still_active():
     groups = [
         _group(
@@ -517,6 +526,38 @@ async def test_build_pr_review_comment_thin_moonshot_returns_fallback():
 
     assert result == expected
     assert "## Revy code review" in result
+
+
+@pytest.mark.asyncio
+async def test_build_pr_review_comment_accepts_lowercase_score_rationale():
+    from app.services.github_publish_formatter import build_pr_review_comment
+
+    groups = [_group(severity=FindingSeverity.warning)]
+    ctx = _ctx(groups)
+    moonshot_markdown = (
+        "## Revy code review\n\n"
+        "This revision has one warning to review before merge.\n\n"
+        "**Merge recommendation:** Review warnings before merge — no critical blockers flagged.\n\n"
+        "**Confidence score:** 4/5\n\n"
+        "The score is 4 because a warning remains on this revision.\n\n"
+        "### Findings\n\n"
+        "| Severity | Category | Title | File |\n"
+        "| --- | --- | --- | --- |\n"
+        "| warning | bug | Issue | app/main.py |\n"
+    )
+
+    with patch("app.services.github_publish_formatter.settings") as mock_settings:
+        mock_settings.reviewer_llm_enabled.return_value = True
+        mock_settings.revy_revision_timeout_standard_seconds = 60
+        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.app_public_url = "https://app.revy.dev"
+        with patch(
+            "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
+            AsyncMock(return_value=moonshot_markdown),
+        ):
+            result = await build_pr_review_comment(ctx)
+
+    assert result.strip() == moonshot_markdown.strip()
 
 
 @pytest.mark.asyncio

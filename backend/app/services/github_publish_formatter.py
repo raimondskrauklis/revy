@@ -399,6 +399,19 @@ def _resolution_metrics_block(ctx: PublishFormatContext) -> str | None:
     return format_resolution_metrics_block(ctx.resolution_metrics_manifest)
 
 
+def _has_resolution_progress(groups: list[GitHubFindingGroupORM]) -> bool:
+    counts = count_resolution_status(groups)
+    return any(
+        counts[key] > 0
+        for key in (
+            ResolutionStatus.addressed.value,
+            ResolutionStatus.judge_dismissed.value,
+            ResolutionMethod.verification_dismissed.value,
+            ResolutionMethod.human_dismissed.value,
+        )
+    )
+
+
 def _confidence_rationale(groups: list[GitHubFindingGroupORM]) -> str:
     active = _active_groups(groups)
     confidence = compute_confidence(groups)
@@ -409,11 +422,13 @@ def _confidence_rationale(groups: list[GitHubFindingGroupORM]) -> str:
     if confidence == 3:
         return "Score is moderated by active findings that still need review before merge."
     if confidence == 4:
-        return (
-            "Score is good but not perfect: some active findings remain, "
-            "though prior fixes or dismissals improved confidence."
-        )
-    return "Score is high with only informational findings or strong resolution progress on this revision."
+        base = "Score is good but not perfect: some active findings remain."
+        if _has_resolution_progress(groups):
+            return f"{base} Prior fixes or dismissals improved confidence."
+        return base
+    if any(g.severity != FindingSeverity.info for g in active):
+        return "Score is high relative to remaining active findings on this revision."
+    return "Score is high with only informational findings on this revision."
 
 
 def _review_narrative_paragraph(ctx: PublishFormatContext) -> str:
@@ -601,7 +616,7 @@ def _issue_comment_meets_product_bar(text: str, ctx: PublishFormatContext) -> bo
         return True
     has_findings_section = "### Findings" in normalized or "| Severity | Category | Title | File |" in normalized
     has_merge_signal = "**Merge recommendation:**" in normalized
-    has_rationale = "Score is" in normalized or "rationale" in normalized.lower()
+    has_rationale = "score is" in normalized.lower() or "rationale" in normalized.lower()
     return has_findings_section and has_merge_signal and has_rationale
 
 

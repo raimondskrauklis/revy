@@ -8,6 +8,8 @@ Judge JSON contract + review engineering context aggregates against the staging 
 
 Requires `PRODUCTION_DATABASE_URL` in `backend/.env` (revy-staging). Use `DATABASE_SSL_INSECURE=1` when connecting to managed Postgres with certificate issues.
 
+**Invocation:** always wrap script calls in `pipenv run sh -c '...'` from `backend/` so `.env` loads and quoting stays correct.
+
 ```bash
 cd backend
 
