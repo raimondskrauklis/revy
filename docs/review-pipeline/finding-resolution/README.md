@@ -36,7 +36,7 @@
 
 **Next wave:** [judge-json-contract](../judge-json-contract/README.md) after merge to `main`.
 
-**Post-PSA dogfood (2026-07-29):** [finding-resolution-dogfood](../finding-resolution-dogfood/README.md) — FR-DG1 PASS; FR-DG2 partial → **[wave C](./FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md)** ([execution](./waves/FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md)).
+**Post-PSA dogfood (2026-07-29):** [finding-resolution-dogfood](../finding-resolution-dogfood/README.md) — FR-DG1 PASS; FR-DG2 partial → **[wave C](./FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md)** shipped (`fix/fr-closure-scope-hygiene`); **C3 staging sign-off pending**.
 
 ## Wave C execution (LOOP)
 

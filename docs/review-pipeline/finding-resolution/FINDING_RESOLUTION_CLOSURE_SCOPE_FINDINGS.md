@@ -210,10 +210,10 @@ That skill helps an **agent address human/bot review comments** on a PR. Revy’
 
 | ID | Gap | Severity | Status |
 |----|-----|----------|--------|
-| **FR-CS1** | Hygiene signals keyed to **push-pair** diff window only | **high** | **planned** — C1 |
-| **FR-CS6** | Pass 2 (and Pass 3) use same pairing cohort filter as Pass 1 | **high** | **planned** — C1 |
-| **FR-CS7** | No **HEAD-truth** path-gone signal (path absent at `head_sha`) | **high** | **planned** — C1 |
-| **FR-CS3** | Hygiene closures skew `resolution_rate_pct` via `_in_sync_stamp_cohort` | **medium** | **planned** — C2 |
+| **FR-CS1** | Hygiene signals keyed to **push-pair** diff window only | **high** | **closed (code)** — C3 staging sign-off pending |
+| **FR-CS6** | Pass 2 (and Pass 3) use same pairing cohort filter as Pass 1 | **high** | **closed (code)** — C3 staging sign-off pending |
+| **FR-CS7** | No **HEAD-truth** path-gone signal (path absent at `head_sha`) | **high** | **closed (code)** — C3 staging sign-off pending |
+| **FR-CS3** | Hygiene closures skew `resolution_rate_pct` via `_in_sync_stamp_cohort` | **medium** | **closed** — C2 (`d4666aa`) |
 | **FR-CS4** | Line-region `addressed` false negatives; Pass 3 same cohort wall | **medium** | open — post wave C |
 | **FR-CS8** | `resolution_status` reset every sync — stamp ephemeral if publish superseded | **medium** | open — mitigate in C1 (same-run close) |
 | **FR-CS5** | Dogfood doc churn invalidates metrics | **low** | locked — VAL8 |
