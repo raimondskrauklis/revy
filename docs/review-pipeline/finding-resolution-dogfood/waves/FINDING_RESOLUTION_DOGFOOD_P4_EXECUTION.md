@@ -9,7 +9,8 @@ Phase **P4** of [FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md](../FINDING_RESOLUTI
 - **Branch:** `chore/moonshot-formatter-signature` — not mixed with wave A resolution fixes.
 - **Prompt only:** add formatter public API snippet to reviewer system/context in `moonshot_review.py` — no signature change in `github_publish_formatter.py`.
 - **Test:** assert prompt contains `generation_groups` and `pr_active_groups` parameter names near `format_summary_comment`.
-- **SSOT:** may keep `active_program` on wave A until P4 PR; P4 PR uses Bugbot links to findings § MR-DG1.
+- **Depends on P0:** program docs + findings baseline only — no probe, no P1–P3 deploy.
+- **SSOT:** keep `active_program` on wave A during P4; optional Bugbot MR-DG1 bullet.
 
 ## Out of scope for P4
 

@@ -6,11 +6,12 @@ Phase **P0** of [FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md](../FINDING_RESOLUTI
 
 ## Decisions locked for P0
 
-- Probe lives under `backend/tests/fixtures/fr_dogfood/` with one intentional fixable issue (unused const or obvious bug).
+- Probe lives under `backend/tests/fixtures/fr_dogfood/` with one intentional fixable issue (unused const — **wire on push 2**, remove file on push 3 after P2).
 - Unit test loads probe via normal import path (no `importlib` hardcoded path).
-- `FINDING_RESOLUTION_DOGFOOD_STAGING_VALIDATION.md` stub with deploy row + dogfood PR table empty.
-- Metrics script adds `publish_summary` block: `generation_active_count`, `pr_active_count`, `resolution` aggregates from completed publish jobs in `--since` window.
+- Staging memo stub includes **deploy-boundary table** (PSA baseline + placeholders for post-P1 / post-P2).
+- Metrics script adds `publish_summary` block from completed publish jobs in `--since` window.
 - `active_program`: `finding-resolution-dogfood` in `.revy/review-context.json`.
+- **P0 metrics `--since`:** PSA post-#62 boundary `2026-07-29T11:38:12Z` only — not the P3 sign-off boundary.
 
 ## PR review context (first commit)
 
@@ -23,7 +24,7 @@ Phase **P0** of [FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md](../FINDING_RESOLUTI
 - `apply_resolution_status_for_synchronize` changes → **P1**
 - Reconcile closure / thread resolve → **P2**
 - Moonshot prompt → **P4**
-- Staging sign-off tables → **P3**
+- FR-DG1/FR-DG2 staging sign-off → **P3**
 
 ---
 
@@ -44,7 +45,7 @@ cd backend && pipenv run pytest tests/unit/test_generate_greptile_files.py -q
 
 ## P0.1 — Staging validation memo stub
 
-**What:** Create `FINDING_RESOLUTION_DOGFOOD_STAGING_VALIDATION.md` with deploy table, `--since` placeholder, dogfood steps 1–3 outline, pass-criteria headers for FR-DG1/FR-DG2.
+**What:** Create `FINDING_RESOLUTION_DOGFOOD_STAGING_VALIDATION.md` with deploy-boundary table (PSA `11:38:12Z`, post-P1 TBD, post-P2 TBD), dogfood push outline (push 1 introduce / push 2 FR-DG1 / push 3 FR-DG2), pass-criteria headers.
 
 **Files:** `docs/review-pipeline/finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_STAGING_VALIDATION.md`
 
@@ -54,7 +55,7 @@ cd backend && pipenv run pytest tests/unit/test_generate_greptile_files.py -q
 
 ## P0.2 — FR dogfood probe fixture
 
-**What:** `probe_module.py` with one fixable maintainability target; `test_fr_dogfood_probe.py` asserts stable behavior.
+**What:** `probe_module.py` with unused const; `test_fr_dogfood_probe.py` imports via package path.
 
 **Files:** `backend/tests/fixtures/fr_dogfood/probe_module.py`, `backend/tests/unit/test_fr_dogfood_probe.py`
 
@@ -68,7 +69,7 @@ cd backend && pipenv run pytest tests/unit/test_fr_dogfood_probe.py -q
 
 ## P0.3 — Metrics script resolution probe
 
-**What:** Extend `judge_json_contract_staging_metrics.py` JSON output with `publish_summary` section (completed publishes in window: count, p50 `generation_active_count`, `pr_active_count`, sum `resolution.addressed`). Unit test with mocked rows or fixture SQL strings.
+**What:** Extend `judge_json_contract_staging_metrics.py` JSON with `publish_summary` (counts, p50 `generation_active_count` / `pr_active_count`, sum `resolution.addressed`, manifest fields when present in trace).
 
 **Files:** `backend/scripts/judge_json_contract_staging_metrics.py`, `backend/tests/unit/test_judge_json_contract_staging_metrics.py`
 
@@ -82,13 +83,13 @@ cd backend && pipenv run pytest tests/unit/test_judge_json_contract_staging_metr
 
 ## P0.4 — Open dogfood PR (push 1)
 
-**What:** Branch `chore/finding-resolution-staging-dogfood`; single commit with P0.0–P0.3; push; **wait for Revy** before any P1 work. Record deploy boundary when feature work merges (this PR opens post-boundary).
+**What:** Branch `chore/finding-resolution-staging-dogfood`; commit P0.0–P0.3; push; **wait for Revy**. Fill memo push-1 row (`head_sha`, run id). P0 does **not** record a new deploy boundary — use PSA baseline for optional P0.3 smoke run only.
 
-**Files:** (operator) open PR; fill memo push-0 row with `head_sha` + run id after agent completes.
+**Files:** (operator) open chore PR; staging memo push-1 row.
 
-**Deliverable:** PR open; rev 1 publish `completed` or operator notes INCONCLUSIVE.
+**Deliverable:** PR open; rev 1 publish `completed`.
 
-**Human gate:** LOOP stops until agent finishes rev 1.
+**Human gate:** LOOP stops until agent finishes push 1.
 
 ---
 

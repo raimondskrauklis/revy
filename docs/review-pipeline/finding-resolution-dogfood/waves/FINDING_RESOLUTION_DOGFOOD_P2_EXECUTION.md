@@ -2,28 +2,29 @@
 
 Phase **P2** of [FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md](../FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md). Baseline: findings § FR-DG2. **P2 only.**
 
-**Goal:** Removing flagged code closes group, shrinks block 2 `pr_active_count`, resolves stale inline per GH-1v2.
+**Goal:** After P2 deploy, removing flagged probe code closes group, shrinks block 2 `pr_active_count`, resolves stale inline per GH-1v2.
 
 ## Decisions locked for P2
 
-- **Absent + addressed:** fingerprint not in run N + `resolution_status=addressed` from Pass 1 → `state=resolved`, `resolution_method=absent_and_addressed` (FR-Q3).
-- **PR-wide table:** `verdict_groups` / `pr_active_groups` query excludes `resolved` / `superseded` groups.
-- **Thread collapse:** fingerprint in `_fingerprints_to_resolve_inline_threads` when group closed or not publishable; handle `line: null` orphaned threads.
-- **Depends on P1:** manifest must show addressed transition on same fix push.
+- **Pass 2 home:** `apply_pass2_closure_for_review_run` in `github_finding_closure.py` (invoked from `reconcile_tasks.py` ~line 52) — not fingerprint matching in `github_finding_reconcile.py`.
+- **Absent + addressed:** fingerprint not in run N + Pass 1 `resolution_status=addressed` → `state=resolved`, `resolution_method=absent_and_addressed` (FR-Q3); uses P1 shared prior-revision helper.
+- **Stale active groups:** FR-DG2 gap is groups **staying active** when fingerprint absent — `_load_pr_active_groups` already filters `state == active` (`github_publish.py` ~1005–1008); P2.1 closes them, P2.2 adds regression tests only if needed.
+- **Thread collapse:** `_fingerprints_to_resolve_inline_threads` + `_resolve_stale_inline_threads` for closed groups and `line: null` orphans.
+- **Dogfood push 3 (P2.4):** **after P2 merge + deploy** — delete or gut probe file; validates FR-DG2 only (push 2 already validated FR-DG1).
 
 ## Out of scope for P2
 
-- Manifest prior-revision logic → **P1** (done)
-- Moonshot discovery changes → **P4**
-- Operator sign-off doc sync → **P3**
+- Manifest / G9 denominator → **P1** (done)
+- Moonshot → **P4**
+- Optional regrowth → **P3.4**
 
 ---
 
-## P2.1 — Pass 2 absent closure wiring
+## P2.1 — Pass 2 absent closure
 
-**What:** Ensure reconcile Pass 2 closes groups when fingerprint absent and Pass 1 stamped `addressed`; unit tests with mock groups.
+**What:** Ensure `apply_pass2_closure_for_review_run` closes groups when fingerprint absent from current run and Pass 1 stamped `addressed`; unit tests with mock groups + prior-revision helper.
 
-**Files:** `backend/app/services/github_finding_reconcile.py`, `backend/app/services/github_finding_closure.py`, `backend/tests/unit/test_github_finding_closure.py`
+**Files:** `backend/app/services/github_finding_closure.py`, `backend/tests/unit/test_github_finding_closure.py`
 
 **Deliverable:**
 
@@ -33,23 +34,23 @@ cd backend && pipenv run pytest tests/unit/test_github_finding_closure.py -q
 
 ---
 
-## P2.2 — PR-wide active set filter
+## P2.2 — PR-wide count parity regression
 
-**What:** Publish path loads `pr_active_groups` without resolved/superseded; block 2 row count matches `pr_active_count`.
+**What:** Assert `pr_active_count` / block 2 rows exclude groups closed in P2.1; extend existing formatter/publish tests — no new query filter unless test proves gap.
 
-**Files:** `backend/app/services/github_publish.py`, `backend/app/services/github_publish_formatter.py`, `backend/tests/unit/test_github_publish_formatter.py`
+**Files:** `backend/tests/unit/test_github_publish_formatter.py`, `backend/tests/unit/test_github_publish.py`
 
 **Deliverable:**
 
 ```bash
-cd backend && pipenv run pytest tests/unit/test_github_publish_formatter.py -k "pr_active or verdict" -q
+cd backend && pipenv run pytest tests/unit/test_github_publish_formatter.py tests/unit/test_github_publish.py -k "pr_active or verdict or absent" -q
 ```
 
 ---
 
 ## P2.3 — Stale inline thread resolve
 
-**What:** Extend `_resolve_stale_inline_threads` / fingerprint map so closed groups and orphaned line threads resolve on GitHub (mock GraphQL in unit tests).
+**What:** Closed-group fingerprints and orphaned threads resolve on publish; mock GraphQL in unit tests.
 
 **Files:** `backend/app/services/github_publish.py`, `backend/tests/unit/test_github_publish.py`
 
@@ -61,15 +62,17 @@ cd backend && pipenv run pytest tests/unit/test_github_publish.py -k "resolve_st
 
 ---
 
-## P2.4 — Dogfood push 3 verification
+## P2.4 — Merge, deploy, dogfood push 3 (FR-DG2)
 
-**What:** On same fix push as P1.4 (or follow-up push if needed), confirm `pr_active_count` decreased vs push 1; inline collapsed in GitHub + `summary_json.github_inline_threads`.
+**What:** Merge P2 to `main`; wait for droplet deploy; record **post-P2 deploy ISO**; chore PR **single commit** removing probe code; push; **wait for agent**.
 
-**Files:** staging memo only
+**Pass criteria (push 3):** `pr_active_count` ↓ vs push 2; stale inline collapsed; group `resolved` + `absent_and_addressed` in DB.
 
-**Deliverable:** Memo push-2/3 rows PASS for FR-DG2 criteria.
+**Files:** remove `backend/tests/fixtures/fr_dogfood/`, update `test_fr_dogfood_probe.py` or delete, staging memo push-3 row
 
-**Human gate:** Operator verifies GitHub inline state.
+**Deliverable:** Memo push-3 row PASS for FR-DG2.
+
+**Human gate:** P2 deployed before push 3; operator verifies GitHub inline state.
 
 ---
 

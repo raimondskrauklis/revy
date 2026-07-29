@@ -38,4 +38,4 @@
 
 **Excluded:** RCX retrieve, judge-json contract code.
 
-**Next step:** `execution-peer-review` → attach plan folder + `phase-execution` on P0.
+**Next step:** `phase-execution` on [P0](./waves/FINDING_RESOLUTION_DOGFOOD_P0_EXECUTION.md) — peer review applied 2026-07-29.

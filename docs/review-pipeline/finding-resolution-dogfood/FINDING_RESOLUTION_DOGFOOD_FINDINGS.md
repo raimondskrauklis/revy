@@ -67,13 +67,19 @@ Fix push removed bogus `format_summary_comment` test call; no addressed transiti
 
 ### Pass criteria (dogfood)
 
+**Primary (manifest):** reconcile `resolution_pass` on publish trace — `denominator_active_prior` ≥ 1; `transitions_addressed` ≥ 1.
+
+**Surface (after P1.3):** G9 `Since last push:` not `n/a`; `summary_json.resolution.addressed` ≥ 1 — both fed from `resolution_metrics_manifest`, not generation-scoped `ctx.groups` alone.
+
 | Check | Expected |
 |-------|----------|
 | Fix push publishes (no supersede) | rev N publish `completed` |
 | Pass 1 | prior active groups get `resolution_status=addressed` when diff touches region |
 | Manifest | `denominator_active_prior` ≥ 1; `transitions_addressed` ≥ 1 |
-| G9 prose | `Since last push:` lists addressed count (not `n/a`) |
-| `summary_json.resolution.addressed` | ≥ 1 |
+| G9 prose | lists addressed count (not `n/a`) |
+| `summary_json.resolution.addressed` | ≥ 1 (manifest-aligned) |
+
+**Dogfood push:** push 2 on chore PR — **wire/fix probe only** (not remove file); after P1 merge + deploy.
 
 ---
 
@@ -112,6 +118,8 @@ Inline thread on `test_psa_staging_validation_behavior.py` had `line: null` (orp
 | Block 2 shrink | `pr_active_count` decreases vs prior rev |
 | Inline collapse | thread `resolved` on GitHub or removed from open set |
 | Group state | `resolved` + `resolution_method=absent_and_addressed` OR superseded |
+
+**Dogfood push:** push 3 on chore PR — **remove probe code**; after P2 merge + deploy (not same push as FR-DG1).
 
 ---
 
@@ -164,13 +172,14 @@ Moonshot reviewer prompt does not include formatter API surface; model inferred 
 **Branch:** `chore/finding-resolution-staging-dogfood`  
 **Open after:** PR #63 merged + [P0](./waves/FINDING_RESOLUTION_DOGFOOD_P0_EXECUTION.md) ships.
 
-| Push | Intent |
-|------|--------|
-| 1 | P0.4 — introduce probe (wait for agent) |
-| 2 | P1.4 — fix probe (wait for agent) — validate FR-DG1 |
-| 3 | P2.4 / P3.4 — optional regrowth |
+| Push | When | Validates |
+|------|------|-----------|
+| 1 | P0.4 | probe introduced |
+| 2 | P1.4 after **P1 merge + deploy** | FR-DG1 (wire probe) |
+| 3 | P2.4 after **P2 merge + deploy** | FR-DG2 (remove probe) |
+| 4 | P3.4 optional | block-1 regrowth |
 
-See [FINDING_RESOLUTION_DOGFOOD_EXECUTION.md](./waves/FINDING_RESOLUTION_DOGFOOD_EXECUTION.md) for full LOOP.
+See [execution index](./waves/FINDING_RESOLUTION_DOGFOOD_EXECUTION.md) for full LOOP.
 
 ---
 
