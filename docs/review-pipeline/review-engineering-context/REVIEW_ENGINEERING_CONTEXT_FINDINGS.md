@@ -3,7 +3,7 @@
 **Date:** 2026-07-29 (platform reframed)  
 **Purpose:** Baseline for wiring **intent** (locked decisions, execution contract, operator evidence) into the **Revy product pipeline** — primarily Moonshot review generation — with Greptile as a **parallel validation channel** while we tune Revy. **No execution steps.**
 
-**Program status:** Code shipped P0–P4; staging human gate pending — [REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md](./REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md)
+**Program status:** P0–P4 shipped on `main` (#60); **P6–P8 closeout wave** planned — [REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md](./REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md) § P6–P8; staging human gate pending — [REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md](./REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md)
 
 **Operator context:** Revy is built **primarily for dogfood on this repo** (solo operator workflow). Greptile and Bugbot remain part of daily PR practice and the whole review surface — but **this program's P0 target is Revy**, not tuning hosted/local Bugbot.
 
@@ -81,18 +81,20 @@ PR #58 remains the motivation: generic API advice when locks/smoke are absent fr
 
 ---
 
-## Reviewer channels (verified)
+## Reviewer channels
 
-| Channel | Mechanism | Engineering context today | RCX phase |
-|---------|-----------|---------------------------|-----------|
-| **Revy — Moonshot** | `prepare_review_context` → `_build_review_prompt` | Diff + PR body + RAG only; **no manifest** | **P2** inject |
-| **Revy — judge** | `_build_judge_prompt` | Snippet-first (#58); no policy rows | **P4** — lock extract |
-| **Greptile** | `.greptile/files.json` + `scope` | Wired; 15 programs on every `backend/**` PR | **P3** — generated from SSOT |
-| **Bugbot** (local + hosted) | `BUGBOT.md` + Task subagent | RC0 links; stale/noisy list | **Maintain** daily; not P0 build |
+**Post-#60 (shipped):** Moonshot reads SSOT `.greptile/review-context.json` at `head_sha`, injects before diff; Greptile uses generated `files.json` (3 RCX entries); judge reuses P1 extract on escalation. **Wave 2 open:** issue-comment depth (P6), API `context_stats` (P7), staging sign-off (P8).
 
-**Verified code:** `github_review.py:754` `prepare_review_context` — no manifest read, no policy injection. `DIFF_MAX_BYTES` = 128 KB (truncation drops largest patches). Prompt instruction: "Focus on introduced or changed **logic** in the unified diff."
+### Baseline (pre-RCX — historical)
 
-**Moonshot diff path (baseline, not sufficient alone):** co-committed `.md` appears in `unified_diff` when under budget. Gaps: follow-up code-only PRs, truncation, model under-weighting MD hunks.
+| Channel | Mechanism | Engineering context (pre-RCX) | RCX phase |
+|---------|-----------|-------------------------------|-----------|
+| **Revy — Moonshot** | `prepare_review_context` → `_build_review_prompt` | Diff + PR body + RAG only; **no manifest** | **P2** inject ✓ |
+| **Revy — judge** | `_build_judge_prompt` | Snippet-first (#58); no policy rows | **P4** lock extract ✓ |
+| **Greptile** | `.greptile/files.json` + `scope` | Wired; 15 programs on every `backend/**` PR | **P3** generated from SSOT ✓ |
+| **Bugbot** (local + hosted) | `BUGBOT.md` + Task subagent | RC0 links; stale/noisy list | **Maintain** daily; not RCX build |
+
+**Pre-RCX code:** `prepare_review_context` did not read manifest; hardcoded 128 KB diff cap. **Post-#60:** `revy_diff_max_bytes` default 512 KB; engineering block prepended with authoritative instruction.
 
 ---
 
@@ -139,7 +141,7 @@ PR #58 remains the motivation: generic API advice when locks/smoke are absent fr
 | `prepare_review_context` | **Shipped** | **P0 injection point** — prepend engineering block |
 | `REVIEW_QUALITY_REVIEW_CONTEXT.md` | **Strategy** | RC1–RC6 ladder; RCX absorbs RC1–RC2 + RC5 dogfood |
 | `OUTPUT_FORMAT.md` + babysit skill | **Shipped** | Disposition helpers (P2) |
-| `.revy/review-context.json` | **Not built** | Product manifest path; dogfood uses `.greptile/files.json` first |
+| `.revy/review-context.json` | **Not built** | Product manifest path; dogfood SSOT: `.greptile/review-context.json`; Greptile: generated `files.json` |
 | `workspace_review_policy` DB | **Not built** | RC4 — post-dogfood |
 | `BUGBOT.md` | **Shipped** | Daily workflow; not P0 generator target |
 
@@ -254,6 +256,11 @@ Sources: [Packmind playbook](https://packmind.com/context-engineering-ai-coding/
 | **RCX-D10** | **Raise prompt caps (dogfood)** — operator spend is low; **`revy_diff_max_bytes` default 512 KB in P0 config** (not 128 KB); staging env may lag until P3 deploy. |
 | **RCX-D11** | **Manifest SSOT** — dogfood: `.greptile/review-context.json`; Greptile: **CI-generated** `.greptile/files.json` from SSOT each LOOP commit (vendor has no `active_program` field — trim = fewer `files[]` entries). Product: `.revy/review-context.json` (RC4). |
 | **RCX-D12** | **Inject dedupe** — always inject **extracted locks/smoke**; skip **full-file MD body** for path `p` iff `p ∈ changed_files` **and** `p ∉ omitted_files` **and** patch present in compare (partial hunks still get lock extract). |
+| **RCX-D13** | **Issue comment only** — P6 Greptile-depth sections; check-run stays G3 compact. |
+| **RCX-D14** | **Fallback parity** — Moonshot disabled/failed path matches section depth (post-review-quality H2). |
+| **RCX-D15** | **One PR** — P6+P7 code on same `backend/**` branch (dogfood vehicle). |
+| **RCX-D16** | **No frontend** in P6–P8 — API `context_stats` sufficient for operator. |
+| **RCX-D17** | **Metrics script name** — keep `judge_json_contract_staging_metrics.py` (rename parking lot). |
 
 ---
 
@@ -272,14 +279,16 @@ Sources: [Packmind playbook](https://packmind.com/context-engineering-ai-coding/
 
 ## Moonshot inject (locked design — RCX-D8)
 
-**Algorithm (P0):**
+**Algorithm (P2 — shipped #60):**
 
-1. **Read manifest** — dogfood: `.greptile/files.json` + `active_program` field; product: `.revy/review-context.json` (same schema, later).
-2. **Filter** — active program paths only; respect `scope` against changed files (RC1).
-3. **Resolve** — fetch pointed `.md` at `head_sha` (GitHub API or compare tree).
-4. **Extract** — `## Locked decisions`, operator smoke tables, active execution gates — **bounded** byte budget; not full findings corpus.
-5. **Dedupe** — per RCX-D12: locks/smoke always; skip redundant full MD when path fully in diff and not omitted.
-6. **Prepend** — engineering context block **before** unified diff in `_build_review_prompt`; adjust review instruction to treat block as authoritative over generic prior.
+1. **Read SSOT** — dogfood: `.greptile/review-context.json` at `head_sha` (`active_program` + `programs[]`); product later: `.revy/review-context.json` (RC4). Greptile consumes **generated** `.greptile/files.json` only (RCX-D11) — Revy does **not** read `files.json`.
+2. **Filter** — resolve `active_program`; skip when `changed_files` non-empty and none match program `scope` (dogfood: `backend/**`).
+3. **Resolve** — fetch pointed `.md` at `head_sha` (GitHub Contents API).
+4. **Extract** — `## Locked decisions`, operator smoke tables — **bounded** by `revy_engineering_context_max_bytes`; not full findings corpus.
+5. **Dedupe** — per RCX-D12: locks/smoke always; skip redundant **full MD body** when path fully in diff and not omitted.
+6. **Prepend** — engineering context block **before** unified diff in `_build_review_prompt`; review instruction treats block as authoritative over generic prior.
+
+**Judge path:** uses `extracted_text` only (2048 chars) — not full Moonshot inject body.
 
 **SC coexistence:** `engineering_context_*` keys live in the **same** retrieve manifest as SC3 fields (`structural_context_mode`, `caller_files_*`) — no second manifest shape.
 
@@ -309,7 +318,7 @@ Sources: [Packmind playbook](https://packmind.com/context-engineering-ai-coding/
 2. Revy findings on program PRs **do not contradict** locked IDs (JC-D*, P3 lock) when smoke is in findings.
 3. **Single manifest edit** updates Greptile `files.json` and Revy inject (one edit, two consumers).
 4. **Active program only** in manifest — Greptile stops loading 15 programs per PR.
-5. Inject block stays **under budget** — no 300-line findings dump; extracted locks/smoke only.
+5. Inject block stays **under budget** — extract always; full MD body only when path not in diff (or omitted/truncated); total capped by `revy_engineering_context_max_bytes` (default 32 KB).
 6. Operator can verify inject in pipeline trace / retrieval manifest (instrumentation TBD in plan).
 
 **Secondary (not P0 gate):** Greptile/Bugbot improvement on same PRs — tracked, not blocking ship.
@@ -327,29 +336,121 @@ Sources: [Packmind playbook](https://packmind.com/context-engineering-ai-coding/
 | **RCX-G3b** | GitHub file at SHA | **P1** | `fetch_repository_file_at_sha` in `github_api.py` (no primitive today) |
 | **RCX-G2** | Moonshot inject | **P2** | RCX-D8 + RCX-D12; populate manifest keys + `context_stats` |
 | **RCX-G4** | Active program trim | **P3** | SSOT lists one program; generated `files.json` |
-| **RCX-G5** | Greptile sync | **P3** | CI generate/validate `files.json` from SSOT (RCX-D11) |
+| **RCX-G5** | Greptile sync | **P3** | Generator + pytest `--check` drift gate (not GitHub Actions workflow) |
 | **RCX-G6** | Judge prompt reuse | **P4** | Share P1 extract |
 | **RCX-G7** | Disposition helpers | Post-program | Babysit |
 | **RCX-G8** | RC4 spike | Post-program | `workspace_review_policy` DB |
+| **RCX-G10** | Greptile-depth issue comment | **P6** | Moonshot prompt + fallback parity — [post-review-quality L2](../post-review-quality/POST_REVIEW_QUALITY_FINDINGS.md) |
+| **RCX-G11** | `context_stats` on review run API | **P7** | `GitHubReviewRunResponse` — operator visibility without SQL |
+| **RCX-G12** | Metrics script RCX pass/fail block | **P7** | `--rcx-gate` summary vs targets at end of script |
+| **RCX-G13** | Staging validation sign-off | **P8** | Filled memo + operator sign-off row |
+| **RCX-G14** | Judge contract re-validation | **P8** | `--since` post-RCX deploy — sibling [judge validation](../judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) |
+| **RCX-G15** | Program doc sync | **P8** | README, recovery Track M, PRODUCT_PATTERNS |
 
 ---
 
 ## Gap registry
 
-| ID | Gap | Evidence |
-|----|-----|----------|
-| **RCX-1** | **Moonshot has no manifest inject** | `prepare_review_context` — diff + RAG only |
-| **RCX-2** | Co-commit diff insufficient alone | 128 KB truncation; "focus on logic" instruction; code-only follow-ups |
-| **RCX-3** | Greptile loads all shipped programs | 15 `files.json` entries on every `backend/**` PR |
-| **RCX-4** | Manifest drift Greptile vs Bugbot | paths differ; stale active pointer in `BUGBOT.md` |
-| **RCX-5** | Customer repos need DB policy | PRODUCT_PATTERNS — no `.greptile/` |
-| **RCX-6** | No lock/smoke extractor | Full findings too large for prompt |
-| **RCX-7** | No inject dedupe vs diff | Risk duplicating MD already in unified diff |
-| **RCX-8** | Judge lacks shared lock extract | Snippet-first only (#58) |
-| **RCX-9** | Bugbot stale/noisy context | PR #58; daily workflow — **not P0** |
-| **RCX-10** | No disposition contract | Babysit ad hoc |
-| **RCX-11** | Greptile v3 auto-ingest ≠ program findings | #58 `format.name` — needs manifest wiring |
-| **RCX-12** | Retrieve manifest keys + `context_stats` column | P0 defines contract; **P2 populates** values |
+| ID | Gap | Status | Evidence |
+|----|-----|--------|----------|
+| **RCX-1** | Moonshot has no manifest inject | **closed #60** | `prepare_review_context` → `build_engineering_context_pack` |
+| **RCX-2** | Co-commit diff insufficient alone | **mitigated #60** | 512 KB cap + inject for off-diff / omitted paths |
+| **RCX-3** | Greptile loads all shipped programs | **closed #60** | SSOT trim; generated `files.json` (3 entries) |
+| **RCX-4** | Manifest drift Greptile vs Bugbot | **partial** | Greptile+Revy share SSOT; `BUGBOT.md` still manual |
+| **RCX-5** | Customer repos need DB policy | **open** | RC4 — post-dogfood |
+| **RCX-6** | No lock/smoke extractor | **closed #60** | `engineering_context/extract.py` |
+| **RCX-7** | No inject dedupe vs diff | **closed #60** | `engineering_context/dedupe.py` (RCX-D12) |
+| **RCX-8** | Judge lacks shared lock extract | **closed #60** | `github_finding_judge.py` reuses pack |
+| **RCX-9** | Bugbot stale/noisy context | **open** | PR #58; daily workflow — not RCX build |
+| **RCX-10** | No disposition contract | **open** | Babysit ad hoc |
+| **RCX-11** | Greptile v3 auto-ingest ≠ program findings | **mitigated #60** | Manifest wiring; Greptile still parallel channel |
+| **RCX-12** | Retrieve manifest keys + `context_stats` column | **closed #60** | P2 populates on each run |
+| **RCX-13** | revybot issue comment thin vs Greptile | **open P6** | `ISSUE_COMMENT_FORMAT_SYSTEM_PROMPT` short narrative |
+| **RCX-14** | `context_stats` not exposed on API | **open P7** | ORM populated; `GitHubReviewRunResponse` omits field |
+| **RCX-15** | No automated RCX pass/fail in metrics script | **open P7** | `--rcx-gate` not shipped |
+| **RCX-16** | Zero post-#60 review runs on staging | **open P8** | `0` runs `--since 2026-07-29T05:55:00Z` — dogfood PR required |
+| **RCX-17** | Judge persistence mixed with pre-ship history | **open P8** | Full-history 38.5% — need `--since` post-RCX |
+| **RCX-18** | Fake dogfood PR wastes review budget | **open P6** | Ship P6+P7 on one `backend/**` PR |
+
+---
+
+## Wave 2 — Closeout ship & validate (P6–P8)
+
+**Date:** 2026-07-29 (post-#60 merge)  
+**Purpose:** Baseline for the **second LOOP** — ship operator-visible improvements, then prove RCX inject + caps on staging without a throwaway PR.
+
+**Evidence:** PR [#60](https://github.com/raimondskrauklis/revy/pull/60) merged `84ab03f`; staging metrics queried 2026-07-29; [POST_REVIEW_QUALITY_FINDINGS.md](../post-review-quality/POST_REVIEW_QUALITY_FINDINGS.md) L2 bar.
+
+### Staging snapshot (post-#60 merge, queried 2026-07-29)
+
+| Item | Value |
+|------|-------|
+| `main` at merge | `84ab03f` (#60 squash — full RCX P0–P4 + fixes tree) |
+| Staging alembic | `2026_07_29_1200_0029_review_context_stats` |
+| Deploy workflow | Success on merge push (`30426495254`) — API + `revy-worker` + `revy-beat` |
+| Post-merge runs (`--since 2026-07-29T05:55:00Z`) | **0** completed retrieve runs |
+| `context_stats` populated | **0** rows (column exists; no post-deploy worker run yet) |
+| `engineering_context_injected` (full history) | **0** — all 47 runs pre-RCX code |
+| Full-history diff truncated % | **34.0%** (16/47) — worse than pre-RCX 25% sample (more runs) |
+| Full-history omitted `.md` runs | **15** |
+
+**Interpretation:** Schema + worker image are ready; **product behavior is unverified** until a scoped `backend/**` PR runs review on the new worker.
+
+### Publish surface gap (RCX-13) — verified
+
+| Surface | Greptile (PR #60) | revybot today | Root cause |
+|---------|-------------------|---------------|------------|
+| Narrative | 2–4 sentences, risk theme | One-line table intro | Moonshot formatter prompt: **short narrative** |
+| Confidence | `N/5` + rationale sentence | `N/5` only | Fallback + prompt omit rationale |
+| Security | `<details>` when security findings | None | Not in fallback |
+| Important files | `<details>` table path + note | Files needing attention bullets only | No overview table |
+| Check run | Compact | Compact G3 | **Out of scope** — issue comment only |
+
+**Code paths (verified):**
+
+- `backend/app/integrations/moonshot_review.py:32` — `ISSUE_COMMENT_FORMAT_SYSTEM_PROMPT`
+- `backend/app/services/github_publish_formatter.py:312` — `build_pr_review_comment_fallback`
+- `backend/tests/unit/test_github_publish_formatter.py:341` — `test_build_pr_review_comment_fallback_greptile_shape` (table only)
+
+**Post-review-quality alignment:** Track A **L2 triage** — fallback is v1 minimum; Moonshot adds narrative when configured. P6 raises both paths to Greptile Summary depth before operator sign-off.
+
+### Operator visibility gap (RCX-14, RCX-15) — verified
+
+| Need | Today | P7 target |
+|------|-------|-----------|
+| See inject bytes on a run | SQL or staging script | `GET` review run includes `context_stats` |
+| See deduped paths / errors | Retrieve manifest artifact in trace | Same JSON on run response |
+| Pass/fail vs RCX targets | Manual matrix in this doc | Script prints `--rcx-gate` block |
+
+`ContextStats` contract (`engineering_context/stats.py`): `engineering_context_injected`, `engineering_context_bytes`, `lock_ids_extracted`, `engineering_context_deduped_paths`, `engineering_context_errors`, `diff_max_bytes`, `unified_diff_bytes`.
+
+### Dogfood strategy (RCX-18) — locked
+
+**Do not** open docs-only or no-op PRs. **Ship P6+P7 on one `backend/**` branch** → autostart review → fills P8 validation tables.
+
+SSOT scope: `.greptile/review-context.json` → `backend/**` — PR must touch backend for lock inject + scoped program.
+
+### Sibling track — judge contract (RCX-17)
+
+Judge-json-contract #58 shipped parse/retry; staging full history still **38.5%** outcome persistence (pre-ship mix). P8 re-runs script `--since` post-RCX deploy after dogfood PR that triggers escalation (optional second PR if P6 PR has no candidates).
+
+### Decisions locked for wave 2
+
+| ID | Decision |
+|----|----------|
+| **RCX-D13** | **P6** ships Greptile-depth **issue comment** only — check-run `output.summary` stays compact (G3). |
+| **RCX-D14** | **Fallback parity required** — Moonshot failure path must match section depth (H2 from post-review-quality). |
+| **RCX-D15** | **One PR** carries P6+P7 code; P8 is human gate + memos. |
+| **RCX-D16** | **No frontend** in P6–P8 — API field sufficient for operator; UI trace deferred. |
+| **RCX-D17** | Metrics script keeps filename `judge_json_contract_staging_metrics.py` (rename parking lot). |
+
+### Wave 2 deliverables summary
+
+| Phase | Ships | Validates |
+|-------|-------|-----------|
+| **P6** | Greptile-shaped issue comment | L2 surface; real dogfood PR |
+| **P7** | API `context_stats` + `--rcx-gate` | Operator tooling; inject visible without SQL |
+| **P8** | Staging memos + doc sync + sign-off | RCX inject, caps, contradict-locks; judge `--since` |
 
 ---
 
@@ -400,9 +501,10 @@ Sources: [Packmind playbook](https://packmind.com/context-engineering-ai-coding/
 ## Edge cases
 
 - **Diff dedupe** — inject must not repeat MD already fully in `unified_diff`; partial hunks may still need lock extract.
-- **Truncation** — 128 KB diff cap drops largest patches; inject is fallback for omitted docs.
+- **Truncation** — default `revy_diff_max_bytes` 512 KB (was 128 KB pre-RCX); inject is fallback for omitted docs.
 - **Frontend program PRs** — `scope: ["backend/**"]` excludes `frontend/**`; RC3 cascading rules later.
-- **Docs-only PRs** — inject still runs when manifest paths match scope.
+- **Docs-only PRs** — inject runs only when at least one `changed_files` entry matches program `scope` (`backend/**`). Docs-only under `docs/**` without backend changes **skips** inject (by design for dogfood; RC3 may add doc scope later).
+- **Compare failure** — when `changed_files` is empty, scope filter is bypassed and inject may still fetch SSOT paths (extra GitHub API calls).
 - **Bugbot** — may stay stale this phase; operator maintains `BUGBOT.md` for daily workflow separately.
 - **Conflicting locks** — two programs' findings disagree; `active_program` resolves; human escalation.
 
@@ -441,16 +543,16 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c 'python -m scripts.judge_json_contract_
 DATABASE_SSL_INSECURE=1 pipenv run sh -c 'python -m scripts.judge_json_contract_staging_metrics --since 2026-07-29T00:00:00Z --json'
 ```
 
-### Storage reality (no RCX columns yet)
+### Storage reality (post-#60)
 
-| Layer | Exists today? | What the script reads |
-|-------|---------------|------------------------|
-| `retrieve` step manifest (`github_pipeline_artifacts.content_json`) | **Yes** — JSONB, no migration | `diff_truncated`, `omitted_files`, `changed_files`, `retrieval_hits`, `fallback_reason` |
-| `engineering_context_*` keys on retrieve manifest | **No** — keys absent | Script counts `engineering_context_injected=true`; **always 0** until RCX P2 |
-| `github_review_runs.context_stats` | **No** — column not shipped | Migration `0029` in RCX P0; script will read when present |
+| Layer | Shipped? | What the script reads |
+|-------|----------|------------------------|
+| `retrieve` step manifest (`github_pipeline_artifacts.content_json`) | **Yes** | `diff_truncated`, `omitted_files`, `changed_files`, `retrieval_hits`, `fallback_reason`, `engineering_context_*` |
+| `engineering_context_*` keys on retrieve manifest | **Yes** (P2+) | `engineering_context_injected`, `engineering_context_bytes`, `lock_ids_extracted`, etc. |
+| `github_review_runs.context_stats` | **Yes** (P2+) | Migration `0029`; populated each run; **not on API until P7** |
 | Moonshot `prompt` artifact length | **Yes** | `review` step `content_text` length (512 KB artifact cap) |
 
-**Do not interpret `engineering_context_injected_runs: 0` as proof inject works** — the field is not written yet.
+**Pre-RCX runs:** `engineering_context_injected` absent or false — use `--since <deploy-iso>` for RCX validation (RCX-D6).
 
 ### Metrics matrix
 
@@ -463,12 +565,12 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c 'python -m scripts.judge_json_contract_
 | **Retrieval hits p50** | RAG noise | **Yes** | `retrieval_hits` length | stable (baseline **15**) |
 | **Moonshot prompt p50 / p95** | Token headroom (RCX-D10) | **Yes** | review `prompt` length | p95 **<400k**; baseline **164k** ✓ |
 | **Compare fallback %** | Diff quality | **Yes** | `fallback_reason` | rare (baseline **0**) |
-| **Engineering inject present** | RCX-D8 shipped? | **No** — P2 writes key | `engineering_context_injected` (contract P0, values P2) | 100% scoped PRs |
-| **Engineering inject bytes** | Inject budget | **No** — P2 | `engineering_context_bytes` | bounded extract |
-| **`diff_max_bytes` applied** | Config audit | **No** — P2 | retrieve manifest | = env (default 512 KB from P0) |
-| **`unified_diff_bytes`** | Cap sizing | **No** — P2 | retrieve manifest | informs calibration |
-| **`context_stats` row** | Fast SQL | **No** — P0 column, **P2 populate** | `github_review_runs` (`0029`) | each run |
-| **Lock IDs extracted** | Extractor health | **No** | manifest / `context_stats` (RCX P1–P2) | ≥1 on program PRs |
+| **Engineering inject present** | RCX-D8 shipped? | **Yes** (post-#60 runs) | retrieve manifest `engineering_context_injected` | 100% scoped PRs |
+| **Engineering inject bytes** | Inject budget | **Yes** | `engineering_context_bytes` / `context_stats` | bounded extract + optional full MD |
+| **`diff_max_bytes` applied** | Config audit | **Yes** | retrieve manifest / `context_stats` | = env (default 512 KB) |
+| **`unified_diff_bytes`** | Cap sizing | **Yes** | retrieve manifest / `context_stats` | informs calibration |
+| **`context_stats` row** | Fast SQL | **Yes** | `github_review_runs` (`0029`) | each scoped run |
+| **Lock IDs extracted** | Extractor health | **Yes** | manifest / `context_stats` | ≥1 on program PRs |
 | **Contradict locks %** | Quality gate | **Manual** | operator review | 0% on smoke PRs |
 | **Judge outcome persistence %** | Sibling track | **Yes** | judge manifest `outcome` | ≥95% — [judge validation](../judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) |
 
@@ -484,12 +586,14 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c 'python -m scripts.judge_json_contract_
 | Moonshot prompt p50 / p95 | **143,129 / 163,981** chars | p95 <400k | Headroom OK; cap raise affordable (RCX-D10) |
 | Changed files p50 | **25** | — | Large program PRs common |
 | Retrieval hits p50 | **15** | stable | At diff-mode cap |
-| `engineering_context_injected` | **0** (field absent) | 100% scoped | RCX P2 — not a measurement yet |
-| `DIFF_MAX_BYTES` config | **128 KB** (hardcoded) | raised | **512 KB** candidate — baseline 25% truncated |
+| `engineering_context_injected` | **0** (pre-RCX field absent) | 100% scoped | Shipped P2 — measure with `--since` post-deploy |
+| `DIFF_MAX_BYTES` config | **128 KB** (hardcoded pre-RCX) | 512 KB | **Shipped** — `revy_diff_max_bytes` default 524288 |
 
-**Post-#58 window (`--since 2026-07-29`):** **0** review runs — no post-deploy dogfood yet; re-query after first program PR.
+**Post-#58 window (`--since 2026-07-29`):** **1** run (pre-#60 merge) — not RCX worker.
 
-**Cap calibration (RCX-D10):** Baseline supports **512 KB** first (25% truncated, 9 MD omissions); re-run script after P3 deploy to confirm <5%.
+**Post-#60 merge (`--since 2026-07-29T05:55:00Z`):** **0** runs — P6 dogfood PR required (see Wave 2).
+
+**Cap calibration (RCX-D10):** Baseline supports **512 KB** first (25% truncated, 9 MD omissions); re-run script after P6 deploy to confirm <5%.
 
 ### Pass/fail gates (RCX dogfood)
 
@@ -538,6 +642,6 @@ See **Validation metrics** above for the full matrix. Quick checklist:
 
 ## Next steps
 
-1. `phase-execution` — P0: migration `0029`, caps, manifest schema.
-2. Dogfood PR — verify inject in pipeline trace on next program slice.
-3. Staging validation — latest runs only after RCX deploy (P5).
+1. `phase-execution` — **P6 → P7 → P8** from [waves/REVIEW_ENGINEERING_CONTEXT_P6_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P6_EXECUTION.md).
+2. Dogfood — same PR as P6+P7 (`backend/**`); autostart or `@revy review`.
+3. Staging validation — `--since` merge ISO; `--rcx-gate`; sign-off in validation memo (P8).

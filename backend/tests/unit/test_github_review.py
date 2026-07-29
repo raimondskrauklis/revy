@@ -1390,6 +1390,39 @@ def test_review_run_polish_defaults():
     response = GitHubReviewRunResponse.model_validate(run)
     assert response.judge_status == GitHubReviewJudgeStatus.not_applicable
     assert response.judge_escalation_candidate_count == 0
+    assert response.context_stats is None
+
+
+def test_review_run_response_includes_context_stats():
+    run = GitHubReviewRunORM(
+        revision_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+    )
+    run.id = uuid.uuid4()
+    run.created_at = datetime.now(UTC)
+    run.updated_at = datetime.now(UTC)
+    run.judge_status = GitHubReviewJudgeStatus.not_applicable
+    run.judge_escalation_candidate_count = 0
+    run.context_stats = {
+        "active_program": "review-engineering-context",
+        "diff_max_bytes": 524288,
+        "unified_diff_bytes": 120000,
+        "diff_truncated": False,
+        "omitted_files_count": 0,
+        "omitted_md_count": 0,
+        "engineering_context_injected": True,
+        "engineering_context_bytes": 4096,
+        "engineering_context_deduped_paths": [],
+        "lock_ids_extracted": ["RCX-D8"],
+        "engineering_context_errors": [],
+        "prompt_chars": 150000,
+    }
+    response = GitHubReviewRunResponse.model_validate(run)
+    assert response.context_stats is not None
+    assert response.context_stats["engineering_context_injected"] is True
+    assert response.context_stats["lock_ids_extracted"] == ["RCX-D8"]
 
 
 def test_finding_polish_defaults():

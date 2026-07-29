@@ -7,6 +7,7 @@ import asyncio
 import json
 import os
 import ssl
+import sys
 from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlparse
@@ -156,12 +157,115 @@ SELECT count(*)::int AS runs_with_context_stats,
        )::int AS engineering_context_injected_runs,
        percentile_cont(0.5) WITHIN GROUP (
          ORDER BY coalesce((context_stats->>'engineering_context_bytes')::int, 0)
-       )::int AS engineering_context_bytes_p50
+       ) FILTER (
+         WHERE coalesce((context_stats->>'engineering_context_injected')::boolean, false)
+       )::int AS engineering_context_bytes_p50,
+       coalesce(
+         max(
+           CASE
+             WHEN coalesce((context_stats->>'engineering_context_injected')::boolean, false)
+             THEN coalesce((context_stats->>'engineering_context_bytes')::int, 0)
+             ELSE 0
+           END
+         ),
+         0
+       )::int AS engineering_context_bytes_max_injected
 FROM github_review_runs rr
 WHERE rr.status = 'completed'
   AND rr.context_stats IS NOT NULL
   AND ($1::timestamptz IS NULL OR rr.created_at >= $1::timestamptz);
 """
+
+
+def _evaluate_rcx_gate(metrics: dict[str, Any]) -> dict[str, Any]:
+    retrieve = metrics.get("review_context", {}).get("retrieve_manifest", {})
+    context_stats = metrics.get("review_context", {}).get("context_stats", {})
+
+    completed_runs = int(retrieve.get("runs") or 0)
+    runs_with_context_stats = int(context_stats.get("runs_with_context_stats") or 0)
+    engineering_injected_ctx = int(context_stats.get("engineering_context_injected_runs") or 0)
+    engineering_bytes_p50 = int(context_stats.get("engineering_context_bytes_p50") or 0)
+    engineering_bytes_max = int(context_stats.get("engineering_context_bytes_max_injected") or 0)
+    runs_with_omitted_md = int(retrieve.get("runs_with_omitted_md") or 0)
+    diff_truncated_pct = retrieve.get("diff_truncated_pct")
+    retrieve_injected = int(retrieve.get("engineering_context_injected_runs") or 0)
+
+    checks: list[dict[str, str]] = []
+
+    def add(name: str, status: str, detail: str = "") -> None:
+        checks.append({"name": name, "status": status, "detail": detail})
+
+    if completed_runs == 0:
+        add("context_stats_rows", "INCONCLUSIVE", "no completed runs in window")
+        add("engineering_context_injected", "INCONCLUSIVE", "no completed runs in window")
+        add("engineering_context_bytes_p50", "INCONCLUSIVE", "no completed runs in window")
+        add("runs_with_omitted_md", "INCONCLUSIVE", "no completed runs in window")
+        add("diff_truncated_pct", "INCONCLUSIVE", "no completed runs in window")
+        add("retrieve_manifest_inject_cross_check", "INCONCLUSIVE", "no completed runs in window")
+    else:
+        add(
+            "context_stats_rows",
+            "PASS" if runs_with_context_stats >= 1 else "FAIL",
+            f"{runs_with_context_stats} rows",
+        )
+        add(
+            "engineering_context_injected",
+            "PASS" if engineering_injected_ctx >= 1 else "FAIL",
+            f"{engineering_injected_ctx} runs",
+        )
+        if engineering_injected_ctx > 0:
+            bytes_ok = engineering_bytes_p50 > 0 or engineering_bytes_max > 0
+            add(
+                "engineering_context_bytes_p50",
+                "PASS" if bytes_ok else "FAIL",
+                f"p50={engineering_bytes_p50}, max_injected={engineering_bytes_max}",
+            )
+        else:
+            add("engineering_context_bytes_p50", "INCONCLUSIVE", "no inject runs")
+        add(
+            "runs_with_omitted_md",
+            "PASS" if runs_with_omitted_md == 0 else "FAIL",
+            f"{runs_with_omitted_md} runs",
+        )
+        if completed_runs >= 3:
+            pct = float(diff_truncated_pct) if diff_truncated_pct is not None else 100.0
+            add(
+                "diff_truncated_pct",
+                "PASS" if pct < 5.0 else "FAIL",
+                f"{pct}%",
+            )
+        else:
+            add(
+                "diff_truncated_pct",
+                "INCONCLUSIVE",
+                f"{completed_runs} run(s) in window",
+            )
+        if engineering_injected_ctx > 0 and retrieve_injected == 0:
+            add(
+                "retrieve_manifest_inject_cross_check",
+                "FAIL",
+                "context_stats injected but retrieve count 0",
+            )
+        elif engineering_injected_ctx > 0:
+            add(
+                "retrieve_manifest_inject_cross_check",
+                "PASS",
+                f"retrieve={retrieve_injected}",
+            )
+        else:
+            add("retrieve_manifest_inject_cross_check", "INCONCLUSIVE", "no inject runs")
+
+    passed = not any(check["status"] == "FAIL" for check in checks)
+    return {"passed": passed, "checks": checks}
+
+
+def _print_rcx_gate(rcx_gate: dict[str, Any], *, since: datetime | None) -> None:
+    print()
+    window = since.isoformat() if since else "full history (baseline mode)"
+    print(f"RCX gate ({window}):")
+    for check in rcx_gate.get("checks", []):
+        print(f"  [{check['status']}] {check['name']}: {check.get('detail', '')}")
+    print(f"  overall: {'PASS' if rcx_gate.get('passed') else 'FAIL'}")
 
 
 def _parse_args() -> argparse.Namespace:
@@ -174,6 +278,11 @@ def _parse_args() -> argparse.Namespace:
         "--json",
         action="store_true",
         help="Print machine-readable JSON only",
+    )
+    parser.add_argument(
+        "--rcx-gate",
+        action="store_true",
+        help="Evaluate RCX pass/fail gate (requires --since for sign-off)",
     )
     return parser.parse_args()
 
@@ -245,8 +354,20 @@ async def _run() -> int:
     since = _parse_since(args.since)
     metrics = await _fetch_metrics(since)
 
+    rcx_gate: dict[str, Any] | None = None
+    if args.rcx_gate:
+        if since is None:
+            print(
+                "WARNING: --rcx-gate without --since uses full history (baseline mode only)",
+                file=sys.stderr,
+            )
+        rcx_gate = _evaluate_rcx_gate(metrics)
+        metrics["rcx_gate"] = rcx_gate
+
     if args.json:
         print(json.dumps(metrics, indent=2, default=str))
+        if args.rcx_gate and rcx_gate is not None and not rcx_gate.get("passed"):
+            return 1
         return 0
 
     print("Judge JSON contract — staging metrics")
@@ -311,6 +432,10 @@ async def _run() -> int:
                   f"{context_stats.get('engineering_context_injected_runs', 0)}")
             print(f"  context_stats engineering_bytes p50: "
                   f"{context_stats.get('engineering_context_bytes_p50')}")
+    if rcx_gate is not None:
+        _print_rcx_gate(rcx_gate, since=since)
+    if args.rcx_gate and rcx_gate is not None and not rcx_gate.get("passed"):
+        return 1
     return 0
 
 

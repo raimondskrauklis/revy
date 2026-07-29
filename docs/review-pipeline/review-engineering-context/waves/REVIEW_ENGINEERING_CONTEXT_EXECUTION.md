@@ -40,7 +40,7 @@ P8: human gate only
 | P4 — Judge reuse | Lock block in judge prompt | [REVIEW_ENGINEERING_CONTEXT_P4_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P4_EXECUTION.md) | done |
 | P5 — Validation stub | Memo stub; P5.5 moved to P6 | [REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md) | stub done |
 | P6 — Publish surface | Greptile-depth issue comment | [REVIEW_ENGINEERING_CONTEXT_P6_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P6_EXECUTION.md) | done |
-| P7 — Operator visibility | `context_stats` API + `--rcx-gate` | [REVIEW_ENGINEERING_CONTEXT_P7_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P7_EXECUTION.md) | planned |
+| P7 — Operator visibility | `context_stats` API + `--rcx-gate` | [REVIEW_ENGINEERING_CONTEXT_P7_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P7_EXECUTION.md) | done |
 | P8 — Closeout | Staging validation + doc sync + sign-off | [REVIEW_ENGINEERING_CONTEXT_P8_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P8_EXECUTION.md) | human gate |
 
 **Baseline (pre-RCX):** 25% diff truncated, 9/40 runs omitted `.md`, prompt p95 164k — see findings § Validation metrics.
