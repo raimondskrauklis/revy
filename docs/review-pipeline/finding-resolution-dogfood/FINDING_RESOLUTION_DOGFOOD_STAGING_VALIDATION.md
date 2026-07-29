@@ -57,7 +57,8 @@
 | Step | Intent | Status | Evidence |
 |------|--------|--------|----------|
 | C3.0 | Delete-only publish smoke | pending | — |
-| C3.1 | Probe publish (push 1) | **in progress** | group id / revision id |
+| C3.1a | Probe publish (MD5) | **FAIL** | Revy rev 2 `6d9a9fe` — 0 publishable findings |
+| C3.1 | Probe publish (#67-style snippet) | **in progress** | group id / revision id |
 | C3.2 | Age cohort (unrelated backend commit) | pending | `last_seen_revision_id` before delete |
 | C3.3 | Aged delete sign-off | pending | `state`, `resolution_method`, G9 path-removed line |
 | C3.4 | Rename guard (optional) | pending | old-path groups stay active |
