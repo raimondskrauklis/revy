@@ -54,16 +54,6 @@
 
 ---
 
-## FR-DG-VAL6 — Push 2a wire did not surface Moonshot finding
-
-| Item | Locked decision |
-|------|-----------------|
-| **Evidence** | PR #65 rev 1 `cdea3cc` — `gen=0`, `pr=0`, 0 findings; G9 `n/a` |
-| **Cause** | Test-fixture-only wire insufficient for Moonshot publishable finding |
-| **Remediation** | Push **2b** adds PSA-class wrong-kwargs snippet in `probe_module.py`; push **2c** fixes → FR-DG1; push **3** removes probe |
-
----
-
 ## FR-DG-VAL5 — `publish_summary` script usage
 
 | Window | `--since` | Use |
@@ -77,3 +67,15 @@ cd backend
 DATABASE_SSL_INSECURE=1 pipenv run sh -c \
   'python -m scripts.judge_json_contract_staging_metrics --since 2026-07-29T17:50:43Z --json'
 ```
+
+---
+
+## FR-DG-VAL6 — Push 2a wire did not surface Moonshot finding
+
+| Item | Locked decision |
+|------|-----------------|
+| **Evidence** | PR #65 rev 1 `cdea3cc` — `gen=0`, `pr=0`, 0 findings; G9 `n/a` |
+| **Cause** | Test-fixture-only wire insufficient for Moonshot publishable finding |
+| **Remediation** | Push **2b** doc/probe delta surfaced 3 findings on rev 2; push **2c** fixes → FR-DG1 |
+
+---
