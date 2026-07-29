@@ -421,8 +421,9 @@ def build_resolution_pass_manifest(
     ]
     hygiene_path_removed_count = sum(
         1
-        for group in transitions
-        if _is_hygiene_path_removed_closure(
+        for group in groups
+        if group.state != GitHubFindingGroupState.superseded
+        and _is_hygiene_path_removed_closure(
             group,
             prior_revision_ids=prior_revision_ids,
             current_revision_id=current_revision_id,

@@ -1241,3 +1241,36 @@ def test_build_resolution_pass_manifest_excludes_hygiene_from_rate():
     assert manifest["transition_count"] == 1
     assert manifest["transitions_addressed"] == 1
     assert manifest["resolution_rate_pct"] == 100.0
+
+
+def test_build_resolution_pass_manifest_hygiene_count_outside_stamp_cohort():
+    """CS-Q6: hygiene_path_removed_count is PR-wide, not pairing-cohort transitions only."""
+    prior_revision_id = uuid.uuid4()
+    aged_prior_id = uuid.uuid4()
+    current_revision_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+
+    hygiene_close = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint="aged",
+        state=GitHubFindingGroupState.resolved,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Hygiene",
+        message="M",
+        file_path="app/gone.py",
+        last_seen_revision_id=aged_prior_id,
+        resolution_method=ResolutionMethod.absent_and_addressed,
+        resolved_at_revision_id=current_revision_id,
+    )
+
+    manifest = github_resolution_metrics.build_resolution_pass_manifest(
+        [hygiene_close],
+        prior_revision_ids=frozenset({prior_revision_id}),
+        current_revision_id=current_revision_id,
+    )
+
+    assert manifest["hygiene_path_removed_count"] == 1
+    assert manifest["transition_count"] == 0
+    assert manifest["denominator_active_prior"] == 0
