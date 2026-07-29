@@ -100,3 +100,14 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
 | **Protocol** | FR-DG2 repro: no program-doc edits in pushes 1–3; isolated probe file only |
 
 ---
+
+## FR-DG-VAL9 — Post-#66 deploy (FR-DG2a on staging)
+
+| Item | Locked decision |
+|------|-----------------|
+| **Merge** | [#66](https://github.com/raimondskrauklis/revy/pull/66) `111e851` — `2026-07-29T19:16:07Z` |
+| **Deploy** | Workflow `30483659578` — droplet job finished **`2026-07-29T19:20:33Z`** |
+| **Metrics `--since`** | Use `2026-07-29T19:20:33Z` for Track B FR-DG2 windows |
+| **Track B PR** | `chore/fr-dg2-staging-dogfood` — push 1 introduce → push 2 fix → push 3 delete |
+
+---
