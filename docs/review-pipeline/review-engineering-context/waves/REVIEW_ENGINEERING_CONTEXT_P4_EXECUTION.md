@@ -6,7 +6,7 @@ Phase **P4** of [REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md](../REVIEW_ENGINEERI
 
 ## Decisions locked for P4
 
-- **No cached pack from Moonshot** — judge path **re-fetches** via `build_engineering_context_pack` (same as P2) using `compare_commits` for `changed_files` + `omitted_files` + `patches_by_file` (mirror `fetch_compare_patches_by_file` / judge patch fetch at `record_review_run_judge_status`).
+- **No cached pack from Moonshot** — judge path **re-fetches** via `build_engineering_context_pack` in one httpx client scope: `compare_commits` → `changed_files` from `compare.paths_to_index`; `omitted_files` from `build_unified_diff(compare.files, max_bytes=settings.revy_diff_max_bytes)` (not from compare alone); `patches_by_file` from compare patches. Judge prompt uses **`extracted_text` only** (2048 cap) — dedupe inputs still passed for pack parity with P2.
 - Judge lock block: **max 2048 chars** from `extracted_text` (tighter than Moonshot `revy_engineering_context_max_bytes` default 32k — intentional).
 - Wire into `_build_judge_prompt` in `github_finding_judge.py` and helpers in `judge_prompt_context.py`.
 - Optional judge manifest field per candidate: `lock_ids_cited: list[str]` when block included.
@@ -35,7 +35,7 @@ cd backend && pipenv run pytest tests/unit/test_github_finding_judge.py -k "judg
 
 ## P4.2 — Wire pack into judge escalation path
 
-**What:** In judge escalation (`record_review_run_judge_status` / `_run_judge_llm_loop` entry): resolve installation/owner/repo; `compare_commits` for changed + omitted files; call `build_engineering_context_pack`; pass into prompt builder.
+**What:** In judge escalation (`record_review_run_judge_status` / `_run_judge_llm_loop` entry): resolve installation/owner/repo; single client block — `compare_commits`, `build_unified_diff` for `omitted_files`, then `build_engineering_context_pack`; pass pack into `_build_judge_prompt`.
 
 **Files:** `backend/app/services/github_finding_judge.py`, `backend/app/services/github_compare_patches.py` (reuse if applicable)
 

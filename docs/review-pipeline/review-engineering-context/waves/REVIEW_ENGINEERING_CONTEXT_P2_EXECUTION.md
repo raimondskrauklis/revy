@@ -7,8 +7,10 @@ Phase **P2** of [REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md](../REVIEW_ENGINEERI
 ## Decisions locked for P2
 
 - Replace `DIFF_MAX_BYTES` / `PR_BODY_MAX_BYTES` module constants in `github_review.py` with `settings.revy_diff_max_bytes` / `settings.revy_pr_body_max_bytes`.
-- **Repo context for pack builder:** add `_resolve_github_repo_for_revision(session, revision, pull_request) -> (installation, owner, repo, client)` — mirror lookup in `_fetch_compare_for_review` (`github_review.py:722–736`). `prepare_review_context` calls it before `build_engineering_context_pack`.
+- **Repo resolution (no client in return):** `_resolve_github_repo_for_revision(session, revision, pull_request) -> (installation, owner, repo_name)` — mirror install/repo lookup in `_fetch_compare_for_review` (`github_review.py:731–736`).
+- **Single httpx client in `prepare_review_context`:** one `async with httpx.AsyncClient` block runs `compare_commits`, `build_unified_diff`, and `build_engineering_context_pack` (file fetches). Do **not** return a client from a helper after `_fetch_compare_for_review` closes its own client — refactor compare into this block or share one client scope (avoid use-after-close + duplicate compare calls).
 - Call `build_engineering_context_pack` with installation, owner, repo, client, `head_sha`, `changed_files`, `omitted_files`, `patches_by_file`.
+- **`ReviewContextPack.engineering_context_pack`** — optional `EngineeringContextPack` field on the dataclass (locked name; not a parallel return).
 - **Dedupe (RCX-D12):** for each manifest path `p`, skip appending full fetched MD to inject body when `p in changed_files` and `p not in omitted_files` and compare patch exists; **always** include merged `extracted_text` (locks/smoke).
 - `_build_review_prompt`: new section `Engineering context (authoritative):` before `Unified diff`; instruction line: treat engineering block over generic API prior.
 - **`ReviewContextPack.manifest` is fully built inside `prepare_review_context`** (engineering fields included). `record_retrieve_pipeline_step` in `review_tasks.py` persists that manifest unchanged after `run_review_run` returns.
@@ -67,7 +69,7 @@ cd backend && pipenv run pytest tests/unit/test_github_review.py -k "build_revie
 
 ## P2.4 — Wire `prepare_review_context` + repo resolution
 
-**What:** Implement `_resolve_github_repo_for_revision`; call `build_engineering_context_pack` inside `prepare_review_context`; attach pack to `ReviewContextPack` (new field or parallel return); handle loader errors (`engineering_context_injected=false`).
+**What:** Implement `_resolve_github_repo_for_revision`; refactor `prepare_review_context` to one httpx client scope for compare + pack fetch; set `ReviewContextPack.engineering_context_pack`; handle loader errors (`engineering_context_injected=false`).
 
 **Files:** `backend/app/services/github_review.py`, `backend/tests/unit/test_github_review.py`
 

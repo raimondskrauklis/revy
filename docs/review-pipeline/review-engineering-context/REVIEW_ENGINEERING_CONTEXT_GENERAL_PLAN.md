@@ -62,7 +62,9 @@
 
 **Depends on:** P1.
 
-**Note:** With P0 default 512 KB, omitted-`.md` rate should drop vs 128 KB baseline before P3 Greptile trim.
+**Note:** With P0 default 512 KB, omitted-`.md` rate should drop vs 128 KB baseline before P3 Greptile generator.
+
+**Implementation note:** `prepare_review_context` uses one httpx client scope for compare + engineering pack fetch (see P2 execution).
 
 ---
 
@@ -84,7 +86,7 @@
 
 **Goal:** Judge shares P1 lock extract on escalation runs.
 
-**Scope — in:** Re-fetch `build_engineering_context_pack` in judge path via `compare_commits` for changed/omitted files; lock block max 2048 chars; optional `lock_ids_cited` on judge manifest.
+**Scope — in:** Re-fetch `build_engineering_context_pack` in judge path — `compare_commits` for `changed_files` + patches; `build_unified_diff` for `omitted_files`; lock block max 2048 chars from `extracted_text` only; optional `lock_ids_cited` on judge manifest.
 
 **Scope — out:** Moonshot changes; judge parse contract.
 

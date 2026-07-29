@@ -137,11 +137,12 @@ PR #58 remains the motivation: generic API advice when locks/smoke are absent fr
 | Asset | Status | Reuse notes |
 |-------|--------|-------------|
 | RC0 wiring (Greptile + Bugbot links) | **Shipped** RQ0 | Greptile pattern; Bugbot maintained separately this phase |
-| `.greptile/files.json` schema | **Shipped** | Dogfood manifest shape; add `active_program` |
-| `prepare_review_context` | **Shipped** | **P0 injection point** — prepend engineering block |
+| `.greptile/review-context.json` (SSOT) | **P0** | `active_program` + `programs[]`; Revy reads at `head_sha` (RCX-D11) |
+| `.greptile/files.json` (Greptile) | **Shipped** legacy | **P3:** CI-generated from SSOT — not hand-edited after P3 |
+| `prepare_review_context` | **Shipped** | **P2 injection point** — prepend engineering block |
 | `REVIEW_QUALITY_REVIEW_CONTEXT.md` | **Strategy** | RC1–RC6 ladder; RCX absorbs RC1–RC2 + RC5 dogfood |
 | `OUTPUT_FORMAT.md` + babysit skill | **Shipped** | Disposition helpers (P2) |
-| `.revy/review-context.json` | **Not built** | Product manifest path; dogfood SSOT: `.greptile/review-context.json`; Greptile: generated `files.json` |
+| `.revy/review-context.json` | **Not built** | Product manifest path (RC4); dogfood SSOT is `.greptile/review-context.json` |
 | `workspace_review_policy` DB | **Not built** | RC4 — post-dogfood |
 | `BUGBOT.md` | **Shipped** | Daily workflow; not P0 generator target |
 
@@ -513,7 +514,7 @@ Judge-json-contract #58 shipped parse/retry; staging full history still **38.5%*
 ## Devil's advocate
 
 - **Inject adds tokens** — bounded extract mandatory; full findings dump will hurt Moonshot quality.
-- **Extractor fragility** — headings vary (`## Locked decisions (discussion …)`); P1 uses tolerant parser + fixtures from `JUDGE_JSON_CONTRACT_FINDINGS.md`, this file, one execution MD.
+- **Extractor fragility** — headings vary (`## Locked decisions (discussion …)`); P1 uses tolerant parser + fixtures from `JUDGE_JSON_CONTRACT_FINDINGS.md` (§ P0 smoke results), this file (§ Locked decisions + § Baseline captured), `JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md` (§ P0 smoke matrix (final)).
 - **Greptile parallel may lag** — if `files.json` not generated from manifest, drift returns.
 - **Customer RC4** — dogfood manifest shape must generalize to DB rows or rework.
 
