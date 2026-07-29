@@ -2,7 +2,7 @@
 
 **Program:** [README.md](./README.md) · **Baseline:** [FINDING_RESOLUTION_DOGFOOD_FINDINGS.md](./FINDING_RESOLUTION_DOGFOOD_FINDINGS.md)
 
-**Status:** **in progress** — chore dogfood PR open; operator fills rows after each push.
+**Status:** **in progress** — P0 pushed (`4830ff7`); P1–P2 committed locally; operator fills rows after dogfood pushes.
 
 ## Deploy boundaries
 

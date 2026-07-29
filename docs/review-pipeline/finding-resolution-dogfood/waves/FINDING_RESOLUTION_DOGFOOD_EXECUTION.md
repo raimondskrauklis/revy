@@ -41,10 +41,10 @@ each phase: implement → pytest gate → Bugbot → commit → merge to main �
 
 | Phase | Focus | Execution | Wave | Status |
 |-------|--------|-----------|------|--------|
-| P0 — Repro + observability | Probe, memo stub, metrics, SSOT | [P0](./FINDING_RESOLUTION_DOGFOOD_P0_EXECUTION.md) | A | pending |
-| P1 — FR-DG1 | Manifest + G9 wiring | [P1](./FINDING_RESOLUTION_DOGFOOD_P1_EXECUTION.md) | A | pending |
-| P2 — FR-DG2 | Stale retirement + collapse | [P2](./FINDING_RESOLUTION_DOGFOOD_P2_EXECUTION.md) | A | pending |
-| P3 — Staging sign-off | Evidence + doc sync | [P3](./FINDING_RESOLUTION_DOGFOOD_P3_EXECUTION.md) | A | pending |
+| P0 — Repro + observability | Probe, memo stub, metrics, SSOT | [P0](./FINDING_RESOLUTION_DOGFOOD_P0_EXECUTION.md) | A | done `4830ff7` |
+| P1 — FR-DG1 | Manifest + G9 wiring | [P1](./FINDING_RESOLUTION_DOGFOOD_P1_EXECUTION.md) | A | done `c2c255c` |
+| P2 — FR-DG2 | Stale retirement + collapse | [P2](./FINDING_RESOLUTION_DOGFOOD_P2_EXECUTION.md) | A | done `b521d23` |
+| P3 — Staging sign-off | Evidence + doc sync | [P3](./FINDING_RESOLUTION_DOGFOOD_P3_EXECUTION.md) | A | in progress |
 | P4 — MR-DG1 | Moonshot signature | [P4](./FINDING_RESOLUTION_DOGFOOD_P4_EXECUTION.md) | B | pending |
 
 **Peer review:** applied 2026-07-29 — ready for `phase-execution`.
