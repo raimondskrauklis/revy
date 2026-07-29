@@ -96,20 +96,20 @@ async def _latest_finding_lines(
     return finding.start_line, finding.end_line
 
 
-def file_path_removed_in_compare(
+def file_path_deleted_in_compare(
     file_path: str,
     *,
-    removed_paths: frozenset[str],
+    deleted_paths: frozenset[str],
 ) -> bool:
-    """True when GitHub compare removed the group's file between prior and current head."""
-    return file_path in removed_paths
+    """True when GitHub compare deleted the group's file between prior and current head."""
+    return file_path in deleted_paths
 
 
 def resolve_group_resolution_status(
     *,
     group: GitHubFindingGroupORM,
     patches_by_file: dict[str, str],
-    removed_paths: frozenset[str],
+    deleted_paths: frozenset[str],
     start_line: int | None,
     end_line: int | None,
 ) -> ResolutionStatus:
@@ -120,7 +120,7 @@ def resolve_group_resolution_status(
     if not file_path:
         return ResolutionStatus.still_open
 
-    if file_path_removed_in_compare(file_path, removed_paths=removed_paths):
+    if file_path_deleted_in_compare(file_path, deleted_paths=deleted_paths):
         return ResolutionStatus.addressed
 
     patch = patches_by_file.get(file_path)
@@ -264,7 +264,7 @@ async def apply_resolution_status_for_synchronize(
         group.resolution_status = resolve_group_resolution_status(
             group=group,
             patches_by_file=compare_result.patches_by_file,
-            removed_paths=compare_result.removed_paths,
+            deleted_paths=compare_result.deleted_paths,
             start_line=start_line,
             end_line=end_line,
         )
@@ -278,16 +278,22 @@ async def apply_resolution_status_for_synchronize(
         absent = absent_by_path.get(file_path)
 
         if compare_result.compare_failed:
-            if absent is None and group.resolution_status != ResolutionStatus.addressed:
-                if group.closure_blocked_reason != COMPARE_FAILED_REASON:
-                    group.closure_blocked_reason = HEAD_CHECK_FAILED_REASON
-                    group.resolution_status = ResolutionStatus.still_open
-                    updated += 1
-            elif (
-                absent is False
-                and group.closure_blocked_reason == HEAD_CHECK_FAILED_REASON
-            ):
-                group.closure_blocked_reason = None
+            if group.resolution_status != ResolutionStatus.addressed:
+                if absent is None:
+                    if group.closure_blocked_reason != COMPARE_FAILED_REASON:
+                        group.closure_blocked_reason = HEAD_CHECK_FAILED_REASON
+                        group.resolution_status = ResolutionStatus.still_open
+                        updated += 1
+                elif absent is True:
+                    if group.closure_blocked_reason != COMPARE_FAILED_REASON:
+                        group.closure_blocked_reason = COMPARE_FAILED_REASON
+                        group.resolution_status = ResolutionStatus.still_open
+                        updated += 1
+                elif (
+                    absent is False
+                    and group.closure_blocked_reason == HEAD_CHECK_FAILED_REASON
+                ):
+                    group.closure_blocked_reason = None
             continue
 
         path_gone = hygiene_path_gone(

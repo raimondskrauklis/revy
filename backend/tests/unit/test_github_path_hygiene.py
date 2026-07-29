@@ -1,5 +1,6 @@
 # backend/tests/unit/test_github_path_hygiene.py
 """HEAD path hygiene — wave C CS-Q7."""
+import uuid
 from unittest.mock import AsyncMock, patch
 
 import httpx
@@ -87,3 +88,53 @@ def test_hygiene_path_gone_returns_absent_at_head():
         absent_at_head=None,
         renamed_from_paths=frozenset(),
     ) is None
+
+
+@pytest.mark.asyncio
+async def test_paths_absent_at_head_malformed_full_name_fail_closed():
+    from app.constants.enums import GitHubAccountType, GitHubInstallationStatus
+    from app.models.github_installation import GitHubInstallationORM
+    from app.models.github_pull_request import GitHubPullRequestORM
+    from app.models.github_repository import GitHubRepositoryORM
+    from app.services.github_path_hygiene import paths_absent_at_head
+
+    workspace_id = uuid.uuid4()
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=workspace_id,
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=1,
+        title="PR",
+        state="open",
+        head_sha="sha",
+        head_ref="main",
+        base_ref="main",
+        revision_count=1,
+    )
+    installation = GitHubInstallationORM(
+        workspace_id=workspace_id,
+        github_installation_id=99,
+        account_login="acme",
+        account_type=GitHubAccountType.organization,
+        account_id=1,
+        status=GitHubInstallationStatus.active,
+    )
+    repository = GitHubRepositoryORM(
+        installation_id=pull_request.installation_id,
+        workspace_id=workspace_id,
+        github_repository_id=1,
+        name="invalid",
+        full_name="invalid-no-slash",
+    )
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[repository, installation])
+
+    result = await paths_absent_at_head(
+        session,
+        pull_request=pull_request,
+        head_sha="sha",
+        file_paths=frozenset({"app/a.py"}),
+    )
+    assert result == {"app/a.py": None}

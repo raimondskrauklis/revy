@@ -24,10 +24,12 @@ from app.services.github_publish_formatter import (
     build_publish_format_result,
     compute_confidence,
     count_resolution_status,
+    extract_summary_blocks_section,
     format_resolution_metrics_block,
     format_summary_comment,
     normalize_llm_issue_comment,
     resolution_counts_from_manifest,
+    splice_deterministic_findings_tables,
 )
 
 
@@ -330,6 +332,44 @@ def test_format_summary_comment_two_block():
     )
     assert "### This generation" in markdown
     assert "### Still open on PR" in markdown
+
+
+def test_splice_deterministic_findings_tables_replaces_llm_mismatch():
+    generation = [_group(severity=FindingSeverity.error, fingerprint="gen")]
+    prior_only = _group(
+        severity=FindingSeverity.warning,
+        fingerprint="prior",
+        file_path="app/legacy.py",
+    )
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=42,
+        head_sha="abc123",
+        revision_number=1,
+        groups=generation,
+        pr_active_groups=[*generation, prior_only],
+    )
+    llm_markdown = (
+        "## Revy code review\n\n"
+        "Narrative.\n\n"
+        "### This generation findings\n\n"
+        "| Severity | Category | Title | File |\n"
+        "| --- | --- | --- | --- |\n"
+        "| error | bug | Issue | app/main.py |\n\n"
+        "### Still open on PR findings\n\n"
+        "| Severity | Category | Title | File |\n"
+        "| --- | --- | --- | --- |\n"
+        "| error | bug | Issue | app/main.py |\n"
+        "| warning | bug | Issue | app/legacy.py |\n\n"
+        "<details><summary>Review metadata</summary></details>"
+    )
+    result = splice_deterministic_findings_tables(llm_markdown, ctx)
+    assert "app/legacy.py" in result
+    assert "### This generation findings" not in result
+    assert extract_summary_blocks_section(result) == format_summary_comment(
+        generation_groups=generation,
+        pr_active_groups=[*generation, prior_only],
+    )
 
 
 def test_build_pr_review_comment_fallback_two_block_when_pr_active_extra():
@@ -784,7 +824,8 @@ async def test_build_pr_review_comment_moonshot_success_includes_greptile_sectio
         ):
             result = await build_pr_review_comment(ctx)
 
-    assert result == moonshot_markdown
+    assert "This revision introduces a warning" in result
+    assert format_summary_comment(generation_groups=groups, pr_active_groups=groups) in result
     assert "Confidence score" in result
     assert "moderated" in result
     assert "<details>" in result
@@ -854,7 +895,8 @@ async def test_build_pr_review_comment_accepts_lowercase_score_rationale():
         ):
             result = await build_pr_review_comment(ctx)
 
-    assert result.strip() == moonshot_markdown.strip()
+    assert "The score is 4 because" in result
+    assert format_summary_comment(generation_groups=groups, pr_active_groups=groups) in result
 
 
 @pytest.mark.asyncio
@@ -890,7 +932,8 @@ async def test_build_pr_review_comment_accepts_confidence_is_because_rationale()
         ):
             result = await build_pr_review_comment(ctx)
 
-    assert result.strip() == moonshot_markdown.strip()
+    assert "Confidence is 4 because" in result
+    assert format_summary_comment(generation_groups=groups, pr_active_groups=groups) in result
 
 
 @pytest.mark.asyncio

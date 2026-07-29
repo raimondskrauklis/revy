@@ -70,7 +70,12 @@ async def paths_absent_at_head(
     if repository is None or installation is None:
         return dict.fromkeys(file_paths, None)
 
+    if "/" not in repository.full_name:
+        return dict.fromkeys(file_paths, None)
+
     owner, repo_name = repository.full_name.split("/", 1)
+    if not owner or not repo_name:
+        return dict.fromkeys(file_paths, None)
     github_installation_id = installation.github_installation_id
 
     async def _check_paths(http_client: httpx.AsyncClient) -> dict[str, bool | None]:
