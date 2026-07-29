@@ -1,6 +1,6 @@
 # Publish summary alignment — program index
 
-**Status:** **code-complete (P0–P1)** on `feat/publish-summary-alignment` — staging human gate pending ([validation memo](./PUBLISH_SUMMARY_ALIGNMENT_STAGING_VALIDATION.md)).
+**Status:** **staging push 1 PASS** on dogfood PR [#63](https://github.com/raimondskrauklis/revy/pull/63) — [validation memo](./PUBLISH_SUMMARY_ALIGNMENT_STAGING_VALIDATION.md) (push 2–3 pending).
 
 **Gap:** **RG-14** / **FR-Q16** — issue comment and check run diverge; confidence/merge can disagree with open inline threads.
 
@@ -34,6 +34,7 @@
 | Generation lifecycle (RG-14 origin) | [review-generation-lifecycle/README.md](../review-generation-lifecycle/README.md) |
 | GitHub surface hardening (GH-1v2) | [github-surface-hardening/GITHUB_SURFACE_HARDENING_FINDINGS.md](../github-surface-hardening/GITHUB_SURFACE_HARDENING_FINDINGS.md) |
 | RCX staging (parallel monitor) | [review-engineering-context/REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md](../review-engineering-context/REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md) |
+| Staging validation workflow | [staging-validation/STAGING_VALIDATION_FINDINGS.md](../staging-validation/STAGING_VALIDATION_FINDINGS.md) |
 
 **Related code**
 

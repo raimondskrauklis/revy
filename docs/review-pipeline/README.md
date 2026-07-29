@@ -70,6 +70,9 @@ docs/review-pipeline/
     waves/
       PUBLISH_SUMMARY_ALIGNMENT_EXECUTION.md
       PUBLISH_SUMMARY_ALIGNMENT_P0_EXECUTION.md … P2
+  staging-validation/                    ← operator workflow: dogfood PRs, deploy windows, parallel metrics
+    README.md
+    STAGING_VALIDATION_FINDINGS.md
   REVIEW_PIPELINE_GREPTILE_PR26_EMAIL.md   ← archived Greptile PR #26 email (triage reference)
   REVIEW_PIPELINE_PRODUCT_PATTERNS.md      ← Greptile-style patterns → Revy phases (defer/future map)
   code-review-arch_perplexity_searcj_advice_only.md  ← external architecture notes (advice only)
