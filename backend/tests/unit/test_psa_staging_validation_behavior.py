@@ -25,9 +25,10 @@ def _load_probe_module():
     return module
 
 
-def test_psa_staging_probe_module_returns_wired_marker():
+def test_psa_staging_probe_module_returns_stable_value():
     probe = _load_probe_module()
-    assert probe.psa_staging_probe_value() == "psa-staging-ok:psa-dogfood-push-2"
+    assert probe.psa_staging_probe_value() == "psa-staging-ok"
+    assert probe.PSA_STAGING_PROBE_MARKER == "psa-dogfood-push-4"
 
 
 def test_psa_staging_probe_fixture_path_exists():

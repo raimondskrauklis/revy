@@ -16,7 +16,7 @@
 
 | PR | Program | Branch | Status |
 |----|---------|--------|--------|
-| [#63](https://github.com/raimondskrauklis/revy/pull/63) | PSA post-#62 deploy | `chore/psa-staging-dogfood` | **push 3 done** — G9/collapse gap logged |
+| [#63](https://github.com/raimondskrauklis/revy/pull/63) | PSA post-#62 deploy | `chore/psa-staging-dogfood` | **push 4 in flight** → merge when agent done |
 
 ## Related per-program validation memos
 

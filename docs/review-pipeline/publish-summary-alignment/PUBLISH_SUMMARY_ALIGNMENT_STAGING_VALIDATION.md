@@ -2,7 +2,7 @@
 
 **Program:** [README.md](./README.md) · **Baseline:** [PUBLISH_SUMMARY_ALIGNMENT_FINDINGS.md](./PUBLISH_SUMMARY_ALIGNMENT_FINDINGS.md)
 
-**Status:** **push 1–2 PASS**, **push 3 mixed** (2026-07-29) — post-deploy dogfood PR [#63](https://github.com/raimondskrauklis/revy/pull/63); G9/collapse **not observed** on fix push.
+**Status:** **push 1–3 complete** — push 4 in flight on [#63](https://github.com/raimondskrauklis/revy/pull/63); **merge after rev publishes**, then finding-resolution probe on **new PR** (one push at a time — wait for agent).
 
 **Validation priority:** exercise two-block / G9 / collapse / `summary_json` on staging; fixing Greptile doc nits is **out of scope**.
 
@@ -46,7 +46,7 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
 | PR | Role | Status |
 |----|------|--------|
 | #62 (merged) | Feature PR — pre-deploy runs only | excluded |
-| [#63](https://github.com/raimondskrauklis/revy/pull/63) | Post-deploy PSA dogfood | **open** — push 3 done; G9/collapse gap logged |
+| [#63](https://github.com/raimondskrauklis/revy/pull/63) | Post-deploy PSA dogfood | **open** — push 4 in flight → merge when agent done |
 
 ## Dogfood steps
 
@@ -54,7 +54,8 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
 2. ~~Push 1 — two-block + inline + `summary_json`~~ — **done** (`ed95a5c`, rev 2).
 3. ~~Push 2 — probe files + behavior tests~~ — **done** (`d52e790`, rev 4).
 4. ~~Push 3 — wire marker + drop bogus test call~~ — **done** (`61f8b5f` code; published on rev 6 `0e0e60a` after docs commit superseded rev 5).
-5. **Push 4 (optional)** — re-introduce unused marker; block 1 shows new generation row again.
+5. **Push 4** — unwired marker (`psa-dogfood-push-4`); expect `generation_active_count` ≥ 1 on unused marker; **merge #63 after publish completes**.
+6. **Post-merge** — open `chore/finding-resolution-staging-dogfood`; **one push per agent cycle** (no back-to-back commits while Revy is running).
 
 ## Pass criteria (push 1 — rev 2)
 
@@ -78,6 +79,16 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
 | 1b | `c57a9c0` | 1 | 3 | 3 | Review warnings | rev 3; run `019fadb9-…`; `pr_active_count=3` (doc findings accumulated) |
 | 2 | `d52e790` | 1 | 4 | 4 | Fix before merge | rev 4; run `019fadbe-…`; gen=error on `format_summary_comment` kwarg (Moonshot FP); unused marker **not** flagged |
 | 3 | `0e0e60a` | 3 | 7 | 6 | Fix before merge | rev 6 publish (rev 5 `61f8b5f` `skipped_not_head`); run `019fadc6-…`; G9 `n/a`, resolution `0/0`; `pr_active_count` 4→7 |
+| 4 | *(pending)* | — | — | — | — | unwired marker `psa-dogfood-push-4` — **final push before merge** |
+
+## Pass criteria (push 4 — pending)
+
+| Check | Pass | Evidence |
+|-------|------|----------|
+| Block 1 shows generation finding on probe change | pending | unused `PSA_STAGING_PROBE_MARKER` |
+| `generation_active_count` ≥ 1 | pending | `summary_json` |
+| Two-block shape holds | pending | issue comment |
+| Single revision published (no supersede) | pending | no `skipped_not_head` on prior rev |
 
 ## Pass criteria (push 3 — rev 6)
 
@@ -142,4 +153,6 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
 
 **Operator sign-off (push 1):** PSA two-block + PR-wide verdict + trace fields **PASS** on post-deploy worker.
 
-**Operator sign-off (push 3):** Two-block surface **PASS**; G9 / collapse / block-2 shrink **FAIL** — log for finding-resolution follow-up. PSA core (#62) ship criteria met for formatter shape; resolution lifecycle needs separate dogfood.
+**Operator sign-off (PSA #62 formatter):** Two-block surface + PR-wide verdict + trace fields **PASS** on post-deploy worker (pushes 1–3). G9/collapse deferred to finding-resolution dogfood.
+
+**Merge gate (#63):** merge after push 4 rev publishes; do **not** push again until agent completes (lesson from rev 5 supersede).
