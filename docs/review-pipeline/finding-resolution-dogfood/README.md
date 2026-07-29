@@ -1,6 +1,6 @@
 # Finding resolution — post-PSA dogfood
 
-**Status:** **code shipped (wave A)** — P0 pushed; P1–P2 local on branch; **staging validation pending** (operator P0.4 / P1.4 / P2.4).
+**Status:** **staging validation** — #64 merged (`f0b12d5`); deploy `2026-07-29T17:50:43Z`; push 2a wire in progress ([memo](./FINDING_RESOLUTION_DOGFOOD_STAGING_VALIDATION.md)).
 
 **Thesis:** PSA #62 validated two-block publish shape; PR #63 exposed **resolution lifecycle** failures (G9 prose, stale groups, thread collapse) that need isolated dogfood with **one push per agent cycle**.
 
@@ -9,7 +9,10 @@
 | [FINDING_RESOLUTION_DOGFOOD_FINDINGS.md](./FINDING_RESOLUTION_DOGFOOD_FINDINGS.md) | Baseline — FR-DG* gaps, evidence, target PRs |
 | [FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md](./FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md) | P0–P4 phases, waves A/B |
 | [waves/FINDING_RESOLUTION_DOGFOOD_EXECUTION.md](./waves/FINDING_RESOLUTION_DOGFOOD_EXECUTION.md) | LOOP index P0–P4 |
-| *(P0)* [FINDING_RESOLUTION_DOGFOOD_STAGING_VALIDATION.md](./FINDING_RESOLUTION_DOGFOOD_STAGING_VALIDATION.md) | Operator memo (created in P0.1) |
+| Doc | Purpose |
+|-----|---------|
+| [FINDING_RESOLUTION_DOGFOOD_VALIDATION_FINDINGS.md](./FINDING_RESOLUTION_DOGFOOD_VALIDATION_FINDINGS.md) | Operator locks — FR-DG-VAL* post-merge protocol |
+| *(P0)* [FINDING_RESOLUTION_DOGFOOD_STAGING_VALIDATION.md](./FINDING_RESOLUTION_DOGFOOD_STAGING_VALIDATION.md) | Operator memo (push rows) |
 
 ## Execution (LOOP order)
 

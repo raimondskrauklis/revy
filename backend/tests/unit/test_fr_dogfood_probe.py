@@ -7,5 +7,5 @@ from tests.fixtures.fr_dogfood.probe_module import (
 
 
 def test_fr_dogfood_probe_module_returns_stable_value():
-    assert fr_dogfood_probe_value() == "fr-dogfood-ok"
+    assert fr_dogfood_probe_value() == FR_DOGFOOD_PROBE_MARKER
     assert FR_DOGFOOD_PROBE_MARKER == "fr-dogfood-push-2"

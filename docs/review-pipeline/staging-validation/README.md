@@ -16,7 +16,7 @@
 
 | PR | Program | Branch | Status |
 |----|---------|--------|--------|
-| *(open)* | Finding resolution dogfood | `chore/finding-resolution-staging-dogfood` | P0 pushed — staging validation in progress |
+| *(open)* | Finding resolution dogfood | `chore/finding-resolution-staging-dogfood` | push 2a–3 after #64 deploy |
 | [#63](https://github.com/raimondskrauklis/revy/pull/63) | PSA post-#62 deploy | `chore/psa-staging-dogfood` | **sign-off complete** — merged |
 
 ## Next validation PRs
