@@ -79,3 +79,24 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
 | **Remediation** | Push **2b** doc/probe delta surfaced 3 findings on rev 2; push **2c** fixes → FR-DG1 |
 
 ---
+
+## FR-DG-VAL7 — FR-DG2 partial on rev 4 (probe deletion)
+
+| Item | Locked decision |
+|------|-----------------|
+| **Evidence** | PR #65 rev 4 `66d64e5` — `pr_active` 3→7; probe group `019faf29-9c6e` still `active`; `0` closures on rev 4 |
+| **Mechanism proof** | 2 doc groups `absent_and_addressed` on rev 3 — Pass 2 works when Pass 1 stamps `addressed` |
+| **Root cause** | Pass 1: deleted files excluded from `patches_by_file` → `still_open` — see [post-validation RC-1](./FINDING_RESOLUTION_DOGFOOD_POST_VALIDATION_FINDINGS.md#rc-1--pass-1-ignores-file-deletion-primary-code-gap) |
+| **Follow-up** | **FR-DG2a** Track A code fix + clean repro PR (Track B) — not merge-as-sign-off |
+
+---
+
+## FR-DG-VAL8 — Dogfood metrics interpretation
+
+| Item | Locked decision |
+|------|-----------------|
+| **Rule** | `pr_active_count` shrink is **insufficient alone** when push introduces new Moonshot findings |
+| **Primary metric** | Per-group `state` + `resolution_method` on the target fingerprint cohort |
+| **Protocol** | FR-DG2 repro: no program-doc edits in pushes 1–3; isolated probe file only |
+
+---

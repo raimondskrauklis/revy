@@ -6,6 +6,8 @@
 
 **Goal:** Close FR-DG1 + FR-DG2 on staging with chore dogfood; MR-DG1 on parallel branch.
 
+**Staging outcome (2026-07-29):** FR-DG1 **PASS** rev 3; FR-DG2 **PARTIAL** rev 4 — [post-validation findings](../FINDING_RESOLUTION_DOGFOOD_POST_VALIDATION_FINDINGS.md).
+
 **Branch (wave A):** `chore/finding-resolution-staging-dogfood` from `main`  
 **Branch (wave B):** `chore/moonshot-formatter-signature` from `main` (after P0.0)
 
@@ -43,8 +45,8 @@ each phase: implement → pytest gate → Bugbot → commit → merge to main �
 | P0 — Repro + observability | Probe, memo stub, metrics, SSOT | [P0](./FINDING_RESOLUTION_DOGFOOD_P0_EXECUTION.md) | A | done `4830ff7` |
 | P1 — FR-DG1 | Manifest + G9 wiring | [P1](./FINDING_RESOLUTION_DOGFOOD_P1_EXECUTION.md) | A | done `3790656` |
 | P2 — FR-DG2 | Stale retirement + collapse | [P2](./FINDING_RESOLUTION_DOGFOOD_P2_EXECUTION.md) | A | done `b521d23` |
-| P3 — Staging sign-off | Evidence + doc sync | [P3](./FINDING_RESOLUTION_DOGFOOD_P3_EXECUTION.md) | A | in progress |
-| **P1.5** — Post-merge dogfood | Push 2a/2b/3 after #64 | [P1.5](./FINDING_RESOLUTION_DOGFOOD_P1.5_EXECUTION.md) | A | in progress |
+| P3 — Staging sign-off | Evidence + doc sync | [P3](./FINDING_RESOLUTION_DOGFOOD_P3_EXECUTION.md) | A | done — post-validation |
+| **P1.5** — Post-merge dogfood | Push 2a–3 after #64 | [P1.5](./FINDING_RESOLUTION_DOGFOOD_P1.5_EXECUTION.md) | A | done [#65](https://github.com/raimondskrauklis/revy/pull/65) |
 | P4 — MR-DG1 | Moonshot signature | [P4](./FINDING_RESOLUTION_DOGFOOD_P4_EXECUTION.md) | B | pending |
 
 **Peer review:** applied 2026-07-29 — ready for `phase-execution`.

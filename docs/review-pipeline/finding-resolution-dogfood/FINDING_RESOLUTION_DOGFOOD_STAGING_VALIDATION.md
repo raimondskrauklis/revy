@@ -88,4 +88,4 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
 | **FR-DG1** | **PASS** — manifest + G9 + `summary_json.resolution` on rev 3 |
 | **FR-DG2** | **PARTIAL** — `absent_and_addressed` proven on rev 3 doc cohort; probe removal on rev 4 did not shrink block 2 or close stale probe group |
 
-**Follow-up:** FR-DG2 probe-removal path needs a cleaner repro (single addressed-then-remove sequence without meta doc findings) or merge #65 and open a focused closure PR.
+**Follow-up:** FR-DG2 probe-removal path — [post-validation findings](./FINDING_RESOLUTION_DOGFOOD_POST_VALIDATION_FINDINGS.md) Track A (code) + Track B (repro). Merge #65 for FR-DG1; **not** FR-DG2 sign-off.

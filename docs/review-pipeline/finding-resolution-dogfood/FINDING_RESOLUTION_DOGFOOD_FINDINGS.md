@@ -22,8 +22,9 @@
 
 | ID | Gap | Severity | Target PR | Status |
 |----|-----|----------|-----------|--------|
-| **FR-DG1** | G9 / resolution manifest `0/0 prior active` | high | `chore/finding-resolution-staging-dogfood` | code ready — staging push 2 pending |
-| **FR-DG2** | Stale finding group survives code removal (block 2 + inline orphan) | high | `chore/finding-resolution-staging-dogfood` | code ready — staging push 3 pending |
+| **FR-DG1** | G9 / resolution manifest `0/0 prior active` | high | `chore/finding-resolution-staging-dogfood` | **closed PASS** — rev 3 `9d32ea2` ([#65](https://github.com/raimondskrauklis/revy/pull/65)) |
+| **FR-DG2** | Stale finding group survives code removal (block 2 + inline orphan) | high | follow-up after Track A | **partial** — doc cohort closed rev 3; probe deletion failed rev 4 — [post-validation](./FINDING_RESOLUTION_DOGFOOD_POST_VALIDATION_FINDINGS.md) |
+| **FR-DG2a** | Pass 1 does not stamp `addressed` when `file_path` deleted in compare | high | `fix/fr-dg2-file-deletion-pass1` (proposed) | **open** — RC-1 in post-validation findings |
 | **MR-DG1** | Moonshot hallucinates `format_summary_comment` signature | medium | `chore/moonshot-formatter-signature` | open |
 
 ### Out of scope (this program)
@@ -120,6 +121,8 @@ Inline thread on `test_psa_staging_validation_behavior.py` had `line: null` (orp
 | Group state | `resolved` + `resolution_method=absent_and_addressed` OR superseded |
 
 **Dogfood push:** push 3 on chore PR — **remove probe code**; after P2 merge + deploy (not same push as FR-DG1).
+
+**Staging result (2026-07-29):** **PARTIAL** on [#65](https://github.com/raimondskrauklis/revy/pull/65) rev 4 — doc cohort `absent_and_addressed` on rev 3; probe file deletion did not close group. Root cause: Pass 1 never stamps `addressed` for deleted files — see [post-validation findings](./FINDING_RESOLUTION_DOGFOOD_POST_VALIDATION_FINDINGS.md) RC-1 / Track A.
 
 ---
 
