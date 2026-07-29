@@ -350,10 +350,76 @@ def test_build_pr_review_comment_fallback_greptile_shape():
     ]
     markdown = build_pr_review_comment_fallback(_ctx(groups))
     assert "## Revy code review" in markdown
+    narrative_pos = markdown.index("active finding")
+    confidence_pos = markdown.index("**Confidence score:**")
+    assert narrative_pos < confidence_pos
     assert "Confidence score" in markdown
+    assert "Score is" in markdown
     assert "### Files needing attention" in markdown
     assert "### Findings" in markdown
     assert "| Severity | Category | Title | File |" in markdown
+    assert "<summary>Important files changed</summary>" in markdown
+    assert "<summary>Review metadata</summary>" in markdown
+
+
+def test_build_pr_review_comment_fallback_includes_security_details():
+    groups = [
+        _group(
+            severity=FindingSeverity.error,
+            category=FindingCategory.security,
+            title="Leaked secret",
+            file_path="app/auth.py",
+            fingerprint="sec",
+        ),
+    ]
+    markdown = build_pr_review_comment_fallback(_ctx(groups))
+    assert "<summary>Security review</summary>" in markdown
+    assert "Leaked secret" in markdown
+    assert "`app/auth.py`" in markdown
+
+
+def test_build_pr_review_comment_fallback_includes_important_files_table():
+    groups = [
+        _group(file_path="app/a.py", title="Null deref", fingerprint="a"),
+        _group(file_path="app/b.py", title="Race", fingerprint="b"),
+    ]
+    markdown = build_pr_review_comment_fallback(_ctx(groups))
+    assert "<summary>Important files changed</summary>" in markdown
+    assert "| File | Note |" in markdown
+    assert "Null deref" in markdown
+
+
+@pytest.mark.asyncio
+async def test_build_pr_review_comment_moonshot_success_includes_greptile_sections():
+    from app.services.github_publish_formatter import build_pr_review_comment
+
+    groups = [_group(severity=FindingSeverity.warning)]
+    ctx = _ctx(groups)
+    moonshot_markdown = (
+        "## Revy code review\n\n"
+        "This revision introduces a warning in core logic that should be reviewed before merge.\n\n"
+        "**Confidence score:** 4/5\n\n"
+        "Score is moderated by warning-level findings.\n\n"
+        "<details>\n<summary>Review metadata</summary>\n\n"
+        "- head_sha: `abc123`\n\n</details>"
+    )
+
+    with patch("app.services.github_publish_formatter.settings") as mock_settings:
+        mock_settings.reviewer_llm_enabled.return_value = True
+        mock_settings.revy_revision_timeout_standard_seconds = 60
+        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.app_public_url = "https://app.revy.dev"
+        with patch(
+            "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
+            AsyncMock(return_value=moonshot_markdown),
+        ):
+            result = await build_pr_review_comment(ctx)
+
+    assert result == moonshot_markdown
+    assert "Confidence score" in result
+    assert "moderated" in result
+    assert "<details>" in result
+    assert "Review metadata" in result
 
 
 @pytest.mark.asyncio

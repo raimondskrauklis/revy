@@ -33,9 +33,18 @@ ISSUE_COMMENT_FORMAT_SYSTEM_PROMPT = (
     "You format GitHub pull request review issue comments. "
     "Return ONLY raw GitHub-flavored markdown — no JSON wrapper, no code fences, "
     "no {\"body\": ...} or {\"review_comment\": ...} envelope. "
-    "Sections: short narrative, confidence score, files needing attention (bullets), "
-    "findings severity table (Severity | Category | Title | File — no message column), "
-    "and a metadata footer. Do not use mermaid. Keep under 12000 characters."
+    "Use this section order: "
+    "(1) ## Revy code review header; "
+    "(2) narrative paragraph (2-4 sentences: risk theme, merge-readiness); "
+    "(3) **Confidence score:** N/5 plus one-sentence rationale (why not higher/lower); "
+    "(4) **Since last push:** resolution prose when provided; "
+    "(5) ### Files needing attention bullet list; "
+    "(6) ### Findings table (Severity | Category | Title | File — no message column); "
+    "(7) <details><summary>Security review</summary> when security findings exist; "
+    "(8) <details><summary>Important files changed</summary> table (File | Note); "
+    "(9) <details><summary>Review metadata</summary> with head_sha and revision. "
+    "Use the provided confidence value and rationale hints. Do not use mermaid. "
+    "Keep under 12000 characters."
 )
 
 _K2_THINKING_MODEL_PREFIXES = (

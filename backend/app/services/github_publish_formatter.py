@@ -10,6 +10,7 @@ from uuid import UUID
 import httpx
 
 from app.constants.enums import (
+    FindingCategory,
     FindingSeverity,
     GitHubFindingGroupState,
     GitHubIndexMode,
@@ -26,6 +27,7 @@ from app.models.github_finding_group import GitHubFindingGroupORM
 logger = get_logger(__name__)
 
 FILES_NEEDING_ATTENTION_CAP = 20
+IMPORTANT_FILES_ROW_CAP = 8
 SUMMARY_ROW_CAP = 50
 
 _JSON_FENCE_RE = re.compile(r"^```(?:json)?\s*\n?(.*?)\n?```\s*$", re.DOTALL | re.IGNORECASE)
@@ -309,6 +311,126 @@ def _resolution_metrics_block(ctx: PublishFormatContext) -> str | None:
     return format_resolution_metrics_block(ctx.resolution_metrics_manifest)
 
 
+def _confidence_rationale(groups: list[GitHubFindingGroupORM]) -> str:
+    active = _active_groups(groups)
+    confidence = compute_confidence(groups)
+    if not active:
+        return "Score is 5 because there are no active findings on this revision."
+    if confidence <= 2:
+        return "Score is low due to critical or error-severity findings that need attention before merge."
+    if confidence == 3:
+        return "Score is moderated by active findings that still need review before merge."
+    if confidence == 4:
+        return (
+            "Score is good but not perfect: some active findings remain, "
+            "though prior fixes or dismissals improved confidence."
+        )
+    return "Score is high with only informational findings or strong resolution progress on this revision."
+
+
+def _review_narrative_paragraph(ctx: PublishFormatContext) -> str:
+    active = _active_groups(ctx.groups)
+    if not active:
+        return (
+            "This revision completed without active findings that need follow-up. "
+            "No merge blockers were identified from the automated review on this push."
+        )
+
+    severity_counts: dict[str, int] = {}
+    category_counts: dict[str, int] = {}
+    for group in active:
+        severity = stored_enum_value(group.severity)
+        category = stored_enum_value(group.category)
+        severity_counts[severity] = severity_counts.get(severity, 0) + 1
+        category_counts[category] = category_counts.get(category, 0) + 1
+
+    dominant_category = max(category_counts, key=category_counts.get)
+    severity_mix = ", ".join(f"{count} {name}" for name, count in sorted(severity_counts.items()))
+    sentences = [
+        (
+            f"This revision has **{len(active)}** active finding"
+            f"{'s' if len(active) != 1 else ''} on PR #{ctx.pull_request_number} "
+            f"(revision {ctx.revision_number})."
+        ),
+        f"Severity mix: {severity_mix}.",
+        f"The dominant theme is **{dominant_category}**-related feedback.",
+    ]
+    if any(g.severity in (FindingSeverity.critical, FindingSeverity.error) for g in active):
+        sentences.append("Address critical or error findings before merge.")
+    elif severity_counts.get(FindingSeverity.warning.value, 0):
+        sentences.append("Review warnings before merge; no critical blockers were flagged.")
+    else:
+        sentences.append("Findings are informational; merge risk appears low pending your judgment.")
+    return " ".join(sentences)
+
+
+def _security_details_lines(groups: list[GitHubFindingGroupORM]) -> list[str] | None:
+    security_findings = [
+        group for group in _active_groups(groups) if group.category == FindingCategory.security
+    ]
+    if not security_findings:
+        return None
+
+    lines = [
+        "<details>",
+        "<summary>Security review</summary>",
+        "",
+    ]
+    for group in security_findings:
+        file_suffix = f" (`{group.file_path}`)" if group.file_path else ""
+        lines.append(f"- {_escape_markdown_table_cell(group.title)}{file_suffix}")
+    lines.extend(["", "</details>"])
+    return lines
+
+
+def _important_files_details_lines(groups: list[GitHubFindingGroupORM]) -> list[str] | None:
+    active = _active_groups(groups)
+    if not active:
+        return None
+
+    rows: list[tuple[str, str]] = []
+    seen_paths: set[str] = set()
+    for group in active:
+        path = group.file_path or "—"
+        if path in seen_paths:
+            continue
+        seen_paths.add(path)
+        rows.append((path, group.title))
+        if len(rows) >= IMPORTANT_FILES_ROW_CAP:
+            break
+
+    if not rows:
+        return None
+
+    lines = [
+        "<details>",
+        "<summary>Important files changed</summary>",
+        "",
+        "| File | Note |",
+        "| --- | --- |",
+    ]
+    for path, note in rows:
+        file_cell = _escape_markdown_table_cell(path) if path != "—" else "—"
+        path_display = f"`{file_cell}`" if path != "—" else "—"
+        lines.append(f"| {path_display} | {_escape_markdown_table_cell(note)} |")
+    lines.extend(["", "</details>"])
+    return lines
+
+
+def _review_metadata_lines(ctx: PublishFormatContext) -> list[str]:
+    return [
+        "<details>",
+        "<summary>Review metadata</summary>",
+        "",
+        f"- head_sha: `{ctx.head_sha}`",
+        f"- revision: {ctx.revision_number}",
+        "- trigger: autostart / `@revy review`",
+        f"- [Open in Revy]({_revy_ui_link(ctx.pull_request_id)})",
+        "",
+        "</details>",
+    ]
+
+
 def build_pr_review_comment_fallback(
     ctx: PublishFormatContext,
     *,
@@ -322,17 +444,12 @@ def build_pr_review_comment_fallback(
     lines = [
         "## Revy code review",
         "",
+        _review_narrative_paragraph(ctx),
+        "",
         f"**Confidence score:** {confidence}/5",
         "",
+        _confidence_rationale(ctx.groups),
     ]
-
-    if not active:
-        lines.append("No files require special attention on this revision.")
-    else:
-        lines.append(
-            f"Found **{len(active)}** active finding{'s' if len(active) != 1 else ''} "
-            f"on revision {ctx.revision_number}."
-        )
 
     if resolution_prose:
         lines.extend(["", f"**Since last push:** {resolution_prose}"])
@@ -347,6 +464,8 @@ def build_pr_review_comment_fallback(
     if attention:
         lines.extend(["", "### Files needing attention", ""])
         lines.extend(f"- `{path}`" for path in attention)
+    elif not active:
+        lines.extend(["", "No files require special attention on this revision."])
 
     if active:
         lines.extend(["", "### Findings", ""])
@@ -355,20 +474,15 @@ def build_pr_review_comment_fallback(
             lines.append("")
             lines.append(f"_Showing {SUMMARY_ROW_CAP} of {len(active)} findings._")
 
-    lines.extend(
-        [
-            "",
-            "<details>",
-            "<summary>Review metadata</summary>",
-            "",
-            f"- head_sha: `{ctx.head_sha}`",
-            f"- revision: {ctx.revision_number}",
-            "- trigger: autostart / `@revy review`",
-            f"- [Open in Revy]({_revy_ui_link(ctx.pull_request_id)})",
-            "",
-            "</details>",
-        ]
-    )
+    security_lines = _security_details_lines(ctx.groups)
+    if security_lines:
+        lines.extend(["", *security_lines])
+
+    important_files_lines = _important_files_details_lines(ctx.groups)
+    if important_files_lines:
+        lines.extend(["", *important_files_lines])
+
+    lines.extend(["", *_review_metadata_lines(ctx)])
 
     footer = _index_footer(ctx)
     if footer:
@@ -384,21 +498,41 @@ def _append_resolution_metrics_block(text: str, ctx: PublishFormatContext) -> st
     return text
 
 
+def _build_issue_comment_user_prompt(ctx: PublishFormatContext) -> str:
+    active = _active_groups(ctx.groups)
+    confidence = compute_confidence(ctx.groups)
+    findings_payload = [
+        {
+            "severity": stored_enum_value(group.severity),
+            "category": stored_enum_value(group.category),
+            "title": group.title,
+            "file": group.file_path,
+        }
+        for group in active[:SUMMARY_ROW_CAP]
+    ]
+    has_security = any(group.category == FindingCategory.security for group in active)
+    return (
+        "Format the issue comment from this structured review context.\n\n"
+        f"PR #{ctx.pull_request_number} revision {ctx.revision_number} head_sha={ctx.head_sha}\n"
+        f"Confidence (use this exact value): {confidence}/5\n"
+        f"Confidence rationale (include as one sentence after the score): "
+        f"{_confidence_rationale(ctx.groups)}\n"
+        f"Narrative hints (write 2-4 sentences in your own words): "
+        f"{_review_narrative_paragraph(ctx)}\n"
+        f"Resolution delta: {build_g9_resolution_prose(ctx.groups) or 'n/a'}\n"
+        f"Include security <details> block: {'yes' if has_security else 'no'}\n"
+        f"Include important files changed <details> table when findings exist.\n"
+        f"Active findings JSON: {findings_payload}"
+    )
+
+
 async def build_pr_review_comment(ctx: PublishFormatContext) -> str:
     """Full issue comment via Moonshot when configured; table fallback on failure (G5)."""
     fallback = build_pr_review_comment_fallback(ctx)
     if not settings.reviewer_llm_enabled():
         return fallback
 
-    active = _active_groups(ctx.groups)
-    prompt = (
-        "Format the issue comment from this structured review context.\n\n"
-        f"PR #{ctx.pull_request_number} revision {ctx.revision_number} head_sha={ctx.head_sha}\n"
-        f"Confidence (use this value): {compute_confidence(ctx.groups)}/5\n"
-        f"Resolution delta: {build_g9_resolution_prose(ctx.groups) or 'n/a'}\n"
-        f"Active findings JSON: "
-        f"{[{'severity': stored_enum_value(g.severity), 'category': stored_enum_value(g.category), 'title': g.title, 'file': g.file_path} for g in active[:SUMMARY_ROW_CAP]]}"
-    )
+    prompt = _build_issue_comment_user_prompt(ctx)
 
     try:
         async with httpx.AsyncClient(

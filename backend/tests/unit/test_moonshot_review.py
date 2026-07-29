@@ -8,6 +8,7 @@ import pytest
 
 from app.core.exceptions import ServiceUnavailableError
 from app.integrations.moonshot_review import (
+    ISSUE_COMMENT_FORMAT_SYSTEM_PROMPT,
     _chat_completion_body,
     _extract_message_content,
     complete_issue_comment_markdown,
@@ -134,6 +135,42 @@ def test_extract_message_content_length_finish_reason():
         )
     assert exc.value.error_code == "llm_error"
     assert "truncated" in exc.value.message
+
+
+def test_issue_comment_format_system_prompt_lists_required_sections():
+    prompt = ISSUE_COMMENT_FORMAT_SYSTEM_PROMPT.lower()
+    assert "short narrative" not in prompt
+    assert "rationale" in prompt
+    assert "security review" in prompt
+    assert "important files changed" in prompt
+
+
+@pytest.mark.asyncio
+async def test_complete_issue_comment_markdown_uses_issue_comment_system_prompt():
+    payload = {
+        "choices": [{"message": {"content": "## Revy code review\n\n**Confidence score:** 4/5"}}],
+    }
+    response = MagicMock()
+    response.status_code = 200
+    response.raise_for_status = MagicMock()
+    response.json.return_value = payload
+    client = AsyncMock(spec=httpx.AsyncClient)
+    client.post = AsyncMock(return_value=response)
+
+    with patch("app.integrations.moonshot_review.settings") as mock_settings:
+        mock_settings.moonshot_api_key = "test-key"
+        mock_settings.revy_moonshot_model_for_profile.return_value = "kimi-k2.7-code"
+        mock_settings.revy_revision_timeout_seconds.return_value = 60.0
+        await complete_issue_comment_markdown(
+            client,
+            profile="standard",
+            user_prompt="format this",
+        )
+
+    body = client.post.call_args.kwargs["json"]
+    messages = body["messages"]
+    assert messages[0]["role"] == "system"
+    assert messages[0]["content"] == ISSUE_COMMENT_FORMAT_SYSTEM_PROMPT
 
 
 @pytest.mark.asyncio
