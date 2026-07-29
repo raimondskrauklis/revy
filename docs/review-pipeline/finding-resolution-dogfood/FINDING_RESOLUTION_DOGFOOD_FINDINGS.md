@@ -162,15 +162,15 @@ Moonshot reviewer prompt does not include formatter API surface; model inferred 
 ## Dogfood plan (next PR)
 
 **Branch:** `chore/finding-resolution-staging-dogfood`  
-**Open after:** PR #63 merges to `main` + deploy boundary recorded.
+**Open after:** PR #63 merged + [P0](./waves/FINDING_RESOLUTION_DOGFOOD_P0_EXECUTION.md) ships.
 
 | Push | Intent |
 |------|--------|
-| 1 | Introduce minimal backend probe with one fixable finding (single file, obvious issue) |
-| 2 | Fix probe — **wait for agent** — validate FR-DG1 + FR-DG2 |
-| 3 | (optional) Re-introduce issue — block 1 regrowth |
+| 1 | P0.4 — introduce probe (wait for agent) |
+| 2 | P1.4 — fix probe (wait for agent) — validate FR-DG1 |
+| 3 | P2.4 / P3.4 — optional regrowth |
 
-**Do not** combine probe + doc commits in one agent cycle.
+See [FINDING_RESOLUTION_DOGFOOD_EXECUTION.md](./waves/FINDING_RESOLUTION_DOGFOOD_EXECUTION.md) for full LOOP.
 
 ---
 
