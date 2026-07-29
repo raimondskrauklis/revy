@@ -120,6 +120,6 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
 | **Cause** | Pass 1 stamps only `last_seen_revision_id ∈ pairing_revision_ids` (last published prior + gap); rev-1 cohort excluded on rev 3 |
 | **Mechanism** | #66 file-deletion stamp **works** for in-window cohort |
 | **Operator rule** | Delete file on **next publish** after finding introduced, or accept orphan until product fix |
-| **Follow-up** | **[Wave C](../finding-resolution/FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md)** — Pass 1b + **Pass 2 widen** + HEAD path-gone (CS-Q7); not Pass 1 alone |
+| **Follow-up** | **[Wave C](../finding-resolution/FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md)** (findings rev 3) — Track A HEAD hygiene: path absent at `head_sha` + Pass 2 widen; not Pass 1 alone |
 
 ---
