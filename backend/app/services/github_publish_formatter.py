@@ -483,7 +483,7 @@ def _security_details_lines(groups: list[GitHubFindingGroupORM]) -> list[str] | 
     ]
     for group in security_findings[:SECURITY_DETAILS_ROW_CAP]:
         file_suffix = f" (`{group.file_path}`)" if group.file_path else ""
-        lines.append(f"- {_escape_markdown_table_cell(group.title)}{file_suffix}")
+        lines.append(f"- {_escape_markdown_inline(group.title)}{file_suffix}")
     if len(security_findings) > SECURITY_DETAILS_ROW_CAP:
         lines.append(
             f"- _{len(security_findings) - SECURITY_DETAILS_ROW_CAP} more security finding(s) "
@@ -522,7 +522,7 @@ def _important_files_details_lines(groups: list[GitHubFindingGroupORM]) -> list[
     for path, note in rows:
         file_cell = _escape_markdown_table_cell(path) if path != "—" else "—"
         path_display = f"`{file_cell}`" if path != "—" else "—"
-        lines.append(f"| {path_display} | {_escape_markdown_table_cell(note)} |")
+        lines.append(f"| {path_display} | {_escape_markdown_inline(note)} |")
     lines.extend(["", "</details>"])
     return lines
 
@@ -614,6 +614,30 @@ def build_pr_review_comment_fallback(
     return "\n".join(lines)
 
 
+def _confidence_rationale_snippet(normalized: str) -> str:
+    """Slice after the confidence heading — stops at the next section."""
+    lower = normalized.lower()
+    conf_idx = lower.find("confidence")
+    if conf_idx < 0:
+        return lower
+    tail = lower[conf_idx:]
+    for end_marker in ("\n### ", "\n<details>", "\n---"):
+        end_idx = tail.find(end_marker)
+        if end_idx > 0:
+            return tail[:end_idx]
+    return tail[:400]
+
+
+def _has_confidence_rationale_in_comment(normalized: str) -> bool:
+    snippet = _confidence_rationale_snippet(normalized)
+    return (
+        "score is" in snippet
+        or "confidence is" in snippet
+        or ("because" in snippet and "/" in snippet)
+        or "rationale" in snippet
+    )
+
+
 def _issue_comment_meets_product_bar(text: str, ctx: PublishFormatContext) -> bool:
     """Reject thin Moonshot markdown — deterministic fallback is the product minimum."""
     normalized = text.strip()
@@ -626,23 +650,31 @@ def _issue_comment_meets_product_bar(text: str, ctx: PublishFormatContext) -> bo
         return True
     has_findings_section = "### Findings" in normalized or "| Severity | Category | Title | File |" in normalized
     has_merge_signal = "**Merge recommendation:**" in normalized
-    has_rationale = (
-        "score is" in normalized.lower()
-        or "confidence is" in normalized.lower()
-        or (
-            "confidence" in normalized.lower()
-            and "because" in normalized.lower()
-        )
-        or "rationale" in normalized.lower()
-    )
+    has_rationale = _has_confidence_rationale_in_comment(normalized)
     return has_findings_section and has_merge_signal and has_rationale
 
 
-def _append_resolution_metrics_block(text: str, ctx: PublishFormatContext) -> str:
+def _insert_resolution_metrics_block(text: str, ctx: PublishFormatContext) -> str:
+    """Insert metrics after resolution prose — before files/findings/details (fallback parity)."""
     block = _resolution_metrics_block(ctx)
-    if block and block not in text:
-        return f"{text}\n\n{block}"
-    return text
+    if not block or block in text:
+        return text
+    for marker in (
+        "### Files needing attention",
+        "### Findings",
+        "<details>",
+        "---\n*Review metadata",
+    ):
+        idx = text.find(marker)
+        if idx >= 0:
+            prefix = text[:idx].rstrip()
+            suffix = text[idx:]
+            return f"{prefix}\n\n{block}\n\n{suffix}"
+    return f"{text}\n\n{block}"
+
+
+def _append_resolution_metrics_block(text: str, ctx: PublishFormatContext) -> str:
+    return _insert_resolution_metrics_block(text, ctx)
 
 
 def _build_issue_comment_user_prompt(ctx: PublishFormatContext) -> str:
@@ -661,7 +693,8 @@ def _build_issue_comment_user_prompt(ctx: PublishFormatContext) -> str:
     return (
         "Format the issue comment from this structured review context.\n\n"
         f"PR #{ctx.pull_request_number} revision {ctx.revision_number} head_sha={ctx.head_sha}\n"
-        f"Confidence (use this exact value): {confidence}/5\n"
+        f"Confidence score (use this exact value): {confidence}/5\n"
+        f"Label the section **Confidence score:** {confidence}/5 in the comment.\n"
         f"Confidence rationale (include as one sentence after the score): "
         f"{_confidence_rationale(ctx.groups)}\n"
         f"Narrative hints (write 2-4 sentences in your own words): "

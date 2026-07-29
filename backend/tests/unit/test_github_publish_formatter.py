@@ -432,6 +432,68 @@ def test_build_pr_review_comment_fallback_narrative_escapes_title_markdown():
     assert "**Use \\`foo\\_\\*\\` safely**" in markdown
 
 
+def test_insert_resolution_metrics_block_before_findings_section():
+    from app.services.github_publish_formatter import _insert_resolution_metrics_block
+
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=42,
+        head_sha="abc123",
+        revision_number=2,
+        groups=[_group()],
+        resolution_metrics_manifest={
+            "resolution_rate_pct": 50.0,
+            "transition_count": 1,
+            "denominator_active_prior": 2,
+            "transitions_addressed": 1,
+            "transitions_dismissed": {},
+            "compare_failed_count": 0,
+            "still_open_count": 1,
+        },
+    )
+    moonshot = (
+        "## Revy code review\n\n"
+        "Narrative.\n\n"
+        "**Merge recommendation:** Review.\n\n"
+        "**Confidence score:** 4/5\n\n"
+        "The score is 4 because warnings remain.\n\n"
+        "### Findings\n\n"
+        "| Severity | Category | Title | File |\n"
+    )
+    result = _insert_resolution_metrics_block(moonshot, ctx)
+    metrics_idx = result.find("### Resolution metrics")
+    findings_idx = result.find("### Findings")
+    assert metrics_idx >= 0
+    assert findings_idx > metrics_idx
+
+
+def test_has_confidence_rationale_ignores_score_is_in_finding_title():
+    from app.services.github_publish_formatter import _has_confidence_rationale_in_comment
+
+    markdown = (
+        "## Revy code review\n\n"
+        "**Merge recommendation:** Review.\n\n"
+        "**Confidence score:** 4/5\n\n"
+        "Moderated by remaining findings.\n\n"
+        "### Findings\n\n"
+        "| warning | bug | The score is wrong | app/main.py |\n"
+    )
+    assert _has_confidence_rationale_in_comment(markdown) is False
+
+
+def test_build_pr_review_comment_fallback_security_details_escapes_inline_markdown():
+    groups = [
+        _group(
+            severity=FindingSeverity.error,
+            category=FindingCategory.security,
+            title="Use `foo_*` token",
+            fingerprint="s1",
+        ),
+    ]
+    markdown = build_pr_review_comment_fallback(_ctx(groups))
+    assert "Use \\`foo\\_\\*\\` token" in markdown
+
+
 def test_build_pr_review_comment_fallback_security_details_row_cap():
     groups = [
         _group(
