@@ -92,10 +92,20 @@ async def _latest_finding_lines(
     return finding.start_line, finding.end_line
 
 
+def file_path_removed_in_compare(
+    file_path: str,
+    *,
+    removed_paths: frozenset[str],
+) -> bool:
+    """True when GitHub compare removed the group's file between prior and current head."""
+    return file_path in removed_paths
+
+
 def resolve_group_resolution_status(
     *,
     group: GitHubFindingGroupORM,
     patches_by_file: dict[str, str],
+    removed_paths: frozenset[str],
     start_line: int | None,
     end_line: int | None,
 ) -> ResolutionStatus:
@@ -105,6 +115,9 @@ def resolve_group_resolution_status(
     file_path = group.file_path
     if not file_path:
         return ResolutionStatus.still_open
+
+    if file_path_removed_in_compare(file_path, removed_paths=removed_paths):
+        return ResolutionStatus.addressed
 
     patch = patches_by_file.get(file_path)
     if patch is None:
@@ -236,6 +249,7 @@ async def apply_resolution_status_for_synchronize(
         group.resolution_status = resolve_group_resolution_status(
             group=group,
             patches_by_file=compare_result.patches_by_file,
+            removed_paths=compare_result.removed_paths,
             start_line=start_line,
             end_line=end_line,
         )
