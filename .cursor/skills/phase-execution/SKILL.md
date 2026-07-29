@@ -67,16 +67,16 @@ Changed `.md` files appear in the PR diff, but bots and Moonshot do **not** trea
 
 1. Edit `.revy/review-context.json`:
    - `active_program` = this program's `id`
-   - `programs[]` entry: `id`, `scope` (e.g. `backend/**`), `paths[]` with **exactly three** docs — execution index, findings, general plan
+   - **`programs[]` = exactly one entry** — the active program only (`id`, `scope`, three doc `paths`). **Remove** prior/shipped program entries; do not accumulate.
 2. Regenerate Greptile manifest:
    ```bash
    cd backend && python -m scripts.generate_greptile_files_from_review_context --write
    ```
-3. Update `.cursor/BUGBOT.md` — active program at top; links to the same three docs.
+3. Update `.cursor/BUGBOT.md` — **replace** program doc links with the active program's three docs only (remove shipped-program sections).
 4. **Verify before phase gate** (non-negotiable):
    ```bash
    cd backend && python -m scripts.generate_greptile_files_from_review_context --check
-   pipenv run pytest tests/unit/test_generate_greptile_files.py -q
+   pipenv run pytest tests/unit/test_generate_greptile_files.py tests/unit/test_engineering_context_manifest.py -q
    ```
 5. Commit **SSOT + generated `files.json` + `BUGBOT.md` together** in the first phase commit.
 
@@ -90,9 +90,9 @@ Changed `.md` files appear in the PR diff, but bots and Moonshot do **not** trea
 
 **First-iteration checklist:**
 
-- [ ] `.revy/review-context.json` — `active_program` switched; program entry present with correct `scope`
+- [ ] `.revy/review-context.json` — `active_program` switched; **`programs[]` has one entry only** (prior programs removed)
 - [ ] `.greptile/files.json` — regenerated from SSOT (`--check` passes)
-- [ ] `.cursor/BUGBOT.md` — active program + links to execution + findings + general plan
+- [ ] `.cursor/BUGBOT.md` — **only** active program + three doc links (shipped programs removed)
 - [ ] `test_generate_greptile_files.py` green
 - [ ] All three ship in **first phase commit** — do not defer to final doc-sync phase
 

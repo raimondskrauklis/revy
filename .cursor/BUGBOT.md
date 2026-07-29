@@ -4,61 +4,12 @@
 
 When reviewing **backend** changes that touch publish / formatter / pipeline / generation lifecycle / judge code, treat these as authoritative:
 
-**Finding resolution dogfood (active program):**
-
 - [FINDING_RESOLUTION_DOGFOOD_EXECUTION.md](../docs/review-pipeline/finding-resolution-dogfood/waves/FINDING_RESOLUTION_DOGFOOD_EXECUTION.md) — LOOP P0–P3, deploy cadence, FR-DG* locks
 - [FINDING_RESOLUTION_DOGFOOD_FINDINGS.md](../docs/review-pipeline/finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_FINDINGS.md) — FR-DG1/2, MR-DG1 gaps from PSA #63
 - [FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md](../docs/review-pipeline/finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md) — phase goals
-
-**Publish summary alignment (shipped #62):**
-
-- [PUBLISH_SUMMARY_ALIGNMENT_EXECUTION.md](../docs/review-pipeline/publish-summary-alignment/waves/PUBLISH_SUMMARY_ALIGNMENT_EXECUTION.md) — LOOP P0–P2, PSA-D* locks
-- [PUBLISH_SUMMARY_ALIGNMENT_FINDINGS.md](../docs/review-pipeline/publish-summary-alignment/PUBLISH_SUMMARY_ALIGNMENT_FINDINGS.md) — RG-14 / FR-Q16 gaps, verdict scope
-- [PUBLISH_SUMMARY_ALIGNMENT_GENERAL_PLAN.md](../docs/review-pipeline/publish-summary-alignment/PUBLISH_SUMMARY_ALIGNMENT_GENERAL_PLAN.md) — phase goals
-
-**Review engineering context (shipped #61):**
-
-- [REVIEW_ENGINEERING_CONTEXT_EXECUTION.md](../docs/review-pipeline/review-engineering-context/waves/REVIEW_ENGINEERING_CONTEXT_EXECUTION.md) — LOOP P0–P5, RCX-D* locks
-- [REVIEW_ENGINEERING_CONTEXT_FINDINGS.md](../docs/review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_FINDINGS.md) — RCX gaps, validation metrics
-- [REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md](../docs/review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md) — phase goals
-
-**Judge input quality (shipped):**
-
-- [JUDGE_INPUT_QUALITY_EXECUTION.md](../docs/review-pipeline/judge/waves/JUDGE_INPUT_QUALITY_EXECUTION.md) — P0–P5 scope, gates, J-8 patch reload
-- [JUDGE_INPUT_INVESTIGATION_FINDINGS.md](../docs/review-pipeline/judge/JUDGE_INPUT_INVESTIGATION_FINDINGS.md) — J-* gaps, find→verify thesis
-- [JUDGE_INPUT_QUALITY_GENERAL_PLAN.md](../docs/review-pipeline/judge/JUDGE_INPUT_QUALITY_GENERAL_PLAN.md) — phase goals
-
-**Review generation lifecycle (shipped on `main`):**
-
-- [REVIEW_GENERATION_LIFECYCLE_EXECUTION.md](../docs/review-pipeline/review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_EXECUTION.md) — P0–P5 scope, gates, dogfood rubric
-- [REVIEW_GENERATION_LIFECYCLE_FINDINGS.md](../docs/review-pipeline/review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_FINDINGS.md) — RG-* gaps, snapshot semantics
-- [REVIEW_GENERATION_LIFECYCLE_GENERAL_PLAN.md](../docs/review-pipeline/review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_GENERAL_PLAN.md) — phase goals
-
-**GitHub surface hardening (shipped on `main`):**
-
-- [GITHUB_SURFACE_HARDENING_EXECUTION.md](../docs/review-pipeline/github-surface-hardening/GITHUB_SURFACE_HARDENING_EXECUTION.md) — P0–P4 scope, gates, dogfood rubric
-- [GITHUB_SURFACE_HARDENING_FINDINGS.md](../docs/review-pipeline/github-surface-hardening/GITHUB_SURFACE_HARDENING_FINDINGS.md) — GH-* gaps, Option A resolve
-- [GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md](../docs/review-pipeline/github-surface-hardening/GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md) — phase goals
-
-**Review-quality engine (shipped on `main`):**
-
-- [REVIEW_QUALITY_EXECUTION.md](../docs/review-pipeline/waves/REVIEW_QUALITY_EXECUTION.md) — RQ0–RQ9 routes, schema
-- [REVIEW_QUALITY_FINDINGS.md](../docs/review-pipeline/review-quality/REVIEW_QUALITY_FINDINGS.md) — locked Q# and storage model
 
 **Agent workflow:**
 
 - [agents/prompts/](../docs/review-pipeline/agents/prompts/) — VERB + OUTPUT_FORMAT
 - [CURSOR_AGENT_WORKFLOW.md](../docs/utils/CURSOR_AGENT_WORKFLOW.md) — roles + verbs quick ref
 - [agents/prompts/ROLES.md](../docs/review-pipeline/agents/prompts/ROLES.md) — master/reviewer boundaries
-
-**Finding resolution (shipped on `main`):**
-
-- [FINDING_RESOLUTION_EXECUTION.md](../docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_EXECUTION.md) — P0–P5 scope, closure passes, FR-Q12
-- [FINDING_RESOLUTION_FINDINGS.md](../docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_FINDINGS.md) — FR-* gaps, multi-pass model
-- [FINDING_RESOLUTION_GENERAL_PLAN.md](../docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_GENERAL_PLAN.md) — phase goals
-
-**Judge JSON contract (shipped on `main`):**
-
-- [JUDGE_JSON_CONTRACT_EXECUTION.md](../docs/review-pipeline/judge-json-contract/waves/JUDGE_JSON_CONTRACT_EXECUTION.md) — P0–P5 scope, structured output, observability
-- [JUDGE_JSON_CONTRACT_FINDINGS.md](../docs/review-pipeline/judge-json-contract/JUDGE_JSON_CONTRACT_FINDINGS.md) — JC-* gaps, staging metrics
-- [JUDGE_JSON_CONTRACT_GENERAL_PLAN.md](../docs/review-pipeline/judge-json-contract/JUDGE_JSON_CONTRACT_GENERAL_PLAN.md) — phase goals

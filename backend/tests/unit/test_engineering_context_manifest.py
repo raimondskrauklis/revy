@@ -15,13 +15,33 @@ def test_parse_committed_ssot_file():
     repo_root = Path(__file__).resolve().parents[3]
     raw_text = (repo_root / SSOT_RELATIVE_PATH).read_text(encoding="utf-8")
     manifest = parse_review_context_manifest_json(raw_text)
-    assert manifest.active_program == "publish-summary-alignment"
-    program_ids = {program.id for program in manifest.programs}
-    assert manifest.active_program in program_ids
-    assert "review-engineering-context" in program_ids
-    active = next(p for p in manifest.programs if p.id == manifest.active_program)
+    assert manifest.active_program == "finding-resolution-dogfood"
+    assert len(manifest.programs) == 1
+    active = manifest.programs[0]
+    assert active.id == manifest.active_program
     assert active.scope == ("backend/**",)
     assert len(active.paths) == 3
+
+
+def test_parse_review_context_manifest_rejects_multiple_programs():
+    with pytest.raises(ValueError, match="exactly one entry"):
+        parse_review_context_manifest(
+            {
+                "active_program": "a",
+                "programs": [
+                    {
+                        "id": "a",
+                        "scope": ["backend/**"],
+                        "paths": [{"path": "docs/a.md", "description": "a"}],
+                    },
+                    {
+                        "id": "b",
+                        "scope": ["backend/**"],
+                        "paths": [{"path": "docs/b.md", "description": "b"}],
+                    },
+                ],
+            }
+        )
 
 
 def test_parse_review_context_manifest_requires_active_program():

@@ -59,6 +59,14 @@ def parse_review_context_manifest(raw: dict[str, Any]) -> ReviewContextManifest:
     if active_program not in program_ids:
         raise ValueError("active_program must reference a programs[].id")
 
+    if len(programs) != 1:
+        raise ValueError(
+            "programs must contain exactly one entry — the active program only "
+            "(remove shipped programs on program switch; RCX-D11 active trim)"
+        )
+    if programs[0].id != active_program:
+        raise ValueError("programs[0].id must match active_program")
+
     return ReviewContextManifest(active_program=active_program, programs=tuple(programs))
 
 

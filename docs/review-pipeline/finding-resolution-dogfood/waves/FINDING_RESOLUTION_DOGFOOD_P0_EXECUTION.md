@@ -15,7 +15,7 @@ Phase **P0** of [FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md](../FINDING_RESOLUTI
 
 ## PR review context (first commit)
 
-- **SSOT:** `.revy/review-context.json` — `active_program` + `programs[]` with execution, findings, general plan paths under `finding-resolution-dogfood/`
+- **SSOT:** `.revy/review-context.json` — `active_program` + **`programs[]` with exactly one entry** (active program only; remove shipped programs)
 - **Greptile:** `cd backend && pipenv run python -m scripts.generate_greptile_files_from_review_context --write`
 - **Bugbot:** `.cursor/BUGBOT.md` — active program + three doc links
 
