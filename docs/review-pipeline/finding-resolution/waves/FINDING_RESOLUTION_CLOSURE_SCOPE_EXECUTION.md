@@ -3,7 +3,7 @@
 **LOOP index** for [FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md](../FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md).  
 **Authority:** [FINDING_RESOLUTION_CLOSURE_SCOPE_FINDINGS.md](../FINDING_RESOLUTION_CLOSURE_SCOPE_FINDINGS.md) (rev 3).
 
-**Branch:** `fix/fr-closure-scope-hygiene` · **Product PR:** [#68](https://github.com/raimondskrauklis/revy/pull/68). **Evidence PR:** #67 (close evidence-only; do not fold product fix).
+**Branch:** `main` (product [#68](https://github.com/raimondskrauklis/revy/pull/68) merged `162d7e7`). **Dogfood:** `chore/fr-dg2-track-c-staging`. **Evidence:** #67 closed.
 
 ## Locked decisions (all phases)
 
@@ -34,10 +34,10 @@
 | C0 | SSOT, Greptile, Bugbot, index | [C0](./FINDING_RESOLUTION_CLOSURE_SCOPE_C0_EXECUTION.md) | `c7c84f1` | done |
 | C1 | HEAD hygiene + Pass 2 widen | [C1](./FINDING_RESOLUTION_CLOSURE_SCOPE_C1_EXECUTION.md) | `d4666aa` | done |
 | C2 | Manifest + G9 | [C2](./FINDING_RESOLUTION_CLOSURE_SCOPE_C2_EXECUTION.md) | `d4666aa` | done |
-| C3 | Staging Track C dogfood | [C3](./FINDING_RESOLUTION_CLOSURE_SCOPE_C3_EXECUTION.md) | `254681f` | probe done — **operator C3.0–C3.3** |
-| C4 | Doc sync + gap close | [C4](./FINDING_RESOLUTION_CLOSURE_SCOPE_C4_EXECUTION.md) | `0fa3ae5` | done (FR-DG2 awaits C3 staging) |
-| — | Post–#68 Revy review fixes | findings § Post–#68 | `7de95f2` | done — **await Revy re-run** |
+| C3 | Staging Track C dogfood | [C3](./FINDING_RESOLUTION_CLOSURE_SCOPE_C3_EXECUTION.md) | — | **in progress** — `chore/fr-dg2-track-c-staging` |
+| C4 | Doc sync + gap close | [C4](./FINDING_RESOLUTION_CLOSURE_SCOPE_C4_EXECUTION.md) | `0fa3ae5` | pending C3 PASS |
+| — | Post–#68 Revy fixes | findings § Post–#68 | `0277f4d` | done (shipped in #68) |
 
-**Deploy:** Record droplet job ISO after C2 merge — C3 `--since` boundary.
+**Deploy:** `2026-07-29T21:53:28Z` — C3 `--since` boundary.
 
 **Related:** [finding-resolution-dogfood](../../finding-resolution-dogfood/README.md) · [#66](https://github.com/raimondskrauklis/revy/pull/66) · [#67](https://github.com/raimondskrauklis/revy/pull/67) · [#68](https://github.com/raimondskrauklis/revy/pull/68)

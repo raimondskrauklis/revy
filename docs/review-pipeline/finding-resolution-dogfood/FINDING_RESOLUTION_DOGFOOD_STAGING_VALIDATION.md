@@ -2,15 +2,15 @@
 
 **Program:** [README.md](./README.md) · **Baseline:** [FINDING_RESOLUTION_DOGFOOD_FINDINGS.md](./FINDING_RESOLUTION_DOGFOOD_FINDINGS.md)
 
-**Status:** **in progress** — P0 pushed (`4830ff7`); P1–P2 committed locally; operator fills rows after dogfood pushes.
+**Status:** **Track C in progress** — [#68](https://github.com/raimondskrauklis/revy/pull/68) merged + deployed `2026-07-29T21:53:28Z`; [#67](https://github.com/raimondskrauklis/revy/pull/67) closed (evidence-only). Operator: [Track C memo](./FINDING_RESOLUTION_DOGFOOD_STAGING_VALIDATION.md#track-c--closure-scope-wave-c-68-deployed).
 
 ## Deploy boundaries
 
 | Boundary | `--since` ISO | Used for |
 |----------|---------------|----------|
 | PSA baseline (reference) | `2026-07-29T11:38:12Z` | P0 metrics smoke only |
-| Post-P1 deploy | *(TBD)* | Dogfood push 2 — FR-DG1 |
-| Post-P2 deploy | *(TBD)* | Dogfood push 3 — FR-DG2; P3 sign-off metrics |
+| Post-#66 deploy | `2026-07-29T19:20:33Z` | FR-DG2a reference |
+| **Post-#68 deploy (wave C)** | **`2026-07-29T21:53:28Z`** | **Track C C3 metrics (`judge_json_contract_staging_metrics`)** |
 
 ## Dogfood PR
 
@@ -50,17 +50,17 @@
 |------|------------|-------|
 | 1 | — | pending |
 
-## Track C — closure scope (wave C, `fix/fr-closure-scope-hygiene`)
+## Track C — closure scope (wave C, [#68](https://github.com/raimondskrauklis/revy/pull/68) deployed)
 
-**Probe branch:** `chore/fr-dg2-track-c-staging` (separate from #67). **Fixture:** `backend/tests/fixtures/fr_dg2_track_c/`.
+**Probe branch:** `chore/fr-dg2-track-c-staging`. **Fixture:** `backend/tests/fixtures/fr_dg2_track_c/`. **Evidence:** #67 closed (evidence-only).
 
 | Step | Intent | Status | Evidence |
 |------|--------|--------|----------|
 | C3.0 | Delete-only publish smoke | pending | — |
-| C3.1 | Introduce probe + publish | pending | group id / revision id |
+| C3.1 | Probe publish (push 1) | **in progress** | group id / revision id |
 | C3.2 | Age cohort (unrelated backend commit) | pending | `last_seen_revision_id` before delete |
 | C3.3 | Aged delete sign-off | pending | `state`, `resolution_method`, G9 path-removed line |
 | C3.4 | Rename guard (optional) | pending | old-path groups stay active |
 | C3.5 | FR-Q13 re-open (optional) | pending | — |
 
-**Deploy boundary (`--since`):** *(TBD — post C1+C2 droplet deploy ISO)*
+**Deploy boundary (`--since`):** `2026-07-29T21:53:28Z` (post-#68 droplet deploy)

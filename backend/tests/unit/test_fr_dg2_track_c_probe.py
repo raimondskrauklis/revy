@@ -1,9 +1,12 @@
 # backend/tests/unit/test_fr_dg2_track_c_probe.py
 """Track C dogfood probe import hook."""
-from tests.fixtures.fr_dg2_track_c.probe_module import fr_dg2_track_c_digest
+from tests.fixtures.fr_dg2_track_c.probe_module import (
+    TRACK_C_STAGING_MARKER,
+    fr_dg2_track_c_digest,
+)
 
 
 def test_fr_dg2_track_c_probe_importable():
-    digest = fr_dg2_track_c_digest("x")
+    digest = fr_dg2_track_c_digest()
     assert len(digest) == 32
-    assert digest == fr_dg2_track_c_digest("x")
+    assert digest == fr_dg2_track_c_digest(TRACK_C_STAGING_MARKER)
