@@ -5,7 +5,7 @@
 
 **Evidence:** Staging DB `revy-staging`; code on `main` `111e851`; [dogfood post-validation](../finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_POST_VALIDATION_FINDINGS.md); [validation findings](../finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_VALIDATION_FINDINGS.md) VAL10.
 
-**Execution plan:** [FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md](./FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md).
+**Execution plan:** [FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md](./FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md) · [LOOP index](./waves/FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md).
 
 ---
 

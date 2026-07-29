@@ -26,7 +26,7 @@
 | **FR-Q5** | Human dismiss — **P4** workspace `Permission.admin_users` API; full R7.6 UI defer. |
 | **FR-Q10** | Post-merge batch re-check — **defer** v1.1. |
 | **FR-Q11** | Pass 3 escalation set: `still_open` + `is_judge_candidate` + `last_seen_revision_id == prior_revision` + not `compare_failed`. |
-| **FR-Q12** | Rate = transitions this pair / denominator (`active` on N−1 at sync, exclude `compare_failed` and pre-sync `resolved`). Persist on reconcile manifest — not live row scan. |
+| **FR-Q12** | Rate = transitions this pair / denominator (`active` on N−1 at sync, exclude `compare_failed` and pre-sync `resolved`). Persist on reconcile manifest — not live row scan. **Wave C (CS-Q6):** hygiene path-removed closures (`last_seen` outside pairing cohort) excluded from numerator/denominator — see [closure-scope findings](./FINDING_RESOLUTION_CLOSURE_SCOPE_FINDINGS.md). |
 | **FR-Q13** | Re-open: `absent_and_addressed` → re-report same fingerprint **re-opens** (`active`). `judge_dismissed` / `human_dismissed` → stay `resolved` until human or verification dismiss. |
 | **FR-Q14** | Same as FR-Q7 — locked for execution cross-ref. |
 | **FR-Q15** | Human dismiss auth: workspace installation route + `Permission.admin_users` (not platform super-admin). |

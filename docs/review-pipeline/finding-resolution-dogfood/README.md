@@ -1,6 +1,6 @@
 # Finding resolution — post-PSA dogfood
 
-**Status:** **waves A + B complete** — FR-DG1 **PASS**; FR-DG2 **partial PASS** ([#67](https://github.com/raimondskrauklis/revy/pull/67)). **Wave C planned** — [closure scope program](../finding-resolution/FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md).
+**Status:** **waves A + B complete** — FR-DG1 **PASS**; FR-DG2 **partial PASS** ([#67](https://github.com/raimondskrauklis/revy/pull/67)). **Wave C** — [general plan](../finding-resolution/FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md) · [execution LOOP](../finding-resolution/waves/FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md).
 
 **Thesis:** PSA #63 exposed resolution lifecycle gaps; dogfood validated fixes and exposed **cohort scope** as the remaining platform gap (FR-CS1).
 
@@ -29,4 +29,4 @@
 3. Dogfood repro pushes: **backend only** ([VAL8](./FINDING_RESOLUTION_DOGFOOD_VALIDATION_FINDINGS.md#fr-dg-val8--dogfood-metrics-interpretation)).
 4. Primary metric: **per-group** `state` + `resolution_method`, not `pr_active_count` alone.
 
-**Next:** Lock CS-Q6 → execution plan for wave C → `fix/fr-closure-scope-hygiene-pass1b` (do not ad-hoc patch #67).
+**Next:** C0 LOOP → `fix/fr-closure-scope-hygiene` (C1+C2).
