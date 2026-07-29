@@ -51,7 +51,11 @@ from app.services.github_finding_judge import (
     call_judge_with_optional_retry,
 )
 from app.services.github_finding_reconcile import _ensure_pull_request_access
-from app.services.github_resolution_metrics import get_last_published_prior_revision
+from app.services.github_resolution_metrics import (
+    get_intermediate_revision_ids_between,
+    get_last_published_prior_revision,
+    prior_publish_pairing_revision_ids,
+)
 from app.services.github_review import resolve_judge_code_context
 from app.services.judge_prompt_context import judge_prompt_file_patch_chars
 from app.services.model_policy import ModelRole, resolve_model
@@ -147,12 +151,23 @@ async def apply_pass2_closure_for_review_run(
     if prior_revision is None:
         return 0
 
+    intermediate_revision_ids = await get_intermediate_revision_ids_between(
+        session,
+        pull_request_id=revision.pull_request_id,
+        prior_revision=prior_revision,
+        current_revision=revision,
+    )
+    pairing_revision_ids = prior_publish_pairing_revision_ids(
+        prior_revision=prior_revision,
+        intermediate_revision_ids=intermediate_revision_ids,
+    )
+
     fingerprints_in_run = await _fingerprints_in_review_run(session, review_run_id=review_run_id)
     groups = list(
         await session.scalars(
             select(GitHubFindingGroupORM).where(
                 GitHubFindingGroupORM.pull_request_id == revision.pull_request_id,
-                GitHubFindingGroupORM.last_seen_revision_id == prior_revision.id,
+                GitHubFindingGroupORM.last_seen_revision_id.in_(pairing_revision_ids),
                 GitHubFindingGroupORM.state == GitHubFindingGroupState.active,
             )
         )

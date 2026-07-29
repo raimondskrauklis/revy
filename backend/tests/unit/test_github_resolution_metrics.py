@@ -349,7 +349,7 @@ def test_build_resolution_pass_manifest_counts_transitions():
 
     manifest = github_resolution_metrics.build_resolution_pass_manifest(
         [addressed, judge_dismissed, still_open, compare_failed, pre_sync_resolved],
-        prior_revision_id=prior_revision_id,
+        prior_revision_ids=frozenset({prior_revision_id}),
         current_revision_id=current_revision_id,
     )
 
@@ -382,7 +382,37 @@ def test_build_resolution_pass_manifest_includes_rereported_stamp_cohort():
 
     manifest = github_resolution_metrics.build_resolution_pass_manifest(
         [rereported],
-        prior_revision_id=prior_revision_id,
+        prior_revision_ids=frozenset({prior_revision_id}),
+        current_revision_id=current_revision_id,
+    )
+
+    assert manifest["denominator_active_prior"] == 1
+    assert manifest["still_open_count"] == 1
+
+
+def test_build_resolution_pass_manifest_includes_unpublished_gap_last_seen():
+    prior_revision_id = uuid.uuid4()
+    gap_revision_id = uuid.uuid4()
+    current_revision_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+
+    gap_group = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint="gap",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Gap",
+        message="M",
+        file_path="app/gap.py",
+        last_seen_revision_id=gap_revision_id,
+        resolution_status=ResolutionStatus.still_open,
+    )
+
+    manifest = github_resolution_metrics.build_resolution_pass_manifest(
+        [gap_group],
+        prior_revision_ids=frozenset({prior_revision_id, gap_revision_id}),
         current_revision_id=current_revision_id,
     )
 

@@ -262,13 +262,17 @@ async def test_apply_pass2_closure_closes_absent_addressed_group():
         AsyncMock(return_value=published_prior),
     ):
         with patch(
-            "app.services.github_finding_closure._fingerprints_in_review_run",
-            AsyncMock(return_value=set()),
+            "app.services.github_finding_closure.get_intermediate_revision_ids_between",
+            AsyncMock(return_value=frozenset()),
         ):
-            closed = await apply_pass2_closure_for_review_run(
-                session,
-                review_run_id=review_run_id,
-            )
+            with patch(
+                "app.services.github_finding_closure._fingerprints_in_review_run",
+                AsyncMock(return_value=set()),
+            ):
+                closed = await apply_pass2_closure_for_review_run(
+                    session,
+                    review_run_id=review_run_id,
+                )
 
     assert closed == 1
     assert group.state == GitHubFindingGroupState.resolved

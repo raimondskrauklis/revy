@@ -115,6 +115,34 @@ def resolve_group_resolution_status(
     return ResolutionStatus.still_open
 
 
+async def get_intermediate_revision_ids_between(
+    session: AsyncSession,
+    *,
+    pull_request_id: UUID,
+    prior_revision: GitHubPullRequestRevisionORM,
+    current_revision: GitHubPullRequestRevisionORM,
+) -> frozenset[UUID]:
+    """Revisions after last published prior and before current (unpublished gap)."""
+    if current_revision.revision_number <= prior_revision.revision_number + 1:
+        return frozenset()
+    rows = await session.scalars(
+        select(GitHubPullRequestRevisionORM.id).where(
+            GitHubPullRequestRevisionORM.pull_request_id == pull_request_id,
+            GitHubPullRequestRevisionORM.revision_number > prior_revision.revision_number,
+            GitHubPullRequestRevisionORM.revision_number < current_revision.revision_number,
+        )
+    )
+    return frozenset(rows)
+
+
+def prior_publish_pairing_revision_ids(
+    *,
+    prior_revision: GitHubPullRequestRevisionORM,
+    intermediate_revision_ids: frozenset[UUID],
+) -> frozenset[UUID]:
+    return frozenset({prior_revision.id, *intermediate_revision_ids})
+
+
 async def get_last_published_prior_revision(
     session: AsyncSession,
     *,
@@ -157,6 +185,17 @@ async def apply_resolution_status_for_synchronize(
     if prior_revision is None:
         return 0
 
+    intermediate_revision_ids = await get_intermediate_revision_ids_between(
+        session,
+        pull_request_id=pull_request.id,
+        prior_revision=prior_revision,
+        current_revision=new_revision,
+    )
+    pairing_revision_ids = prior_publish_pairing_revision_ids(
+        prior_revision=prior_revision,
+        intermediate_revision_ids=intermediate_revision_ids,
+    )
+
     stale_groups = list(
         await session.scalars(
             select(GitHubFindingGroupORM).where(
@@ -171,7 +210,7 @@ async def apply_resolution_status_for_synchronize(
     groups = [
         group
         for group in stale_groups
-        if group.last_seen_revision_id == prior_revision.id
+        if group.last_seen_revision_id in pairing_revision_ids
     ]
     if not groups:
         await session.flush()
@@ -221,11 +260,11 @@ def _is_pre_sync_resolved(
 def _in_sync_stamp_cohort(
     group: GitHubFindingGroupORM,
     *,
-    prior_revision_id: UUID,
+    prior_revision_ids: frozenset[UUID],
     current_revision_id: UUID,
 ) -> bool:
-    """Groups active on N−1 at Pass 1 sync, including re-reported cohort members."""
-    if group.last_seen_revision_id == prior_revision_id:
+    """Groups active on last-published prior (or unpublished gap), including re-reports."""
+    if group.last_seen_revision_id in prior_revision_ids:
         return True
     if group.resolved_at_revision_id == current_revision_id:
         return True
@@ -238,7 +277,7 @@ def _in_sync_stamp_cohort(
 def build_resolution_pass_manifest(
     groups: list[GitHubFindingGroupORM],
     *,
-    prior_revision_id: UUID,
+    prior_revision_ids: frozenset[UUID],
     current_revision_id: UUID,
 ) -> dict[str, object]:
     """FR-Q12 transitions-only metrics for reconcile manifest resolution_pass."""
@@ -248,7 +287,7 @@ def build_resolution_pass_manifest(
         if group.state != GitHubFindingGroupState.superseded
         and _in_sync_stamp_cohort(
             group,
-            prior_revision_id=prior_revision_id,
+            prior_revision_ids=prior_revision_ids,
             current_revision_id=current_revision_id,
         )
     ]
@@ -327,8 +366,17 @@ async def compute_resolution_transitions(
             )
         )
     )
+    intermediate_revision_ids = await get_intermediate_revision_ids_between(
+        session,
+        pull_request_id=pull_request.id,
+        prior_revision=prior_revision,
+        current_revision=current_revision,
+    )
     return build_resolution_pass_manifest(
         groups,
-        prior_revision_id=prior_revision.id,
+        prior_revision_ids=prior_publish_pairing_revision_ids(
+            prior_revision=prior_revision,
+            intermediate_revision_ids=intermediate_revision_ids,
+        ),
         current_revision_id=current_revision.id,
     )
