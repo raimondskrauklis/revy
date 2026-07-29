@@ -1,6 +1,6 @@
 # Publish summary alignment — program index
 
-**Status:** **code-complete (P0–P1)** on `feat/publish-summary-alignment` — staging human gate pending ([validation memo](./PUBLISH_SUMMARY_ALIGNMENT_STAGING_VALIDATION.md)).
+**Status:** **staging push 1 PASS** on dogfood PR [#63](https://github.com/raimondskrauklis/revy/pull/63) — [validation memo](./PUBLISH_SUMMARY_ALIGNMENT_STAGING_VALIDATION.md) (push 2–3 pending).
 
 **Gap:** **RG-14** / **FR-Q16** — issue comment and check run diverge; confidence/merge can disagree with open inline threads.
 
