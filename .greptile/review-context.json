@@ -7,15 +7,15 @@
       "paths": [
         {
           "path": "docs/review-pipeline/review-engineering-context/waves/REVIEW_ENGINEERING_CONTEXT_EXECUTION.md",
-          "description": "RCX execution index — LOOP P0–P5, locked decisions"
+          "description": "RCX execution index — LOOP P0–P8, locked decisions"
         },
         {
           "path": "docs/review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_FINDINGS.md",
-          "description": "RCX baseline — RCX-D*, validation metrics"
+          "description": "RCX baseline — RCX-D*, Wave 2, validation metrics"
         },
         {
           "path": "docs/review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md",
-          "description": "RCX general plan — phases P0–P5"
+          "description": "RCX general plan — phases P0–P8"
         }
       ]
     }

@@ -1,6 +1,6 @@
 # GitHub surface hardening (post P0–P4)
 
-**Status:** **Code complete** — [PR #53](https://github.com/raimondskrauklis/revy/pull/53). **GH-7 dogfood:** pending staging deploy (see [DOGFOOD](./GITHUB_SURFACE_HARDENING_DOGFOOD.md)).
+**Status:** **Code complete** — [PR #53](https://github.com/raimondskrauklis/revy/pull/53). **GH-1v2** collapse (Option B + outdated + resolved sync): shipped on `main` via follow-up (see [findings §4c](./GITHUB_SURFACE_HARDENING_FINDINGS.md#gh-1v2--collapse-triggers-shipped-post-p4)). **GH-7 dogfood:** pending staging deploy (see [DOGFOOD](./GITHUB_SURFACE_HARDENING_DOGFOOD.md)).
 
 **Prerequisite:** [post-review-quality](../post-review-quality/README.md) P0–P4 merged ([#52](https://github.com/raimondskrauklis/revy/pull/52)).
 

@@ -125,12 +125,47 @@ publish → load github_inline_threads from prior jobs
 
 **Explicitly not v1:**
 
-| Option | Why deferred |
-|--------|----------------|
-| **B** — `resolution_status == addressed` | Diff-based signal already exists (`github_resolution_metrics.py:139–194`) but does not change `group.state`; adopting it is a second trigger — consider post-v1 alignment only |
-| **C** — reconcile marks absent groups resolved | Fixes check/summary too but is reconcile scope change — out of this program |
+| Option | Why deferred (v1) | v2 status |
+|--------|-------------------|-----------|
+| **B** — `resolution_status == addressed` | Diff-based signal already exists (`github_resolution_metrics.py:139–194`) but does not change `group.state`; adopting it is a second trigger — consider post-v1 alignment only | **Shipped (GH-Q9)** — see §4c |
+| **C** — reconcile marks absent groups resolved | Fixes check/summary too but is reconcile scope change — out of this program | Still reconcile-only (finding-resolution P1–P2) |
 
 **v1 scope for check/summary (GH-Q7):** GH-1 **collapses GitHub threads only**. Active groups absent from the new run may still appear in check/summary until reconcile changes (separate program). Do not block GH-1 on reconcile.
+
+### GH-1v2 — collapse triggers (shipped post P4)
+
+**Motivation:** Dogfood PRs ([#52](https://github.com/raimondskrauklis/revy/pull/52), [#53](https://github.com/raimondskrauklis/revy/pull/53), [#61](https://github.com/raimondskrauklis/revy/pull/61)) showed Greptile threads collapsing while Revybot threads stayed open: Moonshot **re-reported** fixed findings (Option A never fired), and **line drift** left outdated threads unresolved.
+
+**Where (code):**
+
+| Piece | Location |
+|-------|----------|
+| Resolve criteria | `_fingerprints_to_resolve_inline_threads()` → `github_publish.py` |
+| GraphQL resolve + map pop | `_resolve_stale_inline_threads()` → same module |
+| Thread index (`isOutdated`, `isResolved`) | `build_review_thread_index()` → `github_api.py` |
+| When it runs | Publish flush only — `run_publish_job` → `_flush_publish_surface` (Celery `publish_review_run`). **Not** a GitHub Action or `synchronize` webhook. |
+
+**Flush order (unchanged):** `build_review_thread_index` → `_resolve_stale_inline_threads` → check run → issue comment → inline posts → persist `summary_json.github_inline_threads` (GH-1b).
+
+**Triggers (union — any match collapses the thread):**
+
+| ID | Trigger | Condition |
+|----|---------|-----------|
+| **Option A** | Not in current publishable set | Fingerprint ∈ `inline_threads` and ∉ `_publishable_fingerprints_for_run(review_run_id)` |
+| **Option B** | Pass 1 addressed | Fingerprint ∈ `inline_threads` and group `resolution_status=addressed` (may still be `active` + re-reported — intentional) |
+| **Outdated** | GitHub anchor moved | REST `comment_id` for fingerprint maps to thread with `isOutdated=true` |
+| **Synced** | Already resolved on GitHub | `comment_id` on thread with `isResolved=true` — pop map entry only, no `resolveReviewThread` call |
+| **Closed** | DB lifecycle | Group `state` ∈ `resolved` \| `superseded` (P1 behavior) |
+
+**Explicit non-triggers:**
+
+- Greptile / other bots' review threads (Revy only resolves fingerprints in Revy's `github_inline_threads` map).
+- Issue-comment summary rows (not in thread map).
+- `resolution_status=still_open` alone (no outdated signal, still publishable, not addressed).
+
+**Tests:** `test_resolve_stale_inline_threads_option_a`, `_outdated_comment`, `_addressed_while_still_publishable`, `_pops_already_resolved_without_graphql`; `test_build_review_thread_index_tracks_outdated_and_resolved`.
+
+**Still deferred (follow-up):** verification judge for warning/info false positives; title+file fingerprint to reduce line-drift identity splits; GH-7 dogfood row after staging deploy of v2.
 
 ### GH-1b — thread-map persistence (same program phase as GH-1)
 
@@ -149,16 +184,16 @@ GH-Q2 locked **no** new diff-based resolve logic. M2 `resolution_status` may inf
 
 ---
 
-## 4b. `resolution_status` coupling (documented, not v1 trigger)
+## 4b. `resolution_status` coupling
 
 | Fact | Location |
 |------|----------|
 | `apply_resolution_status_for_synchronize` stamps diff-based `addressed` on push | `github_resolution_metrics.py:139–194` |
-| Does **not** change `group.state` | same |
+| Does **not** change `group.state` by itself | same |
 | `count_resolution_status` excludes `addressed` while group still `active` | `github_publish_formatter.py:97–100` — L2 prose under-counts fixes |
-| Thread resolve ignores `resolution_status` today | `github_publish.py:290–350` |
+| Thread resolve **v2:** Option B collapses when `resolution_status=addressed` | `_fingerprints_to_resolve_inline_threads` — see §4c (GH-Q9) |
 
-Execution must not silently adopt Option B without updating formatter/check semantics.
+Option B does not flip `group.state`; it only collapses the GitHub thread so the PR surface matches “dev fixed this hunk” even when Moonshot re-reports the same fingerprint.
 
 ---
 
@@ -209,6 +244,7 @@ Row: [GITHUB_SURFACE_DOGFOOD.md](../post-review-quality/GITHUB_SURFACE_DOGFOOD.m
 | **GH-Q6** | GH-1 resolve trigger v1? | **locked** | **Option A** + existing superseded/resolved pass |
 | **GH-Q7** | Stale active groups — threads vs check/summary? | **locked** | **Threads only** in v1; reconcile unchanged |
 | **GH-Q8** | Gap ID vs program phase naming? | **locked** | **GH-*** = gap id; **P0–P4** = program phase in general/execution plan |
+| **GH-Q9** | GH-1v2 collapse beyond Option A? | **locked** | **Option B** (`addressed`) + **outdated** + **already-resolved sync** — see §4c; GH-Q2 unchanged for v1 history |
 
 **Naming:** findings “Priority” column used GH-1 **P0** (urgency) vs program **P1** (phase) — use **GH-*** ids in execution docs to avoid “ship P0 twice” confusion.
 

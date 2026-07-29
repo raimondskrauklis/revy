@@ -54,8 +54,8 @@
 |------|----------|--------|------|
 | Before fix | Group `active`, inline thread open | pending dogfood | |
 | Push fix (line touch) | Pass 1: `resolution_status=addressed` | pending | |
-| After publish rev N | Pass 2: `state=resolved`, `resolution_method=absent_and_addressed` | pending | |
-| GitHub | Thread resolved (Option A) | pending | |
+| After publish rev N | Pass 2: `state=resolved`, `resolution_method=absent_and_addressed` (when fingerprint absent) | pending | |
+| GitHub | Thread collapsed: Option A and/or **Option B** (`addressed`) and/or **outdated** — see [GH-1v2 §4c](../github-surface-hardening/GITHUB_SURFACE_HARDENING_FINDINGS.md#gh-1v2--collapse-triggers-shipped-post-p4) | pending | |
 
 ---
 

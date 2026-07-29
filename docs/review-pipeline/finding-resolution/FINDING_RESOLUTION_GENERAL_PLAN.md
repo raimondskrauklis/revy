@@ -42,7 +42,7 @@
 | **1 — Fast** | `synchronize` (before index) | Compare diff → `resolution_status` | Push landed | — |
 | **2 — Identity** | After Moonshot + reconcile | Absent fingerprint + addressed → `resolved`; judge dismiss (existing) | Thread gone from HEAD set | Comment not in new review |
 | **3 — Verify** | Reconcile, before publish | Judge re-check prior escalation still-open; outcomes `upheld` / `dismissed` (reuse discovery enum); push-delta patches | Re-check prior flags | LLM-as-judge “addressed” |
-| **4 — Surface** | Publish | G9 prose + metrics block + Option A resolve | Resolution rate UX | Addressed % in summary |
+| Pass 4 — Surface | Publish | G9 prose + metrics block + **GH-1v2** thread resolve (Option A + B + outdated) | Resolution rate UX | Addressed % in summary |
 
 **Better than vendors for Revy:** structured `group_id` + fingerprint (not comment text matching); evidence-backed Pass 3 (not prose-only); Pass 1 free (compare API); judge only on escalation subset (cost control).
 

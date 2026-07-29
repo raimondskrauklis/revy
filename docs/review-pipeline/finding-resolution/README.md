@@ -8,6 +8,8 @@
 
 **Thesis:** How Revy decides a finding is **addressed**, **dismissed**, or **still open** — multi-pass closure after each push + resolution-rate metrics.
 
+**GitHub thread collapse (GH-1v2):** Pass 1 `addressed` + publish-time resolve (Option B, outdated) — canonical spec in [github-surface-hardening §4c](../github-surface-hardening/GITHUB_SURFACE_HARDENING_FINDINGS.md#gh-1v2--collapse-triggers-shipped-post-p4).
+
 | Doc | Purpose |
 |-----|---------|
 | [FINDING_RESOLUTION_FINDINGS.md](./FINDING_RESOLUTION_FINDINGS.md) | Baseline — current flow, gaps, FR-Q registry |

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 import httpx
-from sqlalchemy import case, select
+from sqlalchemy import and_, case, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import (
@@ -15,6 +15,7 @@ from app.constants.enums import (
     GitHubFindingGroupState,
     GitHubPublishJobStatus,
     GitHubReviewRunStatus,
+    ResolutionStatus,
     stored_enum_value,
 )
 from app.core.config import settings
@@ -610,6 +611,57 @@ async def _publishable_fingerprints_for_run(
     return fingerprints
 
 
+async def _fingerprints_to_resolve_inline_threads(
+    session: AsyncSession,
+    *,
+    review_run_id: UUID,
+    pull_request_id: UUID,
+    inline_threads: dict[str, int],
+    outdated_comment_ids: frozenset[int] | None = None,
+) -> set[str]:
+    publishable = await _publishable_fingerprints_for_run(
+        session,
+        review_run_id=review_run_id,
+        pull_request_id=pull_request_id,
+    )
+    fingerprints_to_resolve: set[str] = {
+        fingerprint for fingerprint in inline_threads if fingerprint not in publishable
+    }
+    if outdated_comment_ids:
+        for fingerprint, comment_id in inline_threads.items():
+            if comment_id in outdated_comment_ids:
+                fingerprints_to_resolve.add(fingerprint)
+
+    tracked_fingerprints = tuple(inline_threads.keys())
+    if tracked_fingerprints:
+        groups = list(
+            await session.scalars(
+                select(GitHubFindingGroupORM).where(
+                    GitHubFindingGroupORM.pull_request_id == pull_request_id,
+                    or_(
+                        GitHubFindingGroupORM.state.in_(
+                            (
+                                GitHubFindingGroupState.superseded,
+                                GitHubFindingGroupState.resolved,
+                            )
+                        ),
+                        and_(
+                            GitHubFindingGroupORM.fingerprint.in_(tracked_fingerprints),
+                            GitHubFindingGroupORM.resolution_status
+                            == ResolutionStatus.addressed,
+                        ),
+                    ),
+                )
+            )
+        )
+        # v2 (post GH-Q2): collapse when Pass 1 stamped addressed even if Moonshot
+        # re-reports the same fingerprint — avoids stale open threads on fix pushes.
+        for group in groups:
+            if group.fingerprint in inline_threads:
+                fingerprints_to_resolve.add(group.fingerprint)
+    return fingerprints_to_resolve
+
+
 async def _resolve_stale_inline_threads(
     client: httpx.AsyncClient,
     *,
@@ -623,39 +675,26 @@ async def _resolve_stale_inline_threads(
     inline_threads: dict[str, int],
     auth_headers: dict[str, str],
     thread_index: dict[int, str] | None = None,
+    outdated_comment_ids: frozenset[int] | None = None,
+    resolved_comment_ids: frozenset[int] | None = None,
 ) -> None:
     if not inline_threads:
         return
 
-    publishable = await _publishable_fingerprints_for_run(
+    fingerprints_to_resolve = await _fingerprints_to_resolve_inline_threads(
         session,
         review_run_id=review_run_id,
         pull_request_id=pull_request_id,
+        inline_threads=inline_threads,
+        outdated_comment_ids=outdated_comment_ids,
     )
-    fingerprints_to_resolve: set[str] = {
-        fingerprint for fingerprint in inline_threads if fingerprint not in publishable
-    }
-
-    closed_groups = list(
-        await session.scalars(
-            select(GitHubFindingGroupORM).where(
-                GitHubFindingGroupORM.pull_request_id == pull_request_id,
-                GitHubFindingGroupORM.state.in_(
-                    (
-                        GitHubFindingGroupState.superseded,
-                        GitHubFindingGroupState.resolved,
-                    )
-                ),
-            )
-        )
-    )
-    for group in closed_groups:
-        if group.fingerprint in inline_threads:
-            fingerprints_to_resolve.add(group.fingerprint)
 
     for fingerprint in fingerprints_to_resolve:
         comment_id = inline_threads.get(fingerprint)
         if comment_id is None:
+            continue
+        if resolved_comment_ids and comment_id in resolved_comment_ids:
+            inline_threads.pop(fingerprint, None)
             continue
         try:
             thread_id = thread_index.get(comment_id) if thread_index else None
@@ -1161,8 +1200,10 @@ async def _flush_publish_surface(
         )
 
         thread_index: dict[int, str] = {}
+        outdated_comment_ids: frozenset[int] = frozenset()
+        resolved_comment_ids: frozenset[int] = frozenset()
         if inline_threads:
-            thread_index = await github_api.build_review_thread_comment_index(
+            review_thread_index = await github_api.build_review_thread_index(
                 client,
                 github_installation_id=installation.github_installation_id,
                 owner=build.owner,
@@ -1170,6 +1211,9 @@ async def _flush_publish_surface(
                 pull_number=pull_request.number,
                 auth_headers=auth_headers,
             )
+            thread_index = review_thread_index.comment_to_thread_id
+            outdated_comment_ids = review_thread_index.outdated_comment_ids
+            resolved_comment_ids = review_thread_index.resolved_comment_ids
 
         skipped_before_resolve = await _recheck_publish_authority_before_flush(
             session,
@@ -1192,6 +1236,8 @@ async def _flush_publish_surface(
             inline_threads=inline_threads,
             auth_headers=auth_headers,
             thread_index=thread_index,
+            outdated_comment_ids=outdated_comment_ids,
+            resolved_comment_ids=resolved_comment_ids,
         )
 
         indexed_thread_ids = _fingerprint_thread_ids_from_index(inline_threads, thread_index)

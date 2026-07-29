@@ -118,7 +118,55 @@
 
 **Deliverables:** Issue comment sections aligned with Greptile Summary shape on next staging dogfood push.
 
-**Execution:** [waves/REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md) § P5.5.
+**Execution:** [waves/REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md) § P5.5 (stub — **implementation moved to P6**).
+
+---
+
+## P6 — Publish surface depth (Greptile issue comment)
+
+**Goal:** revybot PR **issue comment** matches Greptile Summary triage depth — narrative, confidence rationale, security + important-files `<details>` — before RCX operator sign-off.
+
+**Scope — in:** `ISSUE_COMMENT_FORMAT_SYSTEM_PROMPT`; `build_pr_review_comment_fallback` parity; `build_pr_review_comment` user prompt enrichment; tests in `test_github_publish_formatter.py`, `test_moonshot_review.py`.
+
+**Scope — out:** Check-run body (stays G3 compact); mermaid; frontend.
+
+**Deliverables:** Locked section list on issue comment; fallback path matches when Moonshot disabled or fails (RCX-D14).
+
+**Depends on:** P0–P4 on `main`; ties to [post-review-quality L2](../post-review-quality/POST_REVIEW_QUALITY_FINDINGS.md).
+
+**Execution:** [waves/REVIEW_ENGINEERING_CONTEXT_P6_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P6_EXECUTION.md)
+
+---
+
+## P7 — Operator visibility (API + metrics gate)
+
+**Goal:** Operator validates RCX without raw SQL — `context_stats` on review run API; script prints pass/fail vs targets.
+
+**Scope — in:** `context_stats: dict | None` on `GitHubReviewRunResponse`; unit test `model_validate` from ORM; `judge_json_contract_staging_metrics.py` `--rcx-gate` block (diff truncated %, omitted `.md`, inject count, `context_stats` rows); optional `--json` includes `rcx_gate` object.
+
+**Scope — out:** Frontend reviewer UI; script rename (parking lot).
+
+**Deliverables:** API field; automated gate summary for P8.3.
+
+**Depends on:** P2 (`context_stats` populate); can ship same PR as P6 (RCX-D15).
+
+**Execution:** [waves/REVIEW_ENGINEERING_CONTEXT_P7_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P7_EXECUTION.md)
+
+---
+
+## P8 — Staging validation closeout
+
+**Goal:** Human gate — prove RCX inject + caps on staging; fill memos; program sign-off; sibling judge re-validation.
+
+**Scope — in:** Dogfood on P6+P7 PR (`backend/**`); metrics `--since <deploy-iso>` + `--rcx-gate`; fill [REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md](./REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md); update [JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](../judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) § Review context + post-deploy judge table; manual contradict-locks %; doc sync (README, recovery Track M, PRODUCT_PATTERNS, execution index).
+
+**Scope — out:** RC4 DB spike; disposition helpers (RCX-G7); frontend trace UI.
+
+**Deliverables:** Operator sign-off row; program marked shipped.
+
+**Depends on:** P6+P7 deployed; at least one completed scoped review run in `--since` window.
+
+**Execution:** [waves/REVIEW_ENGINEERING_CONTEXT_P8_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P8_EXECUTION.md)
 
 ---
 
@@ -126,4 +174,4 @@
 
 None — cap default **512 KB** locked from staging baseline (25% truncated at 128 KB).
 
-**Next step:** **`phase-execution`** complete for code — operator human gate: [REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md](./REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md).
+**Next step:** **`phase-execution`** P6 → P7 → P8 — [waves/REVIEW_ENGINEERING_CONTEXT_P6_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P6_EXECUTION.md).

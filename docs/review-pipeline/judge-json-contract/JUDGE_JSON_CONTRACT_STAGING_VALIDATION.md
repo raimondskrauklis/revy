@@ -13,8 +13,8 @@
 | Item | Value |
 |------|-------|
 | Merged to `main` | `9a7b5cb` (#58, 2026-07-29) |
-| Staging alembic | `2026_07_28_1200_0028_finding_resolution_closure` |
-| Judge-json-contract on staging worker | **pending deploy** — manifests still lack `parse_error` / `retry_count` (pre-ship) |
+| Staging alembic | `2026_07_29_1200_0029_review_context_stats` (post-#60) |
+| Judge-json-contract on staging worker | **deployed** (#58 on `main`) — post-#60 dogfood pending judge escalation run |
 
 **Operator:** deploy `main` to staging, trigger dogfood PR with escalation finding, re-run metrics script.
 
@@ -40,19 +40,20 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c 'python -m scripts.judge_json_contract_
 
 **Queried:** 2026-07-29 · `revy-staging` · alembic `0028` · full history (pre-RCX). See [REVIEW_ENGINEERING_CONTEXT_FINDINGS.md](../review-engineering-context/REVIEW_ENGINEERING_CONTEXT_FINDINGS.md) § Validation metrics.
 
-**Note:** `engineering_context_injected` is **not a DB column** — script counts a JSON key that **does not exist yet** (always 0). `context_stats` on `github_review_runs` ships in RCX migration `0029`.
+**Note:** `engineering_context_injected` is read from retrieve manifest **and** `github_review_runs.context_stats` (migration `0029`, RCX #60).
 
-| Metric | Baseline (pre-RCX) | Target | After RCX / cap raise |
-|--------|-------------------|--------|------------------------|
-| Completed runs (retrieve manifest) | **40** | — | pending |
-| Diff truncated % | **25.0%** (10/40) | <5% | pending |
-| Omitted files p50 / p95 | **0 / 4** | p95 ≤2 | pending |
-| Runs with omitted `.md` | **9** | 0 | pending |
-| Moonshot prompt p50 / p95 (chars) | **143,129 / 163,981** | p95 <400k | ✓ headroom |
-| `engineering_context_injected` runs | **0** (key absent) | 100% scoped | pending RCX P2 |
-| `DIFF_MAX_BYTES` config | **128 KB** hardcoded | **512 KB** candidate | pending RCX P3 |
+| Metric | Baseline (pre-RCX) | Target | Post-#60 (`--since 2026-07-29T05:55:00Z`) |
+|--------|-------------------|--------|-------------------------------------------|
+| Completed runs (retrieve manifest) | **40** | — | **2** |
+| Diff truncated % | **25.0%** (10/40) | <5% | **0.0%** (INCONCLUSIVE — 2 runs) |
+| Omitted files p50 / p95 | **0 / 4** | p95 ≤2 | **0 / 0** |
+| Runs with omitted `.md` | **9** | 0 | **0** |
+| Moonshot prompt p50 / p95 (chars) | **143,129 / 163,981** | p95 <400k | **156,115 / 161,909** ✓ |
+| `engineering_context_injected` runs | **0** (pre-RCX) | 100% scoped | **2/2** ✓ |
+| `context_stats` rows | **0** (pre-RCX) | each scoped run | **2** ✓ |
+| `DIFF_MAX_BYTES` config | **128 KB** hardcoded | **512 KB** | **524288** ✓ |
 
-**Post-#58 (`--since 2026-07-29`):** 0 review runs — no post-deploy dogfood yet.
+**Post-#58 judge candidates in same window:** 0 — judge persistence not exercised; needs escalation dogfood PR.
 
 ### Judge contract (baseline)
 
@@ -71,10 +72,10 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c 'python -m scripts.judge_json_contract_
 
 | Metric | Value | Date | Notes |
 |--------|-------|------|-------|
-| Outcome persistence % | — | — | |
+| Outcome persistence % | — | — | 0 judge candidates in post-#60 window |
 | `user_prompt` p50 | — | — | |
 | `retry_count` > 0 on recoveries | — | — | |
-| Sample `review_run_id` | — | — | |
+| Sample `review_run_id` (RCX) | `019facbd-d7a7-775e-9380-3ef48ca87e68` | 2026-07-29 | PR #61 latest; inject ✓ |
 
 ---
 

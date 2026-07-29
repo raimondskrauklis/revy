@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -39,6 +40,7 @@ class GitHubReviewRunResponse(BaseModel):
     error_message: str | None
     judge_status: GitHubReviewJudgeStatus
     judge_escalation_candidate_count: int
+    context_stats: dict[str, Any] | None = None
     created_at: datetime
     updated_at: datetime
 

@@ -1,32 +1,33 @@
 # Review engineering context — program index
 
-**Status:** Execution plans ready — `phase-execution` from P0.
+**Status:** P0–P4 on `main` (#60) · Pass 1 validation filled · PR #61 merge → pass 2.
 
-**Problem:** Revy Moonshot has no engineering-context layer. Greptile loads 15 programs from `files.json`. **RCX P2** = Moonshot inject; **P3** = Greptile generated from SSOT; Bugbot manual.
+**Problem:** Revy Moonshot has engineering-context inject (P2). **Closeout:** Greptile-depth issue comment (P6), operator API + metrics gate (P7), staging sign-off (P8).
 
 | Doc | Purpose |
 |-----|---------|
-| [REVIEW_ENGINEERING_CONTEXT_FINDINGS.md](./REVIEW_ENGINEERING_CONTEXT_FINDINGS.md) | Baseline — RCX-D1–D12, validation metrics |
-| [REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md](./REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md) | Phases P0–P5 — execution authority |
+| [REVIEW_ENGINEERING_CONTEXT_FINDINGS.md](./REVIEW_ENGINEERING_CONTEXT_FINDINGS.md) | Baseline — RCX-D1–D17, Wave 2, validation metrics |
+| [REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md](./REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md) | Phases P0–P8 — execution authority |
 | [waves/REVIEW_ENGINEERING_CONTEXT_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_EXECUTION.md) | LOOP index + locked execution decisions |
 
 ## Execution table
 
 | Phase | File | Status |
 |-------|------|--------|
-| P0 — Foundations | Migration `0029`, SSOT, caps (settings only), path-exists CI | [waves/REVIEW_ENGINEERING_CONTEXT_P0_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P0_EXECUTION.md) | done |
+| P0 — Foundations | Migration `0029`, SSOT, caps (settings only), path-exists pytest | [waves/REVIEW_ENGINEERING_CONTEXT_P0_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P0_EXECUTION.md) | done |
 | P1 — Loader + extract | [waves/REVIEW_ENGINEERING_CONTEXT_P1_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P1_EXECUTION.md) | done |
 | P2 — Moonshot inject | [waves/REVIEW_ENGINEERING_CONTEXT_P2_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P2_EXECUTION.md) | done |
 | P3 — Greptile sync | [waves/REVIEW_ENGINEERING_CONTEXT_P3_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P3_EXECUTION.md) | done |
 | P4 — Judge reuse | [waves/REVIEW_ENGINEERING_CONTEXT_P4_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P4_EXECUTION.md) | done |
-| P5 — Validation + closeout (+ P5.5 issue-comment narrative) | [waves/REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md) | human gate |
-
-**Branch:** `docs/judge-json-contract-staging-validation` — **docs + code ship in one PR** (agent context for Greptile/Bugbot).
+| P5 — Validation stub | Memo + P5.5 moved to P6 | [waves/REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md) | stub done |
+| P6 — Publish surface | Greptile-depth issue comment + shape guard | [waves/REVIEW_ENGINEERING_CONTEXT_P6_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P6_EXECUTION.md) | PR #61 |
+| P7 — Operator visibility | `context_stats` API + `--rcx-gate` | [waves/REVIEW_ENGINEERING_CONTEXT_P7_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P7_EXECUTION.md) | PR #61 |
+| P8 — Closeout | Staging validation + sign-off | [waves/REVIEW_ENGINEERING_CONTEXT_P8_EXECUTION.md](./waves/REVIEW_ENGINEERING_CONTEXT_P8_EXECUTION.md) | human gate |
 
 **Supersedes:** [RQ-RC-1](../review-quality/REVIEW_QUALITY_REVIEW_CONTEXT.md) dogfood items (RC1, RC2, RC5 inject).
 
-**Related:** [review-quality/README.md](../review-quality/README.md) · [judge-json-contract](../judge-json-contract/README.md)
+**Related:** [review-quality/README.md](../review-quality/README.md) · [judge-json-contract](../judge-json-contract/README.md) · [post-review-quality L2](../post-review-quality/POST_REVIEW_QUALITY_FINDINGS.md)
 
-**Next step:** `phase-execution` → P0 (migration `0029` — LOOP pauses after P0.1).
+**Next step:** Merge PR #61 → deploy → validation pass 2 (API + publish surface).
 
-**Program status:** P0–P4 code shipped · P5 human gate pending (staging validation memo).
+**Program status:** P0–P4 validated on staging (pass 1) · P6+P7 on PR #61 · pass 2 after merge.

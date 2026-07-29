@@ -553,6 +553,17 @@ async def delete_pull_request_review_comment(
 class ReviewThreadNode:
     thread_id: str
     comment_database_ids: tuple[int, ...]
+    is_outdated: bool = False
+    is_resolved: bool = False
+
+
+@dataclass(frozen=True)
+class ReviewThreadIndex:
+    """Maps REST review comment database id → GraphQL thread id plus collapse hints."""
+
+    comment_to_thread_id: dict[int, str]
+    outdated_comment_ids: frozenset[int]
+    resolved_comment_ids: frozenset[int]
 
 
 async def list_review_threads(
@@ -580,6 +591,8 @@ async def list_review_threads(
             pageInfo {{ hasNextPage endCursor }}
             nodes {{
               id
+              isOutdated
+              isResolved
               comments(first: {REVIEW_THREAD_COMMENTS_PAGE_SIZE}) {{
                 pageInfo {{ hasNextPage endCursor }}
                 nodes {{ databaseId }}
@@ -656,6 +669,8 @@ async def list_review_threads(
             thread_id = thread.get("id")
             if not isinstance(thread_id, str) or not thread_id:
                 continue
+            is_outdated = thread.get("isOutdated") is True
+            is_resolved = thread.get("isResolved") is True
             comment_ids: list[int] = []
             comments = thread.get("comments")
             if isinstance(comments, dict):
@@ -716,6 +731,8 @@ async def list_review_threads(
                 ReviewThreadNode(
                     thread_id=thread_id,
                     comment_database_ids=tuple(comment_ids),
+                    is_outdated=is_outdated,
+                    is_resolved=is_resolved,
                 )
             )
         page_info = review_threads.get("pageInfo")
@@ -728,6 +745,40 @@ async def list_review_threads(
     return threads
 
 
+async def build_review_thread_index(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+    owner: str,
+    repo: str,
+    pull_number: int,
+    auth_headers: dict[str, str] | None = None,
+) -> ReviewThreadIndex:
+    """Map REST review comment database id → GraphQL thread id (PRRT_…)."""
+    comment_to_thread_id: dict[int, str] = {}
+    outdated_comment_ids: set[int] = set()
+    resolved_comment_ids: set[int] = set()
+    for thread in await list_review_threads(
+        client,
+        github_installation_id=github_installation_id,
+        owner=owner,
+        repo=repo,
+        pull_number=pull_number,
+        auth_headers=auth_headers,
+    ):
+        for comment_id in thread.comment_database_ids:
+            comment_to_thread_id[comment_id] = thread.thread_id
+            if thread.is_outdated:
+                outdated_comment_ids.add(comment_id)
+            if thread.is_resolved:
+                resolved_comment_ids.add(comment_id)
+    return ReviewThreadIndex(
+        comment_to_thread_id=comment_to_thread_id,
+        outdated_comment_ids=frozenset(outdated_comment_ids),
+        resolved_comment_ids=frozenset(resolved_comment_ids),
+    )
+
+
 async def build_review_thread_comment_index(
     client: httpx.AsyncClient,
     *,
@@ -738,18 +789,15 @@ async def build_review_thread_comment_index(
     auth_headers: dict[str, str] | None = None,
 ) -> dict[int, str]:
     """Map REST review comment database id → GraphQL thread id (PRRT_…)."""
-    index: dict[int, str] = {}
-    for thread in await list_review_threads(
+    index = await build_review_thread_index(
         client,
         github_installation_id=github_installation_id,
         owner=owner,
         repo=repo,
         pull_number=pull_number,
         auth_headers=auth_headers,
-    ):
-        for comment_id in thread.comment_database_ids:
-            index[comment_id] = thread.thread_id
-    return index
+    )
+    return index.comment_to_thread_id
 
 
 async def find_review_thread_id_for_comment(

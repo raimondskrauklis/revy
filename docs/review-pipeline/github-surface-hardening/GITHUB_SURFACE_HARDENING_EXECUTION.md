@@ -4,7 +4,7 @@
 
 **Authority:** [GITHUB_WEBHOOK_DEV.md](../GITHUB_WEBHOOK_DEV.md) · [REVIEW_PIPELINE_PRODUCT_PATTERNS.md](../REVIEW_PIPELINE_PRODUCT_PATTERNS.md) · [GITHUB_APP_SETUP.md](../../utils/GITHUB_APP_SETUP.md)
 
-**Goal:** GH-1 thread auto-resolve (Option A) + GraphQL scale + publish test harness. Track B out.
+**Goal:** GH-1 thread auto-resolve (Option A + **v2** Option B/outdated) + GraphQL scale + publish test harness. Track B out.
 
 **Branch:** `feat/github-surface-hardening` · **PR:** [#53](https://github.com/raimondskrauklis/revy/pull/53)
 
@@ -22,7 +22,8 @@ each phase: implement → pytest gate → Bugbot → commit (no push until user/
 - **GH-Q6:** Resolve when fingerprint ∈ `inline_threads` but ∉ current run publishable findings (Option A) + existing superseded/resolved pass.
 - **GH-1b:** Persist `summary_json` after every resolve (even `post_inline=False`).
 - **GH-Q7:** v1 collapses GitHub threads only — reconcile/check unchanged.
-- **GH-Q2:** No `resolution_status.addressed` trigger in v1.
+- **GH-Q2:** No `resolution_status.addressed` trigger **in v1** (historical).
+- **GH-Q9:** **v2** — also collapse when `resolution_status=addressed`, GitHub `isOutdated`, or `isResolved` (map sync). See [findings §4c](./GITHUB_SURFACE_HARDENING_FINDINGS.md#gh-1v2--collapse-triggers-shipped-post-p4).
 - **Thread map v2:** `{ fingerprint: { "comment_id": int, "thread_id"?: str } }` — migrate-on-read from `dict[str, int]`; `serialize_inline_thread_map` / `deserialize_inline_thread_map` (P0).
 - **Migrations:** none expected; JSONB shape only.
 - **i18n:** GitHub markdown EN v1.

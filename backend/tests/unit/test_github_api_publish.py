@@ -428,6 +428,38 @@ async def test_build_review_thread_comment_index_maps_ids():
 
 
 @pytest.mark.asyncio
+async def test_build_review_thread_index_tracks_outdated_and_resolved():
+    with patch(
+        "app.integrations.github_api.list_review_threads",
+        AsyncMock(
+            return_value=[
+                github_api.ReviewThreadNode(
+                    thread_id="PRRT_old",
+                    comment_database_ids=(10,),
+                    is_outdated=True,
+                ),
+                github_api.ReviewThreadNode(
+                    thread_id="PRRT_done",
+                    comment_database_ids=(20,),
+                    is_resolved=True,
+                ),
+            ]
+        ),
+    ):
+        index = await github_api.build_review_thread_index(
+            AsyncMock(),
+            github_installation_id=1,
+            owner="acme",
+            repo="demo",
+            pull_number=3,
+        )
+
+    assert index.comment_to_thread_id == {10: "PRRT_old", 20: "PRRT_done"}
+    assert index.outdated_comment_ids == frozenset({10})
+    assert index.resolved_comment_ids == frozenset({20})
+
+
+@pytest.mark.asyncio
 async def test_list_review_threads_logs_graphql_errors(caplog):
     client = AsyncMock()
     response = MagicMock()

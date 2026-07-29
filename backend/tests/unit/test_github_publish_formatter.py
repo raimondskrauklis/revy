@@ -65,6 +65,32 @@ def test_compute_confidence_lower_for_errors():
     assert compute_confidence([_group(severity=FindingSeverity.error)]) <= 3
 
 
+def test_compute_confidence_ceiling_with_warnings_and_resolution_bonus():
+    groups = [
+        _group(severity=FindingSeverity.warning, fingerprint="w"),
+        _group(
+            resolution_method=ResolutionMethod.absent_and_addressed,
+            state=GitHubFindingGroupState.resolved,
+            fingerprint="r",
+        ),
+        _group(
+            resolution_method=ResolutionMethod.judge_dismissed,
+            state=GitHubFindingGroupState.resolved,
+            fingerprint="j",
+        ),
+    ]
+    assert compute_confidence(groups) <= 4
+
+
+def test_confidence_rationale_four_without_resolution_omits_progress_claim():
+    from app.services.github_publish_formatter import _confidence_rationale
+
+    groups = [_group(severity=FindingSeverity.warning, fingerprint="w")]
+    rationale = _confidence_rationale(groups)
+    assert "Prior fixes" not in rationale
+    assert "some active findings remain" in rationale
+
+
 def test_build_g9_resolution_prose_ignores_addressed_still_active():
     groups = [
         _group(
@@ -286,8 +312,11 @@ async def test_build_pr_review_comment_unwraps_json_body_from_moonshot():
         },
     )
     moonshot_json = (
-        '{"body":"## Code Review Summary\\n\\nTwo warnings on this revision.\\n\\n'
-        '## Confidence Score\\n\\n4/5"}'
+        '{"body":"## Revy code review\\n\\nTwo warnings on this revision.\\n\\n'
+        "**Merge recommendation:** Review warnings before merge — no critical blockers flagged.\\n\\n"
+        '**Confidence score:** 4/5\\n\\nScore is moderated by warning-level findings.\\n\\n'
+        '### Findings\\n\\n| Severity | Category | Title | File |\\n'
+        '| --- | --- | --- | --- |\\n| warning | bug | Issue | app/main.py |"}'
     )
 
     with patch("app.services.github_publish_formatter.settings") as mock_settings:
@@ -301,9 +330,9 @@ async def test_build_pr_review_comment_unwraps_json_body_from_moonshot():
         ):
             result = await build_pr_review_comment(ctx)
 
-    assert result.startswith("## Code Review Summary")
+    assert result.startswith("## Revy code review")
     assert not result.startswith("{")
-    assert "Confidence Score" in result
+    assert "Confidence score" in result
     assert "Resolution metrics (this push)" in result
 
 
@@ -350,10 +379,292 @@ def test_build_pr_review_comment_fallback_greptile_shape():
     ]
     markdown = build_pr_review_comment_fallback(_ctx(groups))
     assert "## Revy code review" in markdown
+    narrative_pos = markdown.index("active finding")
+    merge_pos = markdown.index("**Merge recommendation:**")
+    confidence_pos = markdown.index("**Confidence score:**")
+    assert narrative_pos < merge_pos < confidence_pos
     assert "Confidence score" in markdown
+    assert "Score is" in markdown
     assert "### Files needing attention" in markdown
     assert "### Findings" in markdown
     assert "| Severity | Category | Title | File |" in markdown
+    assert "<summary>Important files changed</summary>" in markdown
+    assert "<summary>Review metadata</summary>" in markdown
+
+
+def test_build_pr_review_comment_fallback_collapses_info_when_priority_exists():
+    groups = [
+        _group(severity=FindingSeverity.warning, title="Warn", fingerprint="w"),
+        _group(severity=FindingSeverity.info, title="Info one", fingerprint="i1"),
+        _group(severity=FindingSeverity.info, title="Info two", fingerprint="i2"),
+    ]
+    markdown = build_pr_review_comment_fallback(_ctx(groups))
+    assert "### Findings" in markdown
+    assert "<summary>2 informational findings</summary>" in markdown
+    assert "Info one" in markdown
+    assert "Warn" in markdown
+
+
+def test_build_pr_review_comment_fallback_narrative_names_top_findings():
+    groups = [
+        _group(
+            severity=FindingSeverity.error,
+            title="Null deref",
+            file_path="app/a.py",
+            fingerprint="a",
+        ),
+    ]
+    markdown = build_pr_review_comment_fallback(_ctx(groups))
+    assert "**Null deref**" in markdown
+    assert "`app/a.py`" in markdown
+
+
+def test_build_pr_review_comment_fallback_narrative_escapes_title_markdown():
+    groups = [
+        _group(
+            severity=FindingSeverity.warning,
+            title="Use `foo_*` safely",
+            file_path="app/a.py",
+            fingerprint="a",
+        ),
+    ]
+    markdown = build_pr_review_comment_fallback(_ctx(groups))
+    assert "**Use \\`foo\\_\\*\\` safely**" in markdown
+
+
+def test_insert_resolution_metrics_block_before_findings_section():
+    from app.services.github_publish_formatter import _insert_resolution_metrics_block
+
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=42,
+        head_sha="abc123",
+        revision_number=2,
+        groups=[_group()],
+        resolution_metrics_manifest={
+            "resolution_rate_pct": 50.0,
+            "transition_count": 1,
+            "denominator_active_prior": 2,
+            "transitions_addressed": 1,
+            "transitions_dismissed": {},
+            "compare_failed_count": 0,
+            "still_open_count": 1,
+        },
+    )
+    moonshot = (
+        "## Revy code review\n\n"
+        "Narrative.\n\n"
+        "**Merge recommendation:** Review.\n\n"
+        "**Confidence score:** 4/5\n\n"
+        "The score is 4 because warnings remain.\n\n"
+        "### Findings\n\n"
+        "| Severity | Category | Title | File |\n"
+    )
+    result = _insert_resolution_metrics_block(moonshot, ctx)
+    metrics_idx = result.find("### Resolution metrics")
+    findings_idx = result.find("### Findings")
+    assert metrics_idx >= 0
+    assert findings_idx > metrics_idx
+
+
+def test_has_confidence_rationale_ignores_score_is_in_finding_title():
+    from app.services.github_publish_formatter import _has_confidence_rationale_in_comment
+
+    markdown = (
+        "## Revy code review\n\n"
+        "**Merge recommendation:** Review.\n\n"
+        "**Confidence score:** 4/5\n\n"
+        "Moderated by remaining findings.\n\n"
+        "### Findings\n\n"
+        "| warning | bug | The score is wrong | app/main.py |\n"
+    )
+    assert _has_confidence_rationale_in_comment(markdown) is False
+
+
+def test_build_pr_review_comment_fallback_security_details_escapes_inline_markdown():
+    groups = [
+        _group(
+            severity=FindingSeverity.error,
+            category=FindingCategory.security,
+            title="Use `foo_*` token",
+            fingerprint="s1",
+        ),
+    ]
+    markdown = build_pr_review_comment_fallback(_ctx(groups))
+    assert "Use \\`foo\\_\\*\\` token" in markdown
+
+
+def test_build_pr_review_comment_fallback_security_details_row_cap():
+    groups = [
+        _group(
+            severity=FindingSeverity.error,
+            category=FindingCategory.security,
+            title=f"Security issue {index}",
+            fingerprint=f"s{index}",
+        )
+        for index in range(10)
+    ]
+    markdown = build_pr_review_comment_fallback(_ctx(groups))
+    assert "2 more security finding(s)" in markdown
+
+
+def test_build_pr_review_comment_fallback_includes_security_details():
+    groups = [
+        _group(
+            severity=FindingSeverity.error,
+            category=FindingCategory.security,
+            title="Leaked secret",
+            file_path="app/auth.py",
+            fingerprint="sec",
+        ),
+    ]
+    markdown = build_pr_review_comment_fallback(_ctx(groups))
+    assert "<summary>Security review</summary>" in markdown
+    assert "Leaked secret" in markdown
+    assert "`app/auth.py`" in markdown
+
+
+def test_build_pr_review_comment_fallback_includes_important_files_table():
+    groups = [
+        _group(file_path="app/a.py", title="Null deref", fingerprint="a"),
+        _group(file_path="app/b.py", title="Race", fingerprint="b"),
+    ]
+    markdown = build_pr_review_comment_fallback(_ctx(groups))
+    assert "<summary>Important files changed</summary>" in markdown
+    assert "| File | Note |" in markdown
+    assert "Null deref" in markdown
+
+
+@pytest.mark.asyncio
+async def test_build_pr_review_comment_moonshot_success_includes_greptile_sections():
+    from app.services.github_publish_formatter import build_pr_review_comment
+
+    groups = [_group(severity=FindingSeverity.warning)]
+    ctx = _ctx(groups)
+    moonshot_markdown = (
+        "## Revy code review\n\n"
+        "This revision introduces a warning in core logic that should be reviewed before merge.\n\n"
+        "**Merge recommendation:** Review warnings before merge — no critical blockers flagged.\n\n"
+        "**Confidence score:** 4/5\n\n"
+        "Score is moderated by warning-level findings.\n\n"
+        "### Findings\n\n"
+        "| Severity | Category | Title | File |\n"
+        "| --- | --- | --- | --- |\n"
+        "| warning | bug | Issue | app/main.py |\n\n"
+        "<details>\n<summary>Review metadata</summary>\n\n"
+        "- head_sha: `abc123`\n\n</details>"
+    )
+
+    with patch("app.services.github_publish_formatter.settings") as mock_settings:
+        mock_settings.reviewer_llm_enabled.return_value = True
+        mock_settings.revy_revision_timeout_standard_seconds = 60
+        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.app_public_url = "https://app.revy.dev"
+        with patch(
+            "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
+            AsyncMock(return_value=moonshot_markdown),
+        ):
+            result = await build_pr_review_comment(ctx)
+
+    assert result == moonshot_markdown
+    assert "Confidence score" in result
+    assert "moderated" in result
+    assert "<details>" in result
+    assert "Review metadata" in result
+
+
+@pytest.mark.asyncio
+async def test_build_pr_review_comment_thin_moonshot_returns_fallback():
+    from app.services.github_publish_formatter import build_pr_review_comment
+
+    groups = [_group(severity=FindingSeverity.warning)]
+    ctx = _ctx(groups)
+    thin_markdown = (
+        "Automated review of PR #61 identified **1 active finding**.\n\n"
+        "**Confidence:** 4/5\n\n"
+        "| Severity | Category | Title | File |\n"
+        "| --- | --- | --- | --- |\n"
+        "| warning | bug | Issue | app/main.py |"
+    )
+
+    with patch("app.services.github_publish_formatter.settings") as mock_settings:
+        mock_settings.reviewer_llm_enabled.return_value = True
+        mock_settings.revy_revision_timeout_standard_seconds = 60
+        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.app_public_url = "https://app.revy.dev"
+        with patch(
+            "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
+            AsyncMock(return_value=thin_markdown),
+        ):
+            result = await build_pr_review_comment(ctx)
+            expected = build_pr_review_comment_fallback(ctx)
+
+    assert result == expected
+    assert "## Revy code review" in result
+
+
+@pytest.mark.asyncio
+async def test_build_pr_review_comment_accepts_lowercase_score_rationale():
+    from app.services.github_publish_formatter import build_pr_review_comment
+
+    groups = [_group(severity=FindingSeverity.warning)]
+    ctx = _ctx(groups)
+    moonshot_markdown = (
+        "## Revy code review\n\n"
+        "This revision has one warning to review before merge.\n\n"
+        "**Merge recommendation:** Review warnings before merge — no critical blockers flagged.\n\n"
+        "**Confidence score:** 4/5\n\n"
+        "The score is 4 because a warning remains on this revision.\n\n"
+        "### Findings\n\n"
+        "| Severity | Category | Title | File |\n"
+        "| --- | --- | --- | --- |\n"
+        "| warning | bug | Issue | app/main.py |\n"
+    )
+
+    with patch("app.services.github_publish_formatter.settings") as mock_settings:
+        mock_settings.reviewer_llm_enabled.return_value = True
+        mock_settings.revy_revision_timeout_standard_seconds = 60
+        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.app_public_url = "https://app.revy.dev"
+        with patch(
+            "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
+            AsyncMock(return_value=moonshot_markdown),
+        ):
+            result = await build_pr_review_comment(ctx)
+
+    assert result.strip() == moonshot_markdown.strip()
+
+
+@pytest.mark.asyncio
+async def test_build_pr_review_comment_accepts_confidence_is_because_rationale():
+    from app.services.github_publish_formatter import build_pr_review_comment
+
+    groups = [_group(severity=FindingSeverity.warning)]
+    ctx = _ctx(groups)
+    moonshot_markdown = (
+        "## Revy code review\n\n"
+        "This revision has one warning to review before merge.\n\n"
+        "**Merge recommendation:** Review warnings before merge — no critical blockers flagged.\n\n"
+        "**Confidence score:** 4/5\n\n"
+        "Confidence is 4 because a warning remains on this revision.\n\n"
+        "### Findings\n\n"
+        "| Severity | Category | Title | File |\n"
+        "| --- | --- | --- | --- |\n"
+        "| warning | bug | Issue | app/main.py |\n"
+    )
+
+    with patch("app.services.github_publish_formatter.settings") as mock_settings:
+        mock_settings.reviewer_llm_enabled.return_value = True
+        mock_settings.revy_revision_timeout_standard_seconds = 60
+        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.app_public_url = "https://app.revy.dev"
+        with patch(
+            "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
+            AsyncMock(return_value=moonshot_markdown),
+        ):
+            result = await build_pr_review_comment(ctx)
+
+    assert result.strip() == moonshot_markdown.strip()
 
 
 @pytest.mark.asyncio

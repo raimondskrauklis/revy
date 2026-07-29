@@ -30,12 +30,12 @@
 | **Reconcile** | Links run findings → groups; peer supersede within file+category (`github_finding_reconcile.py`) |
 | **`group.state`** | `active` · `superseded` · `resolved` — publish + API lifecycle |
 | **`resolution_status`** | `addressed` · `still_open` · `judge_dismissed` — **metrics + G9 prose only**; does not change `group.state` except via `judge_dismissed` path |
-| **GitHub thread resolved** | `resolveReviewThread` GraphQL — UI “resolved”; Option A + closed groups |
+| **GitHub thread resolved** | `resolveReviewThread` GraphQL — UI “resolved”; **GH-1v2** triggers (Option A + B + outdated + closed groups) — [§4c](../github-surface-hardening/GITHUB_SURFACE_HARDENING_FINDINGS.md#gh-1v2--collapse-triggers-shipped-post-p4) |
 | **`resolution_method`** | **P0** — how group closed: `absent_and_addressed`, `judge_dismissed`, `verification_dismissed`, `human_dismissed` |
 | **Publishable** | Finding eligible for inline comment this generation (per-run + judge gate) |
 | **Resolution (product)** | User-facing: **Addressed** · **Dismissed** · **Still open** · **Superseded** — backed by `resolution_status` + `group.state` (see general plan) |
 
-**GitHub vs Revy:** GitHub “Outdated” = diff anchor moved (automatic). GitHub “Resolved” = explicit thread resolve. Revy Option A resolves threads when fingerprint ∉ current publishable set or group is `resolved`/`superseded`.
+**GitHub vs Revy:** GitHub “Outdated” = diff anchor moved (automatic UI badge). Revy **v2** also resolves outdated Revybot threads at publish (`isOutdated` from GraphQL). Revy collapses threads when: fingerprint ∉ publishable (Option A), Pass 1 `addressed` (Option B), outdated, already resolved on GitHub, or group `resolved`/`superseded`.
 
 ---
 
@@ -97,7 +97,9 @@ flowchart TD
 | `resolution_status` on synchronize | Prior-revision groups only | `apply_resolution_status_for_synchronize` |
 | Diff heuristic `addressed` | `patch_touches_line_region` | Any `+`/`−` overlapping line region |
 | G9 prose | “Since last push: N fixed…” | `github_publish_formatter.py:147–157` — **only** if group still `active` |
-| Option A thread resolve | Fingerprint ∉ publishable OR group closed | `_resolve_stale_inline_threads` |
+| Option A thread resolve | Fingerprint ∉ publishable OR group closed | `_fingerprints_to_resolve_inline_threads` → `_resolve_stale_inline_threads` |
+| Option B thread resolve | `resolution_status=addressed` (even if re-reported) | same (GH-Q9) |
+| Outdated thread resolve | GitHub `isOutdated` on mapped comment | same (GH-Q9) |
 | Judge gate on publish | Candidates need outcome row or `resolved` | `publishable_groups_for_review_run` |
 | HEAD / supersede guards | Skip publish when not HEAD | generation lifecycle P1 |
 
@@ -129,7 +131,7 @@ flowchart TD
 | **C. Finding not in new run** | Moonshot omits fingerprint | Group unchanged; `last_seen_revision_id` old | Option A resolves thread when not publishable | **Medium** — implicit |
 | **D. Peer supersede** | New finding same file+category | Old group `superseded` | Resolve if in thread map | **High** — identity rule |
 | **E. Human** | — | **Not shipped** | — | — |
-| **F. GitHub outdated** | Line anchor moved | None | Thread marked outdated by GitHub | Automatic, not Revy DB |
+| **F. GitHub outdated** | Line anchor moved | None in DB | **v2:** thread collapsed at publish when `isOutdated` | **Shipped** — GH-Q9 |
 
 **Publish eligibility** (`inline_publish_findings_statement`): only `group.state == active` (`github_publish.py:407–428`). **`resolved` groups never get new inline** but may appear in summary path via `publishable_groups_for_review_run` inclusion of resolved groups for check conclusion context — verify per publish build.
 

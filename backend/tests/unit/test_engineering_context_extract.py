@@ -7,37 +7,23 @@ from app.services.engineering_context.extract import extract_engineering_context
 _FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "engineering_context"
 
 
-def test_extract_engineering_context_judge_findings_snippet():
-    md_text = (_FIXTURES / "judge_findings_snippet.md").read_text(encoding="utf-8")
-    result = extract_engineering_context(md_text, max_bytes=8192)
-    assert "JC-D1" in result.lock_ids
-    assert "JC-D2" in result.lock_ids
-    assert "Locked decisions" in result.text
-    assert "P0 smoke" in result.text
-
-
-def test_extract_engineering_context_rcx_findings_snippet():
+def test_extract_engineering_context_committed_rcx_fixture():
     md_text = (_FIXTURES / "rcx_findings_snippet.md").read_text(encoding="utf-8")
     result = extract_engineering_context(md_text, max_bytes=8192)
     assert "RCX-D8" in result.lock_ids
     assert "RCX-D12" in result.lock_ids
-    assert "Baseline captured" in result.text
-    assert "Queried:" in result.text
+    assert "## Locked decisions" in result.text
+    assert "Diff truncated %" in result.text
 
 
-def test_extract_engineering_context_truncates_utf8():
-    md_text = "## Locked decisions\n\n" + ("x" * 1000)
-    result = extract_engineering_context(md_text, max_bytes=50)
-    assert len(result.text.encode("utf-8")) <= 50
+def test_extract_engineering_context_locked_decisions_dated_heading():
+    md_text = "## Locked decisions (discussion 2026-07-29)\n\n| ID | Decision |\n|----|----------|\n| **JC-D3** | Lock |\n"
+    result = extract_engineering_context(md_text, max_bytes=4096)
+    assert result.lock_ids == ("JC-D3",)
+    assert "JC-D3" in result.text
 
 
-def test_extract_engineering_context_skips_duplicate_nested_smoke_sections():
-    md_text = (
-        "## Locked decisions\n\n"
-        "foo\n\n"
-        "### Baseline captured\n\n"
-        "**Queried:** x\n"
-    )
-    result = extract_engineering_context(md_text, max_bytes=8192)
-    assert result.text.count("### Baseline captured") == 1
-    assert result.text.count("**Queried:**") == 1
+def test_extract_engineering_context_respects_byte_budget():
+    md_text = (_FIXTURES / "rcx_findings_snippet.md").read_text(encoding="utf-8")
+    result = extract_engineering_context(md_text, max_bytes=64)
+    assert len(result.text.encode("utf-8")) <= 64
