@@ -1,6 +1,24 @@
 {
-  "active_program": "review-engineering-context",
+  "active_program": "publish-summary-alignment",
   "programs": [
+    {
+      "id": "publish-summary-alignment",
+      "scope": ["backend/**"],
+      "paths": [
+        {
+          "path": "docs/review-pipeline/publish-summary-alignment/waves/PUBLISH_SUMMARY_ALIGNMENT_EXECUTION.md",
+          "description": "PSA execution index — LOOP P0–P2, PSA-D* locks"
+        },
+        {
+          "path": "docs/review-pipeline/publish-summary-alignment/PUBLISH_SUMMARY_ALIGNMENT_FINDINGS.md",
+          "description": "PSA baseline — RG-14 / FR-Q16 two-block issue comment parity"
+        },
+        {
+          "path": "docs/review-pipeline/publish-summary-alignment/PUBLISH_SUMMARY_ALIGNMENT_GENERAL_PLAN.md",
+          "description": "PSA general plan — P0–P2 phases"
+        }
+      ]
+    },
     {
       "id": "review-engineering-context",
       "scope": ["backend/**"],

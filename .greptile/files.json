@@ -2,42 +2,21 @@
   "files": [
     {
       "path": "docs/review-pipeline/publish-summary-alignment/waves/PUBLISH_SUMMARY_ALIGNMENT_EXECUTION.md",
-      "description": "PSA execution index — LOOP P0–P2, PSA-D* locks",
+      "description": "PSA execution index \u2014 LOOP P0\u2013P2, PSA-D* locks",
       "scope": [
         "backend/**"
       ]
     },
     {
       "path": "docs/review-pipeline/publish-summary-alignment/PUBLISH_SUMMARY_ALIGNMENT_FINDINGS.md",
-      "description": "PSA baseline — RG-14 / FR-Q16 two-block issue comment parity",
+      "description": "PSA baseline \u2014 RG-14 / FR-Q16 two-block issue comment parity",
       "scope": [
         "backend/**"
       ]
     },
     {
       "path": "docs/review-pipeline/publish-summary-alignment/PUBLISH_SUMMARY_ALIGNMENT_GENERAL_PLAN.md",
-      "description": "PSA general plan — P0–P2 phases",
-      "scope": [
-        "backend/**"
-      ]
-    },
-    {
-      "path": "docs/review-pipeline/review-engineering-context/waves/REVIEW_ENGINEERING_CONTEXT_EXECUTION.md",
-      "description": "RCX execution index — LOOP P0–P8, locked decisions",
-      "scope": [
-        "backend/**"
-      ]
-    },
-    {
-      "path": "docs/review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_FINDINGS.md",
-      "description": "RCX baseline — RCX-D*, Wave 2, validation metrics",
-      "scope": [
-        "backend/**"
-      ]
-    },
-    {
-      "path": "docs/review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md",
-      "description": "RCX general plan — phases P0–P8",
+      "description": "PSA general plan \u2014 P0\u2013P2 phases",
       "scope": [
         "backend/**"
       ]

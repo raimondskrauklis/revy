@@ -12,7 +12,7 @@
 
 | Decision | Verdict |
 |----------|---------|
-| **Wire Greptile + Bugbot to execution + findings in v1** | **Yes** — `.greptile/files.json` + `.cursor/BUGBOT.md` in **RQ0** (first commit) |
+| **Wire Greptile + Bugbot + Moonshot to execution + findings in v1** | **Yes** — `.greptile/review-context.json` (SSOT) + generated `.greptile/files.json` + `.cursor/BUGBOT.md` in **RQ0** (first commit) |
 | **Treat changed `.md` in PR diff as authoritative spec** | **No** — bots need explicit wiring; diff alone is insufficient |
 | **Productize as workspace policy in v1** | **No** — dogfood repo config first; `.revy/rules` → post-G (DB) |
 | **Improve iteratively after dogfood** | **Yes** — was **RQ-RC-1**; now **[RCX](../review-engineering-context/README.md)** (Moonshot inject + Greptile SSOT) |
@@ -55,7 +55,8 @@ Shipped in **RQ0** (same commit as migration `0026`):
 
 | File | Role |
 |------|------|
-| `.greptile/files.json` | `path` entries for execution + findings; `scope: ["backend/**"]` |
+| `.greptile/review-context.json` | **SSOT** — `active_program` + `programs[]`; Moonshot inject reads at `head_sha` (RCX-D11) |
+| `.greptile/files.json` | **Generated** from SSOT — Greptile dogfood manifest; never hand-edit after RCX P3 |
 | `.cursor/BUGBOT.md` | Markdown links to same docs (paths relative to `.cursor/`) |
 
 **Per-phase commit pattern** (LOOP): phase code + **minimal** doc touch (README status / execution table row). Do **not** re-edit full findings + peer-review corpus every push — context budget.

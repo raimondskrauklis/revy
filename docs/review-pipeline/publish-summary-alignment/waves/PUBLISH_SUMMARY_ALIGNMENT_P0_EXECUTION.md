@@ -19,16 +19,40 @@ Phase **P0** of [PUBLISH_SUMMARY_ALIGNMENT_GENERAL_PLAN.md](../PUBLISH_SUMMARY_A
 - **PSA-D12:** `compute_check_conclusion(groups)` unchanged — generation-scoped; out of scope (see findings).
 - Flip `test_build_pr_review_comment_fallback_generation_only_not_pr_block` → `test_build_pr_review_comment_fallback_two_block_when_pr_active_extra`.
 
-## PR review context (first commit)
+## PR review context (first commit) — **hard gate**
 
-- **Greptile:** `.greptile/files.json` — add `docs/review-pipeline/publish-summary-alignment/**`, `backend/app/services/github_publish_formatter.py`
-- **Bugbot:** `.cursor/BUGBOT.md` — link to program README + findings
+- **SSOT:** `.greptile/review-context.json` — `active_program: "publish-summary-alignment"`; add PSA `programs[]` entry (`scope: ["backend/**"]`, three doc paths below)
+- **Greptile:** regenerate `.greptile/files.json` from SSOT — **do not hand-edit**
+- **Bugbot:** `.cursor/BUGBOT.md` — active program PSA + links to execution, findings, general plan
+
+**Doc paths (SSOT `paths[]` only — not source files):**
+
+- `docs/review-pipeline/publish-summary-alignment/waves/PUBLISH_SUMMARY_ALIGNMENT_EXECUTION.md`
+- `docs/review-pipeline/publish-summary-alignment/PUBLISH_SUMMARY_ALIGNMENT_FINDINGS.md`
+- `docs/review-pipeline/publish-summary-alignment/PUBLISH_SUMMARY_ALIGNMENT_GENERAL_PLAN.md`
 
 ## Out of scope for P0
 
 - Moonshot prompt / system prompt / product bar (P1)
 - Staging memo (P2)
 - `compute_check_conclusion` generation scope (PSA-D12)
+
+---
+
+## P0.0 — Program PR review context (SSOT + Greptile + Bugbot)
+
+**What:** Switch SSOT `active_program` to `publish-summary-alignment`; add PSA program entry; regenerate Greptile `files.json`; update Bugbot active program block.
+
+**Files:** `.greptile/review-context.json`, `.greptile/files.json`, `.cursor/BUGBOT.md`
+
+**Deliverable:**
+
+```bash
+cd backend && python -m scripts.generate_greptile_files_from_review_context --write
+python -m scripts.generate_greptile_files_from_review_context --check
+pipenv run pytest tests/unit/test_generate_greptile_files.py -q
+python -m json.tool ../.greptile/review-context.json > /dev/null
+```
 
 ---
 
@@ -107,6 +131,8 @@ cd backend && pipenv run pytest tests/unit/test_github_publish_formatter.py -k "
 ```bash
 pipenv run pytest tests/unit/test_github_publish_formatter.py -q
 pipenv run ruff check app/services/github_publish_formatter.py
+python -m scripts.generate_greptile_files_from_review_context --check
+pipenv run pytest tests/unit/test_generate_greptile_files.py -q
 ```
 
 **Next:** [PUBLISH_SUMMARY_ALIGNMENT_P1_EXECUTION.md](./PUBLISH_SUMMARY_ALIGNMENT_P1_EXECUTION.md)

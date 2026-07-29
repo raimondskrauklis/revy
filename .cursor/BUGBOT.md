@@ -45,17 +45,13 @@ When reviewing **backend** changes that touch publish / formatter / pipeline / g
 - [CURSOR_AGENT_WORKFLOW.md](../docs/utils/CURSOR_AGENT_WORKFLOW.md) — roles + verbs quick ref
 - [agents/prompts/ROLES.md](../docs/review-pipeline/agents/prompts/ROLES.md) — master/reviewer boundaries
 
-**Program:** Review engineering context on `feat/review-engineering-context` — SSOT `.greptile/review-context.json`, Moonshot inject P2, Greptile generator P3.
-
-**Judge input quality (historical — shipped):**
-
 **Finding resolution (shipped on `main`):**
 
 - [FINDING_RESOLUTION_EXECUTION.md](../docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_EXECUTION.md) — P0–P5 scope, closure passes, FR-Q12
 - [FINDING_RESOLUTION_FINDINGS.md](../docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_FINDINGS.md) — FR-* gaps, multi-pass model
 - [FINDING_RESOLUTION_GENERAL_PLAN.md](../docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_GENERAL_PLAN.md) — phase goals
 
-**Judge JSON contract (active program):**
+**Judge JSON contract (shipped on `main`):**
 
 - [JUDGE_JSON_CONTRACT_EXECUTION.md](../docs/review-pipeline/judge-json-contract/waves/JUDGE_JSON_CONTRACT_EXECUTION.md) — P0–P5 scope, structured output, observability
 - [JUDGE_JSON_CONTRACT_FINDINGS.md](../docs/review-pipeline/judge-json-contract/JUDGE_JSON_CONTRACT_FINDINGS.md) — JC-* gaps, staging metrics
