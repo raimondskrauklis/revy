@@ -127,7 +127,7 @@ After Track A ships + deploy:
 | ID | Question | Status | Resolution |
 |----|----------|--------|------------|
 | **DG-PV-Q1** | Is FR-DG1 staging-closed? | **locked** | **Yes** — rev 3 manifest + surface PASS |
-| **DG-PV-Q2** | Is FR-DG2 staging-closed? | **locked** | **No** — partial; probe removal failed; follow Track A+B |
+| **DG-PV-Q2** | Is FR-DG2 staging-closed? | **locked** | **Partial PASS** — #67 rev 3 mechanism; push-1 orphan per VAL10 |
 | **DG-PV-Q3** | Root cause of probe survival? | **locked** | RC-1 — deleted files not stamped `addressed` |
 | **DG-PV-Q4** | Next code work? | **locked** | Track A shipped in `fix/fr-dg2-file-deletion-pass1` |
 | **DG-PV-Q5** | Merge #65? | **open** | Safe for FR-DG1; not FR-DG2 sign-off |

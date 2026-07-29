@@ -111,3 +111,15 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
 | **Track B PR** | `chore/fr-dg2-staging-dogfood` — push 1 introduce → push 2 fix → push 3 delete |
 
 ---
+
+## FR-DG-VAL10 — Pass 1 pairing window on delete
+
+| Item | Locked decision |
+|------|-----------------|
+| **Evidence** | #67 rev 3 — `019faf5b` (last_seen rev 2) `absent_and_addressed`; `019faf58` (last_seen rev 1) stayed `active` |
+| **Cause** | Pass 1 stamps only `last_seen_revision_id ∈ pairing_revision_ids` (last published prior + gap); rev-1 cohort excluded on rev 3 |
+| **Mechanism** | #66 file-deletion stamp **works** for in-window cohort |
+| **Operator rule** | Delete file on **next publish** after finding introduced, or accept orphan until product fix |
+| **Follow-up** | Optional **FR-DG2b** — stamp `addressed` on file delete for **all active groups** on `file_path`, not pairing cohort only |
+
+---

@@ -2,43 +2,48 @@
 
 **Program:** [README.md](./README.md) · **Post-validation:** [FINDING_RESOLUTION_DOGFOOD_POST_VALIDATION_FINDINGS.md](./FINDING_RESOLUTION_DOGFOOD_POST_VALIDATION_FINDINGS.md) · **Operator locks:** [FINDING_RESOLUTION_DOGFOOD_VALIDATION_FINDINGS.md](./FINDING_RESOLUTION_DOGFOOD_VALIDATION_FINDINGS.md)
 
-**Status:** **Track B push 3 in progress** — FR-DG2 sign-off after probe file deletion.
+**Status:** **Track B complete** — FR-DG2 **PARTIAL PASS** ([#67](https://github.com/raimondskrauklis/revy/pull/67) rev 3 `2c14e7d`).
 
 ## Deploy boundaries
 
 | Boundary | `--since` ISO | Used for |
 |----------|---------------|----------|
-| PSA baseline (reference) | `2026-07-29T11:38:12Z` | Pre-#64 history only |
-| Post-#64 deploy (wave A) | `2026-07-29T17:50:43Z` | #65 wave A metrics |
-| Post-#66 deploy (FR-DG2a) | `2026-07-29T19:20:33Z` | **Track B** FR-DG2 sign-off |
+| Post-#66 deploy (FR-DG2a) | `2026-07-29T19:20:33Z` | Track B metrics |
 
-**Deploy evidence (#66):** workflow `30483659578` — merge `111e851` — job **Build, Push, and Deploy to Droplet** finished `2026-07-29T19:20:33Z`.
-
-## Track B dogfood PR — [#67](https://github.com/raimondskrauklis/revy/pull/67)
+## Track B — [#67](https://github.com/raimondskrauklis/revy/pull/67)
 
 | Push | Intent | Status |
 |------|--------|--------|
-| 1 | Introduce `fr_dg2_probe` + Moonshot defect | **PASS** — `893cf83` (gen=1, pr=1) |
-| 2 | Fix defect in-file | **done** — `79fef27` (denom=1; orig group `still_open`; +2 new findings) |
-| 3 | Delete probe file — **FR-DG2** | in progress |
+| 1 | Introduce probe + defect | **PASS** — `893cf83` |
+| 2 | Fix in-file | **done** — `79fef27` |
+| 3 | Delete probe file — FR-DG2 | **PARTIAL PASS** — `2c14e7d` |
 
-**Target group (push 1 cohort):** `019faf58-ad7e-7f6a-b7b4-64e33fa01f38` — `probe_module.py`
-
-## Pass criteria — FR-DG2 (push 3)
+## Pass criteria — FR-DG2 (push 3 / rev 3)
 
 | Check | Pass | Evidence |
 |-------|------|----------|
-| Target probe group `absent_and_addressed` on rev 3 | pending | DB |
-| `pr_active_count` stable or ↓ vs push 2 | pending | `summary_json` |
-| Stale inline collapsed | pending | `github_inline_threads` |
+| File-deletion `absent_and_addressed` (mechanism) | **PASS** | `019faf5b` closed rev 3 — `absent_and_addressed` |
+| Push-1 cohort group `019faf58` closed | **FAIL** | still `active` — aged out of Pass 1 pairing on rev 3 |
+| `transitions_addressed` ≥ 1 | **PASS** | `1` (manifest) |
+| `pr_active_count` stable vs push 2 | **PASS** | 3 → 3 |
+| Inline collapse | **partial** | 4 threads remain; probe cohort mixed |
+
+**Rev 3 manifest:** `denominator_active_prior=2`, `transitions_addressed=1`, `resolution.addressed=1`, `judge_dismissed=1`.
 
 ## Results (operator)
 
 | Push | `head_sha` | `review_run_id` | `gen` / `pr` | Notes |
 |------|------------|-----------------|--------------|-------|
-| 1 | `893cf83` | `019faf57-3bf2-77a8-814d-398603e4c406` | 1 / 1 | probe defect active |
-| 2 | `79fef27` | `019faf59-d82d-79db-b638-ce240b8dbadc` | 2 / 3 | denom=1; addressed=0; orig `still_open` |
-| 3 | — | — | — | delete file — FR-DG2 (#66 Pass 1) |
+| 1 | `893cf83` | `019faf57-3bf2-77a8-814d-398603e4c406` | 1 / 1 | cohort `019faf58` introduced |
+| 2 | `79fef27` | `019faf59-d82d-79db-b638-ce240b8dbadc` | 2 / 3 | orig `still_open`; `019faf5b` introduced |
+| 3 | `2c14e7d` | `019faf5e-5b5f-7859-a243-efdd8a4e22c2` | 1 / 3 | `019faf5b` **absent_and_addressed**; `019faf58` orphan |
+
+## Sign-off
+
+| Gap | Result |
+|-----|--------|
+| **FR-DG2a** | **PASS** — file-deletion Pass 1 + Pass 2 closure on rev-adjacent cohort |
+| **FR-DG2** | **PARTIAL PASS** — mechanism proven; push-1 orphan → [VAL10](./FINDING_RESOLUTION_DOGFOOD_VALIDATION_FINDINGS.md#fr-dg-val10--pass-1-pairing-window-on-delete) |
 
 ## Metrics
 
