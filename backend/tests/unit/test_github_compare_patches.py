@@ -123,6 +123,10 @@ async def test_fetch_compare_patches_includes_removed_paths():
             "app/old.py",
         }
     )
+    assert result.deleted_paths == frozenset(
+        {"backend/tests/fixtures/fr_dogfood/probe_module.py"}
+    )
+    assert result.renamed_from_paths == frozenset({"app/old.py"})
 
 
 @pytest.mark.asyncio

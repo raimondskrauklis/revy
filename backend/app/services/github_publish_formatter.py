@@ -219,6 +219,14 @@ def format_resolution_metrics_block(manifest: dict[str, object]) -> str:
         lines.append(f"- **Still open from prior review:** {still_open}")
     if isinstance(compare_failed, int) and compare_failed > 0:
         lines.append(f"- **Compare blocked:** {compare_failed} group(s)")
+    hygiene_path_removed = manifest.get("hygiene_path_removed_count")
+    if isinstance(hygiene_path_removed, int) and hygiene_path_removed > 0:
+        lines.append(
+            f"- **Closed as path removed:** {hygiene_path_removed} (outside this push pair)"
+        )
+    head_check_failed = manifest.get("head_check_failed_count")
+    if isinstance(head_check_failed, int) and head_check_failed > 0:
+        lines.append(f"- **HEAD path check blocked:** {head_check_failed} group(s)")
     return "\n".join(lines)
 
 

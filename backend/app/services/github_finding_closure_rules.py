@@ -12,6 +12,7 @@ from app.constants.enums import (
 )
 
 COMPARE_FAILED_REASON = "compare_failed"
+HEAD_CHECK_FAILED_REASON = "head_check_failed"
 
 
 def should_close_absent_and_addressed(

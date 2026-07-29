@@ -22,6 +22,8 @@ class ComparePatchesResult:
     patches_by_file: dict[str, str]
     compare_failed: bool
     removed_paths: frozenset[str] = frozenset()
+    deleted_paths: frozenset[str] = frozenset()
+    renamed_from_paths: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,8 +81,16 @@ async def fetch_compare_patches(
             return ComparePatchesResult({}, True, frozenset())
 
     patches = {item.filename: item.patch for item in compare.files if item.patch}
+    deleted_paths = frozenset(compare.deleted_paths)
+    renamed_from_paths = frozenset(compare.renamed_from_paths)
     removed_paths = frozenset(compare.paths_to_remove)
-    return ComparePatchesResult(patches, False, removed_paths)
+    return ComparePatchesResult(
+        patches,
+        False,
+        removed_paths,
+        deleted_paths,
+        renamed_from_paths,
+    )
 
 
 async def fetch_compare_patches_by_file(

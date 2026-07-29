@@ -256,6 +256,23 @@ def test_format_resolution_metrics_block():
     assert "Still open" in block
 
 
+def test_format_resolution_metrics_block_path_removed_line():
+    block = format_resolution_metrics_block(
+        {
+            "resolution_rate_pct": 50.0,
+            "transition_count": 1,
+            "denominator_active_prior": 2,
+            "transitions_addressed": 1,
+            "transitions_dismissed": {},
+            "still_open_count": 1,
+            "compare_failed_count": 0,
+            "hygiene_path_removed_count": 2,
+        }
+    )
+    assert "Closed as path removed" in block
+    assert "outside this push pair" in block
+
+
 def test_build_pr_review_comment_fallback_includes_resolution_metrics_block():
     groups = [
         _group(
