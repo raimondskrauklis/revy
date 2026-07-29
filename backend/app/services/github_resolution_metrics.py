@@ -20,7 +20,11 @@ from app.models.github_publish_job import GitHubPublishJobORM
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.services.github_compare_patches import ComparePatchesResult, fetch_compare_patches
-from app.services.github_finding_closure_rules import COMPARE_FAILED_REASON
+from app.services.github_finding_closure_rules import (
+    COMPARE_FAILED_REASON,
+    HEAD_CHECK_FAILED_REASON,
+)
+from app.services.github_path_hygiene import hygiene_path_gone, paths_absent_at_head
 
 _HUNK_HEADER_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 
@@ -92,20 +96,20 @@ async def _latest_finding_lines(
     return finding.start_line, finding.end_line
 
 
-def file_path_removed_in_compare(
+def file_path_deleted_in_compare(
     file_path: str,
     *,
-    removed_paths: frozenset[str],
+    deleted_paths: frozenset[str],
 ) -> bool:
-    """True when GitHub compare removed the group's file between prior and current head."""
-    return file_path in removed_paths
+    """True when GitHub compare deleted the group's file between prior and current head."""
+    return file_path in deleted_paths
 
 
 def resolve_group_resolution_status(
     *,
     group: GitHubFindingGroupORM,
     patches_by_file: dict[str, str],
-    removed_paths: frozenset[str],
+    deleted_paths: frozenset[str],
     start_line: int | None,
     end_line: int | None,
 ) -> ResolutionStatus:
@@ -116,7 +120,7 @@ def resolve_group_resolution_status(
     if not file_path:
         return ResolutionStatus.still_open
 
-    if file_path_removed_in_compare(file_path, removed_paths=removed_paths):
+    if file_path_deleted_in_compare(file_path, deleted_paths=deleted_paths):
         return ResolutionStatus.addressed
 
     patch = patches_by_file.get(file_path)
@@ -220,14 +224,16 @@ async def apply_resolution_status_for_synchronize(
     for group in stale_groups:
         group.resolution_status = None
 
-    groups = [
+    cohort_groups = [
         group
         for group in stale_groups
         if group.last_seen_revision_id in pairing_revision_ids
     ]
-    if not groups:
-        await session.flush()
-        return 0
+    active_groups = [
+        group
+        for group in stale_groups
+        if group.state == GitHubFindingGroupState.active and group.file_path
+    ]
 
     compare_result = await _fetch_compare_patches(
         session,
@@ -236,12 +242,32 @@ async def apply_resolution_status_for_synchronize(
         new_revision=new_revision,
     )
 
+    file_paths = frozenset(group.file_path for group in active_groups if group.file_path)
+    compare_fast_path = not compare_result.compare_failed
+    absent_by_path = await paths_absent_at_head(
+        session,
+        pull_request=pull_request,
+        head_sha=new_revision.head_sha,
+        file_paths=file_paths,
+        deleted_paths=compare_result.deleted_paths if compare_fast_path else None,
+        renamed_from_paths=compare_result.renamed_from_paths if compare_fast_path else None,
+    )
+
     updated = 0
-    for group in groups:
+    updated_group_ids: set[UUID] = set()
+
+    def _count_group_update(group: GitHubFindingGroupORM) -> None:
+        nonlocal updated
+        if group.id in updated_group_ids:
+            return
+        updated_group_ids.add(group.id)
+        updated += 1
+
+    for group in cohort_groups:
         if compare_result.compare_failed:
             group.closure_blocked_reason = COMPARE_FAILED_REASON
             group.resolution_status = ResolutionStatus.still_open
-            updated += 1
+            _count_group_update(group)
             continue
 
         group.closure_blocked_reason = None
@@ -249,11 +275,58 @@ async def apply_resolution_status_for_synchronize(
         group.resolution_status = resolve_group_resolution_status(
             group=group,
             patches_by_file=compare_result.patches_by_file,
-            removed_paths=compare_result.removed_paths,
+            deleted_paths=compare_result.deleted_paths,
             start_line=start_line,
             end_line=end_line,
         )
-        updated += 1
+        _count_group_update(group)
+
+    for group in active_groups:
+        file_path = group.file_path
+        if not file_path:
+            continue
+
+        absent = absent_by_path.get(file_path)
+
+        if compare_result.compare_failed:
+            if group.resolution_status != ResolutionStatus.addressed:
+                if absent is None:
+                    if group.closure_blocked_reason != COMPARE_FAILED_REASON:
+                        group.closure_blocked_reason = HEAD_CHECK_FAILED_REASON
+                        group.resolution_status = ResolutionStatus.still_open
+                        _count_group_update(group)
+                elif absent is True:
+                    if group.closure_blocked_reason != COMPARE_FAILED_REASON:
+                        group.closure_blocked_reason = COMPARE_FAILED_REASON
+                        group.resolution_status = ResolutionStatus.still_open
+                        _count_group_update(group)
+                elif (
+                    absent is False
+                    and group.closure_blocked_reason == HEAD_CHECK_FAILED_REASON
+                ):
+                    group.closure_blocked_reason = None
+            continue
+
+        path_gone = hygiene_path_gone(
+            file_path,
+            absent_at_head=absent,
+            renamed_from_paths=compare_result.renamed_from_paths,
+        )
+        if path_gone is None:
+            if group.resolution_status != ResolutionStatus.addressed:
+                group.closure_blocked_reason = HEAD_CHECK_FAILED_REASON
+                group.resolution_status = ResolutionStatus.still_open
+                _count_group_update(group)
+            continue
+        if not path_gone:
+            if group.closure_blocked_reason is not None:
+                group.closure_blocked_reason = None
+                _count_group_update(group)
+            continue
+
+        group.closure_blocked_reason = None
+        group.resolution_status = ResolutionStatus.addressed
+        _count_group_update(group)
 
     await session.flush()
     return updated
@@ -288,6 +361,20 @@ def _in_sync_stamp_cohort(
     )
 
 
+def _is_hygiene_path_removed_closure(
+    group: GitHubFindingGroupORM,
+    *,
+    prior_revision_ids: frozenset[UUID],
+    current_revision_id: UUID,
+) -> bool:
+    return (
+        group.state == GitHubFindingGroupState.resolved
+        and group.resolution_method == ResolutionMethod.absent_and_addressed
+        and group.resolved_at_revision_id == current_revision_id
+        and group.last_seen_revision_id not in prior_revision_ids
+    )
+
+
 def build_resolution_pass_manifest(
     groups: list[GitHubFindingGroupORM],
     *,
@@ -308,11 +395,22 @@ def build_resolution_pass_manifest(
     compare_failed_count = sum(
         1 for group in cohort if group.closure_blocked_reason == COMPARE_FAILED_REASON
     )
+    head_check_failed_count = sum(
+        1
+        for group in groups
+        if group.state != GitHubFindingGroupState.superseded
+        and group.closure_blocked_reason == HEAD_CHECK_FAILED_REASON
+    )
     denominator_groups = [
         group
         for group in cohort
-        if group.closure_blocked_reason != COMPARE_FAILED_REASON
+        if group.closure_blocked_reason not in (COMPARE_FAILED_REASON, HEAD_CHECK_FAILED_REASON)
         and not _is_pre_sync_resolved(group, current_revision_id=current_revision_id)
+        and not _is_hygiene_path_removed_closure(
+            group,
+            prior_revision_ids=prior_revision_ids,
+            current_revision_id=current_revision_id,
+        )
     ]
     transitions = [
         group
@@ -321,29 +419,48 @@ def build_resolution_pass_manifest(
         and group.resolved_at_revision_id == current_revision_id
         and group.resolution_method is not None
     ]
+    hygiene_path_removed_count = sum(
+        1
+        for group in groups
+        if group.state != GitHubFindingGroupState.superseded
+        and _is_hygiene_path_removed_closure(
+            group,
+            prior_revision_ids=prior_revision_ids,
+            current_revision_id=current_revision_id,
+        )
+    )
+    rate_transitions = [
+        group
+        for group in transitions
+        if not _is_hygiene_path_removed_closure(
+            group,
+            prior_revision_ids=prior_revision_ids,
+            current_revision_id=current_revision_id,
+        )
+    ]
     transitions_addressed = sum(
         1
-        for group in transitions
+        for group in rate_transitions
         if group.resolution_method == ResolutionMethod.absent_and_addressed
     )
     transitions_dismissed = {
         ResolutionMethod.judge_dismissed.value: sum(
             1
-            for group in transitions
+            for group in rate_transitions
             if group.resolution_method == ResolutionMethod.judge_dismissed
         ),
         ResolutionMethod.verification_dismissed.value: sum(
             1
-            for group in transitions
+            for group in rate_transitions
             if group.resolution_method == ResolutionMethod.verification_dismissed
         ),
         ResolutionMethod.human_dismissed.value: sum(
             1
-            for group in transitions
+            for group in rate_transitions
             if group.resolution_method == ResolutionMethod.human_dismissed
         ),
     }
-    transition_count = len(transitions)
+    transition_count = len(rate_transitions)
     denominator = len(denominator_groups)
     resolution_rate_pct = (
         round(100.0 * transition_count / denominator, 1) if denominator else 0.0
@@ -361,6 +478,8 @@ def build_resolution_pass_manifest(
         "denominator_active_prior": denominator,
         "resolution_rate_pct": resolution_rate_pct,
         "compare_failed_count": compare_failed_count,
+        "head_check_failed_count": head_check_failed_count,
+        "hygiene_path_removed_count": hygiene_path_removed_count,
         "still_open_count": still_open_count,
     }
 

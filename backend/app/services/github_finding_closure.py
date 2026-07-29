@@ -7,7 +7,7 @@ from typing import Any
 from uuid import UUID
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import (
@@ -167,8 +167,11 @@ async def apply_pass2_closure_for_review_run(
         await session.scalars(
             select(GitHubFindingGroupORM).where(
                 GitHubFindingGroupORM.pull_request_id == revision.pull_request_id,
-                GitHubFindingGroupORM.last_seen_revision_id.in_(pairing_revision_ids),
                 GitHubFindingGroupORM.state == GitHubFindingGroupState.active,
+                or_(
+                    GitHubFindingGroupORM.last_seen_revision_id.in_(pairing_revision_ids),
+                    GitHubFindingGroupORM.resolution_status == ResolutionStatus.addressed,
+                ),
             )
         )
     )

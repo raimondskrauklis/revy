@@ -52,7 +52,7 @@ def test_resolve_group_resolution_status_judge_dismissed():
     status = github_resolution_metrics.resolve_group_resolution_status(
         group=group,
         patches_by_file={},
-        removed_paths=frozenset(),
+        deleted_paths=frozenset(),
         start_line=1,
         end_line=1,
     )
@@ -76,7 +76,7 @@ def test_resolve_group_resolution_status_addressed():
     status = github_resolution_metrics.resolve_group_resolution_status(
         group=group,
         patches_by_file={"app/a.py": patch},
-        removed_paths=frozenset(),
+        deleted_paths=frozenset(),
         start_line=5,
         end_line=5,
     )
@@ -99,7 +99,7 @@ def test_resolve_group_resolution_status_still_open():
     status = github_resolution_metrics.resolve_group_resolution_status(
         group=group,
         patches_by_file={"app/a.py": "@@ -1 +1 @@\n+x\n"},
-        removed_paths=frozenset(),
+        deleted_paths=frozenset(),
         start_line=10,
         end_line=10,
     )
@@ -122,14 +122,14 @@ def test_resolve_group_resolution_status_addressed_when_file_removed():
     status = github_resolution_metrics.resolve_group_resolution_status(
         group=group,
         patches_by_file={},
-        removed_paths=frozenset({"app/deleted.py"}),
+        deleted_paths=frozenset({"app/deleted.py"}),
         start_line=12,
         end_line=12,
     )
     assert status == ResolutionStatus.addressed
 
 
-def test_resolve_group_resolution_status_addressed_when_file_renamed_old_path():
+def test_resolve_group_resolution_status_still_open_when_file_renamed_old_path():
     group = GitHubFindingGroupORM(
         workspace_id=uuid.uuid4(),
         pull_request_id=uuid.uuid4(),
@@ -145,11 +145,11 @@ def test_resolve_group_resolution_status_addressed_when_file_renamed_old_path():
     status = github_resolution_metrics.resolve_group_resolution_status(
         group=group,
         patches_by_file={"app/new_name.py": "@@ -1 +1 @@\n+x\n"},
-        removed_paths=frozenset({"app/old_name.py"}),
+        deleted_paths=frozenset(),
         start_line=4,
         end_line=4,
     )
-    assert status == ResolutionStatus.addressed
+    assert status == ResolutionStatus.still_open
 
 
 @pytest.mark.asyncio
@@ -225,7 +225,7 @@ async def test_apply_resolution_status_for_synchronize_updates_prior_groups():
             return_value=type(
                 "CompareResult",
                 (),
-                {"patches_by_file": {"app/handler.py": compare.files[0].patch}, "compare_failed": False, "removed_paths": frozenset()},
+                {"patches_by_file": {"app/handler.py": compare.files[0].patch}, "compare_failed": False, "removed_paths": frozenset(), "deleted_paths": frozenset(), "renamed_from_paths": frozenset()},
             )()
         ),
     ):
@@ -233,11 +233,15 @@ async def test_apply_resolution_status_for_synchronize_updates_prior_groups():
             "app.services.github_resolution_metrics._latest_finding_lines",
             AsyncMock(return_value=(12, 12)),
         ):
-            updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
-                session,
-                pull_request=pull_request,
-                new_revision=new_revision,
-            )
+            with patch(
+                "app.services.github_resolution_metrics.paths_absent_at_head",
+                AsyncMock(return_value={"app/handler.py": False}),
+            ):
+                updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
+                    session,
+                    pull_request=pull_request,
+                    new_revision=new_revision,
+                )
 
     assert updated == 1
     assert group.resolution_status == ResolutionStatus.addressed
@@ -303,18 +307,28 @@ async def test_apply_resolution_status_for_synchronize_stamps_compare_failed():
     failed_result = type(
         "CompareResult",
         (),
-        {"patches_by_file": {}, "compare_failed": True, "removed_paths": frozenset()},
+        {
+            "patches_by_file": {},
+            "compare_failed": True,
+            "removed_paths": frozenset(),
+            "deleted_paths": frozenset(),
+            "renamed_from_paths": frozenset(),
+        },
     )()
 
     with patch(
         "app.services.github_resolution_metrics._fetch_compare_patches",
         AsyncMock(return_value=failed_result),
     ):
-        updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
-            session,
-            pull_request=pull_request,
-            new_revision=new_revision,
-        )
+        with patch(
+            "app.services.github_resolution_metrics.paths_absent_at_head",
+            AsyncMock(return_value={"app/handler.py": False}),
+        ):
+            updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
+                session,
+                pull_request=pull_request,
+                new_revision=new_revision,
+            )
 
     assert updated == 1
     assert group.resolution_status == ResolutionStatus.still_open
@@ -388,6 +402,10 @@ async def test_apply_resolution_status_for_synchronize_stamps_addressed_on_file_
                     "removed_paths": frozenset(
                         {"backend/tests/fixtures/fr_dogfood/probe_module.py"}
                     ),
+                    "deleted_paths": frozenset(
+                        {"backend/tests/fixtures/fr_dogfood/probe_module.py"}
+                    ),
+                    "renamed_from_paths": frozenset(),
                 },
             )()
         ),
@@ -396,11 +414,19 @@ async def test_apply_resolution_status_for_synchronize_stamps_addressed_on_file_
             "app.services.github_resolution_metrics._latest_finding_lines",
             AsyncMock(return_value=(8, 8)),
         ):
-            updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
-                session,
-                pull_request=pull_request,
-                new_revision=new_revision,
-            )
+            with patch(
+                "app.services.github_resolution_metrics.paths_absent_at_head",
+                AsyncMock(
+                    return_value={
+                        "backend/tests/fixtures/fr_dogfood/probe_module.py": True,
+                    }
+                ),
+            ):
+                updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
+                    session,
+                    pull_request=pull_request,
+                    new_revision=new_revision,
+                )
 
     assert updated == 1
     assert group.resolution_status == ResolutionStatus.addressed
@@ -704,6 +730,8 @@ async def test_apply_resolution_status_for_synchronize_skipped_not_head_uses_las
                         },
                         "compare_failed": False,
                         "removed_paths": frozenset(),
+                        "deleted_paths": frozenset(),
+                        "renamed_from_paths": frozenset(),
                     },
                 )()
             ),
@@ -712,6 +740,101 @@ async def test_apply_resolution_status_for_synchronize_skipped_not_head_uses_las
                 "app.services.github_resolution_metrics._latest_finding_lines",
                 AsyncMock(return_value=(12, 12)),
             ):
+                with patch(
+                    "app.services.github_resolution_metrics.paths_absent_at_head",
+                    AsyncMock(return_value={"app/handler.py": False}),
+                ):
+                    updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
+                        session,
+                        pull_request=pull_request,
+                        new_revision=new_revision,
+                    )
+
+    assert updated == 1
+    assert group.resolution_status == ResolutionStatus.addressed
+
+
+@pytest.mark.asyncio
+async def test_apply_resolution_status_hygiene_aged_cohort_empty_pairing():
+    """VAL10: rev-1 group stamped via Pass 1b when not in pairing cohort."""
+    pull_request_id = uuid.uuid4()
+    rev1_id = uuid.uuid4()
+    rev2_id = uuid.uuid4()
+    rev3_id = uuid.uuid4()
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=1,
+        title="PR",
+        state="open",
+        head_sha="head3",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=3,
+    )
+    pull_request.id = pull_request_id
+
+    published_prior = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=2,
+        head_sha="head2",
+        base_sha="base",
+    )
+    published_prior.id = rev2_id
+
+    new_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=3,
+        head_sha="head3",
+        base_sha="base",
+    )
+    new_revision.id = rev3_id
+
+    aged_group = GitHubFindingGroupORM(
+        workspace_id=pull_request.workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="aged-fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Aged",
+        message="msg",
+        file_path="backend/probe/deleted.py",
+        last_seen_revision_id=rev1_id,
+    )
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[published_prior])
+    session.scalars = AsyncMock(return_value=[aged_group])
+    session.flush = AsyncMock()
+
+    compare_result = type(
+        "CompareResult",
+        (),
+        {
+            "patches_by_file": {},
+            "compare_failed": False,
+            "removed_paths": frozenset(),
+            "deleted_paths": frozenset(),
+            "renamed_from_paths": frozenset(),
+        },
+    )()
+
+    with patch(
+        "app.services.github_resolution_metrics.get_intermediate_revision_ids_between",
+        AsyncMock(return_value=frozenset()),
+    ):
+        with patch(
+            "app.services.github_resolution_metrics._fetch_compare_patches",
+            AsyncMock(return_value=compare_result),
+        ):
+            with patch(
+                "app.services.github_resolution_metrics.paths_absent_at_head",
+                AsyncMock(return_value={"backend/probe/deleted.py": True}),
+            ):
                 updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
                     session,
                     pull_request=pull_request,
@@ -719,4 +842,435 @@ async def test_apply_resolution_status_for_synchronize_skipped_not_head_uses_las
                 )
 
     assert updated == 1
-    assert group.resolution_status == ResolutionStatus.addressed
+    assert aged_group.resolution_status == ResolutionStatus.addressed
+
+
+@pytest.mark.asyncio
+async def test_apply_resolution_status_head_fail_closed():
+    pull_request_id = uuid.uuid4()
+    prior_revision_id = uuid.uuid4()
+    new_revision_id = uuid.uuid4()
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=1,
+        title="PR",
+        state="open",
+        head_sha="newsha",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=2,
+    )
+    pull_request.id = pull_request_id
+
+    prior_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="oldsha",
+        base_sha="base1",
+    )
+    prior_revision.id = prior_revision_id
+
+    new_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=2,
+        head_sha="newsha",
+        base_sha="base1",
+    )
+    new_revision.id = new_revision_id
+
+    group = GitHubFindingGroupORM(
+        workspace_id=pull_request.workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Bug",
+        message="msg",
+        file_path="app/missing.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[prior_revision])
+    session.scalars = AsyncMock(return_value=[group])
+    session.flush = AsyncMock()
+
+    with patch(
+        "app.services.github_resolution_metrics._fetch_compare_patches",
+        AsyncMock(
+            return_value=type(
+                "CompareResult",
+                (),
+                {
+                    "patches_by_file": {},
+                    "compare_failed": False,
+                    "removed_paths": frozenset(),
+                    "deleted_paths": frozenset(),
+                    "renamed_from_paths": frozenset(),
+                },
+            )()
+        ),
+    ):
+        with patch(
+            "app.services.github_resolution_metrics.paths_absent_at_head",
+            AsyncMock(return_value={"app/missing.py": None}),
+        ):
+            updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
+                session,
+                pull_request=pull_request,
+                new_revision=new_revision,
+            )
+
+    assert updated == 1
+    assert group.resolution_status == ResolutionStatus.still_open
+    assert group.closure_blocked_reason == "head_check_failed"
+
+
+@pytest.mark.asyncio
+async def test_apply_resolution_status_head_fail_closed_when_compare_failed():
+    """R4: non-cohort groups still fail-closed on HEAD API error when compare fails."""
+    pull_request_id = uuid.uuid4()
+    prior_revision_id = uuid.uuid4()
+    new_revision_id = uuid.uuid4()
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=1,
+        title="PR",
+        state="open",
+        head_sha="newsha",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=2,
+    )
+    pull_request.id = pull_request_id
+
+    prior_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="oldsha",
+        base_sha="base1",
+    )
+    prior_revision.id = prior_revision_id
+
+    new_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=2,
+        head_sha="newsha",
+        base_sha="base1",
+    )
+    new_revision.id = new_revision_id
+
+    aged_group = GitHubFindingGroupORM(
+        workspace_id=pull_request.workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="fp-aged",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Aged",
+        message="msg",
+        file_path="app/missing.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[prior_revision])
+    session.scalars = AsyncMock(return_value=[aged_group])
+    session.flush = AsyncMock()
+
+    failed_result = type(
+        "CompareResult",
+        (),
+        {
+            "patches_by_file": {},
+            "compare_failed": True,
+            "removed_paths": frozenset(),
+            "deleted_paths": frozenset(),
+            "renamed_from_paths": frozenset(),
+        },
+    )()
+
+    with patch(
+        "app.services.github_resolution_metrics._fetch_compare_patches",
+        AsyncMock(return_value=failed_result),
+    ):
+        with patch(
+            "app.services.github_resolution_metrics.paths_absent_at_head",
+            AsyncMock(return_value={"app/missing.py": None}),
+        ):
+            updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
+                session,
+                pull_request=pull_request,
+                new_revision=new_revision,
+            )
+
+    assert updated == 1
+    assert aged_group.resolution_status == ResolutionStatus.still_open
+    assert aged_group.closure_blocked_reason == "head_check_failed"
+
+
+@pytest.mark.asyncio
+async def test_apply_resolution_status_compare_failed_path_gone_still_open():
+    """Compare fail + HEAD path gone: fail closed without hygiene stamp (rename guard)."""
+    pull_request_id = uuid.uuid4()
+    prior_revision_id = uuid.uuid4()
+    new_revision_id = uuid.uuid4()
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=1,
+        title="PR",
+        state="open",
+        head_sha="newsha",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=2,
+    )
+    pull_request.id = pull_request_id
+
+    prior_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="oldsha",
+        base_sha="base1",
+    )
+    prior_revision.id = prior_revision_id
+
+    new_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=2,
+        head_sha="newsha",
+        base_sha="base1",
+    )
+    new_revision.id = new_revision_id
+
+    aged_group = GitHubFindingGroupORM(
+        workspace_id=pull_request.workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="fp-aged",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Aged",
+        message="msg",
+        file_path="app/gone.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[prior_revision])
+    session.scalars = AsyncMock(return_value=[aged_group])
+    session.flush = AsyncMock()
+
+    failed_result = type(
+        "CompareResult",
+        (),
+        {
+            "patches_by_file": {},
+            "compare_failed": True,
+            "removed_paths": frozenset(),
+            "deleted_paths": frozenset(),
+            "renamed_from_paths": frozenset(),
+        },
+    )()
+
+    with patch(
+        "app.services.github_resolution_metrics._fetch_compare_patches",
+        AsyncMock(return_value=failed_result),
+    ):
+        with patch(
+            "app.services.github_resolution_metrics.paths_absent_at_head",
+            AsyncMock(return_value={"app/gone.py": True}),
+        ):
+            updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
+                session,
+                pull_request=pull_request,
+                new_revision=new_revision,
+            )
+
+    assert updated == 1
+    assert aged_group.resolution_status == ResolutionStatus.still_open
+    assert aged_group.closure_blocked_reason == "compare_failed"
+
+
+@pytest.mark.asyncio
+async def test_apply_resolution_status_clears_stale_compare_failed_on_success():
+    """P1: clear closure_blocked_reason when compare succeeds (non-cohort)."""
+    pull_request_id = uuid.uuid4()
+    prior_revision_id = uuid.uuid4()
+    new_revision_id = uuid.uuid4()
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=1,
+        title="PR",
+        state="open",
+        head_sha="newsha",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=2,
+    )
+    pull_request.id = pull_request_id
+
+    prior_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="oldsha",
+        base_sha="base1",
+    )
+    prior_revision.id = prior_revision_id
+
+    new_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=2,
+        head_sha="newsha",
+        base_sha="base1",
+    )
+    new_revision.id = new_revision_id
+
+    aged_group = GitHubFindingGroupORM(
+        workspace_id=pull_request.workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="fp-aged",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Aged",
+        message="msg",
+        file_path="app/handler.py",
+        last_seen_revision_id=uuid.uuid4(),
+        closure_blocked_reason="compare_failed",
+    )
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[prior_revision])
+    session.scalars = AsyncMock(return_value=[aged_group])
+    session.flush = AsyncMock()
+
+    compare_ok = type(
+        "CompareResult",
+        (),
+        {
+            "patches_by_file": {"app/handler.py": "@@ -1 +1 @@\n x"},
+            "compare_failed": False,
+            "removed_paths": frozenset(),
+            "deleted_paths": frozenset(),
+            "renamed_from_paths": frozenset(),
+        },
+    )()
+
+    with patch(
+        "app.services.github_resolution_metrics._fetch_compare_patches",
+        AsyncMock(return_value=compare_ok),
+    ):
+        with patch(
+            "app.services.github_resolution_metrics._latest_finding_lines",
+            AsyncMock(return_value=(10, 10)),
+        ):
+            with patch(
+                "app.services.github_resolution_metrics.paths_absent_at_head",
+                AsyncMock(return_value={"app/handler.py": False}),
+            ):
+                updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
+                    session,
+                    pull_request=pull_request,
+                    new_revision=new_revision,
+                )
+
+    assert updated == 1
+    assert aged_group.closure_blocked_reason is None
+
+
+def test_build_resolution_pass_manifest_excludes_hygiene_from_rate():
+    prior_revision_id = uuid.uuid4()
+    aged_prior_id = uuid.uuid4()
+    current_revision_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+
+    pairing_close = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint="in-pair",
+        state=GitHubFindingGroupState.resolved,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="In pair",
+        message="M",
+        file_path="app/a.py",
+        last_seen_revision_id=prior_revision_id,
+        resolution_method=ResolutionMethod.absent_and_addressed,
+        resolved_at_revision_id=current_revision_id,
+    )
+    hygiene_close = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint="aged",
+        state=GitHubFindingGroupState.resolved,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Hygiene",
+        message="M",
+        file_path="app/gone.py",
+        last_seen_revision_id=aged_prior_id,
+        resolution_method=ResolutionMethod.absent_and_addressed,
+        resolved_at_revision_id=current_revision_id,
+    )
+
+    manifest = github_resolution_metrics.build_resolution_pass_manifest(
+        [pairing_close, hygiene_close],
+        prior_revision_ids=frozenset({prior_revision_id}),
+        current_revision_id=current_revision_id,
+    )
+
+    assert manifest["hygiene_path_removed_count"] == 1
+    assert manifest["transition_count"] == 1
+    assert manifest["transitions_addressed"] == 1
+    assert manifest["resolution_rate_pct"] == 100.0
+
+
+def test_build_resolution_pass_manifest_hygiene_count_outside_stamp_cohort():
+    """CS-Q6: hygiene_path_removed_count is PR-wide, not pairing-cohort transitions only."""
+    prior_revision_id = uuid.uuid4()
+    aged_prior_id = uuid.uuid4()
+    current_revision_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+
+    hygiene_close = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint="aged",
+        state=GitHubFindingGroupState.resolved,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Hygiene",
+        message="M",
+        file_path="app/gone.py",
+        last_seen_revision_id=aged_prior_id,
+        resolution_method=ResolutionMethod.absent_and_addressed,
+        resolved_at_revision_id=current_revision_id,
+    )
+
+    manifest = github_resolution_metrics.build_resolution_pass_manifest(
+        [hygiene_close],
+        prior_revision_ids=frozenset({prior_revision_id}),
+        current_revision_id=current_revision_id,
+    )
+
+    assert manifest["hygiene_path_removed_count"] == 1
+    assert manifest["transition_count"] == 0
+    assert manifest["denominator_active_prior"] == 0

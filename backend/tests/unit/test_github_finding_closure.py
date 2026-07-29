@@ -281,6 +281,94 @@ async def test_apply_pass2_closure_closes_absent_addressed_group():
 
 
 @pytest.mark.asyncio
+async def test_apply_pass2_closure_e2e_aged_group_outside_pairing():
+    """E2E: aged group addressed by hygiene, closed via widened Pass 2 query."""
+    review_run_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    rev1_id = uuid.uuid4()
+    rev2_id = uuid.uuid4()
+    rev3_id = uuid.uuid4()
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=1,
+        title="PR",
+        state="open",
+        head_sha="head3",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=3,
+    )
+    pull_request.id = pull_request_id
+
+    published_prior = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=2,
+        head_sha="head2",
+        base_sha="base",
+    )
+    published_prior.id = rev2_id
+
+    current_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=3,
+        head_sha="head3",
+        base_sha="base",
+    )
+    current_revision.id = rev3_id
+
+    aged_group = GitHubFindingGroupORM(
+        workspace_id=pull_request.workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="aged-fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Aged",
+        message="msg",
+        file_path="backend/probe/deleted.py",
+        last_seen_revision_id=rev1_id,
+        resolution_status=ResolutionStatus.addressed,
+    )
+
+    run = GitHubReviewRunORM(
+        workspace_id=pull_request.workspace_id,
+        revision_id=rev3_id,
+        status=GitHubReviewRunStatus.completed,
+    )
+    run.id = review_run_id
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, current_revision])
+    session.scalars = AsyncMock(return_value=[aged_group])
+    session.flush = AsyncMock()
+
+    with patch(
+        "app.services.github_finding_closure.get_last_published_prior_revision",
+        AsyncMock(return_value=published_prior),
+    ):
+        with patch(
+            "app.services.github_finding_closure.get_intermediate_revision_ids_between",
+            AsyncMock(return_value=frozenset()),
+        ):
+            with patch(
+                "app.services.github_finding_closure._fingerprints_in_review_run",
+                AsyncMock(return_value=set()),
+            ):
+                closed = await apply_pass2_closure_for_review_run(
+                    session,
+                    review_run_id=review_run_id,
+                )
+
+    assert closed == 1
+    assert aged_group.state == GitHubFindingGroupState.resolved
+    assert aged_group.resolution_method == ResolutionMethod.absent_and_addressed
+
+
+@pytest.mark.asyncio
 async def test_apply_pass2_closure_after_file_deletion_pass1_stamp():
     """FR-DG2a: deletion push stamps addressed on sync, then Pass 2 closes absent fingerprint."""
     review_run_id = uuid.uuid4()
@@ -349,21 +437,33 @@ async def test_apply_pass2_closure_after_file_deletion_pass1_stamp():
                     "removed_paths": frozenset(
                         {"backend/tests/fixtures/fr_dogfood/probe_module.py"}
                     ),
+                    "deleted_paths": frozenset(
+                        {"backend/tests/fixtures/fr_dogfood/probe_module.py"}
+                    ),
+                    "renamed_from_paths": frozenset(),
                 },
             )()
         ),
     ):
         with patch(
-            "app.services.github_resolution_metrics._latest_finding_lines",
-            AsyncMock(return_value=(5, 5)),
+            "app.services.github_resolution_metrics.paths_absent_at_head",
+            AsyncMock(
+                return_value={
+                    "backend/tests/fixtures/fr_dogfood/probe_module.py": True,
+                }
+            ),
         ):
-            stamped = await github_resolution_metrics.apply_resolution_status_for_synchronize(
-                session,
-                pull_request=pull_request,
-                new_revision=current_revision,
-            )
+            with patch(
+                "app.services.github_resolution_metrics._latest_finding_lines",
+                AsyncMock(return_value=(5, 5)),
+            ):
+                stamped = await github_resolution_metrics.apply_resolution_status_for_synchronize(
+                    session,
+                    pull_request=pull_request,
+                    new_revision=current_revision,
+                )
 
-    assert stamped == 1
+    assert stamped == 2
     assert group.resolution_status == ResolutionStatus.addressed
 
     run = GitHubReviewRunORM(
@@ -396,3 +496,4 @@ async def test_apply_pass2_closure_after_file_deletion_pass1_stamp():
     assert closed == 1
     assert group.state == GitHubFindingGroupState.resolved
     assert group.resolution_method == ResolutionMethod.absent_and_addressed
+

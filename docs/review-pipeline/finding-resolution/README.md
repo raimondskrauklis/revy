@@ -13,6 +13,9 @@
 | Doc | Purpose |
 |-----|---------|
 | [FINDING_RESOLUTION_FINDINGS.md](./FINDING_RESOLUTION_FINDINGS.md) | Baseline — current flow, gaps, FR-Q registry |
+| [FINDING_RESOLUTION_CLOSURE_SCOPE_FINDINGS.md](./FINDING_RESOLUTION_CLOSURE_SCOPE_FINDINGS.md) | **Wave C** — cohort vs hygiene (post-dogfood) |
+| [FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md](./FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md) | **Wave C** — phased plan (C0–C4) |
+| [waves/FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md](./waves/FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md) | **Wave C LOOP** — execution index |
 | [FINDING_RESOLUTION_TECHNICAL_FINDINGS.md](./FINDING_RESOLUTION_TECHNICAL_FINDINGS.md) | Incident + staging DB evidence |
 | [FINDING_RESOLUTION_GENERAL_PLAN.md](./FINDING_RESOLUTION_GENERAL_PLAN.md) | P0–P5 phases, locked FR-Q*, multi-pass model |
 | [FINDING_RESOLUTION_STAGING_VALIDATION.md](./FINDING_RESOLUTION_STAGING_VALIDATION.md) | Staging dogfood + human sign-off checklist |
@@ -33,4 +36,14 @@
 
 **Next wave:** [judge-json-contract](../judge-json-contract/README.md) after merge to `main`.
 
-**Post-PSA dogfood (2026-07-29):** [finding-resolution-dogfood](../finding-resolution-dogfood/README.md) — G9/collapse gaps from PR #63.
+**Post-PSA dogfood (2026-07-29):** [finding-resolution-dogfood](../finding-resolution-dogfood/README.md) — FR-DG1 PASS; FR-DG2 partial → **[wave C](./FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md)** on [#68](https://github.com/raimondskrauklis/revy/pull/68); **C3 staging sign-off pending**.
+
+## Wave C execution (LOOP)
+
+| Phase | Focus | File | Status |
+|-------|--------|------|--------|
+| C0 | SSOT + index | [C0](./waves/FINDING_RESOLUTION_CLOSURE_SCOPE_C0_EXECUTION.md) | pending |
+| C1 | HEAD hygiene + Pass 2 | [C1](./waves/FINDING_RESOLUTION_CLOSURE_SCOPE_C1_EXECUTION.md) | pending |
+| C2 | Manifest + G9 | [C2](./waves/FINDING_RESOLUTION_CLOSURE_SCOPE_C2_EXECUTION.md) | pending |
+| C3 | Staging Track C | [C3](./waves/FINDING_RESOLUTION_CLOSURE_SCOPE_C3_EXECUTION.md) | pending |
+| C4 | Doc sync | [C4](./waves/FINDING_RESOLUTION_CLOSURE_SCOPE_C4_EXECUTION.md) | pending |

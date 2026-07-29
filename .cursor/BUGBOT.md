@@ -1,12 +1,12 @@
 # Bugbot — review pipeline contract
 
-**Active program:** finding-resolution-dogfood — FR-DG1 manifest pairing + FR-DG2 stale retirement (LOOP P0–P3 on `chore/finding-resolution-staging-dogfood`).
+**Active program:** finding-resolution-closure-scope — HEAD path-gone hygiene (Pass 1b + Pass 2 widen), FR-CS1/6/7, CS-Q6 manifest honesty.
 
-When reviewing **backend** changes that touch publish / formatter / pipeline / generation lifecycle / judge code, treat these as authoritative:
+When reviewing **backend** changes that touch resolution metrics, finding closure, compare patches, publish formatter, or pipeline trace, treat these as authoritative:
 
-- [FINDING_RESOLUTION_DOGFOOD_EXECUTION.md](../docs/review-pipeline/finding-resolution-dogfood/waves/FINDING_RESOLUTION_DOGFOOD_EXECUTION.md) — LOOP P0–P3, deploy cadence, FR-DG* locks
-- [FINDING_RESOLUTION_DOGFOOD_FINDINGS.md](../docs/review-pipeline/finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_FINDINGS.md) — FR-DG1/2, MR-DG1 gaps from PSA #63
-- [FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md](../docs/review-pipeline/finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md) — phase goals
+- [FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md](../docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md) — LOOP C0–C4, locked CS-Q*
+- [FINDING_RESOLUTION_CLOSURE_SCOPE_FINDINGS.md](../docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_CLOSURE_SCOPE_FINDINGS.md) — FR-CS gaps, three-track architecture, CS-Q7 HEAD truth
+- [FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md](../docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md) — phase goals
 
 **Agent workflow:**
 

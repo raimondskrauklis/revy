@@ -40,6 +40,7 @@
 | Capability | Location | Notes |
 |------------|----------|-------|
 | Two-block **check** summary | `build_check_run_summary` `github_publish_formatter.py:317–331` | Uses `ctx.groups` + `ctx.pr_active_groups` |
+| Deterministic issue-comment tables | `splice_deterministic_findings_tables` `github_publish_formatter.py` | Replaces Moonshot `### This generation` / `### Still open on PR` sections with `format_summary_comment` (FR-Q7 parity; shipped wave C #68) |
 | `pr_active_groups` loaded at publish | `_load_pr_active_groups` `github_publish.py:998–1010` | Passed into `PublishFormatContext` |
 | Issue comment **in-place** update | `update_issue_comment` `github_publish.py:1304–1314` | Same `github_comment_id` per PR |
 | Full PR diff per review | `compare_commits(base_sha, head_sha)` `github_review.py:779–786` | Not push-delta |
@@ -65,6 +66,7 @@
 | **Double-count rows** | Generation findings ⊆ PR active when reconcile is healthy; table rows may appear in both blocks by design (FR-Q7) |
 | **Resolved in generation** | `publishable_groups_for_review_run` includes `resolved` groups for metrics — filter with `_active_groups` for tables |
 | **Moonshot thin output** | Fallback must meet full bar; LLM path validated against same structure |
+| **Moonshot table drift** | Moonshot may omit rows from “This generation” while listing them under “Still open on PR” on rev 1 — **mitigation:** `splice_deterministic_findings_tables` overwrites both tables from DB JSON (`#68`) |
 | **`_insert_resolution_metrics_block`** | Keys off `### Findings` today — breaks after P0 removes that heading |
 | **`ISSUE_COMMENT_FORMAT_SYSTEM_PROMPT`** | Hardcodes `### Findings` step (7) — Moonshot will ignore two-block unless P1 rewrites |
 | **Greptile contract tests** | `greptile_shape`, `collapses_info` assert `### Findings` — must update in P0 (PSA-D10) |
@@ -77,7 +79,7 @@
 |---------|------------------|---------------|----------------------------|--------------|
 | Check run summary | **Yes** (block 1) | **Yes** (block 2) | Generation-only ⚠️ | N/A |
 | Issue comment (fallback) | **Yes** (`### Findings`) | **No** ⚠️ | Generation-only ⚠️ | N/A |
-| Issue comment (Moonshot) | Partial (prompt JSON) | **No** ⚠️ | Generation-only ⚠️ | N/A |
+| Issue comment (Moonshot) | Partial (prompt JSON) | **Yes** (after splice) | Generation-only ⚠️ | N/A |
 | Inline comments | **Yes** | No | N/A | GH-1v2 resolve |
 | G9 / resolution metrics | **Yes** | No | N/A | Informs “fixed since last push” |
 

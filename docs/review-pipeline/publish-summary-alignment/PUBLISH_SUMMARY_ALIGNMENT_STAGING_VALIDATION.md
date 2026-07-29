@@ -63,8 +63,8 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
 
 | Check | Pass | Evidence |
 |-------|------|----------|
-| Issue comment has `### This generation` + `### Still open on PR` | **yes** | Moonshot headings `### This generation findings` / `### Still open on PR findings` (substring match) |
-| Check summary matches issue two-block tables (same rows) | **yes** | Check uses canonical headings; same 1 + 2 table rows |
+| Issue comment has `### This generation` + `### Still open on PR` | **yes** | Canonical headings from `format_summary_comment` (Moonshot narrative only; tables spliced post-LLM on #68+) |
+| Check summary matches issue two-block tables (same rows) | **yes** | Both use `format_summary_comment` after Moonshot splice |
 | Confidence / merge use PR-wide open | **yes** | Narrative: "2 findings remain open on PR overall"; merge warns; `pr_active_count=2` |
 | Check conclusion may differ from merge line (PSA-D12) | **yes** | Check `neutral`; merge warns with PR-wide open |
 | Inline count ≈ generation publishable | **yes** | 1 inline thread; 1 generation table row |

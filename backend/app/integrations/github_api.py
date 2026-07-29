@@ -49,14 +49,20 @@ class CompareCommitsResult:
         )
 
     @property
+    def deleted_paths(self) -> tuple[str, ...]:
+        return tuple(f.filename for f in self.files if f.status in _REMOVED_COMPARE_STATUSES)
+
+    @property
+    def renamed_from_paths(self) -> tuple[str, ...]:
+        return tuple(
+            f.previous_filename
+            for f in self.files
+            if f.status == "renamed" and f.previous_filename
+        )
+
+    @property
     def paths_to_remove(self) -> tuple[str, ...]:
-        removed: list[str] = []
-        for f in self.files:
-            if f.status in _REMOVED_COMPARE_STATUSES:
-                removed.append(f.filename)
-            elif f.status == "renamed" and f.previous_filename:
-                removed.append(f.previous_filename)
-        return tuple(removed)
+        return self.deleted_paths + self.renamed_from_paths
 
 
 def _compare_http_error(exc: httpx.HTTPStatusError) -> None:

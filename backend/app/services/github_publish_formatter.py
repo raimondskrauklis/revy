@@ -219,6 +219,14 @@ def format_resolution_metrics_block(manifest: dict[str, object]) -> str:
         lines.append(f"- **Still open from prior review:** {still_open}")
     if isinstance(compare_failed, int) and compare_failed > 0:
         lines.append(f"- **Compare blocked:** {compare_failed} group(s)")
+    hygiene_path_removed = manifest.get("hygiene_path_removed_count")
+    if isinstance(hygiene_path_removed, int) and hygiene_path_removed > 0:
+        lines.append(
+            f"- **Closed as path removed:** {hygiene_path_removed} (outside this push pair)"
+        )
+    head_check_failed = manifest.get("head_check_failed_count")
+    if isinstance(head_check_failed, int) and head_check_failed > 0:
+        lines.append(f"- **HEAD path check blocked:** {head_check_failed} group(s)")
     return "\n".join(lines)
 
 
@@ -720,6 +728,40 @@ def _has_confidence_rationale_in_comment(normalized: str) -> bool:
     )
 
 
+def _findings_tables_markdown(ctx: PublishFormatContext) -> str:
+    return format_summary_comment(
+        generation_groups=ctx.groups,
+        pr_active_groups=verdict_groups(ctx),
+    )
+
+
+_FINDINGS_TABLES_START_RE = re.compile(r"### This generation(?: findings)?\b", re.IGNORECASE)
+_FINDINGS_TABLES_STILL_OPEN_RE = re.compile(
+    r"### Still open on PR(?: findings)?\b",
+    re.IGNORECASE,
+)
+
+
+def splice_deterministic_findings_tables(markdown: str, ctx: PublishFormatContext) -> str:
+    """Replace Moonshot findings tables with DB-backed FR-Q7 blocks (PSA-D1)."""
+    start_match = _FINDINGS_TABLES_START_RE.search(markdown)
+    if start_match is None:
+        return markdown
+    start = start_match.start()
+    still_match = _FINDINGS_TABLES_STILL_OPEN_RE.search(markdown, start)
+    if still_match is None:
+        return markdown
+    still_start = still_match.start()
+    tail = markdown[still_start:]
+    end_offset = len(tail)
+    for marker in ("\n### ", "\n<details>", "\n---\n"):
+        idx = tail.find(marker, 1)
+        if idx > 0:
+            end_offset = min(end_offset, idx)
+    end = still_start + end_offset
+    return markdown[:start] + _findings_tables_markdown(ctx) + markdown[end:]
+
+
 def _issue_comment_meets_product_bar(text: str, ctx: PublishFormatContext) -> bool:
     """Reject thin Moonshot markdown — deterministic fallback is the product minimum."""
     normalized = text.strip()
@@ -802,7 +844,9 @@ def _build_issue_comment_user_prompt(ctx: PublishFormatContext) -> str:
         f"{json.dumps(_findings_payload(ctx.groups), ensure_ascii=False)}\n"
         f"PR-wide still-open findings JSON: "
         f"{json.dumps(_findings_payload(verdict), ensure_ascii=False)}\n"
-        f"Generation active count: {len(generation_active)}; PR active count: {len(pr_active)}"
+        f"Generation active count: {len(generation_active)}; PR active count: {len(pr_active)}\n"
+        f"Revision note: when revision_number is 1, PR active count equals generation count "
+        f"(no prior push); both tables must list the same rows."
     )
 
 
@@ -843,6 +887,7 @@ async def build_pr_review_comment(ctx: PublishFormatContext) -> str:
                 },
             )
             return fallback
+        text = splice_deterministic_findings_tables(text, ctx)
         footer = _index_footer(ctx)
         if footer and footer not in text:
             text = f"{text}\n\n{footer}"

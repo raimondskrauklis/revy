@@ -113,6 +113,8 @@ async def test_compare_commits_returns_changed_paths():
         )
 
     assert result.paths_to_index == ("a.py", "c.py")
+    assert result.deleted_paths == ("b.py",)
+    assert result.renamed_from_paths == ("old_c.py",)
     assert result.paths_to_remove == ("b.py", "old_c.py")
 
 
