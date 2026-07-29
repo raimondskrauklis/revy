@@ -1,6 +1,24 @@
 {
-  "active_program": "publish-summary-alignment",
+  "active_program": "finding-resolution-dogfood",
   "programs": [
+    {
+      "id": "finding-resolution-dogfood",
+      "scope": ["backend/**"],
+      "paths": [
+        {
+          "path": "docs/review-pipeline/finding-resolution-dogfood/waves/FINDING_RESOLUTION_DOGFOOD_EXECUTION.md",
+          "description": "FR-DG execution index — LOOP P0–P3 wave A, P4 wave B"
+        },
+        {
+          "path": "docs/review-pipeline/finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_FINDINGS.md",
+          "description": "FR-DG baseline — FR-DG1/2, MR-DG1 gaps from PSA #63"
+        },
+        {
+          "path": "docs/review-pipeline/finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md",
+          "description": "FR-DG general plan — P0–P4 phases"
+        }
+      ]
+    },
     {
       "id": "publish-summary-alignment",
       "scope": ["backend/**"],

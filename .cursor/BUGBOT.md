@@ -1,10 +1,16 @@
 # Bugbot — review pipeline contract
 
-**Active program:** publish-summary-alignment — issue comment two-block parity with check run (PSA P0–P2 on `feat/publish-summary-alignment`).
+**Active program:** finding-resolution-dogfood — FR-DG1 manifest pairing + FR-DG2 stale retirement (LOOP P0–P3 on `chore/finding-resolution-staging-dogfood`).
 
 When reviewing **backend** changes that touch publish / formatter / pipeline / generation lifecycle / judge code, treat these as authoritative:
 
-**Publish summary alignment (active program):**
+**Finding resolution dogfood (active program):**
+
+- [FINDING_RESOLUTION_DOGFOOD_EXECUTION.md](../docs/review-pipeline/finding-resolution-dogfood/waves/FINDING_RESOLUTION_DOGFOOD_EXECUTION.md) — LOOP P0–P3, deploy cadence, FR-DG* locks
+- [FINDING_RESOLUTION_DOGFOOD_FINDINGS.md](../docs/review-pipeline/finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_FINDINGS.md) — FR-DG1/2, MR-DG1 gaps from PSA #63
+- [FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md](../docs/review-pipeline/finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md) — phase goals
+
+**Publish summary alignment (shipped #62):**
 
 - [PUBLISH_SUMMARY_ALIGNMENT_EXECUTION.md](../docs/review-pipeline/publish-summary-alignment/waves/PUBLISH_SUMMARY_ALIGNMENT_EXECUTION.md) — LOOP P0–P2, PSA-D* locks
 - [PUBLISH_SUMMARY_ALIGNMENT_FINDINGS.md](../docs/review-pipeline/publish-summary-alignment/PUBLISH_SUMMARY_ALIGNMENT_FINDINGS.md) — RG-14 / FR-Q16 gaps, verdict scope
