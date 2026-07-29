@@ -243,20 +243,31 @@ async def apply_resolution_status_for_synchronize(
     )
 
     file_paths = frozenset(group.file_path for group in active_groups if group.file_path)
+    compare_fast_path = not compare_result.compare_failed
     absent_by_path = await paths_absent_at_head(
         session,
         pull_request=pull_request,
         head_sha=new_revision.head_sha,
         file_paths=file_paths,
+        deleted_paths=compare_result.deleted_paths if compare_fast_path else None,
+        renamed_from_paths=compare_result.renamed_from_paths if compare_fast_path else None,
     )
 
     updated = 0
+    updated_group_ids: set[UUID] = set()
+
+    def _count_group_update(group: GitHubFindingGroupORM) -> None:
+        nonlocal updated
+        if group.id in updated_group_ids:
+            return
+        updated_group_ids.add(group.id)
+        updated += 1
 
     for group in cohort_groups:
         if compare_result.compare_failed:
             group.closure_blocked_reason = COMPARE_FAILED_REASON
             group.resolution_status = ResolutionStatus.still_open
-            updated += 1
+            _count_group_update(group)
             continue
 
         group.closure_blocked_reason = None
@@ -268,7 +279,7 @@ async def apply_resolution_status_for_synchronize(
             start_line=start_line,
             end_line=end_line,
         )
-        updated += 1
+        _count_group_update(group)
 
     for group in active_groups:
         file_path = group.file_path
@@ -283,12 +294,12 @@ async def apply_resolution_status_for_synchronize(
                     if group.closure_blocked_reason != COMPARE_FAILED_REASON:
                         group.closure_blocked_reason = HEAD_CHECK_FAILED_REASON
                         group.resolution_status = ResolutionStatus.still_open
-                        updated += 1
+                        _count_group_update(group)
                 elif absent is True:
                     if group.closure_blocked_reason != COMPARE_FAILED_REASON:
                         group.closure_blocked_reason = COMPARE_FAILED_REASON
                         group.resolution_status = ResolutionStatus.still_open
-                        updated += 1
+                        _count_group_update(group)
                 elif (
                     absent is False
                     and group.closure_blocked_reason == HEAD_CHECK_FAILED_REASON
@@ -305,16 +316,17 @@ async def apply_resolution_status_for_synchronize(
             if group.resolution_status != ResolutionStatus.addressed:
                 group.closure_blocked_reason = HEAD_CHECK_FAILED_REASON
                 group.resolution_status = ResolutionStatus.still_open
-                updated += 1
+                _count_group_update(group)
             continue
         if not path_gone:
-            if group.closure_blocked_reason == HEAD_CHECK_FAILED_REASON:
+            if group.closure_blocked_reason is not None:
                 group.closure_blocked_reason = None
+                _count_group_update(group)
             continue
 
         group.closure_blocked_reason = None
         group.resolution_status = ResolutionStatus.addressed
-        updated += 1
+        _count_group_update(group)
 
     await session.flush()
     return updated

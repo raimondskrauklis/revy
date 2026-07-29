@@ -1,9 +1,9 @@
 # Finding resolution — closure scope findings (platform)
 
-**Date:** 2026-07-29 (rev 3 — HEAD-truth hygiene + pr-comments alignment)  
+**Date:** 2026-07-29 (rev 3.1 — post–[#68](https://github.com/raimondskrauklis/revy/pull/68) Revy review fixes; was rev 3 HEAD-truth + pr-comments alignment)  
 **Purpose:** Platform baseline after dogfood waves A + B ([#63](https://github.com/raimondskrauklis/revy/pull/63), [#65](https://github.com/raimondskrauklis/revy/pull/65), [#66](https://github.com/raimondskrauklis/revy/pull/66), [#67](https://github.com/raimondskrauklis/revy/pull/67)). **Why FR-DG2 is partial PASS, what broke, and what wave C must build — with enough context to resume implementation months later.**
 
-**Evidence:** Staging DB `revy-staging`; code on `main` `111e851`; [dogfood post-validation](../finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_POST_VALIDATION_FINDINGS.md); [validation findings](../finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_VALIDATION_FINDINGS.md) VAL10.
+**Evidence:** Staging DB `revy-staging`; wave C product PR [#68](https://github.com/raimondskrauklis/revy/pull/68) on `fix/fr-closure-scope-hygiene`; [dogfood post-validation](../finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_POST_VALIDATION_FINDINGS.md); [validation findings](../finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_VALIDATION_FINDINGS.md) VAL10.
 
 **Execution plan:** [FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md](./FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md) · [LOOP index](./waves/FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md).
 
@@ -140,7 +140,7 @@ flowchart TB
 **Implementation mapping (wave C):**
 
 - Track A → Pass 1b (stamp) + widened Pass 2 (close) + HEAD path-absent check
-- Track B → Pass 1a unchanged
+- Track B → Pass 1a pairing cohort (`patch_touches_line_region` + push-pair **`deleted_paths` only** — CS-Q11 / R1)
 - Track C → unchanged in wave C; note Pass 3 cohort gap (FR-CS4)
 
 ---
@@ -149,9 +149,9 @@ flowchart TB
 
 Three progressively better signals were considered. **CS-Q7 locks the strongest practical one.**
 
-### Signal 1 — Push-pair `removed_paths` (shipped #66)
+### Signal 1 — Push-pair `deleted_paths` (shipped #66; refined #68)
 
-Compare `prior_published.head_sha → new.head_sha`. If `file_path ∈ removed_paths`, stamp `addressed`.
+Compare `prior_published.head_sha → new.head_sha`. If `file_path ∈ deleted_paths` (explicit `removed` status — **not** rename `previous_filename`), stamp `addressed` in Pass 1a pairing cohort.
 
 | Pros | Cons |
 |------|------|
@@ -239,10 +239,10 @@ That skill helps an **agent address human/bot review comments** on a PR. Revy’
 
 | ID | Risk | Why it matters | Mitigation |
 |----|------|----------------|------------|
-| **R1** | Rename → `previous_filename` in `paths_to_remove` | One rename PR-wide closes every finding on old path silently | **CS-Q8:** `deleted_paths` only for hygiene; split compare result |
+| **R1** | Rename → `previous_filename` in `paths_to_remove` | One rename PR-wide closes every finding on old path silently | **CS-Q8** Pass 1b hygiene; **CS-Q11** Pass 1a uses `deleted_paths` only |
 | **R2** | `resolution_status` reset each sync (`:220–221`) | Fast follow-up push supersede → stamp gone → re-orphan | Close in **same reconcile run** after stamp; optional durable column later |
 | **R3** | Pass 3 same cohort filter (`:250`) | Structural fix candidates orphaned like #67 | Document; FR-CS4 separate wave |
-| **R4** | Compare/HEAD check fail on hygiene path | Groups reset, no `closure_blocked_reason`; under-reported “Compare blocked” | Set blocked reason; count in manifest |
+| **R4** | Compare/HEAD check fail on hygiene path | Groups reset, no `closure_blocked_reason`; under-reported failures | `head_check_failed` on HEAD API `None`; `compare_failed` when compare fails and path gone at HEAD but rename guard blocks stamp; manifest counts |
 | **R5** | `resolve_group_resolution_status` maps resolved → `judge_dismissed` (`:102–103`) | `count_resolution_status` inaccurate | Pre-existing ticket; not C1 blocker |
 
 ---
@@ -273,6 +273,26 @@ That skill helps an **agent address human/bot review comments** on a PR. Revy’
 | **CS-Q8** | Renames = path gone? | **locked** | **No** — deletions only for hygiene stamp |
 | **CS-Q9** | Pass 2 widen? | **locked** | Widen query; `should_close_absent_and_addressed` unchanged |
 | **CS-Q10** | Reliable vs perfect scope? | **locked** | Ship Track A hygiene first; FR-CS4 judge/heuristics later |
+| **CS-Q11** | Pass 1a uses `removed_paths` union? | **locked** | **No** — Pass 1a `deleted_paths` only (R1); `removed_paths` union kept on `ComparePatchesResult` for non-stamp callers |
+
+---
+
+## Post–#68 Revy review (code + surface)
+
+Shipped on `fix/fr-closure-scope-hygiene` (`7de95f2` and prior LOOP commits). **Docs below updated locally; push after Revy re-run on code.**
+
+| Fix | Area | Notes |
+|-----|------|-------|
+| Pass 1a `deleted_paths` | `github_resolution_metrics.py` | CS-Q11 — rename old path stays `still_open` in pairing cohort |
+| R4 Pass 1b compare-fail | same | HEAD `None` → `head_check_failed`; path gone at HEAD + compare fail → `compare_failed` + `still_open` (no hygiene stamp) |
+| `full_name` parse | `github_path_hygiene.py` | Malformed `owner/repo` → all paths `None` (fail-closed) |
+| FR-Q7 table parity | `github_publish_formatter.py` | `splice_deterministic_findings_tables` replaces Moonshot tables with `format_summary_comment` — fixes rev 1 “2 this generation / 4 still open” LLM drift |
+| Stale block reason (rev 3) | `github_resolution_metrics.py` | P1: clear `closure_blocked_reason` when compare succeeds + path exists at HEAD (all actives) |
+| `updated` counter (rev 3) | same | Count unique groups only across Pass 1a + 1b |
+| Compare fast path (rev 3) | `github_path_hygiene.py` | `deleted_paths` / `renamed_from_paths` skip HEAD API when compare succeeded |
+| Track C probe | `fr_dg2_track_c/probe_module.py` | `usedforsecurity=False` on intentional MD5 dogfood defect |
+
+**#67:** close as evidence-only; C3 sign-off uses `chore/fr-dg2-track-c-staging` + `fr_dg2_track_c` probe — not #67.
 
 ---
 

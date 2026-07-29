@@ -60,8 +60,14 @@ async def paths_absent_at_head(
     head_sha: str,
     file_paths: frozenset[str],
     client: httpx.AsyncClient | None = None,
+    deleted_paths: frozenset[str] | None = None,
+    renamed_from_paths: frozenset[str] | None = None,
 ) -> dict[str, bool | None]:
-    """Batch HEAD existence check for unique file paths."""
+    """Batch HEAD existence check for unique file paths.
+
+    When compare succeeded, ``deleted_paths`` / ``renamed_from_paths`` skip HEAD
+    for known push-pair outcomes (CS-Q7 fast path).
+    """
     if not file_paths or not head_sha:
         return {}
 
@@ -77,10 +83,18 @@ async def paths_absent_at_head(
     if not owner or not repo_name:
         return dict.fromkeys(file_paths, None)
     github_installation_id = installation.github_installation_id
+    deleted = deleted_paths or frozenset()
+    renamed_from = renamed_from_paths or frozenset()
 
     async def _check_paths(http_client: httpx.AsyncClient) -> dict[str, bool | None]:
         results: dict[str, bool | None] = {}
         for file_path in sorted(file_paths):
+            if file_path in renamed_from:
+                results[file_path] = False
+                continue
+            if file_path in deleted:
+                results[file_path] = True
+                continue
             results[file_path] = await path_absent_at_head(
                 http_client,
                 github_installation_id=github_installation_id,

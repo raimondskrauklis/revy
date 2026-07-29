@@ -4,13 +4,13 @@
 **Parent:** [FINDING_RESOLUTION_GENERAL_PLAN.md](./FINDING_RESOLUTION_GENERAL_PLAN.md) (P0–P5 shipped)  
 **Authority:** Findings § decisions registry (CS-Q3–Q10 locked).
 
-**Thesis:** **Track A (HEAD hygiene)** — path absent at `revision.head_sha` → Pass 1b `addressed` stamp + widened Pass 2 close. **Track B (FR-Q12)** — Pass 1a pairing cohort unchanged. **Track C (judge)** — out of scope.
+**Thesis:** **Track A (HEAD hygiene)** — path absent at `revision.head_sha` → Pass 1b `addressed` stamp + widened Pass 2 close. **Track B (FR-Q12)** — Pass 1a pairing cohort (`deleted_paths` + line region; CS-Q11). **Track C (judge)** — out of scope.
 
 **North star:** PSA #63 / #67 — file/path gone on HEAD → `absent_and_addressed` + thread collapsed on any push.
 
 **Cross-cutting (every phase):** unit tests (`backend/tests/unit/` only); no silent metric/surface lies (CS-Q6); EN publish strings via existing formatter paths; no new migrations in wave C.
 
-**Locked (from findings):** CS-Q7 path absent at `head_sha` (Contents 404); CS-Q8 deletions-only hygiene (not rename); CS-Q9 Pass 2 query widen; CS-Q4 reuse `absent_and_addressed`; CS-Q6 exclude hygiene from rate + visible G9 line; CS-Q10 hygiene before FR-CS4.
+**Locked (from findings):** CS-Q7 path absent at `head_sha` (Contents 404); CS-Q8 deletions-only hygiene (not rename); CS-Q9 Pass 2 query widen; CS-Q11 Pass 1a `deleted_paths` only; CS-Q4 reuse `absent_and_addressed`; CS-Q6 exclude hygiene from rate + visible G9 line; CS-Q10 hygiene before FR-CS4.
 
 ---
 
@@ -32,7 +32,7 @@
 
 **Goal:** Aged + adjacent file-delete groups close end-to-end (#67 VAL10, #66 regression).
 
-**Scope in:** Compare-first sync; `deleted_paths` / `renamed_from_paths` split; HEAD path-absent via `fetch_repository_file_at_sha` (+ compare `deleted_paths` fast path); Pass 1b; Pass 2 widen; R4 fail-closed; E2E tests.
+**Scope in:** Compare-first sync; `deleted_paths` / `renamed_from_paths` split; Pass 1a `deleted_paths` only (CS-Q11); HEAD path-absent via `fetch_repository_file_at_sha` (+ compare `deleted_paths` fast path); Pass 1b; Pass 2 widen; R4 fail-closed; E2E tests.
 
 **Scope out:** Pass 3 widen; Moonshot prompt; FR-CS4 line-region; durable DB column (R2 defer).
 

@@ -428,7 +428,7 @@ async def test_apply_resolution_status_for_synchronize_stamps_addressed_on_file_
                     new_revision=new_revision,
                 )
 
-    assert updated == 2
+    assert updated == 1
     assert group.resolution_status == ResolutionStatus.addressed
     assert group.closure_blocked_reason is None
 
@@ -1103,6 +1103,97 @@ async def test_apply_resolution_status_compare_failed_path_gone_still_open():
     assert updated == 1
     assert aged_group.resolution_status == ResolutionStatus.still_open
     assert aged_group.closure_blocked_reason == "compare_failed"
+
+
+@pytest.mark.asyncio
+async def test_apply_resolution_status_clears_stale_compare_failed_on_success():
+    """P1: clear closure_blocked_reason when compare succeeds (non-cohort)."""
+    pull_request_id = uuid.uuid4()
+    prior_revision_id = uuid.uuid4()
+    new_revision_id = uuid.uuid4()
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=1,
+        title="PR",
+        state="open",
+        head_sha="newsha",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=2,
+    )
+    pull_request.id = pull_request_id
+
+    prior_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="oldsha",
+        base_sha="base1",
+    )
+    prior_revision.id = prior_revision_id
+
+    new_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=2,
+        head_sha="newsha",
+        base_sha="base1",
+    )
+    new_revision.id = new_revision_id
+
+    aged_group = GitHubFindingGroupORM(
+        workspace_id=pull_request.workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="fp-aged",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Aged",
+        message="msg",
+        file_path="app/handler.py",
+        last_seen_revision_id=uuid.uuid4(),
+        closure_blocked_reason="compare_failed",
+    )
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[prior_revision])
+    session.scalars = AsyncMock(return_value=[aged_group])
+    session.flush = AsyncMock()
+
+    compare_ok = type(
+        "CompareResult",
+        (),
+        {
+            "patches_by_file": {"app/handler.py": "@@ -1 +1 @@\n x"},
+            "compare_failed": False,
+            "removed_paths": frozenset(),
+            "deleted_paths": frozenset(),
+            "renamed_from_paths": frozenset(),
+        },
+    )()
+
+    with patch(
+        "app.services.github_resolution_metrics._fetch_compare_patches",
+        AsyncMock(return_value=compare_ok),
+    ):
+        with patch(
+            "app.services.github_resolution_metrics._latest_finding_lines",
+            AsyncMock(return_value=(10, 10)),
+        ):
+            with patch(
+                "app.services.github_resolution_metrics.paths_absent_at_head",
+                AsyncMock(return_value={"app/handler.py": False}),
+            ):
+                updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
+                    session,
+                    pull_request=pull_request,
+                    new_revision=new_revision,
+                )
+
+    assert updated == 1
+    assert aged_group.closure_blocked_reason is None
 
 
 def test_build_resolution_pass_manifest_excludes_hygiene_from_rate():
