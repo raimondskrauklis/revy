@@ -2,7 +2,7 @@
 
 **Program:** [README.md](./README.md) · **Post-validation:** [FINDING_RESOLUTION_DOGFOOD_POST_VALIDATION_FINDINGS.md](./FINDING_RESOLUTION_DOGFOOD_POST_VALIDATION_FINDINGS.md) · **Operator locks:** [FINDING_RESOLUTION_DOGFOOD_VALIDATION_FINDINGS.md](./FINDING_RESOLUTION_DOGFOOD_VALIDATION_FINDINGS.md)
 
-**Status:** **Track B in progress** — FR-DG2 sign-off after [#66](https://github.com/raimondskrauklis/revy/pull/66) deploy.
+**Status:** **Track B push 2 in progress** — push 1 PASS (`893cf83`, 1 active finding).
 
 ## Deploy boundaries
 
@@ -22,12 +22,12 @@ FR-DG1 **PASS** rev 3; FR-DG2 **PARTIAL** rev 4 (RC-1). See #65 staging rows in 
 
 | PR | Branch | Status |
 |----|--------|--------|
-| *(open)* | `chore/fr-dg2-staging-dogfood` | push 1 in progress |
+| *(#67)* | `chore/fr-dg2-staging-dogfood` | push 2 in progress |
 
 | Push | Intent | Status |
 |------|--------|--------|
-| 1 | Introduce `fr_dg2_probe` + Moonshot defect | in progress |
-| 2 | Fix defect in-file (line touch) | pending |
+| 1 | Introduce `fr_dg2_probe` + Moonshot defect | **PASS** — `893cf83` (gen=1, pr=1) |
+| 2 | Fix defect in-file (line touch) | in progress |
 | 3 | Delete probe file — **FR-DG2** target | pending |
 
 **Protocol ([VAL8](./FINDING_RESOLUTION_DOGFOOD_VALIDATION_FINDINGS.md#fr-dg-val8--dogfood-metrics-interpretation)):** backend-only pushes 1–3; one push per Revy cycle.
@@ -44,7 +44,7 @@ FR-DG1 **PASS** rev 3; FR-DG2 **PARTIAL** rev 4 (RC-1). See #65 staging rows in 
 
 | Push | `head_sha` | `review_run_id` | `gen` / `pr` | Notes |
 |------|------------|-----------------|--------------|-------|
-| 1 | — | — | — | introduce probe |
+| 1 | `893cf83` | `019faf57-3bf2-77a8-814d-398603e4c406` | 1 / 1 | probe defect active |
 | 2 | — | — | — | fix in-file |
 | 3 | — | — | — | delete file — FR-DG2 |
 
