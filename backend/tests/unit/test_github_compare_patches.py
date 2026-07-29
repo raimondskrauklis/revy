@@ -7,7 +7,13 @@ import pytest
 
 from app.integrations.github_api import CompareCommitsResult, CompareFileChange
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
-from app.services.github_compare_patches import fetch_compare_patches, fetch_compare_patches_by_file
+from app.services.github_compare_patches import ComparePatchesResult, fetch_compare_patches, fetch_compare_patches_by_file
+
+
+def test_compare_patches_result_deleted_paths_default_empty():
+    result = ComparePatchesResult(patches_by_file={}, compare_failed=False)
+    assert result.deleted_paths == frozenset()
+    assert result.renamed_from_paths == frozenset()
 
 
 @pytest.mark.asyncio
