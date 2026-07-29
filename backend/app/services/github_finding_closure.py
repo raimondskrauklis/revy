@@ -218,6 +218,17 @@ async def verify_still_open_escalation_groups(
     if prior_revision is None:
         return VerificationJudgeResult(judged_count=0, artifacts=[])
 
+    intermediate_revision_ids = await get_intermediate_revision_ids_between(
+        session,
+        pull_request_id=revision.pull_request_id,
+        prior_revision=prior_revision,
+        current_revision=revision,
+    )
+    pairing_revision_ids = prior_publish_pairing_revision_ids(
+        prior_revision=prior_revision,
+        intermediate_revision_ids=intermediate_revision_ids,
+    )
+
     pull_request = await session.get(GitHubPullRequestORM, revision.pull_request_id)
     if pull_request is None:
         return VerificationJudgeResult(judged_count=0, artifacts=[])
@@ -236,7 +247,7 @@ async def verify_still_open_escalation_groups(
         await session.scalars(
             select(GitHubFindingGroupORM).where(
                 GitHubFindingGroupORM.pull_request_id == revision.pull_request_id,
-                GitHubFindingGroupORM.last_seen_revision_id == prior_revision.id,
+                GitHubFindingGroupORM.last_seen_revision_id.in_(pairing_revision_ids),
                 GitHubFindingGroupORM.state == GitHubFindingGroupState.active,
             )
         )
