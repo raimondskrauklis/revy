@@ -1,6 +1,6 @@
 # Review engineering context — program index
 
-**Status:** P0–P4 shipped on `main` (#60) · P6+P7 on PR #61 (merge pending) · P8 human gate after deploy.
+**Status:** P0–P4 on `main` (#60) · Pass 1 validation filled · PR #61 merge → pass 2.
 
 **Problem:** Revy Moonshot has engineering-context inject (P2). **Closeout:** Greptile-depth issue comment (P6), operator API + metrics gate (P7), staging sign-off (P8).
 
@@ -28,6 +28,6 @@
 
 **Related:** [review-quality/README.md](../review-quality/README.md) · [judge-json-contract](../judge-json-contract/README.md) · [post-review-quality L2](../post-review-quality/POST_REVIEW_QUALITY_FINDINGS.md)
 
-**Next step:** Merge PR #61 → deploy `main` → P8 staging sign-off.
+**Next step:** Merge PR #61 → deploy → validation pass 2 (API + publish surface).
 
-**Program status:** P0–P4 on `main` · P6+P7 awaiting merge · P8 after deploy.
+**Program status:** P0–P4 validated on staging (pass 1) · P6+P7 on PR #61 · pass 2 after merge.
