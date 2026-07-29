@@ -765,6 +765,112 @@ def test_build_unified_diff_truncates_largest_files_first():
     assert "large.py" not in diff
 
 
+def test_build_unified_diff_default_cap_allows_large_patch():
+    from app.integrations.github_api import CompareFileChange
+
+    patch_body = "+" + ("x" * 200_000)
+    files = (CompareFileChange(filename="big.py", status="modified", patch=patch_body),)
+
+    diff, truncated, omitted = github_review.build_unified_diff(files)
+
+    assert truncated is False
+    assert omitted == []
+    assert "big.py" in diff
+
+
+def test_build_review_prompt_engineering_context_before_diff():
+    prompt = github_review._build_review_prompt(
+        pr_title="Title",
+        pr_body=None,
+        head_sha="abc",
+        base_ref="main",
+        head_ref="feat",
+        index_mode=GitHubIndexMode.diff,
+        changed_files=["backend/main.py"],
+        unified_diff="@@ patch",
+        supplemental=[],
+        engineering_block="## Locked decisions\n\n**RCX-D8**",
+    )
+    eng_pos = prompt.index("Engineering context (authoritative)")
+    diff_pos = prompt.index("Unified diff (primary)")
+    assert eng_pos < diff_pos
+    assert "RCX-D8" in prompt
+    assert "override generic API advice" in prompt
+
+
+@pytest.mark.asyncio
+async def test_prepare_review_context_populates_engineering_manifest():
+    from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
+    from app.services.engineering_context.pack import EngineeringContextPack
+
+    workspace_id = uuid.uuid4()
+    repository_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+
+    revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="headsha",
+        base_sha="basesha",
+    )
+    revision.id = revision_id
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=repository_id,
+        workspace_id=workspace_id,
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=1,
+        title="RCX",
+        state=GitHubPullRequestState.open,
+        head_sha="headsha",
+        head_ref="feat",
+        base_ref="main",
+        revision_count=1,
+    )
+
+    index_job = _completed_index_job(revision_id=revision_id, workspace_id=workspace_id)
+    engineering_pack = EngineeringContextPack(
+        active_program="review-engineering-context",
+        lock_ids=["RCX-D8"],
+        inject_text="## Locked decisions\n",
+        deduped_paths=["docs/a.md"],
+    )
+    session = AsyncMock()
+
+    with patch(
+        "app.services.github_review._fetch_compare_for_review",
+        AsyncMock(return_value=(None, "compare_skipped")),
+    ):
+        with patch(
+            "app.services.github_review._resolve_github_repo_for_revision",
+            AsyncMock(return_value=(MagicMock(github_installation_id=99), "org", "repo")),
+        ):
+            with patch(
+                "app.services.github_review.build_engineering_context_pack",
+                AsyncMock(return_value=engineering_pack),
+            ):
+                with patch(
+                    "app.services.github_review._collect_supplemental_chunks",
+                    AsyncMock(return_value=[]),
+                ):
+                    pack = await github_review.prepare_review_context(
+                        session,
+                        workspace_id=workspace_id,
+                        repository_id=repository_id,
+                        pull_request_id=pull_request_id,
+                        revision=revision,
+                        pull_request=pull_request,
+                        index_job=index_job,
+                    )
+
+    assert pack.manifest["engineering_context_injected"] is True
+    assert pack.manifest["lock_ids_extracted"] == ["RCX-D8"]
+    assert pack.manifest["engineering_context_deduped_paths"] == ["docs/a.md"]
+    assert "Engineering context (authoritative)" in pack.prompt
+
+
 def test_normalize_finding_start_line():
     assert github_review.normalize_finding_start_line(12) == 12
     assert github_review.normalize_finding_start_line("15") == 15
@@ -1247,6 +1353,26 @@ def test_build_retrieval_manifest_includes_sc3_defaults():
     assert manifest["structural_context_mode"] == "none"
     assert manifest["structural_context_attempted"] is False
     assert manifest["changed_symbols"] == []
+
+
+def test_build_retrieval_manifest_includes_engineering_context_defaults():
+    manifest = github_review.build_retrieval_manifest(
+        index_mode=GitHubIndexMode.diff,
+        changed_files=["app/main.py"],
+        diff_truncated=False,
+        omitted_files=[],
+        fallback_reason=None,
+        supplemental=[],
+    )
+
+    assert manifest["engineering_context_injected"] is False
+    assert manifest["engineering_context_bytes"] == 0
+    assert manifest["diff_max_bytes"] == 524288
+    assert manifest["unified_diff_bytes"] == 0
+    assert manifest["active_program"] is None
+    assert manifest["lock_ids_extracted"] == []
+    assert manifest["engineering_context_deduped_paths"] == []
+    assert manifest["engineering_context_errors"] == []
 
 
 def test_review_run_polish_defaults():

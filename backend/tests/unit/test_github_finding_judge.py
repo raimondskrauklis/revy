@@ -19,6 +19,7 @@ from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
 from app.models.github_review_run import GitHubReviewRunORM
+from app.services.github_compare_patches import CompareReviewContext
 from app.services.github_finding_judge import (
     _build_judge_prompt,
     _judge_failure_log_extra,
@@ -30,11 +31,27 @@ from app.services.model_policy import ModelRef
 
 @pytest.fixture(autouse=True)
 def _mock_fetch_compare_patches_for_judge():
+    from app.services.engineering_context.pack import EngineeringContextPack
+    from app.services.github_compare_patches import CompareReviewContext
+
+    compare_ctx = CompareReviewContext(
+        patches_by_file={},
+        changed_files=(),
+        omitted_files=[],
+        compare_failed=False,
+        github_installation_id=1,
+        owner="org",
+        repo_name="repo",
+    )
     with patch(
-        "app.services.github_finding_judge.fetch_compare_patches_by_file",
-        AsyncMock(return_value={}),
+        "app.services.github_finding_judge.fetch_compare_review_context",
+        AsyncMock(return_value=compare_ctx),
     ):
-        yield
+        with patch(
+            "app.services.github_finding_judge.build_engineering_context_pack",
+            AsyncMock(return_value=EngineeringContextPack()),
+        ):
+            yield
 
 
 def test_is_judge_candidate_error():
@@ -117,6 +134,39 @@ def test_judge_failure_log_extra_includes_raw_response_text():
     assert extra["raw_response_text"] == '{"broken":'
     assert extra["parse_error"] == "judge_json_invalid"
     assert extra["response_chars"] == len('{"broken":')
+
+
+def test_build_judge_prompt_includes_engineering_locks():
+    group = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=uuid.uuid4(),
+        fingerprint="abc",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Bug",
+        message="msg",
+        file_path="app/handler.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+    prompt = _build_judge_prompt(
+        group=group,
+        evidence_snippet="snippet",
+        engineering_block="## Locked decisions\n\n**RCX-D8**",
+    )
+    assert "Engineering context (authoritative locks)" in prompt
+    assert "RCX-D8" in prompt
+    assert prompt.index("Evidence (code excerpt") < prompt.index("Engineering context")
+
+
+def test_format_judge_engineering_context_truncates_utf8():
+    from app.services.engineering_context.pack import EngineeringContextPack
+    from app.services.judge_prompt_context import format_judge_engineering_context
+
+    pack = EngineeringContextPack(extracted_text="x" * 5000)
+    block = format_judge_engineering_context(pack, max_chars=100)
+    assert block is not None
+    assert len(block.encode("utf-8")) <= 100
 
 
 def test_build_judge_prompt_without_evidence_uses_conservative_grounding():
@@ -821,8 +871,18 @@ async def test_run_judge_partial_llm_failure_skipped_unavailable():
             AsyncMock(return_value=ModelRef(provider="anthropic", model_id="claude-test")),
         ):
             with patch(
-                "app.services.github_finding_judge.fetch_compare_patches_by_file",
-                AsyncMock(return_value={}),
+                "app.services.github_finding_judge.fetch_compare_review_context",
+                AsyncMock(
+                    return_value=CompareReviewContext(
+                        patches_by_file={},
+                        changed_files=(),
+                        omitted_files=[],
+                        compare_failed=False,
+                        github_installation_id=1,
+                        owner="org",
+                        repo_name="repo",
+                    ),
+                ),
             ):
                 with patch(
                     "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
@@ -903,8 +963,18 @@ async def test_run_judge_parse_failure_captures_artifact():
             AsyncMock(return_value=ModelRef(provider="anthropic", model_id="claude-test")),
         ):
             with patch(
-                "app.services.github_finding_judge.fetch_compare_patches_by_file",
-                AsyncMock(return_value={}),
+                "app.services.github_finding_judge.fetch_compare_review_context",
+                AsyncMock(
+                    return_value=CompareReviewContext(
+                        patches_by_file={},
+                        changed_files=(),
+                        omitted_files=[],
+                        compare_failed=False,
+                        github_installation_id=1,
+                        owner="org",
+                        repo_name="repo",
+                    ),
+                ),
             ):
                 with patch(
                     "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
@@ -1082,8 +1152,18 @@ async def test_run_judge_fenced_json_persists_outcome():
             AsyncMock(return_value=ModelRef(provider="anthropic", model_id="claude-test")),
         ):
             with patch(
-                "app.services.github_finding_judge.fetch_compare_patches_by_file",
-                AsyncMock(return_value={}),
+                "app.services.github_finding_judge.fetch_compare_review_context",
+                AsyncMock(
+                    return_value=CompareReviewContext(
+                        patches_by_file={},
+                        changed_files=(),
+                        omitted_files=[],
+                        compare_failed=False,
+                        github_installation_id=1,
+                        owner="org",
+                        repo_name="repo",
+                    ),
+                ),
             ):
                 with patch(
                     "app.services.github_finding_judge.llm_dispatch.call_judge_llm",

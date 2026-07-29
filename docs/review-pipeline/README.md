@@ -54,9 +54,13 @@ docs/review-pipeline/
     README.md
     JUDGE_JSON_CONTRACT_FINDINGS.md
     JUDGE_JSON_CONTRACT_GENERAL_PLAN.md
+    JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md
     waves/
       JUDGE_JSON_CONTRACT_EXECUTION.md
       JUDGE_JSON_CONTRACT_P0_EXECUTION.md … P5
+  review-engineering-context/            ← Moonshot manifest inject (findings + general plan P0–P5)
+    README.md
+    REVIEW_ENGINEERING_CONTEXT_FINDINGS.md
   REVIEW_PIPELINE_GREPTILE_PR26_EMAIL.md   ← archived Greptile PR #26 email (triage reference)
   REVIEW_PIPELINE_PRODUCT_PATTERNS.md      ← Greptile-style patterns → Revy phases (defer/future map)
   code-review-arch_perplexity_searcj_advice_only.md  ← external architecture notes (advice only)

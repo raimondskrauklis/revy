@@ -23,6 +23,17 @@ class ComparePatchesResult:
     compare_failed: bool
 
 
+@dataclass(frozen=True, slots=True)
+class CompareReviewContext:
+    patches_by_file: dict[str, str]
+    changed_files: tuple[str, ...]
+    omitted_files: list[str]
+    compare_failed: bool
+    github_installation_id: int | None = None
+    owner: str | None = None
+    repo_name: str | None = None
+
+
 async def fetch_compare_patches(
     session: AsyncSession,
     *,
@@ -86,3 +97,65 @@ async def fetch_compare_patches_by_file(
         skip_when_same_sha=False,
     )
     return result.patches_by_file
+
+
+async def fetch_compare_review_context(
+    session: AsyncSession,
+    *,
+    pull_request: GitHubPullRequestORM,
+    revision: GitHubPullRequestRevisionORM,
+    client: httpx.AsyncClient,
+) -> CompareReviewContext:
+    """Compare patches + changed/omitted file lists for engineering context and judge."""
+    from app.services.github_review import build_unified_diff
+
+    if not revision.base_sha or not revision.head_sha:
+        return CompareReviewContext({}, (), [], False)
+
+    repository = await session.get(GitHubRepositoryORM, pull_request.repository_id)
+    installation = await session.get(GitHubInstallationORM, pull_request.installation_id)
+    if repository is None or installation is None:
+        return CompareReviewContext({}, (), [], False)
+
+    owner, repo_name = repository.full_name.split("/", 1)
+    try:
+        compare = await compare_commits(
+            client,
+            github_installation_id=installation.github_installation_id,
+            owner=owner,
+            repo=repo_name,
+            base_sha=revision.base_sha,
+            head_sha=revision.head_sha,
+        )
+    except (httpx.HTTPError, OSError, NotFoundError, RateLimitedError, ServiceUnavailableError) as exc:
+        logger.warning(
+            "judge_compare_review_context_failed",
+            extra={
+                "pull_request_id": str(pull_request.id),
+                "base_sha": revision.base_sha,
+                "head_sha": revision.head_sha,
+                "error": str(exc),
+            },
+        )
+        return CompareReviewContext(
+            {},
+            (),
+            [],
+            True,
+            github_installation_id=installation.github_installation_id,
+            owner=owner,
+            repo_name=repo_name,
+        )
+
+    patches = {item.filename: item.patch for item in compare.files if item.patch}
+    changed_files = compare.paths_to_index
+    _, _, omitted_files = build_unified_diff(compare.files)
+    return CompareReviewContext(
+        patches_by_file=patches,
+        changed_files=changed_files,
+        omitted_files=omitted_files,
+        compare_failed=False,
+        github_installation_id=installation.github_installation_id,
+        owner=owner,
+        repo_name=repo_name,
+    )

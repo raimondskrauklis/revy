@@ -562,6 +562,7 @@ async def record_judge_pipeline_step(
             "parse_error": item.parse_error,
             "retry_count": item.retry_count,
             "outcome": item.outcome,
+            "lock_ids_cited": item.lock_ids_cited,
         }
         for item in (candidates or [])
     ]
@@ -576,6 +577,7 @@ async def record_judge_pipeline_step(
             "parse_error": item.parse_error,
             "retry_count": item.retry_count,
             "outcome": item.outcome,
+            "lock_ids_cited": item.lock_ids_cited,
         }
         for item in (verification_candidates or [])
     ]

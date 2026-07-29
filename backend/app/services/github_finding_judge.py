@@ -29,11 +29,16 @@ from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_finding_judge_outcome import GitHubFindingJudgeOutcomeORM
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
 from app.models.github_review_run import GitHubReviewRunORM
-from app.services.github_compare_patches import fetch_compare_patches_by_file
+from app.services.engineering_context.pack import (
+    EngineeringContextPack,
+    build_engineering_context_pack,
+)
+from app.services.github_compare_patches import fetch_compare_review_context
 from app.services.github_finding_closure_rules import apply_resolution_method_on_judge_dismiss
 from app.services.github_finding_reconcile import severity_rank
 from app.services.github_review import resolve_judge_code_context
 from app.services.judge_prompt_context import (
+    format_judge_engineering_context,
     judge_prompt_file_patch_chars,
     resolve_judge_prompt_file_patch,
 )
@@ -61,6 +66,7 @@ class JudgeCandidateArtifact:
     raw_response: dict[str, Any] | None
     outcome: str | None
     file_patch_chars: int | None = None
+    lock_ids_cited: list[str] | None = None
     raw_response_text: str | None = None
     parse_error: str | None = None
     retry_count: int = 0
@@ -161,6 +167,7 @@ def _judge_failure_artifact(
         parse_error=parse_error,
         outcome=None,
         file_patch_chars=file_patch_chars,
+        lock_ids_cited=None,
         retry_count=retry_count,
     )
 
@@ -182,6 +189,7 @@ def _build_judge_prompt(
     end_line: int | None = None,
     suggestion: str | None = None,
     file_patch: str | None = None,
+    engineering_block: str | None = None,
 ) -> str:
     parts = [
         "Automated reviewer (Moonshot) raised the finding below. Verify this claim only.",
@@ -200,15 +208,6 @@ def _build_judge_prompt(
         parts.append(f"Line: {line_ref}")
     if suggestion:
         parts.append(f"Suggested fix: {suggestion}")
-    prompt_patch = resolve_judge_prompt_file_patch(evidence_snippet, file_patch)
-    if prompt_patch:
-        parts.extend(
-            [
-                "",
-                "File diff (scoped):",
-                prompt_patch,
-            ]
-        )
     if evidence_snippet and evidence_snippet.strip():
         parts.extend(
             [
@@ -221,6 +220,23 @@ def _build_judge_prompt(
         )
     else:
         parts.extend(["", _GROUNDING_WITHOUT_EVIDENCE])
+    if engineering_block:
+        parts.extend(
+            [
+                "",
+                "Engineering context (authoritative locks):",
+                engineering_block,
+            ]
+        )
+    prompt_patch = resolve_judge_prompt_file_patch(evidence_snippet, file_patch)
+    if prompt_patch:
+        parts.extend(
+            [
+                "",
+                "File diff (scoped):",
+                prompt_patch,
+            ]
+        )
     return "\n".join(parts)
 
 
@@ -264,9 +280,12 @@ async def _run_judge_llm_loop(
     candidates: list[tuple[GitHubFindingORM, GitHubFindingGroupORM]],
     model_ref: ModelRef,
     patches_by_file: dict[str, str],
+    engineering_pack: EngineeringContextPack | None = None,
     artifacts_out: list[JudgeCandidateArtifact] | None = None,
 ) -> int:
     judged = 0
+    engineering_block = format_judge_engineering_context(engineering_pack)
+    lock_ids_cited = list(engineering_pack.lock_ids) if engineering_pack and engineering_pack.lock_ids else None
     async with httpx.AsyncClient(timeout=float(settings.revy_revision_timeout_standard_seconds)) as client:
         for finding, group in candidates[:JUDGE_MAX_PER_RUN]:
             existing = await session.scalar(
@@ -294,6 +313,7 @@ async def _run_judge_llm_loop(
                 end_line=finding.end_line,
                 suggestion=finding.suggestion,
                 file_patch=file_patch,
+                engineering_block=engineering_block,
             )
             raw: dict[str, Any] | None = None
             outcome_str: str | None = None
@@ -359,6 +379,7 @@ async def _run_judge_llm_loop(
                         raw_response=raw,
                         outcome=outcome_str,
                         file_patch_chars=patch_chars,
+                        lock_ids_cited=lock_ids_cited,
                         retry_count=retry_count,
                     )
                 )
@@ -443,15 +464,34 @@ async def record_review_run_judge_status(
         return 0
 
     revision = await session.get(GitHubPullRequestRevisionORM, run.revision_id)
+    engineering_pack = EngineeringContextPack()
     patches_by_file: dict[str, str] = {}
     if revision is not None:
         pull_request = await session.get(GitHubPullRequestORM, revision.pull_request_id)
         if pull_request is not None:
-            patches_by_file = await fetch_compare_patches_by_file(
-                session,
-                pull_request=pull_request,
-                revision=revision,
-            )
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                compare_ctx = await fetch_compare_review_context(
+                    session,
+                    pull_request=pull_request,
+                    revision=revision,
+                    client=client,
+                )
+                patches_by_file = compare_ctx.patches_by_file
+                if (
+                    compare_ctx.github_installation_id is not None
+                    and compare_ctx.owner is not None
+                    and compare_ctx.repo_name is not None
+                ):
+                    engineering_pack = await build_engineering_context_pack(
+                        client,
+                        github_installation_id=compare_ctx.github_installation_id,
+                        owner=compare_ctx.owner,
+                        repo=compare_ctx.repo_name,
+                        head_sha=revision.head_sha,
+                        changed_files=frozenset(compare_ctx.changed_files),
+                        omitted_files=frozenset(compare_ctx.omitted_files),
+                        patches_by_file=patches_by_file,
+                    )
 
     judged = await _run_judge_llm_loop(
         session,
@@ -460,6 +500,7 @@ async def record_review_run_judge_status(
         candidates=candidates,
         model_ref=model_ref,
         patches_by_file=patches_by_file,
+        engineering_pack=engineering_pack,
         artifacts_out=artifacts_out,
     )
     await session.flush()

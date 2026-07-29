@@ -48,4 +48,4 @@
 | P4 | Targeted retry (G5) | [P4](./waves/JUDGE_JSON_CONTRACT_P4_EXECUTION.md) | done (`60eb2ca`) |
 | P5 | Staging validation + doc sync | [P5](./waves/JUDGE_JSON_CONTRACT_P5_EXECUTION.md) | code-complete — human gate pending |
 
-**Next step:** Deploy branch to staging → fill [validation memo](./JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) → merge PR #58.
+**Next step:** Deploy `main` to staging → dogfood PR → fill [validation memo](./JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) (metrics script in [BACKEND_SCRIPTS_RUNBOOK.md](../../utils/BACKEND_SCRIPTS_RUNBOOK.md)).

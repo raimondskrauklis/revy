@@ -78,12 +78,20 @@
 - [ ] Staging dogfood — two pushes ~8 s apart ([dogfood log](./review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md))
 - [ ] Optional tag `review-generation-lifecycle-v1` on `main`
 
-### Track L — Judge JSON contract — **code-complete** (PR #58, `feat/judge-json-contract`)
+### Track L — Judge JSON contract — **merged** (#58) · staging validation in progress
 
-- [x] P0–P4 LOOP — observability, snippet-first, `parse_llm_json_object`, optional structured output, targeted retry
-- [x] Validation memo stub — [judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](./judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md)
+- [x] P0–P5 LOOP merged to `main` (`9a7b5cb`)
+- [x] Validation memo + metrics script — [judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](./judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md)
+- [ ] Deploy `main` to staging worker
 - [ ] Operator dogfood — ≥95% judge outcome persistence on staging PR
-- [ ] Merge PR [#58](https://github.com/raimondskrauklis/revy/pull/58) → `main`
+- [ ] Sign-off validation memo
+
+### Track M — Review engineering context — **shipped (code)** · human gate pending
+
+- [x] Findings + general plan + P0–P5 execution LOOP (code on PR #60)
+- [x] P0–P4 shipped — Moonshot inject, Greptile `files.json` generator, judge locks
+- [ ] Staging deploy + dogfood — [REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md](./review-engineering-context/REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md)
+- [ ] Operator sign-off (P5.2–P5.3, P5.5 narrative)
 
 ### Track K — Finding resolution — **code-complete** (PR #57, `feat/finding-resolution`)
 

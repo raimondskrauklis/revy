@@ -1,8 +1,16 @@
 # Bugbot — review pipeline contract
 
+**Active program:** review-engineering-context — Moonshot manifest inject (RCX P0–P5 on `feat/review-engineering-context`).
+
 When reviewing **backend** changes that touch publish / formatter / pipeline / generation lifecycle / judge code, treat these as authoritative:
 
-**Judge input quality (active program):**
+**Review engineering context (active program):**
+
+- [REVIEW_ENGINEERING_CONTEXT_EXECUTION.md](../docs/review-pipeline/review-engineering-context/waves/REVIEW_ENGINEERING_CONTEXT_EXECUTION.md) — LOOP P0–P5, RCX-D* locks
+- [REVIEW_ENGINEERING_CONTEXT_FINDINGS.md](../docs/review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_FINDINGS.md) — RCX gaps, validation metrics
+- [REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md](../docs/review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md) — phase goals
+
+**Judge input quality (shipped):**
 
 - [JUDGE_INPUT_QUALITY_EXECUTION.md](../docs/review-pipeline/judge/waves/JUDGE_INPUT_QUALITY_EXECUTION.md) — P0–P5 scope, gates, J-8 patch reload
 - [JUDGE_INPUT_INVESTIGATION_FINDINGS.md](../docs/review-pipeline/judge/JUDGE_INPUT_INVESTIGATION_FINDINGS.md) — J-* gaps, find→verify thesis
@@ -31,7 +39,9 @@ When reviewing **backend** changes that touch publish / formatter / pipeline / g
 - [CURSOR_AGENT_WORKFLOW.md](../docs/utils/CURSOR_AGENT_WORKFLOW.md) — roles + verbs quick ref
 - [agents/prompts/ROLES.md](../docs/review-pipeline/agents/prompts/ROLES.md) — master/reviewer boundaries
 
-**Program:** Judge input quality on feature branch `feat/judge-input-quality` — scoped judge context, verifier prompts, Moonshot PR body fetch. Review generation lifecycle shipped on `main` via PR #54.
+**Program:** Review engineering context on `feat/review-engineering-context` — SSOT `.greptile/review-context.json`, Moonshot inject P2, Greptile generator P3.
+
+**Judge input quality (historical — shipped):**
 
 **Finding resolution (shipped on `main`):**
 

@@ -24,7 +24,7 @@ class PlatformException(Exception):
 
 
 class ValidationError(PlatformException):
-    http_status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
+    http_status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
     error_code = "validation_error"
 
 

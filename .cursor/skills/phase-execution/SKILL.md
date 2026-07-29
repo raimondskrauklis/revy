@@ -80,6 +80,8 @@ Changed `.md` files appear in the PR diff, but Greptile/Bugbot do **not** treat 
 
 If the execution doc has an explicit **PR review context** block — follow it over these defaults.
 
+**RCX Greptile sync:** after editing `.greptile/review-context.json`, run `cd backend && python -m scripts.generate_greptile_files_from_review_context --write` and commit SSOT + generated `.greptile/files.json` together.
+
 ---
 
 ## The LOOP

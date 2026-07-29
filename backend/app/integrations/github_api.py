@@ -2,10 +2,12 @@
 """Minimal GitHub App API client — R1 repository list sync."""
 from __future__ import annotations
 
+import base64
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 import jwt
@@ -63,6 +65,21 @@ def _compare_http_error(exc: httpx.HTTPStatusError) -> None:
         raise NotFoundError(
             message="GitHub compare not found",
             error_code="github_compare_not_found",
+        ) from exc
+    if status_code == 429:
+        raise RateLimitedError(
+            message="GitHub API rate limit exceeded",
+            error_code="github_rate_limited",
+        ) from exc
+    raise exc
+
+
+def _contents_http_error(exc: httpx.HTTPStatusError) -> None:
+    status_code = exc.response.status_code
+    if status_code == 404:
+        raise NotFoundError(
+            message="GitHub repository file not found",
+            error_code="github_contents_not_found",
         ) from exc
     if status_code == 429:
         raise RateLimitedError(
@@ -228,6 +245,47 @@ async def compare_commits(
             )
         )
     return CompareCommitsResult(files=tuple(files))
+
+
+async def fetch_repository_file_at_sha(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+    owner: str,
+    repo: str,
+    path: str,
+    ref: str,
+    auth_headers: dict[str, str] | None = None,
+) -> str:
+    """Fetch a single repository file at ref via GitHub Contents API."""
+    headers = await _resolve_auth_headers(
+        client,
+        github_installation_id=github_installation_id,
+        auth_headers=auth_headers,
+    )
+    encoded_path = quote(path, safe="/")
+    url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{encoded_path}"
+    try:
+        response = await client.get(url, headers=headers, params={"ref": ref})
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        _contents_http_error(exc)
+        raise  # pragma: no cover
+
+    data = response.json()
+    if not isinstance(data, dict):
+        raise ServiceUnavailableError(
+            message="GitHub contents response invalid",
+            error_code="github_contents_invalid",
+        )
+    encoding = data.get("encoding")
+    content = data.get("content")
+    if encoding != "base64" or not isinstance(content, str):
+        raise ServiceUnavailableError(
+            message="GitHub contents response missing base64 body",
+            error_code="github_contents_invalid",
+        )
+    return base64.b64decode(content).decode("utf-8")
 
 
 async def get_pull_request(
