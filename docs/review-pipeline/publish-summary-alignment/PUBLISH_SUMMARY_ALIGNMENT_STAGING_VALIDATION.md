@@ -10,6 +10,7 @@
 |-------|------|----------------|
 | RCX | [REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md](../review-engineering-context/REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md) | **PASS** (`--rcx-gate` since #61 deploy) |
 | Judge JSON contract | [JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](../judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) | unchanged |
+| Meta workflow | [staging-validation/README.md](../staging-validation/README.md) | findings baseline |
 
 ## Deploy
 

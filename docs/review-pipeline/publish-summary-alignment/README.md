@@ -34,6 +34,7 @@
 | Generation lifecycle (RG-14 origin) | [review-generation-lifecycle/README.md](../review-generation-lifecycle/README.md) |
 | GitHub surface hardening (GH-1v2) | [github-surface-hardening/GITHUB_SURFACE_HARDENING_FINDINGS.md](../github-surface-hardening/GITHUB_SURFACE_HARDENING_FINDINGS.md) |
 | RCX staging (parallel monitor) | [review-engineering-context/REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md](../review-engineering-context/REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md) |
+| Staging validation workflow | [staging-validation/STAGING_VALIDATION_FINDINGS.md](../staging-validation/STAGING_VALIDATION_FINDINGS.md) |
 
 **Related code**
 
