@@ -141,6 +141,7 @@ def test_issue_comment_format_system_prompt_lists_required_sections():
     prompt = ISSUE_COMMENT_FORMAT_SYSTEM_PROMPT.lower()
     assert "short narrative" not in prompt
     assert "rationale" in prompt
+    assert "merge recommendation" in prompt
     assert "security review" in prompt
     assert "important files changed" in prompt
 
