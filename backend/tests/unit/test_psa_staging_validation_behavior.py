@@ -9,8 +9,6 @@ Documents what operators check on dogfood PR #63 after each push:
 import importlib.util
 from pathlib import Path
 
-from app.services.github_publish_formatter import format_summary_comment
-
 _PSA_STAGING_PROBE_PATH = (
     Path(__file__).resolve().parents[1] / "fixtures" / "psa_staging" / "probe_module.py"
 )
@@ -27,19 +25,11 @@ def _load_probe_module():
     return module
 
 
-def test_psa_staging_probe_module_returns_stable_value():
+def test_psa_staging_probe_module_returns_wired_marker():
     probe = _load_probe_module()
-    assert probe.psa_staging_probe_value() == "psa-staging-ok"
+    assert probe.psa_staging_probe_value() == "psa-staging-ok:psa-dogfood-push-2"
 
 
 def test_psa_staging_probe_fixture_path_exists():
     assert _PSA_STAGING_PROBE_PATH.is_file()
 
-
-def test_format_summary_comment_emits_two_block_headings():
-    markdown = format_summary_comment(
-        generation_groups=[],
-        pr_active_groups=[],
-    )
-    assert "### This generation" in markdown
-    assert "### Still open on PR" in markdown

@@ -10,5 +10,5 @@ PSA_STAGING_PROBE_MARKER = "psa-dogfood-push-2"
 
 
 def psa_staging_probe_value() -> str:
-    """Stable value for unit tests; marker intentionally unused until push 3."""
-    return "psa-staging-ok"
+    """Return stable probe value including wired marker (push 3 fix)."""
+    return f"psa-staging-ok:{PSA_STAGING_PROBE_MARKER}"
