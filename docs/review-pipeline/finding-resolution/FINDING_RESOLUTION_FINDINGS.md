@@ -112,7 +112,7 @@ flowchart TD
 | **Coarse `addressed` heuristic** | Touching line region ≠ proof fix; no semantic/judge re-check on next push |
 | **No human dismiss** | R7.6 deferred — no API/UI to mark false positive without judge |
 | **Judge failure honesty** | LLM error → no outcome row; `judge_status` may still `completed` (RG-6) |
-| **Summary vs inline scope** | Summary lists all PR `active` groups; inline per current `review_run` — resolution counts on summary can disagree with open threads |
+| **Summary vs inline scope (RG-14)** | Check run: two-block (this generation + PR still open). Issue comment: **generation-only** today — **PSA program** completes FR-Q7 on issue comment + PR-wide verdict. Inline per current `review_run`. |
 | **No post-merge resolution loop** | Bugbot-style batch deferred (FR-Q10) |
 | **Doc drift R5-Q1** | Findings registry cites `normalize(message)`; code uses **title** (D10) |
 | **`count_resolution_status` bug** | Any `state==resolved` counts as `judge_dismissed` today — `resolved+addressed` misclassified (`github_publish_formatter.py:115–117`) |
@@ -204,13 +204,14 @@ flowchart TD
 | FR-Q5 | Human dismiss scope (API only vs UI)? | **addressed** | P4 admin API + reviewer dismiss action (R7.6 full UX defer) |
 | FR-Q6 | Use judge vs diff-only for `addressed`? | **locked** | Layered: Pass 1 diff, Pass 3 judge for escalation still-open |
 | FR-Q7 | Summary vs inline scope? | **addressed** | Two-block check summary + generation-only issue comment |
+| FR-Q16 | Issue comment vs check PR-wide block? | **addressed** | [publish-summary-alignment](../publish-summary-alignment/README.md) — PSA P0–P1 |
 | FR-Q8 | RG-6 judge_status honesty? | **addressed** | `skipped_unavailable` on partial failure — `test_run_judge_partial_llm_failure_skipped_unavailable` |
 | FR-Q9 | Resolution rate KPI | **locked** | Superseded by FR-Q12 (transitions-only) |
 | FR-Q10 | Post-merge re-verify (Bugbot-class)? | **defer** | v1.1 |
 | FR-Q11 | Pass 3 escalation set? | **locked** | `still_open` + `is_judge_candidate` + prior revision + not `compare_failed` |
 | FR-Q12 | Resolution rate formula? | **locked** | Transitions per push pair on reconcile manifest; denominator = `active` on N−1 at sync (stamp cohort), exclude `compare_failed` and pre-sync `resolved` |
 | FR-Q13 | Re-open after closure? | **locked** | `absent_and_addressed` re-opens on re-report; judge/human dismiss stays resolved |
-| FR-Q14 | Summary blocks? | **locked** | Same as FR-Q7 |
+| FR-Q14 | Summary blocks? | **locked** | Same as FR-Q7; issue-comment completion → **FR-Q16** / [PSA](../publish-summary-alignment/README.md) |
 | FR-Q15 | Human dismiss auth? | **locked** | Workspace `Permission.admin_users` on installation route |
 
 ---
@@ -237,6 +238,7 @@ flowchart TD
 
 | Item | When |
 |------|------|
+| **RG-14 / PSA staging** | [publish-summary-alignment](../publish-summary-alignment/README.md) — parallel with RCX pass 2 |
 | Staging SQL: % groups `addressed` vs threads still open | Dogfood PR after #56 deploy |
 | Fill [JUDGE_INPUT_QUALITY_STAGING_VALIDATION.md](../judge/JUDGE_INPUT_QUALITY_STAGING_VALIDATION.md) | Same dogfood |
 | R5-Q1 doc fix (`title` not `message`) | Doc sync with program |

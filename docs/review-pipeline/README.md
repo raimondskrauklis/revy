@@ -61,6 +61,15 @@ docs/review-pipeline/
   review-engineering-context/            ← Moonshot manifest inject (findings + general plan P0–P5)
     README.md
     REVIEW_ENGINEERING_CONTEXT_FINDINGS.md
+  publish-summary-alignment/             ← FR-Q7 completion: issue comment two-block + PR-wide verdict (RG-14)
+    README.md
+    PUBLISH_SUMMARY_ALIGNMENT_FINDINGS.md
+    PUBLISH_SUMMARY_ALIGNMENT_DISCUSSION.md
+    PUBLISH_SUMMARY_ALIGNMENT_GENERAL_PLAN.md
+    PUBLISH_SUMMARY_ALIGNMENT_STAGING_VALIDATION.md
+    waves/
+      PUBLISH_SUMMARY_ALIGNMENT_EXECUTION.md
+      PUBLISH_SUMMARY_ALIGNMENT_P0_EXECUTION.md … P2
   REVIEW_PIPELINE_GREPTILE_PR26_EMAIL.md   ← archived Greptile PR #26 email (triage reference)
   REVIEW_PIPELINE_PRODUCT_PATTERNS.md      ← Greptile-style patterns → Revy phases (defer/future map)
   code-review-arch_perplexity_searcj_advice_only.md  ← external architecture notes (advice only)

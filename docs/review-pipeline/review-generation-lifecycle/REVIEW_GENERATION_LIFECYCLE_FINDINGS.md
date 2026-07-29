@@ -128,14 +128,24 @@ publish:
 
 ---
 
-## 3c. Summary vs inline scope (pre-existing — dogfood note)
+## 3c. Summary vs inline scope (verified 2026-07-29)
 
 | Channel | Scope today | Location |
 |---------|-------------|----------|
-| Check + issue comment | All PR **active** groups | `run_publish_job` groups query `688–702` |
-| Inline + Option A resolve | Current **review_run** publishable fingerprints | `inline_publish_findings_statement`, `_publishable_fingerprints_for_run` |
+| **Issue comment** (narrative, findings table, confidence) | **This generation** — `publishable_groups_for_review_run` for `job.review_run_id` | `_build_publish_surface` → `build_pr_review_comment` (`github_publish.py`, `github_publish_formatter.py`) |
+| **Check run summary** | **Two blocks:** this generation + **Still open on PR** (`pr_active_groups`) | `format_summary_comment` in `build_check_run_summary` |
+| **Inline + thread resolve** | Current **review_run** publishable fingerprints | `inline_publish_findings_statement`, `_publishable_fingerprints_for_run` |
 
-Summary can list a fingerprint with no new inline in this generation (continuity by design). Dogfood “open thread count vs Greptile” → use **inline threads**, not summary row count. Out of scope for this program unless explicitly expanded.
+**Per-push refresh (not append):** one issue comment per PR, body **replaced** on each successful publish at HEAD (`update_issue_comment`). Stale/superseded generations skip publish (HEAD gate).
+
+**Review input vs resolution delta:**
+
+| Input | Range | Purpose |
+|-------|-------|---------|
+| Moonshot review diff | **Full PR** `base_sha` → `head_sha` | Fresh generation each push — **no cross-push LLM memory** |
+| `resolution_status` / G9 “Since last push” | **Push delta** `prior.head_sha` → `new.head_sha` | Metrics + prose only |
+
+**RG-14 (shipped — [publish-summary-alignment](../publish-summary-alignment/README.md)):** Issue comment now mirrors check two-block summary + PR-wide verdict fields (PSA P0–P1). Staging sign-off pending.
 
 ---
 
@@ -226,6 +236,7 @@ synchronize (head_sha = H2)
 | **RG-10** | **Same-SHA re-publish after skip** | `find_publish_job_for_head_sha` has no status filter — skipped job with copied `github_check_run_id` can win `is_update_from_other` (`484–507`) | **P1** |
 | **RG-11** | **No stage-entry authority guards** | Queued H1 index can call `start_pipeline_github_check` after H2 supersedes (`index_tasks.py:56–67`); `prepare_review_after_index` → `create_review_run` with no HEAD/supersede check (`review_pipeline.py:260–267`) | **P2** |
 | **RG-12** | **Pending publish after supersede** | Job created pending; H2 arrives before task runs — need `run_publish_job` re-check `review_run.status == superseded` | **P1–P2** |
+| **RG-14** | **Issue comment generation-only vs check two-block** | Prior open findings omitted from issue comment when not re-reported; check still lists PR-wide open — triage confusion | **shipped** — [publish-summary-alignment](../publish-summary-alignment/README.md) |
 | **RG-13** | **Judge marks completed when outcomes missing** | `judge_status=completed` despite failed candidates — see §3b | **P5** |
 
 **Out of scope:** recall/STRUCT, reconcile marks-absent-resolved, human dismiss R7.6, push-frequency policy.
@@ -293,6 +304,7 @@ synchronize (head_sha = H2)
 - Hard Celery cancel mid-LLM (RG-Q4 defer).
 - GitHub batch review API (RG-Q5 defer).
 - Root-cause staging runs where `judge_status=not_applicable` but candidates exist — investigate in RG-6 / P5.
+- **RG-14:** [publish-summary-alignment](../publish-summary-alignment/README.md) — PSA P0–P2 on `feat/publish-summary-alignment`.
 
 ---
 
