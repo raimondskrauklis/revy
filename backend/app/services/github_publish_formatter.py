@@ -301,6 +301,49 @@ def build_g9_resolution_prose(groups: list[GitHubFindingGroupORM]) -> str:
     return "; ".join(parts)
 
 
+def build_g9_resolution_prose_from_manifest(manifest: dict[str, object]) -> str:
+    """G9 prose from reconcile resolution_pass manifest (FR-DG1)."""
+    parts: list[str] = []
+    addressed = int(manifest.get("transitions_addressed") or 0)
+    if addressed:
+        parts.append(f"{addressed} issue{'s' if addressed != 1 else ''} fixed since last push")
+    dismissed = manifest.get("transitions_dismissed")
+    if isinstance(dismissed, dict):
+        for key, label in (
+            ("judge_dismissed", "judge"),
+            ("verification_dismissed", "verification"),
+            ("human_dismissed", "human"),
+        ):
+            count = int(dismissed.get(key) or 0)
+            if count:
+                parts.append(f"{count} dismissed by {label}")
+    still_open = int(manifest.get("still_open_count") or 0)
+    if still_open:
+        parts.append(f"{still_open} still open from prior review")
+    return "; ".join(parts)
+
+
+def resolution_counts_from_manifest(manifest: dict[str, object]) -> dict[str, int]:
+    dismissed = manifest.get("transitions_dismissed")
+    if not isinstance(dismissed, dict):
+        dismissed = {}
+    return {
+        ResolutionStatus.addressed.value: int(manifest.get("transitions_addressed") or 0),
+        ResolutionStatus.judge_dismissed.value: int(dismissed.get("judge_dismissed") or 0),
+        ResolutionMethod.verification_dismissed.value: int(
+            dismissed.get("verification_dismissed") or 0
+        ),
+        ResolutionMethod.human_dismissed.value: int(dismissed.get("human_dismissed") or 0),
+        ResolutionStatus.still_open.value: int(manifest.get("still_open_count") or 0),
+    }
+
+
+def _g9_resolution_prose_for_ctx(ctx: PublishFormatContext) -> str:
+    if ctx.resolution_metrics_manifest is not None:
+        return build_g9_resolution_prose_from_manifest(ctx.resolution_metrics_manifest)
+    return build_g9_resolution_prose(ctx.groups)
+
+
 def _active_groups(groups: list[GitHubFindingGroupORM]) -> list[GitHubFindingGroupORM]:
     return [g for g in groups if g.state == GitHubFindingGroupState.active]
 
@@ -596,7 +639,7 @@ def build_pr_review_comment_fallback(
     verdict = verdict_groups(ctx)
     pr_active = _active_groups(verdict)
     confidence = compute_publish_confidence(ctx)
-    resolution_prose = build_g9_resolution_prose(ctx.groups)
+    resolution_prose = _g9_resolution_prose_for_ctx(ctx)
 
     lines = [
         "## Revy code review",
@@ -750,7 +793,7 @@ def _build_issue_comment_user_prompt(ctx: PublishFormatContext) -> str:
         f"Narrative hints (write 2-4 sentences in your own words): "
         f"{_review_narrative_paragraph(ctx)}\n"
         f"Merge recommendation (use this exact line): {_merge_recommendation(verdict)}\n"
-        f"Resolution delta: {build_g9_resolution_prose(ctx.groups) or 'n/a'}\n"
+        f"Resolution delta: {_g9_resolution_prose_for_ctx(ctx) or 'n/a'}\n"
         "Findings layout: use ### This generation and ### Still open on PR markdown "
         "headings with severity tables (no ### Findings section).\n"
         f"Include security <details> block: {'yes' if has_security else 'no'}\n"
@@ -816,6 +859,10 @@ async def build_pr_review_comment(ctx: PublishFormatContext) -> str:
 def _build_summary_json(ctx: PublishFormatContext) -> dict:
     verdict = verdict_groups(ctx)
     confidence = compute_publish_confidence(ctx)
+    if ctx.resolution_metrics_manifest is not None:
+        resolution = resolution_counts_from_manifest(ctx.resolution_metrics_manifest)
+    else:
+        resolution = count_resolution_status(ctx.groups)
     return {
         "head_sha": ctx.head_sha,
         "revision_number": ctx.revision_number,
@@ -823,7 +870,7 @@ def _build_summary_json(ctx: PublishFormatContext) -> dict:
         "active_count": len(_active_groups(verdict)),
         "generation_active_count": len(_active_groups(ctx.groups)),
         "pr_active_count": len(_active_groups(verdict)),
-        "resolution": count_resolution_status(ctx.groups),
+        "resolution": resolution,
     }
 
 

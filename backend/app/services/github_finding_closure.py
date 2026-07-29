@@ -51,6 +51,7 @@ from app.services.github_finding_judge import (
     call_judge_with_optional_retry,
 )
 from app.services.github_finding_reconcile import _ensure_pull_request_access
+from app.services.github_resolution_metrics import get_last_published_prior_revision
 from app.services.github_review import resolve_judge_code_context
 from app.services.judge_prompt_context import judge_prompt_file_patch_chars
 from app.services.model_policy import ModelRole, resolve_model
@@ -86,11 +87,10 @@ async def _load_prior_revision(
     pull_request_id: UUID,
     current_revision: GitHubPullRequestRevisionORM,
 ) -> GitHubPullRequestRevisionORM | None:
-    return await session.scalar(
-        select(GitHubPullRequestRevisionORM).where(
-            GitHubPullRequestRevisionORM.pull_request_id == pull_request_id,
-            GitHubPullRequestRevisionORM.revision_number == current_revision.revision_number - 1,
-        )
+    return await get_last_published_prior_revision(
+        session,
+        pull_request_id=pull_request_id,
+        current_revision=current_revision,
     )
 
 

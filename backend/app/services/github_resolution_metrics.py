@@ -10,12 +10,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import (
     GitHubFindingGroupState,
+    GitHubPublishJobStatus,
     ResolutionMethod,
     ResolutionStatus,
 )
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
+from app.models.github_publish_job import GitHubPublishJobORM
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
+from app.models.github_review_run import GitHubReviewRunORM
 from app.services.github_compare_patches import ComparePatchesResult, fetch_compare_patches
 from app.services.github_finding_closure_rules import COMPARE_FAILED_REASON
 
@@ -112,6 +115,33 @@ def resolve_group_resolution_status(
     return ResolutionStatus.still_open
 
 
+async def get_last_published_prior_revision(
+    session: AsyncSession,
+    *,
+    pull_request_id: UUID,
+    current_revision: GitHubPullRequestRevisionORM,
+) -> GitHubPullRequestRevisionORM | None:
+    """Walk back to the latest prior revision with a completed publish job."""
+    return await session.scalar(
+        select(GitHubPullRequestRevisionORM)
+        .join(
+            GitHubReviewRunORM,
+            GitHubReviewRunORM.revision_id == GitHubPullRequestRevisionORM.id,
+        )
+        .join(
+            GitHubPublishJobORM,
+            GitHubPublishJobORM.review_run_id == GitHubReviewRunORM.id,
+        )
+        .where(
+            GitHubPullRequestRevisionORM.pull_request_id == pull_request_id,
+            GitHubPullRequestRevisionORM.revision_number < current_revision.revision_number,
+            GitHubPublishJobORM.status == GitHubPublishJobStatus.completed,
+        )
+        .order_by(GitHubPullRequestRevisionORM.revision_number.desc())
+        .limit(1)
+    )
+
+
 async def apply_resolution_status_for_synchronize(
     session: AsyncSession,
     *,
@@ -119,11 +149,10 @@ async def apply_resolution_status_for_synchronize(
     new_revision: GitHubPullRequestRevisionORM,
 ) -> int:
     """Stamp resolution_status on prior-revision groups before the next pipeline run."""
-    prior_revision = await session.scalar(
-        select(GitHubPullRequestRevisionORM).where(
-            GitHubPullRequestRevisionORM.pull_request_id == pull_request.id,
-            GitHubPullRequestRevisionORM.revision_number == new_revision.revision_number - 1,
-        )
+    prior_revision = await get_last_published_prior_revision(
+        session,
+        pull_request_id=pull_request.id,
+        current_revision=new_revision,
     )
     if prior_revision is None:
         return 0

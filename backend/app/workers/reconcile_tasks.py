@@ -5,8 +5,6 @@ from __future__ import annotations
 import time
 from uuid import UUID
 
-from sqlalchemy import select
-
 from app.core.database import get_db_context
 from app.core.logging import get_logger
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
@@ -28,7 +26,10 @@ from app.services.github_pipeline_trace import (
     record_reconcile_pipeline_step,
 )
 from app.services.github_publish import enqueue_publish_for_review_run
-from app.services.github_resolution_metrics import compute_resolution_transitions
+from app.services.github_resolution_metrics import (
+    compute_resolution_transitions,
+    get_last_published_prior_revision,
+)
 from app.workers.async_runner import run_worker_async
 from app.workers.celery_app import celery_app
 
@@ -79,13 +80,10 @@ def reconcile_review_run_task(self, review_run_id: str) -> None:
                     review_run.revision_id,
                 )
                 if current_revision is not None:
-                    prior_revision = await session.scalar(
-                        select(GitHubPullRequestRevisionORM).where(
-                            GitHubPullRequestRevisionORM.pull_request_id
-                            == current_revision.pull_request_id,
-                            GitHubPullRequestRevisionORM.revision_number
-                            == current_revision.revision_number - 1,
-                        )
+                    prior_revision = await get_last_published_prior_revision(
+                        session,
+                        pull_request_id=current_revision.pull_request_id,
+                        current_revision=current_revision,
                     )
                     if prior_revision is not None:
                         pull_request = await session.get(

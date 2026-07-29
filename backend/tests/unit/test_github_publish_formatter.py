@@ -19,6 +19,7 @@ from app.services.github_publish_formatter import (
     PublishFormatContext,
     build_check_run_summary,
     build_g9_resolution_prose,
+    build_g9_resolution_prose_from_manifest,
     build_pr_review_comment_fallback,
     build_publish_format_result,
     compute_confidence,
@@ -26,6 +27,7 @@ from app.services.github_publish_formatter import (
     format_resolution_metrics_block,
     format_summary_comment,
     normalize_llm_issue_comment,
+    resolution_counts_from_manifest,
 )
 
 
@@ -150,6 +152,67 @@ def test_build_g9_resolution_prose():
     prose = build_g9_resolution_prose(groups)
     assert "fixed since last push" in prose
     assert "dismissed by judge" in prose
+
+
+def test_build_g9_resolution_prose_from_manifest():
+    prose = build_g9_resolution_prose_from_manifest(
+        {
+            "transitions_addressed": 2,
+            "transitions_dismissed": {"judge_dismissed": 1},
+            "still_open_count": 3,
+        }
+    )
+    assert "2 issues fixed since last push" in prose
+    assert "dismissed by judge" in prose
+    assert "3 still open from prior review" in prose
+
+
+def test_summary_json_resolution_uses_manifest_when_present():
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=42,
+        head_sha="abc123",
+        revision_number=3,
+        groups=[_group(resolution_status=ResolutionStatus.still_open)],
+        resolution_metrics_manifest={
+            "transitions_addressed": 1,
+            "transitions_dismissed": {"verification_dismissed": 1},
+            "still_open_count": 2,
+        },
+    )
+    summary = build_publish_format_result(ctx).summary_json
+    assert summary["resolution"] == resolution_counts_from_manifest(
+        ctx.resolution_metrics_manifest
+    )
+    assert summary["resolution"]["addressed"] == 1
+    assert summary["resolution"]["verification_dismissed"] == 1
+    assert summary["resolution"]["still_open"] == 2
+
+
+def test_build_pr_review_comment_fallback_g9_from_manifest_not_generation_groups():
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=42,
+        head_sha="abc123",
+        revision_number=3,
+        groups=[
+            _group(
+                resolution_status=ResolutionStatus.addressed,
+                state=GitHubFindingGroupState.active,
+            )
+        ],
+        resolution_metrics_manifest={
+            "transitions_addressed": 1,
+            "transitions_dismissed": {},
+            "still_open_count": 0,
+            "resolution_rate_pct": 100.0,
+            "transition_count": 1,
+            "denominator_active_prior": 1,
+            "compare_failed_count": 0,
+        },
+    )
+    markdown = build_pr_review_comment_fallback(ctx)
+    assert "**Since last push:** 1 issue fixed since last push" in markdown
 
 
 def test_count_resolution_status_uses_resolution_method():
