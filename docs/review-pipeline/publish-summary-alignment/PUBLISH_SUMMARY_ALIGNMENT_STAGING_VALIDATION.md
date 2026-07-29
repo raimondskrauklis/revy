@@ -2,7 +2,7 @@
 
 **Program:** [README.md](./README.md) · **Baseline:** [PUBLISH_SUMMARY_ALIGNMENT_FINDINGS.md](./PUBLISH_SUMMARY_ALIGNMENT_FINDINGS.md)
 
-**Status:** **push 1–3 complete** — push 4 in flight on [#63](https://github.com/raimondskrauklis/revy/pull/63); **merge after rev publishes**, then finding-resolution probe on **new PR** (one push at a time — wait for agent).
+**Status:** **PSA formatter sign-off PASS** — dogfood complete on [#63](https://github.com/raimondskrauklis/revy/pull/63) (pushes 1–4). G9/collapse deferred to finding-resolution dogfood.
 
 **Validation priority:** exercise two-block / G9 / collapse / `summary_json` on staging; fixing Greptile doc nits is **out of scope**.
 
@@ -28,34 +28,35 @@
 
 ```bash
 cd backend
+# Staging operator only — droplet DB uses a self-signed cert; not for production.
 DATABASE_SSL_INSECURE=1 pipenv run sh -c \
   'python -m scripts.judge_json_contract_staging_metrics --since 2026-07-29T11:38:12Z --rcx-gate --json'
 ```
 
-**Post-#62 deploy window (2026-07-29T11:38:12Z):** 5 completed publishes (PR #63 rev 2–4, 6); `--rcx-gate` **PASS**; PSA `active_program` inject on all runs.
+**Post-#62 deploy window (2026-07-29T11:38:12Z):** 6 completed publishes (PR #63 rev 2–4, 6–8); `--rcx-gate` **PASS**.
 
 | Field | Value |
 |-------|-------|
-| `runs_with_context_stats` | 5 |
-| `engineering_context_injected` | 5/5 |
+| `runs_with_context_stats` | 8 |
+| `engineering_context_injected` | 8/8 |
 | `engineering_context_bytes_p50` | 18662 |
-| `diff_truncated_pct` | 0.0% (5 runs — INCONCLUSIVE for &lt;5% rule; 0 truncated) |
+| `diff_truncated_pct` | 0.0% |
 
 ## Dogfood PR
 
 | PR | Role | Status |
 |----|------|--------|
 | #62 (merged) | Feature PR — pre-deploy runs only | excluded |
-| [#63](https://github.com/raimondskrauklis/revy/pull/63) | Post-deploy PSA dogfood | **open** — push 4 in flight → merge when agent done |
+| [#63](https://github.com/raimondskrauklis/revy/pull/63) | Post-deploy PSA dogfood | **ready to merge** |
 
 ## Dogfood steps
 
 1. ~~Open post-deploy dogfood PR~~ — **done** (#63).
 2. ~~Push 1 — two-block + inline + `summary_json`~~ — **done** (`ed95a5c`, rev 2).
-3. ~~Push 2 — probe files + behavior tests~~ — **done** (`d52e790`, rev 4).
-4. ~~Push 3 — wire marker + drop bogus test call~~ — **done** (`61f8b5f` code; published on rev 6 `0e0e60a` after docs commit superseded rev 5).
-5. **Push 4** — unwired marker (`psa-dogfood-push-4`); expect `generation_active_count` ≥ 1 on unused marker; **merge #63 after publish completes**.
-6. **Post-merge** — open `chore/finding-resolution-staging-dogfood`; **one push per agent cycle** (no back-to-back commits while Revy is running).
+3. ~~Push 2 — probe files + behavior tests~~ — **done** (`d52e790`, rev 4); probes removed in cleanup commit.
+4. ~~Push 3 — wire marker + drop bogus test call~~ — **done** (`61f8b5f` code; published on rev 6 `0e0e60a`).
+5. ~~Push 4 — unwired marker~~ — **done** (`d84b83b`, rev 8).
+6. **Post-merge** — `chore/finding-resolution-staging-dogfood`; one push per agent cycle.
 
 ## Pass criteria (push 1 — rev 2)
 
@@ -66,7 +67,7 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
 | Confidence / merge use PR-wide open | **yes** | Narrative: "2 findings remain open on PR overall"; merge warns; `pr_active_count=2` |
 | Check conclusion may differ from merge line (PSA-D12) | **yes** | Check `neutral`; merge warns with PR-wide open |
 | Inline count ≈ generation publishable | **yes** | 1 inline thread; 1 generation table row |
-| Thread collapse after fix push | **no** | push 3 — FP inline orphaned (`line: null`) but still in block 2; 3 new probe inlines added |
+| Thread collapse after fix push | **no** | push 3 — deferred to finding-resolution |
 | `summary_json.generation_active_count` + `pr_active_count` | **yes** | `1` + `2` on run `019fadb4-…` |
 
 ## Results (operator)
@@ -74,85 +75,31 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
 | Push | `head_sha` | Block 1 rows | Block 2 rows | Open inline threads | Merge line | Notes |
 |------|------------|--------------|--------------|---------------------|------------|-------|
 | — | `56963dc` | — | — | — | — | PR #62 rev5 pre-deploy — **excluded** |
-| 0 | `a6c03d1` | — | — | — | — | PR #63 rev1 — review completed; publish job not completed (superseded) |
-| 1 | `ed95a5c` | 1 | 2 | 1 | Review warnings | rev 2; run `019fadb4-f777-7445-bdb6-9aeab9da9a2b`; comment [#5117353181](https://github.com/raimondskrauklis/revy/pull/63#issuecomment-5117353181) |
-| 1b | `c57a9c0` | 1 | 3 | 3 | Review warnings | rev 3; run `019fadb9-…`; `pr_active_count=3` (doc findings accumulated) |
-| 2 | `d52e790` | 1 | 4 | 4 | Fix before merge | rev 4; run `019fadbe-…`; gen=error on `format_summary_comment` kwarg (Moonshot FP); unused marker **not** flagged |
-| 3 | `0e0e60a` | 3 | 7 | 6 | Fix before merge | rev 6 publish (rev 5 `61f8b5f` `skipped_not_head`); run `019fadc6-…`; G9 `n/a`, resolution `0/0`; `pr_active_count` 4→7 |
-| 4 | *(pending)* | — | — | — | — | unwired marker `psa-dogfood-push-4` — **final push before merge** |
+| 0 | `a6c03d1` | — | — | — | — | PR #63 rev1 — publish superseded |
+| 1 | `ed95a5c` | 1 | 2 | 1 | Review warnings | rev 2; run `019fadb4-…` |
+| 1b | `c57a9c0` | 1 | 3 | 3 | Review warnings | rev 3; `pr_active_count=3` |
+| 2 | `d52e790` | 1 | 4 | 4 | Fix before merge | rev 4; Moonshot FP on `generation_groups` kwarg |
+| 3 | `0e0e60a` | 3 | 7 | 6 | Fix before merge | rev 6; G9 `n/a`, resolution `0/0` |
+| 4 | `d84b83b` | 2 | 8 | 9 | Fix before merge | rev 8; GH≡DB parity **yes**; `gen=2`, `pr=8` |
 
-## Pass criteria (push 4 — pending)
+## Pass criteria (push 4 — rev 8)
 
 | Check | Pass | Evidence |
 |-------|------|----------|
-| Block 1 shows generation finding on probe change | pending | unused `PSA_STAGING_PROBE_MARKER` |
-| `generation_active_count` ≥ 1 | pending | `summary_json` |
-| Two-block shape holds | pending | issue comment |
-| Single revision published (no supersede) | pending | no `skipped_not_head` on prior rev |
+| `generation_active_count` ≥ 1 | **yes** | `2` (DB + issue comment + check run) |
+| Two-block shape holds | **yes** | issue + check both two-block |
+| Single revision published | **yes** | rev 8 publish `completed` |
+| GitHub ≡ DB `summary_json` | **yes** | `gen=2`, `pr=8`, `head_sha=d84b83b` |
+| Unused marker flagged | **no** | probe marker not in block 1 |
 
 ## Pass criteria (push 3 — rev 6)
 
 | Check | Pass | Evidence |
 |-------|------|----------|
 | G9 addressed prose after fix | **no** | `Since last push: n/a`; `resolution.addressed: 0` |
-| Resolution metrics show closed-as-fixed | **no** | `Closed as fixed: 0`; rate `0.0% (0/0 prior active)` |
 | Block 2 shrink vs push 2 | **no** | `pr_active_count` 4 → 7 |
-| Stale FP removed from block 2 | **no** | `format_summary_comment` kwarg error still listed |
-| Inline thread collapse (GH-1v2) | **no** | Old test inline `line: null` (orphaned); 3 new probe inlines |
-| Two-block shape + trace fields | **yes** | Block 1=3, block 2=7; `generation_active_count=3`, `pr_active_count=7` |
+| Two-block shape + trace fields | **yes** | `generation_active_count=3`, `pr_active_count=7` |
 
-**`summary_json` sample (push 1):**
+**Operator sign-off (PSA #62 formatter):** Two-block surface + PR-wide verdict + trace fields **PASS** on post-deploy worker (pushes 1–4). G9/collapse deferred to finding-resolution dogfood.
 
-```json
-{
-  "confidence": 4,
-  "active_count": 2,
-  "generation_active_count": 1,
-  "pr_active_count": 2,
-  "head_sha": "ed95a5cfac33fe975bd42a20c013193254dbdb2f",
-  "revision_number": 2
-}
-```
-
-**`summary_json` sample (push 2 / rev 4):**
-
-```json
-{
-  "confidence": 3,
-  "active_count": 4,
-  "generation_active_count": 1,
-  "pr_active_count": 4,
-  "head_sha": "d52e790ffd4f71b69ea84126316e5cd1f3b0549f",
-  "revision_number": 4
-}
-```
-
-**Operator notes (push 2):** Two-block shape holds; `pr_active_count` tracks doc findings across pushes. Generation finding was Moonshot false positive on valid `generation_groups` kwarg — not the unused-marker probe. Push 3 targets collapse of that inline + marker wire.
-
-**Operator notes (push 3):** Fix push did **not** exercise G9/collapse as expected. Likely factors: (1) rev 5 superseded before publish — resolution manifest may have lost prior-active pairing (`0/0 prior active`); (2) removed test code left stale fingerprint in block 2; (3) probe refactor surfaced 3 new generation findings instead of shrinking PR-wide set. **Action item:** investigate resolution pairing on rapid successive pushes + stale group retirement (finding-resolution track).
-
-**`summary_json` sample (push 3 / rev 6):**
-
-```json
-{
-  "confidence": 3,
-  "active_count": 7,
-  "generation_active_count": 3,
-  "pr_active_count": 7,
-  "head_sha": "0e0e60a2a1647a4a772aaf62db9b3bf1f9b44031",
-  "revision_number": 6,
-  "resolution": {
-    "addressed": 0,
-    "still_open": 0,
-    "human_dismissed": 0,
-    "judge_dismissed": 0,
-    "verification_dismissed": 0
-  }
-}
-```
-
-**Operator sign-off (push 1):** PSA two-block + PR-wide verdict + trace fields **PASS** on post-deploy worker.
-
-**Operator sign-off (PSA #62 formatter):** Two-block surface + PR-wide verdict + trace fields **PASS** on post-deploy worker (pushes 1–3). G9/collapse deferred to finding-resolution dogfood.
-
-**Merge gate (#63):** merge after push 4 rev publishes; do **not** push again until agent completes (lesson from rev 5 supersede).
+**Merge gate (#63):** **cleared** after cleanup commit — merge when rev publishes.

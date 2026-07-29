@@ -16,7 +16,7 @@
 
 | PR | Program | Branch | Status |
 |----|---------|--------|--------|
-| [#63](https://github.com/raimondskrauklis/revy/pull/63) | PSA post-#62 deploy | `chore/psa-staging-dogfood` | **push 4 in flight** → merge when agent done |
+| [#63](https://github.com/raimondskrauklis/revy/pull/63) | PSA post-#62 deploy | `chore/psa-staging-dogfood` | **sign-off complete** — merge after cleanup rev |
 
 ## Related per-program validation memos
 
@@ -34,4 +34,4 @@
 | Staging metrics + RCX gate | `backend/scripts/judge_json_contract_staging_metrics.py` |
 | SSOT / Greptile gate | `backend/scripts/generate_greptile_files_from_review_context.py` + `tests/unit/test_generate_greptile_files.py` |
 
-**Next step:** discussion → general plan (after PSA #63 dogfood completes).
+**Next step:** merge #63 → finding-resolution dogfood PR (one push per agent cycle).

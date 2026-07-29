@@ -108,7 +108,7 @@ deploy job completes → record ISO (deploy_boundary)
 | Track | Deploy boundary | Metrics window | Gate | Dogfood PR | Memo status |
 |-------|-----------------|----------------|------|------------|-------------|
 | RCX pass 2 | #61 `10:52:38Z` | `--since 2026-07-29T10:52:38Z` | `--rcx-gate` **PASS** | PR #61 (historical) | **filled** |
-| PSA post-#62 | #62 `11:38:12Z` | `--since 2026-07-29T11:38:12Z` | 0 runs INCONCLUSIVE | **PR #63** open | **in progress** |
+| PSA post-#62 | #62 `11:38:12Z` | `--since 2026-07-29T11:38:12Z` | `--rcx-gate` **PASS** (8 runs) | **PR #63** | **filled** — formatter sign-off |
 | Judge JSON | prior | per JC memo | unchanged | — | not this session |
 
 ---
@@ -147,6 +147,8 @@ deploy job completes → record ISO (deploy_boundary)
 
 ```bash
 # RCX / retrieve / context_stats (shared)
+# Staging operator only: DATABASE_SSL_INSECURE=1 disables TLS verify for the
+# droplet Postgres self-signed cert. Do not use in production or CI.
 cd backend
 DATABASE_SSL_INSECURE=1 pipenv run sh -c \
   'python -m scripts.judge_json_contract_staging_metrics \

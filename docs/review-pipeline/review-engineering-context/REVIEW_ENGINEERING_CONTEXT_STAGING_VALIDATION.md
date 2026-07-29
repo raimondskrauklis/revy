@@ -38,22 +38,23 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
   | tee /tmp/rcx-pass2.json
 ```
 
-**Pass 2 result (2026-07-29):** `--rcx-gate` **PASS** — 3 completed runs in window (`--since 2026-07-29T10:52:38Z`); inject **2/3** scoped runs; diff truncated 0%; omitted md 0.
+**Pass 2 result (2026-07-29):** `--rcx-gate` **PASS** — 2 completed runs in window (`--since 2026-07-29T10:52:38Z`); inject **1/2** scoped runs; diff truncated 0%; omitted md 0.
+
+**Pre-boundary exclusion:** run `019fad64-…` at `10:21:26` is **before** deploy boundary `10:52:38Z` — listed for history only, not pass-2 sign-off.
 
 ## Pass 2 review runs (`--since 2026-07-29T10:52:38Z`)
 
 | `review_run_id` | `created_at` (UTC) | PR / trigger | `engineering_context_injected` | Notes |
 |-----------------|-------------------|--------------|------------------------------|-------|
-| `019fad64-…` | 2026-07-29 10:21:26 | PR #61 (`bec39b23`) | true | Post-#61 deploy |
 | `019fad93-…` | 2026-07-29 11:12:28 | PR #62 (`826923d3`) | true | RCX program SSOT (pre-PSA deploy) |
 | `019fad9b-…` | 2026-07-29 11:20:48 | PR #62 (`b8e5342`) | false | Pre-PSA publish shape on issue comment |
 
-**Pass 2 `context_stats` aggregates** (same `--since` window):
+**Pass 2 `context_stats` aggregates** (in-window runs only):
 
 | Field | Target | Pass 2 |
 |-------|--------|--------|
-| `runs_with_context_stats` | ≥ 1 | **3** |
-| `engineering_context_injected` | true on scoped runs | **2/3** |
+| `runs_with_context_stats` | ≥ 1 | **2** |
+| `engineering_context_injected` | true on scoped runs | **1/2** |
 | `engineering_context_bytes_p50` | > 0 when injected | **32768** |
 | `diff_truncated_pct` | < 5% (≥3 runs) | **0.0%** |
 | `runs_with_omitted_md` | 0 | **0** |
