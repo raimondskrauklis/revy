@@ -83,7 +83,7 @@ PR #53 showed the second: **11 Revy inline threads**, overlapping generations, o
 | Trap | Detail |
 |------|--------|
 | **Confuse with push policy** | Push frequency is operator choice; predictability is **generation policy** |
-| **Confuse outdated with fixed** | Outdated = line moved; thread may stay open — separate from Option A resolve |
+| **Confuse outdated with fixed** | Outdated = line moved | **v2:** Revy resolves outdated threads at publish (GH-Q9); DB group may stay `active` if re-reported |
 | **Cancel vs block-publish only** | Letting old jobs finish DB work but blocking GitHub is cheaper than hard cancel mid-LLM — same user contract if HEAD-gated |
 | **Greptile “cannot cancel” docs** | [Greptile trigger docs](https://www.greptile.com/docs/code-review-bot/trigger-code-review) say running reviews aren’t cancelled — user-visible predictability may still come from **single-pass + update-in-place**, not mid-run GitHub posts |
 | **CodeRabbit incremental model** | CodeRabbit documents **incremental** reviews on new commits — different product choice; Revy target for this program is **Greptile/Bugbot snapshot bar** per operator triage |

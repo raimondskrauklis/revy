@@ -61,7 +61,7 @@
 |---------|-------------------------|---------------|--------|
 | Same issue every re-review | Learning + dedupe over time | R5 fingerprints + supersede / resolve | **shipped** |
 | Idempotent GitHub surface | Known pain: new summary comment each push | R6-Q1: update check run + summary **in place**; **per-PR** issue comment reuse across pushes (#52) | **shipped** |
-| Resolve review threads when fixed | Greptile auto-resolves inline threads | Option A: resolve when fingerprint ∉ current-run publishable findings; superseded/resolved groups; GraphQL `resolveReviewThread` | **shipped** |
+| Resolve review threads when fixed | Greptile auto-resolves inline threads | **GH-1v2:** Option A (fingerprint ∉ publishable) + Option B (`resolution_status=addressed`) + GitHub `isOutdated` / `isResolved` sync; closed groups; `resolveReviewThread` on publish flush | **shipped** |
 | **Snapshot generation at HEAD** | Greptile/Bugbot: latest pass only; supersede in-flight; results after finish | [review-generation-lifecycle](./review-generation-lifecycle/) — HEAD gate, supersede on sync, stage guards, coalesce ≤10 s, judge publish gate | **shipped** — [PR #54](https://github.com/raimondskrauklis/revy/pull/54) P0–P5 |
 | Check run **in progress** on PR | Greptile/Bugbot show spinner while reviewing | **G10:** `in_progress` at pipeline start (`start_pipeline_github_check`); `completed` at publish; reuses pipeline check id per `head_sha`; neutral finalize on supersede/skip (generation program) | **shipped** |
 | Human dismiss / ack | Resolve threads, 👍/👎 | R7 execution **deferred** dismiss/ack → **R7.6**; judge `resolved` exists | **defer** — [review-quality peer review](./review-quality/REVIEW_QUALITY_PEER_REVIEW.md) M2 |
@@ -173,5 +173,5 @@ Use while building Revy; optional external review on our PRs (Greptile today) fo
 | `external_id` | `revy:{github_installation_id}:{github_pr_number}:{head_sha}` on first create (`github_installation_id` = GitHub numeric id); reuse GitHub check run id on update |
 | Inline v1 subset | `error` + `critical` + `warning` + `info` with valid line range; table for all severities |
 | Summary PR comment | Update **one issue comment per PR** (`find_prior_issue_comment_id_for_pull_request`) |
-| Inline thread map | `github_inline_threads` v2 `{comment_id, thread_id?}` in `summary_json`; paginated `list_review_threads` + index-backed resolve; Option A auto-resolve when fingerprint ∉ current-run publishable set |
+| Inline thread map | `github_inline_threads` v2 `{comment_id, thread_id?}` in `summary_json`; paginated `list_review_threads` + `build_review_thread_index` (`isOutdated`, `isResolved`); **GH-1v2** auto-resolve — Option A + Option B + outdated (see [github-surface-hardening §4c](./github-surface-hardening/GITHUB_SURFACE_HARDENING_FINDINGS.md#gh-1v2--collapse-triggers-shipped-post-p4)) |
 | New revision | New check run for new `head_sha`; do not mutate prior SHA’s check |

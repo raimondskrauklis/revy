@@ -12,7 +12,7 @@ Phase **P1** of [GITHUB_SURFACE_HARDENING_GENERAL_PLAN.md](./GITHUB_SURFACE_HARD
 - **Dedupe:** collect fingerprints to resolve in one set — Option A (map − publishable) ∪ superseded/resolved groups; one GraphQL resolve per fingerprint per publish.
 - After resolve loop: **always** assign `job.summary_json` via `serialize_inline_thread_map` — even when `post_inline=False`.
 - Pop map entry **only after** successful `resolveReviewThread`.
-- Do **not** use `resolution_status.addressed` (GH-Q2).
+- Do **not** use `resolution_status.addressed` (GH-Q2 v1 scope). **v2 (GH-Q9):** Option B + outdated — see [findings §4c](../GITHUB_SURFACE_HARDENING_FINDINGS.md#gh-1v2--collapse-triggers-shipped-post-p4).
 - Do **not** change reconcile.
 
 ## Out of scope for P1
