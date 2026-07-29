@@ -96,6 +96,16 @@ def _escape_markdown_table_cell(value: str) -> str:
     return value.replace("\\", "\\\\").replace("|", "\\|").replace("\r", " ").replace("\n", " ")
 
 
+def _escape_markdown_inline(value: str) -> str:
+    """Escape metacharacters when wrapping user text in bold or list markdown."""
+    return (
+        _escape_markdown_table_cell(value)
+        .replace("`", "\\`")
+        .replace("*", "\\*")
+        .replace("_", "\\_")
+    )
+
+
 @dataclass(frozen=True)
 class PublishFormatContext:
     pull_request_id: UUID
@@ -353,7 +363,7 @@ def _top_finding_summaries(groups: list[GitHubFindingGroupORM], *, limit: int = 
         if group.severity == FindingSeverity.info:
             continue
         location = f" in `{group.file_path}`" if group.file_path else ""
-        summaries.append(f"**{group.title}**{location}")
+        summaries.append(f"**{_escape_markdown_inline(group.title)}**{location}")
         if len(summaries) >= limit:
             break
     return summaries
@@ -616,7 +626,15 @@ def _issue_comment_meets_product_bar(text: str, ctx: PublishFormatContext) -> bo
         return True
     has_findings_section = "### Findings" in normalized or "| Severity | Category | Title | File |" in normalized
     has_merge_signal = "**Merge recommendation:**" in normalized
-    has_rationale = "score is" in normalized.lower() or "rationale" in normalized.lower()
+    has_rationale = (
+        "score is" in normalized.lower()
+        or "confidence is" in normalized.lower()
+        or (
+            "confidence" in normalized.lower()
+            and "because" in normalized.lower()
+        )
+        or "rationale" in normalized.lower()
+    )
     return has_findings_section and has_merge_signal and has_rationale
 
 

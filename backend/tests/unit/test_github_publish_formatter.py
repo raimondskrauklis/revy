@@ -419,6 +419,19 @@ def test_build_pr_review_comment_fallback_narrative_names_top_findings():
     assert "`app/a.py`" in markdown
 
 
+def test_build_pr_review_comment_fallback_narrative_escapes_title_markdown():
+    groups = [
+        _group(
+            severity=FindingSeverity.warning,
+            title="Use `foo_*` safely",
+            file_path="app/a.py",
+            fingerprint="a",
+        ),
+    ]
+    markdown = build_pr_review_comment_fallback(_ctx(groups))
+    assert "**Use \\`foo\\_\\*\\` safely**" in markdown
+
+
 def test_build_pr_review_comment_fallback_security_details_row_cap():
     groups = [
         _group(
@@ -540,6 +553,38 @@ async def test_build_pr_review_comment_accepts_lowercase_score_rationale():
         "**Merge recommendation:** Review warnings before merge — no critical blockers flagged.\n\n"
         "**Confidence score:** 4/5\n\n"
         "The score is 4 because a warning remains on this revision.\n\n"
+        "### Findings\n\n"
+        "| Severity | Category | Title | File |\n"
+        "| --- | --- | --- | --- |\n"
+        "| warning | bug | Issue | app/main.py |\n"
+    )
+
+    with patch("app.services.github_publish_formatter.settings") as mock_settings:
+        mock_settings.reviewer_llm_enabled.return_value = True
+        mock_settings.revy_revision_timeout_standard_seconds = 60
+        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.app_public_url = "https://app.revy.dev"
+        with patch(
+            "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
+            AsyncMock(return_value=moonshot_markdown),
+        ):
+            result = await build_pr_review_comment(ctx)
+
+    assert result.strip() == moonshot_markdown.strip()
+
+
+@pytest.mark.asyncio
+async def test_build_pr_review_comment_accepts_confidence_is_because_rationale():
+    from app.services.github_publish_formatter import build_pr_review_comment
+
+    groups = [_group(severity=FindingSeverity.warning)]
+    ctx = _ctx(groups)
+    moonshot_markdown = (
+        "## Revy code review\n\n"
+        "This revision has one warning to review before merge.\n\n"
+        "**Merge recommendation:** Review warnings before merge — no critical blockers flagged.\n\n"
+        "**Confidence score:** 4/5\n\n"
+        "Confidence is 4 because a warning remains on this revision.\n\n"
         "### Findings\n\n"
         "| Severity | Category | Title | File |\n"
         "| --- | --- | --- | --- |\n"
