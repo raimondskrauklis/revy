@@ -1,41 +1,32 @@
 # Finding resolution — post-PSA dogfood
 
-**Status:** **code shipped (wave A)** — P0 pushed; P1–P2 local on branch; **staging validation pending** (operator P0.4 / P1.4 / P2.4).
+**Status:** **waves A + B complete** — FR-DG1 **PASS**; FR-DG2 **partial PASS** ([#67](https://github.com/raimondskrauklis/revy/pull/67)). **Wave C** — [general plan](../finding-resolution/FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md) · [execution LOOP](../finding-resolution/waves/FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md).
 
-**Thesis:** PSA #62 validated two-block publish shape; PR #63 exposed **resolution lifecycle** failures (G9 prose, stale groups, thread collapse) that need isolated dogfood with **one push per agent cycle**.
+**Thesis:** PSA #63 exposed resolution lifecycle gaps; dogfood validated fixes and exposed **cohort scope** as the remaining platform gap (FR-CS1).
 
 | Doc | Purpose |
 |-----|---------|
-| [FINDING_RESOLUTION_DOGFOOD_FINDINGS.md](./FINDING_RESOLUTION_DOGFOOD_FINDINGS.md) | Baseline — FR-DG* gaps, evidence, target PRs |
-| [FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md](./FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md) | P0–P4 phases, waves A/B |
-| [waves/FINDING_RESOLUTION_DOGFOOD_EXECUTION.md](./waves/FINDING_RESOLUTION_DOGFOOD_EXECUTION.md) | LOOP index P0–P4 |
-| *(P0)* [FINDING_RESOLUTION_DOGFOOD_STAGING_VALIDATION.md](./FINDING_RESOLUTION_DOGFOOD_STAGING_VALIDATION.md) | Operator memo (created in P0.1) |
+| [FINDING_RESOLUTION_DOGFOOD_FINDINGS.md](./FINDING_RESOLUTION_DOGFOOD_FINDINGS.md) | Original FR-DG* gaps |
+| [FINDING_RESOLUTION_DOGFOOD_POST_VALIDATION_FINDINGS.md](./FINDING_RESOLUTION_DOGFOOD_POST_VALIDATION_FINDINGS.md) | Post–wave A investigation |
+| [FINDING_RESOLUTION_DOGFOOD_VALIDATION_FINDINGS.md](./FINDING_RESOLUTION_DOGFOOD_VALIDATION_FINDINGS.md) | Operator locks VAL* |
+| [FINDING_RESOLUTION_DOGFOOD_STAGING_VALIDATION.md](./FINDING_RESOLUTION_DOGFOOD_STAGING_VALIDATION.md) | Push rows / sign-off |
+| [FINDING_RESOLUTION_CLOSURE_SCOPE_FINDINGS.md](../finding-resolution/FINDING_RESOLUTION_CLOSURE_SCOPE_FINDINGS.md) | **Platform zoom-out** — FR-CS* |
+| [FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md](../finding-resolution/FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md) | **Wave C plan** |
 
-## Execution (LOOP order)
+## Sign-off summary
 
-| Phase | Focus | File | Status |
-|-------|--------|------|--------|
-| P0 — Repro + observability | Probe, metrics, SSOT | [P0](./waves/FINDING_RESOLUTION_DOGFOOD_P0_EXECUTION.md) | done `4830ff7` (pushed) |
-| P1 — FR-DG1 | Manifest + G9 | [P1](./waves/FINDING_RESOLUTION_DOGFOOD_P1_EXECUTION.md) | done `3790656` (local) |
-| P2 — FR-DG2 | Stale retirement + collapse | [P2](./waves/FINDING_RESOLUTION_DOGFOOD_P2_EXECUTION.md) | done `b521d23` (local) |
-| P3 — Staging sign-off | Evidence + doc sync | [P3](./waves/FINDING_RESOLUTION_DOGFOOD_P3_EXECUTION.md) | in progress |
-| P4 — MR-DG1 | Moonshot signature (wave B) | [P4](./waves/FINDING_RESOLUTION_DOGFOOD_P4_EXECUTION.md) | pending |
+| Gap | Result |
+|-----|--------|
+| FR-DG1 | **PASS** — #65 rev 3 |
+| FR-DG2a | **PASS** — #66 deployed `2026-07-29T19:20:33Z` |
+| FR-DG2 | **Partial PASS** — #67; orphan VAL10 → **FR-CS1** |
+| MR-DG1 | open — P4 |
 
-## Planned PRs
+## Operator rules
 
-| PR branch | Gaps | Notes |
-|-----------|------|-------|
-| `chore/finding-resolution-staging-dogfood` | FR-DG1, FR-DG2 | Wave A — P0–P3 |
-| `chore/moonshot-formatter-signature` | MR-DG1 | Wave B — P4 parallel after P0 |
+1. One push per Revy cycle.
+2. `--since` = deploy job completion ([VAL9](./FINDING_RESOLUTION_DOGFOOD_VALIDATION_FINDINGS.md#fr-dg-val9--post-66-deploy-fr-dg2a-on-staging)).
+3. Dogfood repro pushes: **backend only** ([VAL8](./FINDING_RESOLUTION_DOGFOOD_VALIDATION_FINDINGS.md#fr-dg-val8--dogfood-metrics-interpretation)).
+4. Primary metric: **per-group** `state` + `resolution_method`, not `pr_active_count` alone.
 
-## Operator rules (from PSA #63)
-
-1. **One push per agent cycle** — no back-to-back commits while Revy is running.
-2. **Deploy boundary** — `--since` = droplet deploy job completion, not merge time.
-3. **Dogfood PR** — `chore/<program>-staging-dogfood`; minimal `backend/**` touch for autostart.
-
-**Parent program:** [finding-resolution](../finding-resolution/README.md) (shipped P0–P5 on #57).
-
-**Excluded:** RCX retrieve, judge-json contract code.
-
-**Next step:** `phase-execution` on [P0](./waves/FINDING_RESOLUTION_DOGFOOD_P0_EXECUTION.md) — peer review applied 2026-07-29.
+**Next:** C0 LOOP → `fix/fr-closure-scope-hygiene` (C1+C2).
