@@ -27,7 +27,7 @@
 - **AS1 default vs create:** ORM/migration `server_default=full` for backfill; pipeline jobs set `index_mode=diff` explicitly at create (`review_pipeline.py`).
 - **G5 formatter LLM:** `services/github_publish_formatter.py` calling existing Moonshot client (`integrations/moonshot_review.py` pattern) — structured JSON in/out; no new vendor.
 - **G10:** GitHub check run **`in_progress` at pipeline start** (RQ3) → **`completed` at publish** (RQ7). Parity with Greptile/Bugbot PR check UX — today `create_check_run` posts only `completed` in one shot.
-- **PR review context (dogfood):** Ship `.greptile/review-context.json` (SSOT) + generated `.greptile/files.json` + `.cursor/BUGBOT.md` in **RQ0** (first commit). Set `active_program`; three doc paths per program; run `test_generate_greptile_files.py` + generator `--check`. Per-phase commits: code + minimal doc status (execution table row) — not full doc tree every push.
+- **PR review context (dogfood):** Ship `.revy/review-context.json` (SSOT) + generated `.greptile/files.json` + `.cursor/BUGBOT.md` in **RQ0** (first commit). Set `active_program`; three doc paths per program; run `test_generate_greptile_files.py` + generator `--check`. Per-phase commits: code + minimal doc status (execution table row) — not full doc tree every push.
 
 ## PR review context (Greptile + Bugbot + Moonshot)
 
@@ -35,7 +35,7 @@ Changed `.md` files are in the PR diff, but bots and Moonshot do **not** treat p
 
 | Consumer | Mechanism | Ship in RQ0 |
 |------|-----------|-------------|
-| **Moonshot inject** | `.greptile/review-context.json` — `active_program` + `programs[]` | SSOT — edit first |
+| **Moonshot inject** | `.revy/review-context.json` — `active_program` + `programs[]` | SSOT — edit first |
 | **Greptile** | `.greptile/files.json` — **generated** from SSOT (`generate_greptile_files_from_review_context`) | execution + findings + general plan |
 | **Bugbot** | `.cursor/BUGBOT.md` — markdown links to same docs | execution + findings + orchestration (RQ9) |
 

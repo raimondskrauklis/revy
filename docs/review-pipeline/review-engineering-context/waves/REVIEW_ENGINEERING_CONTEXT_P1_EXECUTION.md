@@ -7,7 +7,7 @@ Phase **P1** of [REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md](../REVIEW_ENGINEERI
 ## Decisions locked for P1
 
 - `fetch_repository_file_at_sha(client, owner, repo, path, ref)` in `github_api.py` — GitHub Contents API `GET /repos/{owner}/{repo}/contents/{path}?ref={sha}`; base64 decode; map 404 → `NotFoundError`; reuse rate-limit handling from `compare_commits`.
-- Loader: `load_review_context_manifest_at_sha(...)` reads `.greptile/review-context.json` at revision `head_sha`.
+- Loader: `load_review_context_manifest_at_sha(...)` reads `.revy/review-context.json` at revision `head_sha`.
 - **Scope (RCX-D11):** resolve `manifest.active_program` → single matching `programs[]` entry; then require `changed_files` ∩ `program.scope` non-empty (fnmatch). Never merge multiple programs.
 - Extractor: section heading match `^## Locked decisions` (optional trailing ` (...)` ); table rows `| **ID** |` or `| ID |`; smoke: `## P0 smoke`, `### P0 smoke matrix`, `**Queried:**` validation tables, `### Baseline captured` — byte cap from `settings.revy_engineering_context_max_bytes`.
 - Fixtures: snippets from `JUDGE_JSON_CONTRACT_FINDINGS.md` (§ P0 smoke results (operator)), `REVIEW_ENGINEERING_CONTEXT_FINDINGS.md` (§ Locked decisions + § Baseline captured), `JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md` (§ P0 smoke matrix (final)).

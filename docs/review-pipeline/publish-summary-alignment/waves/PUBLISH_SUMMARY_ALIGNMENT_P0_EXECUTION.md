@@ -21,7 +21,7 @@ Phase **P0** of [PUBLISH_SUMMARY_ALIGNMENT_GENERAL_PLAN.md](../PUBLISH_SUMMARY_A
 
 ## PR review context (first commit) — **hard gate**
 
-- **SSOT:** `.greptile/review-context.json` — `active_program: "publish-summary-alignment"`; add PSA `programs[]` entry (`scope: ["backend/**"]`, three doc paths below)
+- **SSOT:** `.revy/review-context.json` — `active_program: "publish-summary-alignment"`; add PSA `programs[]` entry (`scope: ["backend/**"]`, three doc paths below)
 - **Greptile:** regenerate `.greptile/files.json` from SSOT — **do not hand-edit**
 - **Bugbot:** `.cursor/BUGBOT.md` — active program PSA + links to execution, findings, general plan
 
@@ -43,7 +43,7 @@ Phase **P0** of [PUBLISH_SUMMARY_ALIGNMENT_GENERAL_PLAN.md](../PUBLISH_SUMMARY_A
 
 **What:** Switch SSOT `active_program` to `publish-summary-alignment`; add PSA program entry; regenerate Greptile `files.json`; update Bugbot active program block.
 
-**Files:** `.greptile/review-context.json`, `.greptile/files.json`, `.cursor/BUGBOT.md`
+**Files:** `.revy/review-context.json`, `.greptile/files.json`, `.cursor/BUGBOT.md`
 
 **Deliverable:**
 
@@ -51,7 +51,7 @@ Phase **P0** of [PUBLISH_SUMMARY_ALIGNMENT_GENERAL_PLAN.md](../PUBLISH_SUMMARY_A
 cd backend && python -m scripts.generate_greptile_files_from_review_context --write
 python -m scripts.generate_greptile_files_from_review_context --check
 pipenv run pytest tests/unit/test_generate_greptile_files.py -q
-python -m json.tool ../.greptile/review-context.json > /dev/null
+python -m json.tool ../.revy/review-context.json > /dev/null
 ```
 
 ---

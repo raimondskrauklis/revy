@@ -57,13 +57,15 @@ Changed `.md` files appear in the PR diff, but bots and Moonshot do **not** trea
 
 | Consumer | Repo file | What to edit |
 |:---|:---|:---|
-| **Moonshot inject** (Revy pipeline) | `.greptile/review-context.json` | **SSOT** — set `active_program`; add/update `programs[]` entry with `scope` + 3 doc `paths` |
-| **Greptile** | `.greptile/files.json` | **Generated only** from SSOT — never hand-edit after RCX P3 |
+| **Moonshot inject** (Revy pipeline) | `.revy/review-context.json` | **SSOT** — set `active_program`; add/update `programs[]` entry with `scope` + 3 doc `paths` |
+| **Greptile** (vendor) | `.greptile/files.json` | **Generated only** from SSOT — never hand-edit after RCX P3 |
 | **Bugbot** | `.cursor/BUGBOT.md` | Markdown links to same docs (paths relative to `.cursor/`) |
+
+**Folder split:** `.revy/` = Revy product manifest (SSOT). `.greptile/` = Greptile vendor output only (`files.json` generated from SSOT).
 
 **SSOT workflow (RCX-D11 — mandatory on every program switch):**
 
-1. Edit `.greptile/review-context.json`:
+1. Edit `.revy/review-context.json`:
    - `active_program` = this program's `id`
    - `programs[]` entry: `id`, `scope` (e.g. `backend/**`), `paths[]` with **exactly three** docs — execution index, findings, general plan
 2. Regenerate Greptile manifest:
@@ -88,7 +90,7 @@ Changed `.md` files appear in the PR diff, but bots and Moonshot do **not** trea
 
 **First-iteration checklist:**
 
-- [ ] `.greptile/review-context.json` — `active_program` switched; program entry present with correct `scope`
+- [ ] `.revy/review-context.json` — `active_program` switched; program entry present with correct `scope`
 - [ ] `.greptile/files.json` — regenerated from SSOT (`--check` passes)
 - [ ] `.cursor/BUGBOT.md` — active program + links to execution + findings + general plan
 - [ ] `test_generate_greptile_files.py` green
@@ -112,7 +114,7 @@ One **iteration** = one full phase. After success → **next phase immediately**
 FOR each phase in scope (discovered order):
   1. Read ONLY this phase's execution file (+ findings locks if doc references them)
   2. If file/README links **Authority:** — read it; stop if this phase contradicts it
-  3. First iteration only: **PR review context hard gate** — SSOT `.greptile/review-context.json` → regenerate `files.json` → `BUGBOT.md` → `test_generate_greptile_files.py` + `--check` (see section above; never skip)
+  3. First iteration only: **PR review context hard gate** — SSOT `.revy/review-context.json` → regenerate `files.json` → `BUGBOT.md` → `test_generate_greptile_files.py` + `--check` (see section above; never skip)
   4. Cancel prior phase todos; create one todo per **remaining** subphase (from resume point if set)
   5. FOR each subphase in order (skip subphases before resume point):
        implement → run tests from **Deliverable** / doc → mark todo done
@@ -161,7 +163,7 @@ pipenv run ruff check .
 ## Phase gate (before ship)
 
 - Use the execution doc **phase gate** block when present.
-- **First LOOP iteration** (or any commit touching `.greptile/`): phase gate **must** include:
+- **First LOOP iteration** (or any commit touching `.revy/` or `.greptile/`): phase gate **must** include:
   ```bash
   cd backend && python -m scripts.generate_greptile_files_from_review_context --check
   pipenv run pytest tests/unit/test_generate_greptile_files.py -q

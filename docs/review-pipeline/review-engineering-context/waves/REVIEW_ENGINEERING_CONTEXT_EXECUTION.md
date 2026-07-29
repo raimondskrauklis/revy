@@ -20,7 +20,7 @@ P8: human gate only
 
 ## Decisions locked for execution
 
-- **RCX-D11:** SSOT `.greptile/review-context.json`; Greptile `.greptile/files.json` **generated** in P3 (not hand-edited).
+- **RCX-D11:** SSOT `.revy/review-context.json`; Greptile `.greptile/files.json` **generated** in P3 (not hand-edited).
 - **RCX-D10:** `revy_diff_max_bytes` default **524288** (512 KB) in P0 config; code uses config in P2.
 - **RCX-D12:** Always inject lock/smoke extract; dedupe full MD body only when path in diff ∧ not omitted.
 - **RCX-D8:** Inject block **before** unified diff; review instruction treats engineering block as authoritative.

@@ -12,7 +12,7 @@
 
 | Decision | Verdict |
 |----------|---------|
-| **Wire Greptile + Bugbot + Moonshot to execution + findings in v1** | **Yes** — `.greptile/review-context.json` (SSOT) + generated `.greptile/files.json` + `.cursor/BUGBOT.md` in **RQ0** (first commit) |
+| **Wire Greptile + Bugbot + Moonshot to execution + findings in v1** | **Yes** — `.revy/review-context.json` (SSOT) + generated `.greptile/files.json` + `.cursor/BUGBOT.md` in **RQ0** (first commit) |
 | **Treat changed `.md` in PR diff as authoritative spec** | **No** — bots need explicit wiring; diff alone is insufficient |
 | **Productize as workspace policy in v1** | **No** — dogfood repo config first; `.revy/rules` → post-G (DB) |
 | **Improve iteratively after dogfood** | **Yes** — was **RQ-RC-1**; now **[RCX](../review-engineering-context/README.md)** (Moonshot inject + Greptile SSOT) |
@@ -31,20 +31,23 @@
 Both feed the **north star** ([SC8](./REVIEW_QUALITY_STRUCTURAL_CONTEXT.md#north-star--combine-both-not-a-xor-b)): agents and reviewers need **intent** (RC) and **structure** (SC).
 
 ```text
-  Planning docs (execution, findings, authority)
+  Planning docs (execution, findings, general plan)
            │
            ▼
-  ┌────────────────────┐     ┌─────────────────────┐
-  │ Greptile files.json │     │ Bugbot BUGBOT.md    │
-  │ scope: backend/**   │     │ links to same docs  │
-  └─────────┬──────────┘     └──────────┬──────────┘
-            │                            │
-            └────────────┬───────────────┘
-                         ▼
-              PR review (dogfood on feat/review-quality)
-                         │
-                         ▼
-              Code matches locked execution contract?
+  ┌─────────────────────────────┐
+  │ .revy/review-context.json   │  SSOT — Moonshot inject + Greptile source
+  └─────────────┬───────────────┘
+                │
+       ┌────────┴────────┐
+       ▼                 ▼
+  Greptile files.json   Bugbot BUGBOT.md
+  (generated)           links to same docs
+       │                 │
+       └────────┬────────┘
+                ▼
+         PR review (dogfood)
+                ▼
+    Code matches locked execution contract?
 ```
 
 ---
@@ -55,7 +58,7 @@ Shipped in **RQ0** (same commit as migration `0026`):
 
 | File | Role |
 |------|------|
-| `.greptile/review-context.json` | **SSOT** — `active_program` + `programs[]`; Moonshot inject reads at `head_sha` (RCX-D11) |
+| `.revy/review-context.json` | **SSOT** — `active_program` + `programs[]`; Moonshot inject reads at `head_sha` (RCX-D11) |
 | `.greptile/files.json` | **Generated** from SSOT — Greptile dogfood manifest; never hand-edit after RCX P3 |
 | `.cursor/BUGBOT.md` | Markdown links to same docs (paths relative to `.cursor/`) |
 

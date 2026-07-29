@@ -8,7 +8,7 @@ from app.services.engineering_context.validate import validate_review_context_pa
 
 def test_validate_review_context_paths_exist_committed_ssot():
     repo_root = Path(__file__).resolve().parents[3]
-    raw_text = (repo_root / ".greptile/review-context.json").read_text(encoding="utf-8")
+    raw_text = (repo_root / ".revy/review-context.json").read_text(encoding="utf-8")
     manifest = parse_review_context_manifest_json(raw_text)
     missing = validate_review_context_paths_exist(manifest, repo_root)
     assert missing == []

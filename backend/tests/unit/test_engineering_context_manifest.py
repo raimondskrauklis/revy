@@ -15,12 +15,13 @@ def test_parse_committed_ssot_file():
     repo_root = Path(__file__).resolve().parents[3]
     raw_text = (repo_root / SSOT_RELATIVE_PATH).read_text(encoding="utf-8")
     manifest = parse_review_context_manifest_json(raw_text)
-    assert manifest.active_program == "review-engineering-context"
-    assert len(manifest.programs) == 1
-    program = manifest.programs[0]
-    assert program.id == "review-engineering-context"
-    assert program.scope == ("backend/**",)
-    assert len(program.paths) == 3
+    assert manifest.active_program == "publish-summary-alignment"
+    program_ids = {program.id for program in manifest.programs}
+    assert manifest.active_program in program_ids
+    assert "review-engineering-context" in program_ids
+    active = next(p for p in manifest.programs if p.id == manifest.active_program)
+    assert active.scope == ("backend/**",)
+    assert len(active.paths) == 3
 
 
 def test_parse_review_context_manifest_requires_active_program():
