@@ -9,6 +9,7 @@ Harness notes (GH-6):
 - Inline posts persist partial `summary_json` via `session.flush` per comment (retry-safe); one `_checkpoint_publish_surface` after full flush.
 """
 import uuid
+from contextlib import nullcontext
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -23,8 +24,10 @@ from app.constants.enums import (
     GitHubPullRequestState,
     GitHubRepositoryStatus,
     GitHubReviewRunStatus,
+    ResolutionStatus,
     ReviewProfile,
 )
+from app.integrations import github_api
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_installation import GitHubInstallationORM
 from app.models.github_publish_job import GitHubPublishJobORM
@@ -33,6 +36,32 @@ from app.models.github_repository import GitHubRepositoryORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.services import github_publish
 from app.services.github_publish_formatter import PublishFormatResult
+
+
+def _review_thread_index(
+    mapping: dict[int, str] | None = None,
+    *,
+    outdated: frozenset[int] = frozenset(),
+    resolved: frozenset[int] = frozenset(),
+) -> github_api.ReviewThreadIndex:
+    return github_api.ReviewThreadIndex(
+        comment_to_thread_id=mapping or {},
+        outdated_comment_ids=outdated,
+        resolved_comment_ids=resolved,
+    )
+
+
+def _scalars_sequence(*items: object):
+    """Scalars mock that returns fixed items then empty lists forever."""
+
+    queue = list(items)
+
+    def _next(*_args, **_kwargs):
+        if queue:
+            return queue.pop(0)
+        return []
+
+    return _next
 
 
 @pytest.fixture(autouse=True)
@@ -48,35 +77,48 @@ def _publish_formatter_defaults(request):
             github_publish._resolve_stale_inline_threads,
         )
     )
-    with patch(
-        "app.services.github_publish.get_latest_completed_index_job",
-        AsyncMock(return_value=None),
-    ):
+    find_publish_ctx = (
+        patch(
+            "app.services.github_publish.find_publish_job_for_head_sha",
+            AsyncMock(return_value=None),
+        )
+        if "find_publish_unmocked" not in request.keywords
+        else nullcontext()
+    )
+    with find_publish_ctx:
         with patch(
-            "app.services.github_publish.get_resolution_metrics_for_review_run",
+            "app.services.github_publish.get_latest_completed_index_job",
             AsyncMock(return_value=None),
         ):
             with patch(
-                "app.services.github_publish._fetch_prior_completed_publish_jobs",
-                AsyncMock(return_value=[]),
+                "app.services.github_publish.get_resolution_metrics_for_review_run",
+                AsyncMock(return_value=None),
             ):
-                with resolve_ctx:
-                    with patch(
-                        "app.services.github_publish.github_api.build_review_thread_comment_index",
-                        AsyncMock(return_value={}),
-                    ):
+                with patch(
+                    "app.services.github_publish._fetch_prior_completed_publish_jobs",
+                    AsyncMock(return_value=[]),
+                ):
+                    with resolve_ctx:
                         with patch(
-                            "app.services.github_publish.build_publish_format_result_async",
-                            AsyncMock(
-                                return_value=PublishFormatResult(
-                                    check_summary="## Revy review\n\n**Confidence:** 5/5",
-                                    issue_comment="## Revy code review\n\nfull narrative",
-                                    confidence=5,
-                                    summary_json={"confidence": 5, "active_count": 0, "resolution": {}},
-                                )
-                            ),
+                            "app.services.github_publish.github_api.build_review_thread_index",
+                            AsyncMock(return_value=_review_thread_index()),
                         ):
-                            yield
+                            with patch(
+                                "app.services.github_publish.build_publish_format_result_async",
+                                AsyncMock(
+                                    return_value=PublishFormatResult(
+                                        check_summary="## Revy review\n\n**Confidence:** 5/5",
+                                        issue_comment="## Revy code review\n\nfull narrative",
+                                        confidence=5,
+                                        summary_json={
+                                            "confidence": 5,
+                                            "active_count": 0,
+                                            "resolution": {},
+                                        },
+                                    )
+                                ),
+                            ):
+                                yield
 
 
 def test_compute_check_conclusion_neutral_on_critical():
@@ -315,7 +357,7 @@ async def test_resolve_stale_inline_threads_uses_thread_index():
     client = AsyncMock()
     list_mock = AsyncMock()
     with patch(
-        "app.services.github_publish.github_api.build_review_thread_comment_index",
+        "app.services.github_publish.github_api.build_review_thread_index",
         list_mock,
     ):
         with patch(
@@ -415,7 +457,7 @@ async def test_resolve_stale_inline_threads_option_a():
         start_line=3,
     )
     session = AsyncMock()
-    session.scalars = AsyncMock(side_effect=[[], [active_finding], []])
+    session.scalars = AsyncMock(side_effect=[[], [active_finding], [], []])
     session.get = AsyncMock(return_value=active_group)
     client = AsyncMock()
     with patch(
@@ -450,6 +492,165 @@ async def test_resolve_stale_inline_threads_option_a():
     )
     resolve_mock.assert_awaited_once()
     assert inline_threads == {"active-fp": 1002}
+
+
+@pytest.mark.resolve_unmocked
+@pytest.mark.asyncio
+async def test_resolve_stale_inline_threads_outdated_comment():
+    from app.models.github_finding import GitHubFindingORM
+
+    review_run_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    inline_threads = {"drift-fp": 1001, "active-fp": 1002}
+    group_id = uuid.uuid4()
+    active_group = GitHubFindingGroupORM(
+        id=group_id,
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="active-fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Active",
+        message="still",
+        file_path="app/main.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+    active_finding = GitHubFindingORM(
+        review_run_id=review_run_id,
+        workspace_id=workspace_id,
+        group_id=group_id,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Active",
+        message="still",
+        file_path="app/main.py",
+        start_line=3,
+    )
+    session = AsyncMock()
+    session.scalars = AsyncMock(
+        side_effect=[[], [active_finding], [], []],
+    )
+    session.get = AsyncMock(return_value=active_group)
+    client = AsyncMock()
+    with patch(
+        "app.services.github_publish.github_api.find_review_thread_id_for_comment",
+        AsyncMock(return_value="PRRT_old"),
+    ):
+        with patch(
+            "app.services.github_publish.github_api.resolve_review_thread",
+            AsyncMock(),
+        ) as resolve_mock:
+            await github_publish._resolve_stale_inline_threads(
+                client,
+                session=session,
+                review_run_id=review_run_id,
+                github_installation_id=12345,
+                owner="acme",
+                repo_name="demo",
+                pull_request_id=pull_request_id,
+                pull_number=7,
+                inline_threads=inline_threads,
+                auth_headers={"Authorization": "Bearer t"},
+                thread_index={1001: "PRRT_old"},
+                outdated_comment_ids=frozenset({1001}),
+            )
+    resolve_mock.assert_awaited_once()
+    assert inline_threads == {"active-fp": 1002}
+
+
+@pytest.mark.resolve_unmocked
+@pytest.mark.asyncio
+async def test_resolve_stale_inline_threads_addressed_while_still_publishable():
+    from app.models.github_finding import GitHubFindingORM
+
+    review_run_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    inline_threads = {"addressed-fp": 1001}
+    group_id = uuid.uuid4()
+    addressed_group = GitHubFindingGroupORM(
+        id=group_id,
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="addressed-fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Addressed",
+        message="still reported",
+        file_path="app/main.py",
+        last_seen_revision_id=uuid.uuid4(),
+        resolution_status=ResolutionStatus.addressed,
+    )
+    active_finding = GitHubFindingORM(
+        review_run_id=review_run_id,
+        workspace_id=workspace_id,
+        group_id=group_id,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Addressed",
+        message="still reported",
+        file_path="app/main.py",
+        start_line=3,
+    )
+    session = AsyncMock()
+    session.scalars = AsyncMock(side_effect=[[], [active_finding], [addressed_group]])
+    session.get = AsyncMock(return_value=addressed_group)
+    client = AsyncMock()
+    with patch(
+        "app.services.github_publish.github_api.find_review_thread_id_for_comment",
+        AsyncMock(return_value="PRRT_addr"),
+    ):
+        with patch(
+            "app.services.github_publish.github_api.resolve_review_thread",
+            AsyncMock(),
+        ) as resolve_mock:
+            await github_publish._resolve_stale_inline_threads(
+                client,
+                session=session,
+                review_run_id=review_run_id,
+                github_installation_id=12345,
+                owner="acme",
+                repo_name="demo",
+                pull_request_id=pull_request_id,
+                pull_number=7,
+                inline_threads=inline_threads,
+                auth_headers={"Authorization": "Bearer t"},
+            )
+    resolve_mock.assert_awaited_once()
+    assert inline_threads == {}
+
+
+@pytest.mark.resolve_unmocked
+@pytest.mark.asyncio
+async def test_resolve_stale_inline_threads_pops_already_resolved_without_graphql():
+    review_run_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    inline_threads = {"done-fp": 1001}
+    session = AsyncMock()
+    session.scalars = AsyncMock(side_effect=[[], [], []])
+    client = AsyncMock()
+    with patch(
+        "app.services.github_publish.github_api.resolve_review_thread",
+        AsyncMock(),
+    ) as resolve_mock:
+        await github_publish._resolve_stale_inline_threads(
+            client,
+            session=session,
+            review_run_id=review_run_id,
+            github_installation_id=12345,
+            owner="acme",
+            repo_name="demo",
+            pull_request_id=pull_request_id,
+            pull_number=7,
+            inline_threads=inline_threads,
+            auth_headers={"Authorization": "Bearer t"},
+            resolved_comment_ids=frozenset({1001}),
+        )
+    resolve_mock.assert_not_awaited()
+    assert inline_threads == {}
 
 
 @pytest.mark.resolve_unmocked
@@ -532,7 +733,7 @@ async def test_run_publish_job_persists_thread_map_after_resolve_when_inline_ski
     session.get = AsyncMock(
         side_effect=[job, run, revision, pull_request, repository, installation]
     )
-    session.scalars = AsyncMock(side_effect=[[], [revision_id], [], [], [], []])
+    session.scalars = AsyncMock(side_effect=_scalars_sequence([], [revision_id], [], [], [], []))
     session.scalar = AsyncMock(return_value=None)
     session.flush = AsyncMock()
 
@@ -541,8 +742,8 @@ async def test_run_publish_job_persists_thread_map_after_resolve_when_inline_ski
         AsyncMock(return_value=[prior_job]),
     ):
         with patch(
-            "app.services.github_publish.github_api.build_review_thread_comment_index",
-            AsyncMock(return_value={9001: "PRRT_stale"}),
+            "app.services.github_publish.github_api.build_review_thread_index",
+            AsyncMock(return_value=_review_thread_index({9001: "PRRT_stale"})),
         ):
             with patch(
                 "app.services.github_publish.get_pipeline_run_for_review_run",
@@ -1134,7 +1335,7 @@ async def test_run_publish_job_updates_existing_sha():
     session.get = AsyncMock(
         side_effect=[job, run, revision, pull_request, repository, installation]
     )
-    session.scalars = AsyncMock(side_effect=[[], [revision_id], []])
+    session.scalars = AsyncMock(side_effect=_scalars_sequence([], []))
     session.scalar = AsyncMock(return_value=existing)
     session.flush = AsyncMock()
 
@@ -1142,13 +1343,17 @@ async def test_run_publish_job_updates_existing_sha():
     comment_update_mock = AsyncMock()
     create_check_mock = AsyncMock()
     with patch(
-        "app.services.github_publish.github_api.installation_auth_headers",
-        AsyncMock(return_value={"Authorization": "Bearer t"}),
+        "app.services.github_publish.find_publish_job_for_head_sha",
+        AsyncMock(return_value=existing),
     ):
-        with patch("app.services.github_publish.github_api.update_check_run", update_mock):
-            with patch("app.services.github_publish.github_api.update_issue_comment", comment_update_mock):
-                with patch("app.services.github_publish.github_api.create_check_run", create_check_mock):
-                    result = await github_publish.run_publish_job(session, publish_job_id=publish_job_id)
+        with patch(
+            "app.services.github_publish.github_api.installation_auth_headers",
+            AsyncMock(return_value={"Authorization": "Bearer t"}),
+        ):
+            with patch("app.services.github_publish.github_api.update_check_run", update_mock):
+                with patch("app.services.github_publish.github_api.update_issue_comment", comment_update_mock):
+                    with patch("app.services.github_publish.github_api.create_check_run", create_check_mock):
+                        result = await github_publish.run_publish_job(session, publish_job_id=publish_job_id)
 
     assert result.status == GitHubPublishJobStatus.completed
     assert result.github_check_run_id == 50
@@ -1368,7 +1573,7 @@ async def test_run_publish_job_posts_inline_when_prior_job_failed_before_inline(
     session.get = AsyncMock(
         side_effect=[job, run, revision, pull_request, repository, installation, group, group]
     )
-    session.scalars = AsyncMock(side_effect=[[], [finding]])
+    session.scalars = AsyncMock(side_effect=_scalars_sequence([], [], [finding]))
     session.scalar = AsyncMock(side_effect=[uuid.uuid4(), None])
     session.flush = AsyncMock()
 
@@ -1609,7 +1814,7 @@ async def test_run_publish_job_posts_inline_after_surface_checkpoint():
     session.get = AsyncMock(
         side_effect=[job, run, revision, pull_request, repository, installation, group, group]
     )
-    session.scalars = AsyncMock(side_effect=[[finding], [revision_id], [finding]])
+    session.scalars = AsyncMock(side_effect=_scalars_sequence([finding], [], [], [finding]))
     session.scalar = AsyncMock(side_effect=[uuid.uuid4(), uuid.uuid4()])
     session.flush = AsyncMock()
     session.commit = AsyncMock()
@@ -1828,7 +2033,7 @@ async def test_run_publish_job_same_sha_re_publish_persists_thread_map():
     session.get = AsyncMock(
         side_effect=[job, run, revision, pull_request, repository, installation]
     )
-    session.scalars = AsyncMock(side_effect=[[], [revision_id], [], [], [], []])
+    session.scalars = AsyncMock(side_effect=_scalars_sequence([], [revision_id], [], [], [], []))
     session.scalar = AsyncMock(return_value=existing_job)
     session.flush = AsyncMock()
 
@@ -1838,8 +2043,8 @@ async def test_run_publish_job_same_sha_re_publish_persists_thread_map():
         AsyncMock(return_value=[prior_job]),
     ):
         with patch(
-            "app.services.github_publish.github_api.build_review_thread_comment_index",
-            AsyncMock(return_value={7001: "PRRT_gone"}),
+            "app.services.github_publish.github_api.build_review_thread_index",
+            AsyncMock(return_value=_review_thread_index({7001: "PRRT_gone"})),
         ):
             with patch(
                 "app.services.github_publish.github_api.resolve_review_thread",
@@ -2096,8 +2301,8 @@ async def test_run_publish_job_reactivates_inline_same_publish():
         AsyncMock(return_value=[prior_job]),
     ):
         with patch(
-            "app.services.github_publish.github_api.build_review_thread_comment_index",
-            AsyncMock(return_value={8001: "PRRT_old"}),
+            "app.services.github_publish.github_api.build_review_thread_index",
+            AsyncMock(return_value=_review_thread_index({8001: "PRRT_old"})),
         ):
             with patch(
                 "app.services.github_publish.github_api.resolve_review_thread",
@@ -2440,8 +2645,8 @@ async def test_run_publish_job_surface_flush_call_order():
             AsyncMock(return_value=None),
         ):
             with patch(
-                "app.services.github_publish.github_api.build_review_thread_comment_index",
-                _track("index", {}),
+                "app.services.github_publish.github_api.build_review_thread_index",
+                _track("index", _review_thread_index()),
             ):
                 with patch(
                     "app.services.github_publish._resolve_stale_inline_threads",
@@ -3008,6 +3213,7 @@ async def test_run_publish_job_returns_skip_when_neutralize_fails():
     neutral_check_mock.assert_awaited_once()
 
 
+@pytest.mark.find_publish_unmocked
 @pytest.mark.asyncio
 async def test_find_publish_job_for_head_sha_completed_only():
     pull_request_id = uuid.uuid4()
