@@ -13,6 +13,7 @@
 | RCX | [REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md](../review-engineering-context/REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md) | pass 2 **PASS** |
 | Judge JSON contract | [JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](../judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) | unchanged |
 | Meta workflow | [staging-validation/README.md](../staging-validation/README.md) | findings baseline |
+| Finding resolution dogfood | [finding-resolution-dogfood/README.md](../finding-resolution-dogfood/README.md) | **next PR** — FR-DG1/2 |
 
 ## Deploy
 
@@ -56,7 +57,7 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
 3. ~~Push 2 — probe files + behavior tests~~ — **done** (`d52e790`, rev 4); probes removed in cleanup commit.
 4. ~~Push 3 — wire marker + drop bogus test call~~ — **done** (`61f8b5f` code; published on rev 6 `0e0e60a`).
 5. ~~Push 4 — unwired marker~~ — **done** (`d84b83b`, rev 8).
-6. **Post-merge** — `chore/finding-resolution-staging-dogfood`; one push per agent cycle.
+6. ~~Post-merge~~ — see [finding-resolution-dogfood](../finding-resolution-dogfood/README.md).
 
 ## Pass criteria (push 1 — rev 2)
 

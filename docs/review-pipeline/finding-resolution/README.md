@@ -32,3 +32,5 @@
 **Related shipped programs:** R5 reconcile + judge · RQ6 resolution metrics · github-surface-hardening · generation lifecycle · judge input quality.
 
 **Next wave:** [judge-json-contract](../judge-json-contract/README.md) after merge to `main`.
+
+**Post-PSA dogfood (2026-07-29):** [finding-resolution-dogfood](../finding-resolution-dogfood/README.md) — G9/collapse gaps from PR #63.

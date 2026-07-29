@@ -18,6 +18,13 @@
 |----|---------|--------|--------|
 | [#63](https://github.com/raimondskrauklis/revy/pull/63) | PSA post-#62 deploy | `chore/psa-staging-dogfood` | **sign-off complete** — merge after cleanup rev |
 
+## Next validation PRs
+
+| Program | Branch | Findings |
+|---------|--------|----------|
+| Finding resolution dogfood | `chore/finding-resolution-staging-dogfood` | [FINDING_RESOLUTION_DOGFOOD_FINDINGS.md](../finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_FINDINGS.md) |
+| Moonshot formatter signature | `chore/moonshot-formatter-signature` | MR-DG1 in same doc |
+
 ## Related per-program validation memos
 
 | Program | Memo |
@@ -34,4 +41,4 @@
 | Staging metrics + RCX gate | `backend/scripts/judge_json_contract_staging_metrics.py` |
 | SSOT / Greptile gate | `backend/scripts/generate_greptile_files_from_review_context.py` + `tests/unit/test_generate_greptile_files.py` |
 
-**Next step:** merge #63 → finding-resolution dogfood PR (one push per agent cycle).
+**Next step:** merge #63 → [finding-resolution dogfood](../finding-resolution-dogfood/README.md) (one push per agent cycle).
