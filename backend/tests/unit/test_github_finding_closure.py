@@ -15,8 +15,9 @@ from app.constants.enums import (
     ResolutionStatus,
 )
 from app.models.github_finding_group import GitHubFindingGroupORM
-from app.models.github_pull_request import GitHubPullRequestRevisionORM
+from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
 from app.models.github_review_run import GitHubReviewRunORM
+from app.services import github_resolution_metrics
 from app.services.github_finding_closure import (
     VERIFICATION_JUDGE_MAX_PER_RUN,
     apply_pass2_closure_for_review_run,
@@ -256,6 +257,124 @@ async def test_apply_pass2_closure_closes_absent_addressed_group():
     session.get = AsyncMock(side_effect=[run, current_revision])
     session.scalars = AsyncMock(return_value=[group])
     session.flush = AsyncMock()
+
+    with patch(
+        "app.services.github_finding_closure.get_last_published_prior_revision",
+        AsyncMock(return_value=published_prior),
+    ):
+        with patch(
+            "app.services.github_finding_closure.get_intermediate_revision_ids_between",
+            AsyncMock(return_value=frozenset()),
+        ):
+            with patch(
+                "app.services.github_finding_closure._fingerprints_in_review_run",
+                AsyncMock(return_value=set()),
+            ):
+                closed = await apply_pass2_closure_for_review_run(
+                    session,
+                    review_run_id=review_run_id,
+                )
+
+    assert closed == 1
+    assert group.state == GitHubFindingGroupState.resolved
+    assert group.resolution_method == ResolutionMethod.absent_and_addressed
+
+
+@pytest.mark.asyncio
+async def test_apply_pass2_closure_after_file_deletion_pass1_stamp():
+    """FR-DG2a: deletion push stamps addressed on sync, then Pass 2 closes absent fingerprint."""
+    review_run_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    prior_revision_id = uuid.uuid4()
+    current_revision_id = uuid.uuid4()
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=1,
+        title="PR",
+        state="open",
+        head_sha="head",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=2,
+    )
+    pull_request.id = pull_request_id
+
+    published_prior = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="published",
+        base_sha="base",
+    )
+    published_prior.id = prior_revision_id
+
+    current_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=2,
+        head_sha="head",
+        base_sha="base",
+    )
+    current_revision.id = current_revision_id
+
+    group = GitHubFindingGroupORM(
+        workspace_id=pull_request.workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="probe-fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Probe defect",
+        message="msg",
+        file_path="backend/tests/fixtures/fr_dogfood/probe_module.py",
+        last_seen_revision_id=prior_revision_id,
+    )
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[published_prior])
+    session.scalars = AsyncMock(return_value=[group])
+    session.flush = AsyncMock()
+
+    with patch(
+        "app.services.github_resolution_metrics._fetch_compare_patches",
+        AsyncMock(
+            return_value=type(
+                "CompareResult",
+                (),
+                {
+                    "patches_by_file": {},
+                    "compare_failed": False,
+                    "removed_paths": frozenset(
+                        {"backend/tests/fixtures/fr_dogfood/probe_module.py"}
+                    ),
+                },
+            )()
+        ),
+    ):
+        with patch(
+            "app.services.github_resolution_metrics._latest_finding_lines",
+            AsyncMock(return_value=(5, 5)),
+        ):
+            stamped = await github_resolution_metrics.apply_resolution_status_for_synchronize(
+                session,
+                pull_request=pull_request,
+                new_revision=current_revision,
+            )
+
+    assert stamped == 1
+    assert group.resolution_status == ResolutionStatus.addressed
+
+    run = GitHubReviewRunORM(
+        workspace_id=pull_request.workspace_id,
+        revision_id=current_revision_id,
+        status=GitHubReviewRunStatus.completed,
+    )
+    run.id = review_run_id
+
+    session.get = AsyncMock(side_effect=[run, current_revision])
+    session.scalars = AsyncMock(return_value=[group])
 
     with patch(
         "app.services.github_finding_closure.get_last_published_prior_revision",

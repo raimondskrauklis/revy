@@ -21,6 +21,7 @@ logger = get_logger(__name__)
 class ComparePatchesResult:
     patches_by_file: dict[str, str]
     compare_failed: bool
+    removed_paths: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,14 +46,14 @@ async def fetch_compare_patches(
 ) -> ComparePatchesResult:
     """Load per-file patches for a base/head SHA pair."""
     if not base_sha or not head_sha:
-        return ComparePatchesResult({}, False)
+        return ComparePatchesResult({}, False, frozenset())
     if skip_when_same_sha and base_sha == head_sha:
-        return ComparePatchesResult({}, False)
+        return ComparePatchesResult({}, False, frozenset())
 
     repository = await session.get(GitHubRepositoryORM, pull_request.repository_id)
     installation = await session.get(GitHubInstallationORM, pull_request.installation_id)
     if repository is None or installation is None:
-        return ComparePatchesResult({}, False)
+        return ComparePatchesResult({}, False, frozenset())
 
     owner, repo_name = repository.full_name.split("/", 1)
     async with httpx.AsyncClient(timeout=120.0) as client:
@@ -75,10 +76,11 @@ async def fetch_compare_patches(
                     "error": str(exc),
                 },
             )
-            return ComparePatchesResult({}, True)
+            return ComparePatchesResult({}, True, frozenset())
 
     patches = {item.filename: item.patch for item in compare.files if item.patch}
-    return ComparePatchesResult(patches, False)
+    removed_paths = frozenset(compare.paths_to_remove)
+    return ComparePatchesResult(patches, False, removed_paths)
 
 
 async def fetch_compare_patches_by_file(
