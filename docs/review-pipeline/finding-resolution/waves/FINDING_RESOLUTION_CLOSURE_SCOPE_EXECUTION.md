@@ -34,7 +34,7 @@
 | C0 | SSOT, Greptile, Bugbot, index | [C0](./FINDING_RESOLUTION_CLOSURE_SCOPE_C0_EXECUTION.md) | `c7c84f1` | done |
 | C1 | HEAD hygiene + Pass 2 widen | [C1](./FINDING_RESOLUTION_CLOSURE_SCOPE_C1_EXECUTION.md) | `d4666aa` | done |
 | C2 | Manifest + G9 | [C2](./FINDING_RESOLUTION_CLOSURE_SCOPE_C2_EXECUTION.md) | `d4666aa` | done |
-| C3 | Staging Track C dogfood | [C3](./FINDING_RESOLUTION_CLOSURE_SCOPE_C3_EXECUTION.md) | — | **in progress** — `chore/fr-dg2-track-c-staging` |
+| C3 | Staging Track C dogfood | [C3](./FINDING_RESOLUTION_CLOSURE_SCOPE_C3_EXECUTION.md) | — | **in progress** — [#69](https://github.com/raimondskrauklis/revy/pull/69) |
 | C4 | Doc sync + gap close | [C4](./FINDING_RESOLUTION_CLOSURE_SCOPE_C4_EXECUTION.md) | `0fa3ae5` | pending C3 PASS |
 | — | Post–#68 Revy fixes | findings § Post–#68 | `0277f4d` | done (shipped in #68) |
 

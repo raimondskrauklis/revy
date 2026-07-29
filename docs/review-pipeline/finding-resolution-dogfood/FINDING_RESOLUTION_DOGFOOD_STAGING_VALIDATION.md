@@ -52,7 +52,7 @@
 
 ## Track C — closure scope (wave C, [#68](https://github.com/raimondskrauklis/revy/pull/68) deployed)
 
-**Probe branch:** `chore/fr-dg2-track-c-staging`. **Fixture:** `backend/tests/fixtures/fr_dg2_track_c/`. **Evidence:** #67 closed (evidence-only).
+**Probe branch:** `chore/fr-dg2-track-c-staging` ([#69](https://github.com/raimondskrauklis/revy/pull/69)). **Fixture:** `backend/tests/fixtures/fr_dg2_track_c/`. **Evidence:** #67 closed (evidence-only).
 
 | Step | Intent | Status | Evidence |
 |------|--------|--------|----------|
