@@ -20,13 +20,15 @@ P8: human gate only
 
 ## Decisions locked for execution
 
-- **RCX-D11:** SSOT `.greptile/review-context.json`; Greptile `.greptile/files.json` **generated** in P3 (not hand-edited).
+- **RCX-D11:** SSOT `.revy/review-context.json`; Greptile `.greptile/files.json` **generated** in P3 (not hand-edited).
 - **RCX-D10:** `revy_diff_max_bytes` default **524288** (512 KB) in P0 config; code uses config in P2.
 - **RCX-D12:** Always inject lock/smoke extract; dedupe full MD body only when path in diff ∧ not omitted.
 - **RCX-D8:** Inject block **before** unified diff; review instruction treats engineering block as authoritative.
 - **RCX-D13–D17:** Wave 2 — issue comment depth; fallback parity; one PR P6+P7; no frontend; metrics script name retained.
 - **SC coexistence:** `engineering_context_*` keys on same retrieve manifest as SC3 fields — no second manifest.
 - **Module owner:** `app/services/engineering_context/` — parser (P0), loader+extract (P1), consumed by Moonshot (P2) and judge (P4).
+- **httpx lifecycle (P2/P4):** one `AsyncClient` per `prepare_review_context` / judge pack build — compare + file fetches share client; do not return client from helpers after context closes.
+- **P0 does not touch `.greptile/files.json`** — Greptile generator is P3; P0 adds SSOT path-exists validation (`engineering_context/validate.py`).
 - **P8 sign-off:** Requires P2–P4 on staging + P6 dogfood PR (`--since` window non-empty) + `--rcx-gate` PASS.
 
 ## LOOP order
@@ -36,7 +38,7 @@ P8: human gate only
 | P0 — Foundations | Migration `0029`, SSOT, caps (settings only), path-exists pytest | [REVIEW_ENGINEERING_CONTEXT_P0_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P0_EXECUTION.md) | done |
 | P1 — Loader + extract | `fetch_repository_file_at_sha`, lock/smoke parser | [REVIEW_ENGINEERING_CONTEXT_P1_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P1_EXECUTION.md) | done |
 | P2 — Moonshot inject | `prepare_review_context`, populate metrics | [REVIEW_ENGINEERING_CONTEXT_P2_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P2_EXECUTION.md) | done |
-| P3 — Greptile sync | SSOT trim + generate `files.json` | [REVIEW_ENGINEERING_CONTEXT_P3_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P3_EXECUTION.md) | done |
+| P3 — Greptile sync | Generate `files.json` from SSOT (3 entries) | [REVIEW_ENGINEERING_CONTEXT_P3_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P3_EXECUTION.md) | done |
 | P4 — Judge reuse | Lock block in judge prompt | [REVIEW_ENGINEERING_CONTEXT_P4_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P4_EXECUTION.md) | done |
 | P5 — Validation stub | Memo stub; P5.5 moved to P6 | [REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P5_EXECUTION.md) | stub done |
 | P6 — Publish surface | Greptile-depth issue comment | [REVIEW_ENGINEERING_CONTEXT_P6_EXECUTION.md](./REVIEW_ENGINEERING_CONTEXT_P6_EXECUTION.md) | done |

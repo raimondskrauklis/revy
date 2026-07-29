@@ -6,7 +6,7 @@ Phase **P0** of [REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md](../REVIEW_ENGINEERI
 
 ## Decisions locked for P0
 
-- SSOT path: `.greptile/review-context.json` — shape: `active_program` (string) + `programs[]` with `id`, `scope` (globs), `paths[]` (`path`, `description`).
+- SSOT path: `.revy/review-context.json` — shape: `active_program` (string) + `programs[]` with `id`, `scope` (globs), `paths[]` (`path`, `description`).
 - Initial SSOT: `active_program: "review-engineering-context"`; **exactly 3 paths:**
   - `docs/review-pipeline/review-engineering-context/waves/REVIEW_ENGINEERING_CONTEXT_EXECUTION.md`
   - `docs/review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_FINDINGS.md`
@@ -64,15 +64,15 @@ cd backend && pipenv run pytest tests/unit/test_engineering_context_config.py -q
 
 ## P0.3 — `engineering_context` module + SSOT parser
 
-**What:** Create `app/services/engineering_context/` — `manifest.py` (parse/validate SSOT JSON), `types.py` (`ReviewContextManifest`, `ProgramEntry`); validate `active_program` references a `programs[].id`; commit `.greptile/review-context.json` with locked 3 paths above.
+**What:** Create `app/services/engineering_context/` — `manifest.py` (parse/validate SSOT JSON), `types.py` (`ReviewContextManifest`, `ProgramEntry`); validate `active_program` references a `programs[].id`; commit `.revy/review-context.json` with locked 3 paths above.
 
-**Files:** `backend/app/services/engineering_context/__init__.py`, `manifest.py`, `types.py`, `backend/tests/unit/test_engineering_context_manifest.py`, `.greptile/review-context.json`
+**Files:** `backend/app/services/engineering_context/__init__.py`, `manifest.py`, `types.py`, `backend/tests/unit/test_engineering_context_manifest.py`, `.revy/review-context.json`
 
 **Deliverable:**
 
 ```bash
 cd backend && pipenv run pytest tests/unit/test_engineering_context_manifest.py -q
-python -m json.tool .greptile/review-context.json > /dev/null
+python -m json.tool .revy/review-context.json > /dev/null
 ```
 
 ---
@@ -115,7 +115,7 @@ cd backend && pipenv run pytest tests/unit/test_engineering_context_validate.py 
 
 ```bash
 cd backend && pipenv run ruff check scripts/judge_json_contract_staging_metrics.py app/services/engineering_context/
-python -m json.tool .greptile/review-context.json > /dev/null
+python -m json.tool .revy/review-context.json > /dev/null
 ```
 
 ---

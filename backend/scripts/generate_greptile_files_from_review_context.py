@@ -1,5 +1,5 @@
 # backend/scripts/generate_greptile_files_from_review_context.py
-"""Generate `.greptile/files.json` from SSOT `.greptile/review-context.json` (RCX P3)."""
+"""Generate `.greptile/files.json` from SSOT `.revy/review-context.json` (RCX P3)."""
 from __future__ import annotations
 
 import argparse

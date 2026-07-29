@@ -44,7 +44,7 @@
 | High-signal findings | `commentTypes`: logic default; style optional | R4-Q5: logic/security/behavior only; CI owns lint | **shipped** |
 | Severity / strictness | `strictness` 1–3 | `ReviewProfile` standard / deep / critical + Kimi tier | **shipped** |
 | P0–P2 on PRs (dev process) | Inline severity badges | Map to `FindingSeverity`; use in our PR workflow | **shipped** schema · process now |
-| PR summary narrative | Top-level review comment | G3: compact check `output.summary`; Greptile-shaped issue comment (`build_pr_review_comment_fallback` / optional Moonshot) | **shipped** |
+| PR summary narrative | Top-level review comment | G3: compact check `output.summary`; Greptile-shaped issue comment with **two-block** findings (`### This generation` + `### Still open on PR`) and PR-wide verdict fields | **shipped** — [PSA](../review-pipeline/publish-summary-alignment/README.md) |
 | Inline file+line comments | Review comments on diff | R6 inline for error/critical/warning/info when `file_path` + line; table for all severities | **shipped** |
 | Suggested fix / patch | Copy-prompt, suggestion blocks | Optional `suggestion` on finding; GitHub suggestion when line-accurate | **shipped** (`R6-Q3` polish) |
 | Issues table in review | `includeIssuesTable` | R7 findings table + R6 summary markdown | **shipped** |

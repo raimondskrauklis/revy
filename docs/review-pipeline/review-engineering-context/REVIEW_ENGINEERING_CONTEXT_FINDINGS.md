@@ -17,7 +17,7 @@
 
 **This program (RCX)** wires engineering context into **Revy first**:
 
-1. **Manifest JSON** — SSOT: `.greptile/review-context.json`; Greptile gets **CI-generated** `.greptile/files.json` (RCX-D11).
+1. **Manifest JSON** — SSOT: `.revy/review-context.json`; Greptile gets **CI-generated** `.greptile/files.json` (RCX-D11).
 2. **MD is the content** — LOOP co-commits execution/findings; manifest says *which* docs matter.
 3. **`prepare_review_context` inject (P2)** — read SSOT, resolve MD at `head_sha`, prepend bounded lock/smoke block before diff (RCX-D8).
 4. **Greptile parallel** — generated `files.json` from same SSOT edit (RCX-D9).
@@ -37,8 +37,8 @@ PR #58 remains the motivation: generic API advice when locks/smoke are absent fr
            │
            ▼
   ┌────────────────────────────┐
-  │ SSOT: review-context.json  │  active_program + programs[] + scope
-  │ dogfood: .greptile/        │  product (later): .revy/review-context.json
+  │ SSOT: .revy/review-context.json │  active_program + programs[] + scope
+  │ Greptile: generated files.json  │  vendor manifest under .greptile/
   └─────────────┬──────────────┘
                 │
        ┌────────┴────────┐
@@ -75,7 +75,7 @@ PR #58 remains the motivation: generic API advice when locks/smoke are absent fr
 | **Engineering context** | What this PR/program must implement — execution contract, findings locks, operator smoke |
 | **Structural context** | Who calls X, impact beyond diff — [REVIEW_QUALITY_STRUCTURAL_CONTEXT.md](../review-quality/REVIEW_QUALITY_STRUCTURAL_CONTEXT.md) |
 | **Operational context** | Live API/workspace results (RTU smoke, staging SQL) — first-class, not optional appendix |
-| **Manifest (SSOT)** | `.greptile/review-context.json` — `active_program` + `programs[]`; Greptile consumes generated `files.json` |
+| **Manifest (SSOT)** | `.revy/review-context.json` — `active_program` + `programs[]`; Greptile consumes generated `files.json` |
 | **revybot** | Hosted **Cursor Bugbot** on GitHub — daily workflow; not RCX P0 |
 | **RCX** | Review engineering context program IDs (this doc) |
 
@@ -83,7 +83,7 @@ PR #58 remains the motivation: generic API advice when locks/smoke are absent fr
 
 ## Reviewer channels
 
-**Post-#60 (shipped):** Moonshot reads SSOT `.greptile/review-context.json` at `head_sha`, injects before diff; Greptile uses generated `files.json` (3 RCX entries); judge reuses P1 extract on escalation. **Wave 2 open:** issue-comment depth (P6), API `context_stats` (P7), staging sign-off (P8).
+**Post-#60 (shipped):** Moonshot reads SSOT `.revy/review-context.json` at `head_sha`, injects before diff; Greptile uses generated `files.json` (3 RCX entries); judge reuses P1 extract on escalation. **Wave 2 open:** issue-comment depth (P6), API `context_stats` (P7), staging sign-off (P8).
 
 ### Baseline (pre-RCX — historical)
 
@@ -137,12 +137,12 @@ PR #58 remains the motivation: generic API advice when locks/smoke are absent fr
 | Asset | Status | Reuse notes |
 |-------|--------|-------------|
 | RC0 wiring (Greptile + Bugbot links) | **Shipped** RQ0 | Greptile pattern; Bugbot maintained separately this phase |
-| `.greptile/files.json` schema | **Shipped** | Dogfood manifest shape; add `active_program` |
-| `prepare_review_context` | **Shipped** | **P0 injection point** — prepend engineering block |
+| `.revy/review-context.json` (SSOT) | **Shipped** | `active_program` + `programs[]`; Revy reads at `head_sha` (RCX-D11 / RC4) |
+| `.greptile/files.json` (Greptile) | **Shipped** | **P3:** CI-generated from SSOT — not hand-edited after P3 |
+| `prepare_review_context` | **Shipped** | **P2 injection point** — prepend engineering block |
 | `REVIEW_QUALITY_REVIEW_CONTEXT.md` | **Strategy** | RC1–RC6 ladder; RCX absorbs RC1–RC2 + RC5 dogfood |
 | `OUTPUT_FORMAT.md` + babysit skill | **Shipped** | Disposition helpers (P2) |
-| `.revy/review-context.json` | **Not built** | Product manifest path; dogfood SSOT: `.greptile/review-context.json`; Greptile: generated `files.json` |
-| `workspace_review_policy` DB | **Not built** | RC4 — post-dogfood |
+| `workspace_review_policy` DB | **Not built** | RC4 — workspace-scoped policy rows (post-dogfood) |
 | `BUGBOT.md` | **Shipped** | Daily workflow; not P0 generator target |
 
 ---
@@ -254,7 +254,7 @@ Sources: [Packmind playbook](https://packmind.com/context-engineering-ai-coding/
 | **RCX-D8** | **Moonshot inject shape** — read manifest → resolve MD at `head_sha` → prepend bounded block (active program + extracted locks/smoke) **before** unified diff; skip paths already fully in diff. |
 | **RCX-D9** | **One edit, two consumers** — manifest update feeds Greptile `files.json` and Revy inject; no hand-duplicated path lists. |
 | **RCX-D10** | **Raise prompt caps (dogfood)** — operator spend is low; **`revy_diff_max_bytes` default 512 KB in P0 config** (not 128 KB); staging env may lag until P3 deploy. |
-| **RCX-D11** | **Manifest SSOT** — dogfood: `.greptile/review-context.json`; Greptile: **CI-generated** `.greptile/files.json` from SSOT each LOOP commit (vendor has no `active_program` field — trim = fewer `files[]` entries). Product: `.revy/review-context.json` (RC4). |
+| **RCX-D11** | **Manifest SSOT** — `.revy/review-context.json` (dogfood + product repo path); Greptile: **CI-generated** `.greptile/files.json` from SSOT each LOOP commit (vendor has no `active_program` field — trim = fewer `files[]` entries). |
 | **RCX-D12** | **Inject dedupe** — always inject **extracted locks/smoke**; skip **full-file MD body** for path `p` iff `p ∈ changed_files` **and** `p ∉ omitted_files` **and** patch present in compare (partial hunks still get lock extract). |
 | **RCX-D13** | **Issue comment only** — P6 Greptile-depth sections; check-run stays G3 compact. |
 | **RCX-D14** | **Fallback parity** — Moonshot disabled/failed path matches section depth (post-review-quality H2). |
@@ -281,7 +281,7 @@ Sources: [Packmind playbook](https://packmind.com/context-engineering-ai-coding/
 
 **Algorithm (P2 — shipped #60):**
 
-1. **Read SSOT** — dogfood: `.greptile/review-context.json` at `head_sha` (`active_program` + `programs[]`); product later: `.revy/review-context.json` (RC4). Greptile consumes **generated** `.greptile/files.json` only (RCX-D11) — Revy does **not** read `files.json`.
+1. **Read SSOT** — `.revy/review-context.json` at `head_sha` (`active_program` + `programs[]`). Greptile consumes **generated** `.greptile/files.json` only (RCX-D11) — Revy does **not** read `files.json`.
 2. **Filter** — resolve `active_program`; skip when `changed_files` non-empty and none match program `scope` (dogfood: `backend/**`).
 3. **Resolve** — fetch pointed `.md` at `head_sha` (GitHub Contents API).
 4. **Extract** — `## Locked decisions`, operator smoke tables — **bounded** by `revy_engineering_context_max_bytes`; not full findings corpus.
@@ -329,7 +329,7 @@ Sources: [Packmind playbook](https://packmind.com/context-engineering-ai-coding/
 
 | # | Deliverable | Phase | Notes |
 |---|-------------|-------|-------|
-| **RCX-G1** | Manifest schema + typed parser | **P0** | SSOT `.greptile/review-context.json`; `app/services/engineering_context/` contract module |
+| **RCX-G1** | Manifest schema + typed parser | **P0** | SSOT `.revy/review-context.json`; `app/services/engineering_context/` contract module |
 | **RCX-G9** | Metrics migration + script | **P0** | `0029` `context_stats`; retrieve manifest **field contract** (keys defined, empty until P2) |
 | **RCX-G2b** | Config caps | **P0** | `revy_diff_max_bytes` default **512 KB**; inject budget env |
 | **RCX-G3** | Lock/smoke extractor + loader | **P1** | Tolerant `## Locked decisions` parsing; fixtures from shipped findings MD |
@@ -428,7 +428,7 @@ Sources: [Packmind playbook](https://packmind.com/context-engineering-ai-coding/
 
 **Do not** open docs-only or no-op PRs. **Ship P6+P7 on one `backend/**` branch** → autostart review → fills P8 validation tables.
 
-SSOT scope: `.greptile/review-context.json` → `backend/**` — PR must touch backend for lock inject + scoped program.
+SSOT scope: `.revy/review-context.json` → `backend/**` — PR must touch backend for lock inject + scoped program.
 
 ### Sibling track — judge contract (RCX-17)
 
@@ -466,7 +466,7 @@ Judge-json-contract #58 shipped parse/retry; staging full history still **38.5%*
 
 ### RCX-Q1 — Manifest SSOT?
 
-**Locked (RCX-D11):** `.greptile/review-context.json` is SSOT. Revy reads SSOT at `head_sha`. Greptile reads **generated** `.greptile/files.json` (CI in LOOP — RCX-D9). Product path: `.revy/review-context.json` (RC4).
+**Locked (RCX-D11):** `.revy/review-context.json` is SSOT. Revy reads SSOT at `head_sha`. Greptile reads **generated** `.greptile/files.json` (CI in LOOP — RCX-D9).
 
 ### RCX-Q2 — Hosted Bugbot / manifest?
 
@@ -490,7 +490,7 @@ Judge-json-contract #58 shipped parse/retry; staging full history still **38.5%*
 
 | Q# | Question | Status | Resolution |
 |----|----------|--------|------------|
-| **RCX-Q1** | Manifest SSOT? | **locked** | `.greptile/review-context.json` + generated `files.json` (RCX-D11) |
+| **RCX-Q1** | Manifest SSOT? | **locked** | `.revy/review-context.json` + generated `files.json` (RCX-D11) |
 | **RCX-Q2** | Hosted Bugbot + manifest? | **deferred** | Not RCX build; maintain `BUGBOT.md` manually |
 | **RCX-Q3** | Active program trim? | **locked** | P3 — SSOT one program; generated `files.json` |
 | **RCX-Q4** | Moonshot inject phase? | **locked** | **P2** (not P0) |
@@ -513,7 +513,7 @@ Judge-json-contract #58 shipped parse/retry; staging full history still **38.5%*
 ## Devil's advocate
 
 - **Inject adds tokens** — bounded extract mandatory; full findings dump will hurt Moonshot quality.
-- **Extractor fragility** — headings vary (`## Locked decisions (discussion …)`); P1 uses tolerant parser + fixtures from `JUDGE_JSON_CONTRACT_FINDINGS.md`, this file, one execution MD.
+- **Extractor fragility** — headings vary (`## Locked decisions (discussion …)`); P1 uses tolerant parser + fixtures from `JUDGE_JSON_CONTRACT_FINDINGS.md` (§ P0 smoke results), this file (§ Locked decisions + § Baseline captured), `JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md` (§ P0 smoke matrix (final)).
 - **Greptile parallel may lag** — if `files.json` not generated from manifest, drift returns.
 - **Customer RC4** — dogfood manifest shape must generalize to DB rows or rework.
 

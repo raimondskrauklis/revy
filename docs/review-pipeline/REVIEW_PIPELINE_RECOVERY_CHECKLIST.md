@@ -3,7 +3,7 @@
 **Purpose:** Single handoff for agents when context is limited. Work **top to bottom** on active tracks; mark `[x]` as done.  
 **Rules:** No direct pushes to `main`. One concern per PR. **Peer review = separate agent session** (human-invoked); never self-certified by the implementing agent.
 
-**Last updated:** 2026-07-28 — finding-resolution **code-complete** on PR #57; staging human gate pending
+**Last updated:** 2026-07-29 — PSA docs baseline (RG-14); finding-resolution code-complete on PR #57
 
 ---
 
@@ -100,6 +100,13 @@
 - [ ] Apply migration **`0028`** on staging
 - [ ] Operator dogfood — fix → push → metrics → thread resolve (§ P5.1 table)
 - [ ] Merge PR [#57](https://github.com/raimondskrauklis/revy/pull/57) → `main`
+
+### Track L — Publish summary alignment (RG-14 / FR-Q16) — **code-complete**
+
+- [x] Findings + discussion + general plan + P0–P2 execution — [publish-summary-alignment/README.md](./publish-summary-alignment/README.md)
+- [x] Architecture peer review — gaps incorporated into P0/P1 execution (2026-07-29)
+- [x] `phase-execution` P0–P1 on `feat/publish-summary-alignment`
+- [ ] Staging validation — [PUBLISH_SUMMARY_ALIGNMENT_STAGING_VALIDATION.md](./publish-summary-alignment/PUBLISH_SUMMARY_ALIGNMENT_STAGING_VALIDATION.md) (parallel RCX / judge-json pass 2)
 
 ---
 

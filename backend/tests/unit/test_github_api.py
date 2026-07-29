@@ -242,7 +242,7 @@ async def test_fetch_repository_file_at_sha_decodes_base64():
             github_installation_id=1,
             owner="org",
             repo="repo",
-            path=".greptile/review-context.json",
+            path=".revy/review-context.json",
             ref="abc123",
         )
 

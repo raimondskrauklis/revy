@@ -1,5 +1,13 @@
 # backend/app/services/github_publish_formatter.py
-"""Greptile-shaped GitHub publish formatting — RQ7."""
+"""Greptile-shaped GitHub publish formatting — RQ7 + PSA two-block parity.
+
+Surface contract (PSA-D1–D4, PSA-D12):
+- Check + issue comment share ``format_summary_comment`` (this generation + still open on PR).
+- Verdict fields (confidence, merge, rationale, files, security rollups) use PR-wide active groups.
+- Verdict confidence applies generation resolution boost from ``ctx.groups`` (PSA-D3).
+- G9 / resolution metrics stay generation-scoped.
+- Inline publish remains generation-only; ``compute_check_conclusion`` unchanged (generation-scoped).
+"""
 from __future__ import annotations
 
 import json
@@ -28,7 +36,6 @@ logger = get_logger(__name__)
 
 FILES_NEEDING_ATTENTION_CAP = 20
 IMPORTANT_FILES_ROW_CAP = 8
-PRIORITY_FINDINGS_ROW_CAP = 8
 SECURITY_DETAILS_ROW_CAP = 8
 SUMMARY_ROW_CAP = 50
 
@@ -127,6 +134,30 @@ class PublishFormatResult:
     summary_json: dict
 
 
+def verdict_groups(ctx: PublishFormatContext) -> list[GitHubFindingGroupORM]:
+    """PR-wide active groups for verdict copy; falls back to generation groups."""
+    if ctx.pr_active_groups is not None:
+        return ctx.pr_active_groups
+    return ctx.groups
+
+
+def extract_summary_blocks_section(markdown: str) -> str | None:
+    """Substring from ### This generation through ### Still open on PR block (parity tests)."""
+    start = markdown.find("### This generation")
+    if start < 0:
+        return None
+    still_open = markdown.find("### Still open on PR", start)
+    if still_open < 0:
+        return None
+    tail = markdown[still_open:]
+    end_offset = len(tail)
+    for marker in ("\n### ", "\n<details>", "\n---"):
+        idx = tail.find(marker, len("### Still open on PR"))
+        if idx > 0:
+            end_offset = min(end_offset, idx)
+    return markdown[start : still_open + end_offset].strip()
+
+
 def count_resolution_status(groups: list[GitHubFindingGroupORM]) -> dict[str, int]:
     counts = {
         ResolutionStatus.addressed.value: 0,
@@ -217,7 +248,11 @@ def _confidence_ceiling(groups: list[GitHubFindingGroupORM]) -> int:
     return 5
 
 
-def compute_confidence(groups: list[GitHubFindingGroupORM]) -> int:
+def compute_confidence(
+    groups: list[GitHubFindingGroupORM],
+    *,
+    resolution_groups: list[GitHubFindingGroupORM] | None = None,
+) -> int:
     active = _active_groups(groups)
     if not active:
         return 5
@@ -228,7 +263,8 @@ def compute_confidence(groups: list[GitHubFindingGroupORM]) -> int:
     elif any(g.severity == FindingSeverity.warning for g in active):
         score -= 1
 
-    resolution = count_resolution_status(groups)
+    resolution_source = resolution_groups if resolution_groups is not None else groups
+    resolution = count_resolution_status(resolution_source)
     score += min(2, resolution[ResolutionStatus.addressed.value])
     dismissed_total = (
         resolution[ResolutionStatus.judge_dismissed.value]
@@ -237,6 +273,12 @@ def compute_confidence(groups: list[GitHubFindingGroupORM]) -> int:
     )
     score += min(1, dismissed_total)
     return max(0, min(_confidence_ceiling(groups), score))
+
+
+def compute_publish_confidence(ctx: PublishFormatContext) -> int:
+    """PR-wide severity with generation-scoped resolution boost (PSA-D3)."""
+    verdict = verdict_groups(ctx)
+    return compute_confidence(verdict, resolution_groups=ctx.groups)
 
 
 def build_g9_resolution_prose(groups: list[GitHubFindingGroupORM]) -> str:
@@ -316,8 +358,8 @@ def format_summary_comment(
 
 def build_check_run_summary(ctx: PublishFormatContext) -> str:
     """G3 compact body for GitHub check run output."""
-    confidence = compute_confidence(ctx.groups)
-    pr_active = ctx.pr_active_groups if ctx.pr_active_groups is not None else ctx.groups
+    verdict = verdict_groups(ctx)
+    confidence = compute_publish_confidence(ctx)
     lines = [
         "## Revy review",
         "",
@@ -325,7 +367,7 @@ def build_check_run_summary(ctx: PublishFormatContext) -> str:
         "",
         format_summary_comment(
             generation_groups=ctx.groups,
-            pr_active_groups=pr_active,
+            pr_active_groups=verdict,
         ),
     ]
     return "\n".join(lines)
@@ -349,7 +391,7 @@ def _files_needing_attention(groups: list[GitHubFindingGroupORM]) -> list[str]:
 def _merge_recommendation(groups: list[GitHubFindingGroupORM]) -> str:
     active = _active_groups(groups)
     if not active:
-        return "Ready to merge — no active findings on this revision."
+        return "Ready to merge — no active findings on this pull request."
     if any(g.severity in (FindingSeverity.critical, FindingSeverity.error) for g in active):
         return "Fix before merge — critical or error-severity findings need attention."
     if any(g.severity == FindingSeverity.warning for g in active):
@@ -367,30 +409,6 @@ def _top_finding_summaries(groups: list[GitHubFindingGroupORM], *, limit: int = 
         if len(summaries) >= limit:
             break
     return summaries
-
-
-def _split_priority_and_info(
-    groups: list[GitHubFindingGroupORM],
-) -> tuple[list[GitHubFindingGroupORM], list[GitHubFindingGroupORM]]:
-    sorted_active = _sorted_active_groups(groups)
-    priority = [g for g in sorted_active if g.severity != FindingSeverity.info]
-    info_only = [g for g in sorted_active if g.severity == FindingSeverity.info]
-    return priority, info_only
-
-
-def _info_findings_collapsed_lines(info_groups: list[GitHubFindingGroupORM]) -> list[str] | None:
-    if not info_groups:
-        return None
-    label = f"{len(info_groups)} informational finding{'s' if len(info_groups) != 1 else ''}"
-    lines = [
-        "<details>",
-        f"<summary>{label}</summary>",
-        "",
-        *_severity_table_rows(info_groups),
-        "",
-        "</details>",
-    ]
-    return lines
 
 
 def _index_footer(ctx: PublishFormatContext) -> str:
@@ -422,18 +440,23 @@ def _has_resolution_progress(groups: list[GitHubFindingGroupORM]) -> bool:
     )
 
 
-def _confidence_rationale(groups: list[GitHubFindingGroupORM]) -> str:
+def _confidence_rationale(
+    groups: list[GitHubFindingGroupORM],
+    *,
+    resolution_groups: list[GitHubFindingGroupORM] | None = None,
+) -> str:
     active = _active_groups(groups)
-    confidence = compute_confidence(groups)
+    confidence = compute_confidence(groups, resolution_groups=resolution_groups)
+    resolution_source = resolution_groups if resolution_groups is not None else groups
     if not active:
-        return "Score is 5 because there are no active findings on this revision."
+        return "Score is 5 because there are no active findings on this pull request."
     if confidence <= 2:
         return "Score is low due to critical or error-severity findings that need attention before merge."
     if confidence == 3:
         return "Score is moderated by active findings that still need review before merge."
     if confidence == 4:
         base = "Score is good but not perfect: some active findings remain."
-        if _has_resolution_progress(groups):
+        if _has_resolution_progress(resolution_source):
             return f"{base} Prior fixes or dismissals improved confidence."
         return base
     if any(g.severity != FindingSeverity.info for g in active):
@@ -441,30 +464,53 @@ def _confidence_rationale(groups: list[GitHubFindingGroupORM]) -> str:
     return "Score is high with only informational findings on this revision."
 
 
+def publish_confidence_rationale(ctx: PublishFormatContext) -> str:
+    verdict = verdict_groups(ctx)
+    return _confidence_rationale(verdict, resolution_groups=ctx.groups)
+
+
 def _review_narrative_paragraph(ctx: PublishFormatContext) -> str:
-    active = _active_groups(ctx.groups)
-    if not active:
+    generation_active = _active_groups(ctx.groups)
+    verdict = verdict_groups(ctx)
+    pr_active = _active_groups(verdict)
+
+    if not generation_active and not pr_active:
         return (
             "This revision completed without active findings that need follow-up. "
             "No merge blockers were identified from the automated review on this push."
         )
 
-    top_summaries = _top_finding_summaries(ctx.groups)
-    if top_summaries:
+    if not generation_active and pr_active:
+        top_summaries = _top_finding_summaries(verdict)
         lead = (
-            f"This revision has **{len(active)}** active finding"
-            f"{'s' if len(active) != 1 else ''} on PR #{ctx.pull_request_number}. "
-            f"Top items: {', '.join(top_summaries)}."
+            f"This revision added no new publishable findings, but **{len(pr_active)}** "
+            f"finding{'s' if len(pr_active) != 1 else ''} remain open on PR "
+            f"#{ctx.pull_request_number}."
         )
+        if top_summaries:
+            lead = f"{lead} Top items: {', '.join(top_summaries)}."
     else:
-        lead = (
-            f"This revision has **{len(active)}** informational finding"
-            f"{'s' if len(active) != 1 else ''} on PR #{ctx.pull_request_number}."
-        )
+        top_summaries = _top_finding_summaries(ctx.groups)
+        if top_summaries:
+            lead = (
+                f"This revision has **{len(generation_active)}** active finding"
+                f"{'s' if len(generation_active) != 1 else ''} on PR #{ctx.pull_request_number}. "
+                f"Top items: {', '.join(top_summaries)}."
+            )
+        else:
+            lead = (
+                f"This revision has **{len(generation_active)}** informational finding"
+                f"{'s' if len(generation_active) != 1 else ''} on PR #{ctx.pull_request_number}."
+            )
+        if len(pr_active) > len(generation_active):
+            lead = (
+                f"{lead} **{len(pr_active)}** finding"
+                f"{'s' if len(pr_active) != 1 else ''} remain open on this pull request overall."
+            )
 
-    if any(g.severity in (FindingSeverity.critical, FindingSeverity.error) for g in active):
+    if any(g.severity in (FindingSeverity.critical, FindingSeverity.error) for g in pr_active):
         return f"{lead} Address critical or error findings before merge."
-    if any(g.severity == FindingSeverity.warning for g in active):
+    if any(g.severity == FindingSeverity.warning for g in pr_active):
         return f"{lead} Review warnings before merge; no critical blockers were flagged."
     return f"{lead} Findings are informational; merge risk appears low pending your judgment."
 
@@ -547,8 +593,9 @@ def build_pr_review_comment_fallback(
     resolution_metrics_block: str | None = None,
 ) -> str:
     """Deterministic Greptile-shaped issue comment (G3 full narrative fallback)."""
-    active = _active_groups(ctx.groups)
-    confidence = compute_confidence(ctx.groups)
+    verdict = verdict_groups(ctx)
+    pr_active = _active_groups(verdict)
+    confidence = compute_publish_confidence(ctx)
     resolution_prose = build_g9_resolution_prose(ctx.groups)
 
     lines = [
@@ -556,11 +603,11 @@ def build_pr_review_comment_fallback(
         "",
         _review_narrative_paragraph(ctx),
         "",
-        f"**Merge recommendation:** {_merge_recommendation(ctx.groups)}",
+        f"**Merge recommendation:** {_merge_recommendation(verdict)}",
         "",
         f"**Confidence score:** {confidence}/5",
         "",
-        _confidence_rationale(ctx.groups),
+        publish_confidence_rationale(ctx),
     ]
 
     if resolution_prose:
@@ -572,36 +619,28 @@ def build_pr_review_comment_fallback(
     if resolution_metrics_block:
         lines.extend(["", resolution_metrics_block])
 
-    attention = _files_needing_attention(ctx.groups)
+    attention = _files_needing_attention(verdict)
     if attention:
         lines.extend(["", "### Files needing attention", ""])
         lines.extend(f"- `{path}`" for path in attention)
-    elif not active:
+    elif not pr_active:
         lines.extend(["", "No files require special attention on this revision."])
 
-    if active:
-        priority, info_only = _split_priority_and_info(ctx.groups)
-        display_groups = priority if priority else info_only
-        lines.extend(["", "### Findings", ""])
-        lines.extend(_severity_table_rows(display_groups, row_cap=PRIORITY_FINDINGS_ROW_CAP))
-        shown = min(len(display_groups), PRIORITY_FINDINGS_ROW_CAP)
-        hidden_priority = max(0, len(priority) - shown)
-        if hidden_priority:
-            lines.append("")
-            lines.append(f"_Showing {shown} of {len(priority)} priority findings._")
-        if info_only and priority:
-            info_lines = _info_findings_collapsed_lines(info_only)
-            if info_lines:
-                lines.extend(["", *info_lines])
-        elif len(info_only) > PRIORITY_FINDINGS_ROW_CAP:
-            lines.append("")
-            lines.append(f"_Showing {PRIORITY_FINDINGS_ROW_CAP} of {len(info_only)} findings._")
+    lines.extend(
+        [
+            "",
+            format_summary_comment(
+                generation_groups=ctx.groups,
+                pr_active_groups=verdict,
+            ),
+        ]
+    )
 
-    security_lines = _security_details_lines(ctx.groups)
+    security_lines = _security_details_lines(verdict)
     if security_lines:
         lines.extend(["", *security_lines])
 
-    important_files_lines = _important_files_details_lines(ctx.groups)
+    important_files_lines = _important_files_details_lines(verdict)
     if important_files_lines:
         lines.extend(["", *important_files_lines])
 
@@ -645,13 +684,17 @@ def _issue_comment_meets_product_bar(text: str, ctx: PublishFormatContext) -> bo
         return False
     if "**Confidence" not in normalized and "Confidence score" not in normalized:
         return False
-    active = _active_groups(ctx.groups)
-    if not active:
+    pr_active = _active_groups(verdict_groups(ctx))
+    if not pr_active:
         return True
-    has_findings_section = "### Findings" in normalized or "| Severity | Category | Title | File |" in normalized
     has_merge_signal = "**Merge recommendation:**" in normalized
     has_rationale = _has_confidence_rationale_in_comment(normalized)
-    return has_findings_section and has_merge_signal and has_rationale
+    has_table = "| Severity | Category | Title | File |" in normalized
+    has_generation_block = "### This generation" in normalized
+    has_pr_block = "### Still open on PR" in normalized
+    if "### Findings" in normalized and not has_generation_block:
+        return False
+    return has_generation_block and has_pr_block and has_table and has_merge_signal and has_rationale
 
 
 def _insert_resolution_metrics_block(text: str, ctx: PublishFormatContext) -> str:
@@ -661,6 +704,8 @@ def _insert_resolution_metrics_block(text: str, ctx: PublishFormatContext) -> st
         return text
     for marker in (
         "### Files needing attention",
+        "### This generation",
+        "### Still open on PR",
         "### Findings",
         "<details>",
         "---\n*Review metadata",
@@ -677,33 +722,44 @@ def _append_resolution_metrics_block(text: str, ctx: PublishFormatContext) -> st
     return _insert_resolution_metrics_block(text, ctx)
 
 
-def _build_issue_comment_user_prompt(ctx: PublishFormatContext) -> str:
-    active = _active_groups(ctx.groups)
-    confidence = compute_confidence(ctx.groups)
-    findings_payload = [
+def _findings_payload(groups: list[GitHubFindingGroupORM]) -> list[dict[str, str | None]]:
+    return [
         {
             "severity": stored_enum_value(group.severity),
             "category": stored_enum_value(group.category),
             "title": group.title,
             "file": group.file_path,
         }
-        for group in active[:SUMMARY_ROW_CAP]
+        for group in _active_groups(groups)[:SUMMARY_ROW_CAP]
     ]
-    has_security = any(group.category == FindingCategory.security for group in active)
+
+
+def _build_issue_comment_user_prompt(ctx: PublishFormatContext) -> str:
+    verdict = verdict_groups(ctx)
+    generation_active = _active_groups(ctx.groups)
+    pr_active = _active_groups(verdict)
+    confidence = compute_publish_confidence(ctx)
+    has_security = any(group.category == FindingCategory.security for group in pr_active)
     return (
         "Format the issue comment from this structured review context.\n\n"
         f"PR #{ctx.pull_request_number} revision {ctx.revision_number} head_sha={ctx.head_sha}\n"
         f"Confidence score (use this exact value): {confidence}/5\n"
         f"Label the section **Confidence score:** {confidence}/5 in the comment.\n"
         f"Confidence rationale (include as one sentence after the score): "
-        f"{_confidence_rationale(ctx.groups)}\n"
+        f"{publish_confidence_rationale(ctx)}\n"
         f"Narrative hints (write 2-4 sentences in your own words): "
         f"{_review_narrative_paragraph(ctx)}\n"
-        f"Merge recommendation (use this exact line): {_merge_recommendation(ctx.groups)}\n"
+        f"Merge recommendation (use this exact line): {_merge_recommendation(verdict)}\n"
         f"Resolution delta: {build_g9_resolution_prose(ctx.groups) or 'n/a'}\n"
+        "Findings layout: use ### This generation and ### Still open on PR markdown "
+        "headings with severity tables (no ### Findings section).\n"
         f"Include security <details> block: {'yes' if has_security else 'no'}\n"
         f"Include important files changed <details> table when findings exist.\n"
-        f"Active findings JSON: {json.dumps(findings_payload, ensure_ascii=False)}"
+        f"This-generation active findings JSON: "
+        f"{json.dumps(_findings_payload(ctx.groups), ensure_ascii=False)}\n"
+        f"PR-wide still-open findings JSON: "
+        f"{json.dumps(_findings_payload(verdict), ensure_ascii=False)}\n"
+        f"Generation active count: {len(generation_active)}; PR active count: {len(pr_active)}"
     )
 
 
@@ -757,37 +813,39 @@ async def build_pr_review_comment(ctx: PublishFormatContext) -> str:
     return fallback
 
 
+def _build_summary_json(ctx: PublishFormatContext) -> dict:
+    verdict = verdict_groups(ctx)
+    confidence = compute_publish_confidence(ctx)
+    return {
+        "head_sha": ctx.head_sha,
+        "revision_number": ctx.revision_number,
+        "confidence": confidence,
+        "active_count": len(_active_groups(verdict)),
+        "generation_active_count": len(_active_groups(ctx.groups)),
+        "pr_active_count": len(_active_groups(verdict)),
+        "resolution": count_resolution_status(ctx.groups),
+    }
+
+
 def build_publish_format_result(ctx: PublishFormatContext) -> PublishFormatResult:
     check_summary = build_check_run_summary(ctx)
     issue_comment = build_pr_review_comment_fallback(ctx)
-    confidence = compute_confidence(ctx.groups)
+    summary_json = _build_summary_json(ctx)
     return PublishFormatResult(
         check_summary=check_summary,
         issue_comment=issue_comment,
-        confidence=confidence,
-        summary_json={
-            "head_sha": ctx.head_sha,
-            "revision_number": ctx.revision_number,
-            "confidence": confidence,
-            "active_count": len(_active_groups(ctx.groups)),
-            "resolution": count_resolution_status(ctx.groups),
-        },
+        confidence=summary_json["confidence"],
+        summary_json=summary_json,
     )
 
 
 async def build_publish_format_result_async(ctx: PublishFormatContext) -> PublishFormatResult:
     check_summary = build_check_run_summary(ctx)
     issue_comment = await build_pr_review_comment(ctx)
-    confidence = compute_confidence(ctx.groups)
+    summary_json = _build_summary_json(ctx)
     return PublishFormatResult(
         check_summary=check_summary,
         issue_comment=issue_comment,
-        confidence=confidence,
-        summary_json={
-            "head_sha": ctx.head_sha,
-            "revision_number": ctx.revision_number,
-            "confidence": confidence,
-            "active_count": len(_active_groups(ctx.groups)),
-            "resolution": count_resolution_status(ctx.groups),
-        },
+        confidence=summary_json["confidence"],
+        summary_json=summary_json,
     )

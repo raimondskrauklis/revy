@@ -115,9 +115,11 @@ Phase **C0** of [`<GENERAL_PLAN>.md`](./...). Baseline: [`<FINDINGS>.md`](./...)
 ## Decisions locked for C0
 - bullet decisions — no options downstream
 
-## PR review context (optional — required when code + docs ship in one PR)
-- **Greptile:** `.greptile/files.json` — execution + findings; `scope: ["backend/**"]` (adjust per program)
-- **Bugbot:** `.cursor/BUGBOT.md` — links to same docs
+## PR review context (required when code + docs ship in one PR)
+- **SSOT (Moonshot + Greptile source):** `.revy/review-context.json` — set `active_program`; add `programs[]` with `scope` + three doc paths (execution, findings, general plan)
+- **Greptile (vendor output):** regenerate `.greptile/files.json` — `cd backend && python -m scripts.generate_greptile_files_from_review_context --write` — **never hand-edit**
+- **Bugbot:** `.cursor/BUGBOT.md` — active program + links to same three docs
+- **First subphase:** dedicated `P0.0` / `C0.0` — "Program PR review context (SSOT + Greptile + Bugbot)" with `--check` + `test_generate_greptile_files.py` deliverable
 - Ship in **first phase commit**; per-phase commits touch README status only (not full findings tree)
 
 ## Out of scope for C0 (later phases)
@@ -234,7 +236,7 @@ P0…Pn-1: README status row only when that phase ships.
 - [ ] Phase gate block(s) — backend and/or frontend
 - [ ] Migration subphases flagged for LOOP pause
 - [ ] Human gate marked where ops/sign-off required
-- [ ] **Code + docs in one PR:** first phase includes PR review context (`.greptile/files.json`, `.cursor/BUGBOT.md`) — see `phase-execution` skill
+- [ ] **Code + docs in one PR:** first phase includes SSOT (`.revy/review-context.json`) + generated `files.json` + `.cursor/BUGBOT.md` + `test_generate_greptile_files.py` gate — see `phase-execution` skill
 - [ ] **Final phase:** doc-sync subphase (+ `changelog.json` if user-facing); optional `post-finish-gap-pass`
 - [ ] **`execution-peer-review`** on all files (one-by-one report) — no critical/high open
 ```

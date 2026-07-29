@@ -1,5 +1,5 @@
 # backend/app/services/engineering_context/manifest.py
-"""Parse and validate `.greptile/review-context.json` SSOT (RCX P0)."""
+"""Parse and validate `.revy/review-context.json` SSOT (RCX P0 / RC4)."""
 from __future__ import annotations
 
 import json
@@ -11,7 +11,7 @@ from app.services.engineering_context.types import (
     ReviewContextManifest,
 )
 
-SSOT_RELATIVE_PATH = ".greptile/review-context.json"
+SSOT_RELATIVE_PATH = ".revy/review-context.json"
 
 
 def parse_review_context_manifest(raw: dict[str, Any]) -> ReviewContextManifest:

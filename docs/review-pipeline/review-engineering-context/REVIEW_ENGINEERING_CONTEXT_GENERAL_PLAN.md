@@ -7,7 +7,7 @@
 
 **Gap IDs:** **RCX-*** in findings; **P0–P5** below are **execution authority** (overrides findings deliverable phase labels).
 
-**Locked:** RCX-D1–D12; inject **P2**; cap default **512 KB in P0 config** (RCX-D10); SSOT `.greptile/review-context.json` (RCX-D11); dedupe RCX-D12.
+**Locked:** RCX-D1–D12; inject **P2**; cap default **512 KB in P0 config** (RCX-D10); SSOT `.revy/review-context.json` (RCX-D11); dedupe RCX-D12.
 
 ---
 
@@ -26,7 +26,7 @@
 
 **Goal:** Primitives every later phase depends on — manifest contract, config caps (512 KB default), `context_stats` column, retrieve-manifest key contract (empty until P2).
 
-**Scope — in:** Alembic **`0029_review_context_stats`** — nullable `context_stats JSONB` on `github_review_runs`; config `revy_diff_max_bytes` (default **524288**), `revy_engineering_context_max_bytes`, `revy_pr_body_max_bytes`; SSOT schema `.greptile/review-context.json` + typed parser in `engineering_context`; retrieve manifest + `context_stats` **field contract** documented in code; CI path-exists on SSOT paths; staging script reads `context_stats` when present.
+**Scope — in:** Alembic **`0029_review_context_stats`** — nullable `context_stats JSONB` on `github_review_runs`; config `revy_diff_max_bytes` (default **524288**), `revy_engineering_context_max_bytes`, `revy_pr_body_max_bytes`; SSOT schema `.revy/review-context.json` + typed parser in `engineering_context`; retrieve manifest + `context_stats` **field contract** documented in code; CI path-exists on SSOT paths; staging script reads `context_stats` when present.
 
 **Scope — out:** GitHub file fetch; inject; Greptile `files.json` generation; judge.
 
@@ -62,7 +62,9 @@
 
 **Depends on:** P1.
 
-**Note:** With P0 default 512 KB, omitted-`.md` rate should drop vs 128 KB baseline before P3 Greptile trim.
+**Note:** With P0 default 512 KB, omitted-`.md` rate should drop vs 128 KB baseline before P3 Greptile generator.
+
+**Implementation note:** `prepare_review_context` uses one httpx client scope for compare + engineering pack fetch (see P2 execution).
 
 ---
 
@@ -84,7 +86,7 @@
 
 **Goal:** Judge shares P1 lock extract on escalation runs.
 
-**Scope — in:** Re-fetch `build_engineering_context_pack` in judge path via `compare_commits` for changed/omitted files; lock block max 2048 chars; optional `lock_ids_cited` on judge manifest.
+**Scope — in:** Re-fetch `build_engineering_context_pack` in judge path — `compare_commits` for `changed_files` + patches; `build_unified_diff` for `omitted_files`; lock block max 2048 chars from `extracted_text` only; optional `lock_ids_cited` on judge manifest.
 
 **Scope — out:** Moonshot changes; judge parse contract.
 
