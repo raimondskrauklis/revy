@@ -116,7 +116,7 @@ Phase **C0** of [`<GENERAL_PLAN>.md`](./...). Baseline: [`<FINDINGS>.md`](./...)
 - bullet decisions — no options downstream
 
 ## PR review context (required when code + docs ship in one PR)
-- **SSOT (Moonshot + Greptile source):** `.revy/review-context.json` — set `active_program`; add `programs[]` with `scope` + three doc paths (execution, findings, general plan)
+- **SSOT (Moonshot + Greptile source):** `.revy/review-context.json` — set `active_program`; **`programs[]` = one entry only** (remove prior programs on switch); `scope` + three doc paths (execution, findings, general plan)
 - **Greptile (vendor output):** regenerate `.greptile/files.json` — `cd backend && python -m scripts.generate_greptile_files_from_review_context --write` — **never hand-edit**
 - **Bugbot:** `.cursor/BUGBOT.md` — active program + links to same three docs
 - **First subphase:** dedicated `P0.0` / `C0.0` — "Program PR review context (SSOT + Greptile + Bugbot)" with `--check` + `test_generate_greptile_files.py` deliverable

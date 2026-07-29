@@ -349,7 +349,7 @@ def test_build_resolution_pass_manifest_counts_transitions():
 
     manifest = github_resolution_metrics.build_resolution_pass_manifest(
         [addressed, judge_dismissed, still_open, compare_failed, pre_sync_resolved],
-        prior_revision_id=prior_revision_id,
+        prior_revision_ids=frozenset({prior_revision_id}),
         current_revision_id=current_revision_id,
     )
 
@@ -382,7 +382,37 @@ def test_build_resolution_pass_manifest_includes_rereported_stamp_cohort():
 
     manifest = github_resolution_metrics.build_resolution_pass_manifest(
         [rereported],
-        prior_revision_id=prior_revision_id,
+        prior_revision_ids=frozenset({prior_revision_id}),
+        current_revision_id=current_revision_id,
+    )
+
+    assert manifest["denominator_active_prior"] == 1
+    assert manifest["still_open_count"] == 1
+
+
+def test_build_resolution_pass_manifest_includes_unpublished_gap_last_seen():
+    prior_revision_id = uuid.uuid4()
+    gap_revision_id = uuid.uuid4()
+    current_revision_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+
+    gap_group = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint="gap",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Gap",
+        message="M",
+        file_path="app/gap.py",
+        last_seen_revision_id=gap_revision_id,
+        resolution_status=ResolutionStatus.still_open,
+    )
+
+    manifest = github_resolution_metrics.build_resolution_pass_manifest(
+        [gap_group],
+        prior_revision_ids=frozenset({prior_revision_id, gap_revision_id}),
         current_revision_id=current_revision_id,
     )
 
@@ -439,3 +469,118 @@ async def test_compute_resolution_transitions_queries_groups():
 
     assert manifest["denominator_active_prior"] == 0
     assert manifest["transition_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_get_last_published_prior_revision_returns_completed_publish_prior():
+    pull_request_id = uuid.uuid4()
+    published_prior = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="published",
+        base_sha="base",
+    )
+    current_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=3,
+        head_sha="head",
+        base_sha="base",
+    )
+    session = AsyncMock()
+    session.scalar = AsyncMock(return_value=published_prior)
+
+    result = await github_resolution_metrics.get_last_published_prior_revision(
+        session,
+        pull_request_id=pull_request_id,
+        current_revision=current_revision,
+    )
+
+    assert result is published_prior
+    session.scalar.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_apply_resolution_status_for_synchronize_skipped_not_head_uses_last_published():
+    pull_request_id = uuid.uuid4()
+    prior_revision_id = uuid.uuid4()
+    new_revision_id = uuid.uuid4()
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=1,
+        title="PR",
+        state="open",
+        head_sha="newsha",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=3,
+    )
+    pull_request.id = pull_request_id
+
+    published_prior = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="published",
+        base_sha="base1",
+    )
+    published_prior.id = prior_revision_id
+
+    new_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=3,
+        head_sha="newsha",
+        base_sha="base1",
+    )
+    new_revision.id = new_revision_id
+
+    group = GitHubFindingGroupORM(
+        workspace_id=pull_request.workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Bug",
+        message="msg",
+        file_path="app/handler.py",
+        last_seen_revision_id=prior_revision_id,
+    )
+
+    session = AsyncMock()
+    session.scalars = AsyncMock(return_value=[group])
+    session.flush = AsyncMock()
+
+    with patch(
+        "app.services.github_resolution_metrics.get_last_published_prior_revision",
+        AsyncMock(return_value=published_prior),
+    ):
+        with patch(
+            "app.services.github_resolution_metrics._fetch_compare_patches",
+            AsyncMock(
+                return_value=type(
+                    "CompareResult",
+                    (),
+                    {
+                        "patches_by_file": {
+                            "app/handler.py": "@@ -12,1 +12,1 @@\n-old\n+fixed\n"
+                        },
+                        "compare_failed": False,
+                    },
+                )()
+            ),
+        ):
+            with patch(
+                "app.services.github_resolution_metrics._latest_finding_lines",
+                AsyncMock(return_value=(12, 12)),
+            ):
+                updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
+                    session,
+                    pull_request=pull_request,
+                    new_revision=new_revision,
+                )
+
+    assert updated == 1
+    assert group.resolution_status == ResolutionStatus.addressed

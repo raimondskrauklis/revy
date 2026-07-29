@@ -1,6 +1,6 @@
 # Finding resolution — post-PSA dogfood
 
-**Status:** **execution plans ready** — [waves/FINDING_RESOLUTION_DOGFOOD_EXECUTION.md](./waves/FINDING_RESOLUTION_DOGFOOD_EXECUTION.md).
+**Status:** **code shipped (wave A)** — P0 pushed; P1–P2 local on branch; **staging validation pending** (operator P0.4 / P1.4 / P2.4).
 
 **Thesis:** PSA #62 validated two-block publish shape; PR #63 exposed **resolution lifecycle** failures (G9 prose, stale groups, thread collapse) that need isolated dogfood with **one push per agent cycle**.
 
@@ -15,10 +15,10 @@
 
 | Phase | Focus | File | Status |
 |-------|--------|------|--------|
-| P0 — Repro + observability | Probe, metrics, SSOT | [P0](./waves/FINDING_RESOLUTION_DOGFOOD_P0_EXECUTION.md) | pending |
-| P1 — FR-DG1 | Manifest + G9 | [P1](./waves/FINDING_RESOLUTION_DOGFOOD_P1_EXECUTION.md) | pending |
-| P2 — FR-DG2 | Stale retirement + collapse | [P2](./waves/FINDING_RESOLUTION_DOGFOOD_P2_EXECUTION.md) | pending |
-| P3 — Staging sign-off | Evidence + doc sync | [P3](./waves/FINDING_RESOLUTION_DOGFOOD_P3_EXECUTION.md) | pending |
+| P0 — Repro + observability | Probe, metrics, SSOT | [P0](./waves/FINDING_RESOLUTION_DOGFOOD_P0_EXECUTION.md) | done `4830ff7` (pushed) |
+| P1 — FR-DG1 | Manifest + G9 | [P1](./waves/FINDING_RESOLUTION_DOGFOOD_P1_EXECUTION.md) | done `3790656` (local) |
+| P2 — FR-DG2 | Stale retirement + collapse | [P2](./waves/FINDING_RESOLUTION_DOGFOOD_P2_EXECUTION.md) | done `b521d23` (local) |
+| P3 — Staging sign-off | Evidence + doc sync | [P3](./waves/FINDING_RESOLUTION_DOGFOOD_P3_EXECUTION.md) | in progress |
 | P4 — MR-DG1 | Moonshot signature (wave B) | [P4](./waves/FINDING_RESOLUTION_DOGFOOD_P4_EXECUTION.md) | pending |
 
 ## Planned PRs

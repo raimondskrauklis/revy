@@ -22,8 +22,8 @@
 
 | ID | Gap | Severity | Target PR | Status |
 |----|-----|----------|-----------|--------|
-| **FR-DG1** | G9 / resolution manifest `0/0 prior active` | high | `chore/finding-resolution-staging-dogfood` | open |
-| **FR-DG2** | Stale finding group survives code removal (block 2 + inline orphan) | high | `chore/finding-resolution-staging-dogfood` | open |
+| **FR-DG1** | G9 / resolution manifest `0/0 prior active` | high | `chore/finding-resolution-staging-dogfood` | code ready — staging push 2 pending |
+| **FR-DG2** | Stale finding group survives code removal (block 2 + inline orphan) | high | `chore/finding-resolution-staging-dogfood` | code ready — staging push 3 pending |
 | **MR-DG1** | Moonshot hallucinates `format_summary_comment` signature | medium | `chore/moonshot-formatter-signature` | open |
 
 ### Out of scope (this program)

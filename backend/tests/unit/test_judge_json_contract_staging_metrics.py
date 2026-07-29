@@ -1,6 +1,9 @@
 # backend/tests/unit/test_judge_json_contract_staging_metrics.py
 """RCX P7 — staging metrics RCX gate evaluation."""
-from scripts.judge_json_contract_staging_metrics import _evaluate_rcx_gate
+from scripts.judge_json_contract_staging_metrics import (
+    _evaluate_rcx_gate,
+    _summarize_publish_summary,
+)
 
 
 def _metrics(
@@ -69,3 +72,29 @@ def test_evaluate_rcx_gate_inconclusive_zero_runs():
     gate = _evaluate_rcx_gate(_metrics(runs=0))
     assert gate["passed"] is True
     assert all(check["status"] == "INCONCLUSIVE" for check in gate["checks"])
+
+
+def test_summarize_publish_summary_maps_row():
+    summary = _summarize_publish_summary(
+        {
+            "completed_jobs": 3,
+            "generation_active_count_p50": 1,
+            "pr_active_count_p50": 2,
+            "resolution_addressed_sum": 4,
+            "jobs_with_resolution_addressed": 2,
+            "transitions_addressed_sum": 5,
+            "denominator_active_prior_sum": 6,
+            "jobs_with_denominator_active_prior": 1,
+        }
+    )
+    assert summary["completed_jobs"] == 3
+    assert summary["generation_active_count_p50"] == 1
+    assert summary["pr_active_count_p50"] == 2
+    assert summary["resolution_addressed_sum"] == 4
+    assert summary["transitions_addressed_sum"] == 5
+    assert summary["denominator_active_prior_sum"] == 6
+    assert summary["jobs_with_denominator_active_prior"] == 1
+
+
+def test_summarize_publish_summary_empty_row():
+    assert _summarize_publish_summary(None) == {}

@@ -1,18 +1,25 @@
 # backend/tests/unit/test_github_finding_closure.py
 """Finding group closure rules — P0 pure functions."""
 import uuid
+from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from app.constants.enums import (
     FindingCategory,
     FindingSeverity,
     GitHubFindingGroupState,
     GitHubJudgeOutcome,
+    GitHubReviewRunStatus,
     ResolutionMethod,
     ResolutionStatus,
 )
 from app.models.github_finding_group import GitHubFindingGroupORM
+from app.models.github_pull_request import GitHubPullRequestRevisionORM
+from app.models.github_review_run import GitHubReviewRunORM
 from app.services.github_finding_closure import (
     VERIFICATION_JUDGE_MAX_PER_RUN,
+    apply_pass2_closure_for_review_run,
     is_verification_escalation_candidate,
 )
 from app.services.github_finding_closure_rules import (
@@ -199,3 +206,74 @@ def test_verification_escalation_candidate_skips_compare_failed():
 
 def test_verification_judge_max_per_run_is_five():
     assert VERIFICATION_JUDGE_MAX_PER_RUN == 5
+
+
+@pytest.mark.asyncio
+async def test_apply_pass2_closure_closes_absent_addressed_group():
+    review_run_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    prior_revision_id = uuid.uuid4()
+    current_revision_id = uuid.uuid4()
+
+    run = GitHubReviewRunORM(
+        workspace_id=uuid.uuid4(),
+        revision_id=current_revision_id,
+        status=GitHubReviewRunStatus.completed,
+    )
+    run.id = review_run_id
+
+    published_prior = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="published",
+        base_sha="base",
+    )
+    published_prior.id = prior_revision_id
+
+    current_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=3,
+        head_sha="head",
+        base_sha="base",
+    )
+    current_revision.id = current_revision_id
+
+    group = GitHubFindingGroupORM(
+        workspace_id=run.workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="absent-fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Bug",
+        message="msg",
+        file_path="app/a.py",
+        last_seen_revision_id=prior_revision_id,
+        resolution_status=ResolutionStatus.addressed,
+    )
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, current_revision])
+    session.scalars = AsyncMock(return_value=[group])
+    session.flush = AsyncMock()
+
+    with patch(
+        "app.services.github_finding_closure.get_last_published_prior_revision",
+        AsyncMock(return_value=published_prior),
+    ):
+        with patch(
+            "app.services.github_finding_closure.get_intermediate_revision_ids_between",
+            AsyncMock(return_value=frozenset()),
+        ):
+            with patch(
+                "app.services.github_finding_closure._fingerprints_in_review_run",
+                AsyncMock(return_value=set()),
+            ):
+                closed = await apply_pass2_closure_for_review_run(
+                    session,
+                    review_run_id=review_run_id,
+                )
+
+    assert closed == 1
+    assert group.state == GitHubFindingGroupState.resolved
+    assert group.resolution_method == ResolutionMethod.absent_and_addressed

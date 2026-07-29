@@ -1,39 +1,21 @@
 {
-  "active_program": "publish-summary-alignment",
+  "active_program": "finding-resolution-dogfood",
   "programs": [
     {
-      "id": "publish-summary-alignment",
+      "id": "finding-resolution-dogfood",
       "scope": ["backend/**"],
       "paths": [
         {
-          "path": "docs/review-pipeline/publish-summary-alignment/waves/PUBLISH_SUMMARY_ALIGNMENT_EXECUTION.md",
-          "description": "PSA execution index — LOOP P0–P2, PSA-D* locks"
+          "path": "docs/review-pipeline/finding-resolution-dogfood/waves/FINDING_RESOLUTION_DOGFOOD_EXECUTION.md",
+          "description": "FR-DG execution index — LOOP P0–P3 wave A, P4 wave B"
         },
         {
-          "path": "docs/review-pipeline/publish-summary-alignment/PUBLISH_SUMMARY_ALIGNMENT_FINDINGS.md",
-          "description": "PSA baseline — RG-14 / FR-Q16 two-block issue comment parity"
+          "path": "docs/review-pipeline/finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_FINDINGS.md",
+          "description": "FR-DG baseline — FR-DG1/2, MR-DG1 gaps from PSA #63"
         },
         {
-          "path": "docs/review-pipeline/publish-summary-alignment/PUBLISH_SUMMARY_ALIGNMENT_GENERAL_PLAN.md",
-          "description": "PSA general plan — P0–P2 phases"
-        }
-      ]
-    },
-    {
-      "id": "review-engineering-context",
-      "scope": ["backend/**"],
-      "paths": [
-        {
-          "path": "docs/review-pipeline/review-engineering-context/waves/REVIEW_ENGINEERING_CONTEXT_EXECUTION.md",
-          "description": "RCX execution index — LOOP P0–P8, locked decisions"
-        },
-        {
-          "path": "docs/review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_FINDINGS.md",
-          "description": "RCX baseline — RCX-D*, Wave 2, validation metrics"
-        },
-        {
-          "path": "docs/review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_GENERAL_PLAN.md",
-          "description": "RCX general plan — phases P0–P8"
+          "path": "docs/review-pipeline/finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md",
+          "description": "FR-DG general plan — P0–P4 phases"
         }
       ]
     }

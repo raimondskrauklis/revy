@@ -176,6 +176,83 @@ WHERE rr.status = 'completed'
   AND ($1::timestamptz IS NULL OR rr.created_at >= $1::timestamptz);
 """
 
+_PUBLISH_SUMMARY_SQL = """
+WITH completed_publishes AS (
+  SELECT
+    pj.id,
+    pj.summary_json,
+    rr.id AS review_run_id
+  FROM github_publish_jobs pj
+  JOIN github_review_runs rr ON rr.id = pj.review_run_id
+  WHERE pj.status = 'completed'
+    AND ($1::timestamptz IS NULL OR rr.created_at >= $1::timestamptz)
+),
+resolution_pass_by_run AS (
+  SELECT DISTINCT ON (pr.review_run_id)
+    pr.review_run_id,
+    manifest.content_json->'resolution_pass' AS resolution_pass
+  FROM github_pipeline_runs pr
+  JOIN github_pipeline_steps s
+    ON s.pipeline_run_id = pr.id AND s.step_type = 'reconcile'
+  JOIN github_pipeline_artifacts manifest
+    ON manifest.step_id = s.id AND manifest.kind = 'manifest'
+  WHERE manifest.content_json->'resolution_pass' IS NOT NULL
+  ORDER BY pr.review_run_id, pr.created_at DESC
+),
+joined AS (
+  SELECT
+    cp.id,
+    cp.summary_json,
+    rp.resolution_pass
+  FROM completed_publishes cp
+  LEFT JOIN resolution_pass_by_run rp ON rp.review_run_id = cp.review_run_id
+)
+SELECT
+  count(*)::int AS completed_jobs,
+  percentile_cont(0.5) WITHIN GROUP (
+    ORDER BY coalesce((summary_json->>'generation_active_count')::int, 0)
+  )::int AS generation_active_count_p50,
+  percentile_cont(0.5) WITHIN GROUP (
+    ORDER BY coalesce((summary_json->>'pr_active_count')::int, 0)
+  )::int AS pr_active_count_p50,
+  coalesce(
+    sum(coalesce((summary_json->'resolution'->>'addressed')::int, 0)),
+    0
+  )::int AS resolution_addressed_sum,
+  count(*) FILTER (
+    WHERE coalesce((summary_json->'resolution'->>'addressed')::int, 0) >= 1
+  )::int AS jobs_with_resolution_addressed,
+  coalesce(
+    sum(coalesce((resolution_pass->>'transitions_addressed')::int, 0)),
+    0
+  )::int AS transitions_addressed_sum,
+  coalesce(
+    sum(coalesce((resolution_pass->>'denominator_active_prior')::int, 0)),
+    0
+  )::int AS denominator_active_prior_sum,
+  count(*) FILTER (
+    WHERE coalesce((resolution_pass->>'denominator_active_prior')::int, 0) >= 1
+  )::int AS jobs_with_denominator_active_prior
+FROM joined;
+"""
+
+
+def _summarize_publish_summary(row: dict[str, Any] | None) -> dict[str, Any]:
+    if not row:
+        return {}
+    return {
+        "completed_jobs": int(row.get("completed_jobs") or 0),
+        "generation_active_count_p50": row.get("generation_active_count_p50"),
+        "pr_active_count_p50": row.get("pr_active_count_p50"),
+        "resolution_addressed_sum": int(row.get("resolution_addressed_sum") or 0),
+        "jobs_with_resolution_addressed": int(row.get("jobs_with_resolution_addressed") or 0),
+        "transitions_addressed_sum": int(row.get("transitions_addressed_sum") or 0),
+        "denominator_active_prior_sum": int(row.get("denominator_active_prior_sum") or 0),
+        "jobs_with_denominator_active_prior": int(
+            row.get("jobs_with_denominator_active_prior") or 0
+        ),
+    }
+
 
 def _evaluate_rcx_gate(metrics: dict[str, Any]) -> dict[str, Any]:
     retrieve = metrics.get("review_context", {}).get("retrieve_manifest", {})
@@ -320,6 +397,7 @@ async def _fetch_metrics(since: datetime | None) -> dict[str, Any]:
         retrieve_row = await conn.fetchrow(_RETRIEVE_MANIFESTS_SQL, since)
         prompt_row = await conn.fetchrow(_REVIEW_PROMPT_SQL, since)
         context_stats_row = await conn.fetchrow(_CONTEXT_STATS_SQL, since)
+        publish_summary_row = await conn.fetchrow(_PUBLISH_SUMMARY_SQL, since)
         alembic_row = await conn.fetchrow(_ALEMBIC_SQL)
     finally:
         await conn.close()
@@ -343,6 +421,9 @@ async def _fetch_metrics(since: datetime | None) -> dict[str, Any]:
             "review_prompt": dict(prompt_row) if prompt_row else {},
             "context_stats": dict(context_stats_row) if context_stats_row else {},
         },
+        "publish_summary": _summarize_publish_summary(
+            dict(publish_summary_row) if publish_summary_row else None
+        ),
     }
 
 
@@ -440,6 +521,28 @@ async def _run() -> int:
                   f"{context_stats.get('engineering_context_bytes_p50')}")
     if rcx_gate is not None:
         _print_rcx_gate(rcx_gate, since=since)
+    publish_summary = metrics.get("publish_summary", {})
+    if publish_summary:
+        print()
+        print("Publish summary (completed jobs):")
+        print(f"  completed_jobs: {publish_summary.get('completed_jobs', 0)}")
+        print(
+            f"  generation_active_count p50: "
+            f"{publish_summary.get('generation_active_count_p50')}"
+        )
+        print(f"  pr_active_count p50: {publish_summary.get('pr_active_count_p50')}")
+        print(
+            f"  resolution.addressed sum: "
+            f"{publish_summary.get('resolution_addressed_sum', 0)}"
+        )
+        print(
+            f"  transitions_addressed sum: "
+            f"{publish_summary.get('transitions_addressed_sum', 0)}"
+        )
+        print(
+            f"  denominator_active_prior sum: "
+            f"{publish_summary.get('denominator_active_prior_sum', 0)}"
+        )
     if args.rcx_gate and rcx_gate is not None and not rcx_gate.get("passed"):
         return 1
     return 0

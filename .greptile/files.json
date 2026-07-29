@@ -1,22 +1,22 @@
 {
   "files": [
     {
-      "path": "docs/review-pipeline/publish-summary-alignment/waves/PUBLISH_SUMMARY_ALIGNMENT_EXECUTION.md",
-      "description": "PSA execution index \u2014 LOOP P0\u2013P2, PSA-D* locks",
+      "path": "docs/review-pipeline/finding-resolution-dogfood/waves/FINDING_RESOLUTION_DOGFOOD_EXECUTION.md",
+      "description": "FR-DG execution index \u2014 LOOP P0\u2013P3 wave A, P4 wave B",
       "scope": [
         "backend/**"
       ]
     },
     {
-      "path": "docs/review-pipeline/publish-summary-alignment/PUBLISH_SUMMARY_ALIGNMENT_FINDINGS.md",
-      "description": "PSA baseline \u2014 RG-14 / FR-Q16 two-block issue comment parity",
+      "path": "docs/review-pipeline/finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_FINDINGS.md",
+      "description": "FR-DG baseline \u2014 FR-DG1/2, MR-DG1 gaps from PSA #63",
       "scope": [
         "backend/**"
       ]
     },
     {
-      "path": "docs/review-pipeline/publish-summary-alignment/PUBLISH_SUMMARY_ALIGNMENT_GENERAL_PLAN.md",
-      "description": "PSA general plan \u2014 P0\u2013P2 phases",
+      "path": "docs/review-pipeline/finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md",
+      "description": "FR-DG general plan \u2014 P0\u2013P4 phases",
       "scope": [
         "backend/**"
       ]
