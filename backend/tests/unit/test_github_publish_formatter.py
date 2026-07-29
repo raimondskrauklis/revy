@@ -1,5 +1,5 @@
 # backend/tests/unit/test_github_publish_formatter.py
-"""GitHub publish formatter — RQ7."""
+"""GitHub publish formatter — RQ7 + PSA two-block parity (staging dogfood post-#62)."""
 import uuid
 from unittest.mock import AsyncMock, patch
 

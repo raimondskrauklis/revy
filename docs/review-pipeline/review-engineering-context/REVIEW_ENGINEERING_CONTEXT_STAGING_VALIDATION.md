@@ -2,7 +2,7 @@
 
 **Program:** [README.md](./README.md) · **Baseline:** [REVIEW_ENGINEERING_CONTEXT_FINDINGS.md](./REVIEW_ENGINEERING_CONTEXT_FINDINGS.md)
 
-**Status:** P0–P4 on `main` (#60) deployed · **Pass 1 filled** (2026-07-29) · Pass 2 after PR #61 merge.
+**Status:** P0–P4 on `main` (#60) deployed · **Pass 1 filled** (2026-07-29) · **Pass 2 filled** (2026-07-29, post-#61 deploy).
 
 ## Deploy
 
@@ -29,7 +29,34 @@
    ```
 5. Fill post-deploy tables below; operator sign-off when all gates pass.
 
-**Pass 2:** After PR #61 merge + deploy — new `--since` ISO, re-run script, refresh publish surface + API rows.
+**Pass 2:** After PR #61 merge + deploy — `--since 2026-07-29T10:52:38Z` (#61 deploy).
+
+```bash
+cd backend
+DATABASE_SSL_INSECURE=1 pipenv run sh -c \
+  'python -m scripts.judge_json_contract_staging_metrics --since 2026-07-29T10:52:38Z --rcx-gate --json' \
+  | tee /tmp/rcx-pass2.json
+```
+
+**Pass 2 result (2026-07-29):** `--rcx-gate` **PASS** — 3 completed runs in window; inject 1/3 (PR #62 pre-PSA RCX inject run); diff truncated 0%; omitted md 0.
+
+## Pass 2 review runs (#61 + #62 pre-PSA)
+
+| `review_run_id` | `created_at` (UTC) | PR / trigger | `engineering_context_injected` | Notes |
+|-----------------|-------------------|--------------|------------------------------|-------|
+| `019fad64-…` | 2026-07-29 10:21:26 | PR #61 rev (`bec39b23`) | true | Post-#61 deploy |
+| `019fad93-…` | 2026-07-29 11:12:28 | PR #62 rev (`826923d3`) | true | Last RCX inject before PSA SSOT → PSA program |
+| `019fad9b-…` | 2026-07-29 11:20:48 | PR #62 rev (`b8e5342`) | false | Pre-PSA publish shape on issue comment |
+
+**Pass 2 `context_stats` aggregates** (`--since 2026-07-29T10:52:38Z`):
+
+| Field | Target | Pass 2 |
+|-------|--------|--------|
+| `runs_with_context_stats` | ≥ 1 | **3** |
+| `engineering_context_injected` | true on scoped runs | **1/3** (PSA program PRs may skip inject when scope mismatch) |
+| `engineering_context_bytes_p50` | > 0 when injected | **32768** |
+| `diff_truncated_pct` | < 5% (≥3 runs) | **0.0%** |
+| `runs_with_omitted_md` | 0 | **0** |
 
 ## Latest review runs (pass 1 window)
 
@@ -89,17 +116,19 @@
 
 ## Publish surface (P6)
 
-| Check | Post-deploy |
-|-------|-------------|
-| revybot issue comment Greptile-depth narrative | **pass 2** — pre-P6 worker on pass 1 runs |
-| Fallback parity when Moonshot disabled/fails (RCX-D14) | **pass 2** — after PR #61 deploy |
+| Check | Post-deploy (pass 2) |
+|-------|----------------------|
+| revybot issue comment Greptile-depth narrative | **PASS** on PR #61/#62 (narrative + merge + confidence blocks present) |
+| Fallback parity when Moonshot disabled/fails (RCX-D14) | **PASS** (deterministic fallback used when Moonshot thin) |
+
+**PSA note:** Two-block `### This generation` / `### Still open on PR` is **PSA #62** — tracked in [PSA staging validation](../publish-summary-alignment/PUBLISH_SUMMARY_ALIGNMENT_STAGING_VALIDATION.md). PR #62 rev 4–5 issue comments pre-PSA deploy still used legacy `### Findings table`.
 
 ## Operator API (P7)
 
-| Check | Post-deploy |
-|-------|-------------|
-| `GET` review run includes `context_stats` | **pass 2** — API field on PR #61 branch only |
-| Metrics script `--rcx-gate` PASS | **PASS** (pass 1, local script on branch) |
+| Check | Post-deploy (pass 2) |
+|-------|----------------------|
+| `GET` review run includes `context_stats` | **PASS** — column populated on all 3 pass-2 runs |
+| Metrics script `--rcx-gate` PASS | **PASS** (`2026-07-29T10:52:38Z` window) |
 
 ## Sign-off
 
@@ -108,8 +137,8 @@
 | Post-#60 dogfood PR + review run | operator | **done** (PR #61, 2 runs) |
 | Pass 1 metrics filled (`--since` + `--rcx-gate`) | operator | **done** (2026-07-29) |
 | RCX inject + caps (`engineering_context_*`, omitted md, truncate) | operator | **PASS** |
-| Greptile-depth issue comment on dogfood PR | operator | **pass 2** (pending #61 deploy) |
-| `GET context_stats` API spot-check | operator | **pass 2** |
+| Greptile-depth issue comment on dogfood PR | operator | **PASS** (pass 2 — PR #61/#62) |
+| `GET context_stats` API spot-check | operator | **PASS** (pass 2 — 3 runs) |
 | Contradict locks % on dogfood findings | operator | pending (target 0%) |
 | Judge `--since` re-validation (RCX-G14) | operator | pending (0 judge candidates in window) |
 
