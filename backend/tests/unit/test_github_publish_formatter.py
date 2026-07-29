@@ -219,7 +219,7 @@ def test_format_summary_comment_two_block():
     assert "### Still open on PR" in markdown
 
 
-def test_build_pr_review_comment_fallback_generation_only_not_pr_block():
+def test_build_pr_review_comment_fallback_two_block_when_pr_active_extra():
     generation = [_group(severity=FindingSeverity.error, fingerprint="gen")]
     prior_only = _group(
         severity=FindingSeverity.warning,
@@ -235,8 +235,9 @@ def test_build_pr_review_comment_fallback_generation_only_not_pr_block():
         pr_active_groups=[*generation, prior_only],
     )
     markdown = build_pr_review_comment_fallback(ctx)
-    assert "app/legacy.py" not in markdown
-    assert "### Still open on PR" not in markdown
+    assert "app/legacy.py" in markdown
+    assert "### Still open on PR" in markdown
+    assert "### This generation" in markdown
 
 
 def test_build_check_run_summary_is_compact():
@@ -315,7 +316,9 @@ async def test_build_pr_review_comment_unwraps_json_body_from_moonshot():
         '{"body":"## Revy code review\\n\\nTwo warnings on this revision.\\n\\n'
         "**Merge recommendation:** Review warnings before merge — no critical blockers flagged.\\n\\n"
         '**Confidence score:** 4/5\\n\\nScore is moderated by warning-level findings.\\n\\n'
-        '### Findings\\n\\n| Severity | Category | Title | File |\\n'
+        "### This generation\\n\\n| Severity | Category | Title | File |\\n"
+        '| --- | --- | --- | --- |\\n| warning | bug | Issue | app/main.py |\\n\\n'
+        "### Still open on PR\\n\\n| Severity | Category | Title | File |\\n"
         '| --- | --- | --- | --- |\\n| warning | bug | Issue | app/main.py |"}'
     )
 
@@ -365,6 +368,103 @@ def test_build_publish_format_result_splits_bodies():
     assert "<details>" not in result.check_summary
     assert result.summary_json["confidence"] == result.confidence
     assert "active_count" in result.summary_json
+    assert "generation_active_count" in result.summary_json
+    assert "pr_active_count" in result.summary_json
+
+
+def test_merge_recommendation_uses_pr_active_when_generation_clean():
+    prior_only = _group(
+        severity=FindingSeverity.error,
+        fingerprint="prior",
+        file_path="app/legacy.py",
+    )
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=42,
+        head_sha="abc123",
+        revision_number=2,
+        groups=[],
+        pr_active_groups=[prior_only],
+    )
+    markdown = build_pr_review_comment_fallback(ctx)
+    assert "Ready to merge" not in markdown
+    assert "Fix before merge" in markdown
+    assert compute_confidence([prior_only]) <= 3
+    assert "no active findings" not in markdown.lower()
+
+
+def test_confidence_rationale_pr_wide_when_generation_clean():
+    prior_only = _group(
+        severity=FindingSeverity.error,
+        fingerprint="prior",
+        file_path="app/legacy.py",
+    )
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=42,
+        head_sha="abc123",
+        revision_number=2,
+        groups=[],
+        pr_active_groups=[prior_only],
+    )
+    markdown = build_pr_review_comment_fallback(ctx)
+    assert "no active findings on this revision" not in markdown.lower()
+    assert "critical or error" in markdown.lower()
+
+
+def test_check_and_issue_share_identical_summary_blocks():
+    generation = [_group(severity=FindingSeverity.error, fingerprint="gen")]
+    prior_only = _group(
+        severity=FindingSeverity.warning,
+        fingerprint="prior",
+        file_path="app/legacy.py",
+    )
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=42,
+        head_sha="abc123",
+        revision_number=2,
+        groups=generation,
+        pr_active_groups=[*generation, prior_only],
+    )
+    from app.services.github_publish_formatter import extract_summary_blocks_section
+
+    check_blocks = extract_summary_blocks_section(build_check_run_summary(ctx))
+    issue_blocks = extract_summary_blocks_section(build_pr_review_comment_fallback(ctx))
+    assert check_blocks is not None
+    assert issue_blocks == check_blocks
+
+
+def test_narrative_warns_on_pr_wide_error_when_generation_info_only():
+    generation = [_group(severity=FindingSeverity.info, fingerprint="new-info")]
+    prior_error = _group(
+        severity=FindingSeverity.error,
+        fingerprint="prior-err",
+        file_path="app/legacy.py",
+    )
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=42,
+        head_sha="abc123",
+        revision_number=3,
+        groups=generation,
+        pr_active_groups=[*generation, prior_error],
+    )
+    markdown = build_pr_review_comment_fallback(ctx)
+    assert "Fix before merge" in markdown
+    assert "Address critical or error findings before merge." in markdown
+    assert "merge risk appears low" not in markdown.lower()
+
+
+def test_build_issue_comment_user_prompt_includes_two_block_instruction():
+    from app.services.github_publish_formatter import _build_issue_comment_user_prompt
+
+    groups = [_group(severity=FindingSeverity.warning)]
+    ctx = _ctx(groups)
+    prompt = _build_issue_comment_user_prompt(ctx)
+    assert "### This generation" in prompt
+    assert "### Still open on PR" in prompt
+    assert "PR-wide still-open findings JSON" in prompt
 
 
 def test_build_pr_review_comment_fallback_greptile_shape():
@@ -386,7 +486,8 @@ def test_build_pr_review_comment_fallback_greptile_shape():
     assert "Confidence score" in markdown
     assert "Score is" in markdown
     assert "### Files needing attention" in markdown
-    assert "### Findings" in markdown
+    assert "### This generation" in markdown
+    assert "### Still open on PR" in markdown
     assert "| Severity | Category | Title | File |" in markdown
     assert "<summary>Important files changed</summary>" in markdown
     assert "<summary>Review metadata</summary>" in markdown
@@ -399,10 +500,10 @@ def test_build_pr_review_comment_fallback_collapses_info_when_priority_exists():
         _group(severity=FindingSeverity.info, title="Info two", fingerprint="i2"),
     ]
     markdown = build_pr_review_comment_fallback(_ctx(groups))
-    assert "### Findings" in markdown
-    assert "<summary>2 informational findings</summary>" in markdown
+    assert "### This generation" in markdown
     assert "Info one" in markdown
     assert "Warn" in markdown
+    assert "<summary>2 informational findings</summary>" not in markdown
 
 
 def test_build_pr_review_comment_fallback_narrative_names_top_findings():
@@ -432,7 +533,7 @@ def test_build_pr_review_comment_fallback_narrative_escapes_title_markdown():
     assert "**Use \\`foo\\_\\*\\` safely**" in markdown
 
 
-def test_insert_resolution_metrics_block_before_findings_section():
+def test_insert_resolution_metrics_block_before_summary_blocks():
     from app.services.github_publish_formatter import _insert_resolution_metrics_block
 
     ctx = PublishFormatContext(
@@ -457,14 +558,14 @@ def test_insert_resolution_metrics_block_before_findings_section():
         "**Merge recommendation:** Review.\n\n"
         "**Confidence score:** 4/5\n\n"
         "The score is 4 because warnings remain.\n\n"
-        "### Findings\n\n"
+        "### This generation\n\n"
         "| Severity | Category | Title | File |\n"
     )
     result = _insert_resolution_metrics_block(moonshot, ctx)
     metrics_idx = result.find("### Resolution metrics")
-    findings_idx = result.find("### Findings")
+    generation_idx = result.find("### This generation")
     assert metrics_idx >= 0
-    assert findings_idx > metrics_idx
+    assert generation_idx > metrics_idx
 
 
 def test_has_confidence_rationale_ignores_score_is_in_finding_title():
@@ -547,7 +648,11 @@ async def test_build_pr_review_comment_moonshot_success_includes_greptile_sectio
         "**Merge recommendation:** Review warnings before merge — no critical blockers flagged.\n\n"
         "**Confidence score:** 4/5\n\n"
         "Score is moderated by warning-level findings.\n\n"
-        "### Findings\n\n"
+        "### This generation\n\n"
+        "| Severity | Category | Title | File |\n"
+        "| --- | --- | --- | --- |\n"
+        "| warning | bug | Issue | app/main.py |\n\n"
+        "### Still open on PR\n\n"
         "| Severity | Category | Title | File |\n"
         "| --- | --- | --- | --- |\n"
         "| warning | bug | Issue | app/main.py |\n\n"
@@ -615,7 +720,11 @@ async def test_build_pr_review_comment_accepts_lowercase_score_rationale():
         "**Merge recommendation:** Review warnings before merge — no critical blockers flagged.\n\n"
         "**Confidence score:** 4/5\n\n"
         "The score is 4 because a warning remains on this revision.\n\n"
-        "### Findings\n\n"
+        "### This generation\n\n"
+        "| Severity | Category | Title | File |\n"
+        "| --- | --- | --- | --- |\n"
+        "| warning | bug | Issue | app/main.py |\n\n"
+        "### Still open on PR\n\n"
         "| Severity | Category | Title | File |\n"
         "| --- | --- | --- | --- |\n"
         "| warning | bug | Issue | app/main.py |\n"
@@ -647,7 +756,11 @@ async def test_build_pr_review_comment_accepts_confidence_is_because_rationale()
         "**Merge recommendation:** Review warnings before merge — no critical blockers flagged.\n\n"
         "**Confidence score:** 4/5\n\n"
         "Confidence is 4 because a warning remains on this revision.\n\n"
-        "### Findings\n\n"
+        "### This generation\n\n"
+        "| Severity | Category | Title | File |\n"
+        "| --- | --- | --- | --- |\n"
+        "| warning | bug | Issue | app/main.py |\n\n"
+        "### Still open on PR\n\n"
         "| Severity | Category | Title | File |\n"
         "| --- | --- | --- | --- |\n"
         "| warning | bug | Issue | app/main.py |\n"
@@ -665,6 +778,39 @@ async def test_build_pr_review_comment_accepts_confidence_is_because_rationale()
             result = await build_pr_review_comment(ctx)
 
     assert result.strip() == moonshot_markdown.strip()
+
+
+@pytest.mark.asyncio
+async def test_build_pr_review_comment_moonshot_missing_pr_block_returns_fallback():
+    from app.services.github_publish_formatter import build_pr_review_comment
+
+    groups = [_group(severity=FindingSeverity.warning)]
+    ctx = _ctx(groups)
+    legacy_markdown = (
+        "## Revy code review\n\n"
+        "Narrative.\n\n"
+        "**Merge recommendation:** Review warnings before merge — no critical blockers flagged.\n\n"
+        "**Confidence score:** 4/5\n\n"
+        "Score is moderated by warning-level findings.\n\n"
+        "### Findings\n\n"
+        "| Severity | Category | Title | File |\n"
+        "| --- | --- | --- | --- |\n"
+        "| warning | bug | Issue | app/main.py |\n"
+    )
+
+    with patch("app.services.github_publish_formatter.settings") as mock_settings:
+        mock_settings.reviewer_llm_enabled.return_value = True
+        mock_settings.revy_revision_timeout_standard_seconds = 60
+        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.app_public_url = "https://app.revy.dev"
+        with patch(
+            "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
+            AsyncMock(return_value=legacy_markdown),
+        ):
+            result = await build_pr_review_comment(ctx)
+            expected = build_pr_review_comment_fallback(ctx)
+
+    assert result == expected
 
 
 @pytest.mark.asyncio

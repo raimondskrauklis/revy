@@ -1,10 +1,16 @@
 # Bugbot — review pipeline contract
 
-**Active program:** review-engineering-context — Moonshot manifest inject (RCX P0–P5 on `feat/review-engineering-context`).
+**Active program:** publish-summary-alignment — issue comment two-block parity with check run (PSA P0–P2 on `feat/publish-summary-alignment`).
 
 When reviewing **backend** changes that touch publish / formatter / pipeline / generation lifecycle / judge code, treat these as authoritative:
 
-**Review engineering context (active program):**
+**Publish summary alignment (active program):**
+
+- [PUBLISH_SUMMARY_ALIGNMENT_EXECUTION.md](../docs/review-pipeline/publish-summary-alignment/waves/PUBLISH_SUMMARY_ALIGNMENT_EXECUTION.md) — LOOP P0–P2, PSA-D* locks
+- [PUBLISH_SUMMARY_ALIGNMENT_FINDINGS.md](../docs/review-pipeline/publish-summary-alignment/PUBLISH_SUMMARY_ALIGNMENT_FINDINGS.md) — RG-14 / FR-Q16 gaps, verdict scope
+- [PUBLISH_SUMMARY_ALIGNMENT_GENERAL_PLAN.md](../docs/review-pipeline/publish-summary-alignment/PUBLISH_SUMMARY_ALIGNMENT_GENERAL_PLAN.md) — phase goals
+
+**Review engineering context (shipped #61):**
 
 - [REVIEW_ENGINEERING_CONTEXT_EXECUTION.md](../docs/review-pipeline/review-engineering-context/waves/REVIEW_ENGINEERING_CONTEXT_EXECUTION.md) — LOOP P0–P5, RCX-D* locks
 - [REVIEW_ENGINEERING_CONTEXT_FINDINGS.md](../docs/review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_FINDINGS.md) — RCX gaps, validation metrics
