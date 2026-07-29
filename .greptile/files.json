@@ -1,22 +1,22 @@
 {
   "files": [
     {
-      "path": "docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md",
-      "description": "Wave C LOOP index \u2014 C0\u2013C4 HEAD hygiene + manifest",
+      "path": "docs/review-pipeline/finding-resolution-dogfood/waves/FINDING_RESOLUTION_DOGFOOD_EXECUTION.md",
+      "description": "FR-DG execution index \u2014 waves A\u2013C sign-off complete",
       "scope": [
         "backend/**"
       ]
     },
     {
-      "path": "docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_CLOSURE_SCOPE_FINDINGS.md",
-      "description": "FR-CS baseline \u2014 cohort vs HEAD hygiene (rev 3)",
+      "path": "docs/review-pipeline/finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_FINDINGS.md",
+      "description": "FR-DG baseline \u2014 FR-DG1/2 closed PASS; MR-DG1 open",
       "scope": [
         "backend/**"
       ]
     },
     {
-      "path": "docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md",
-      "description": "Wave C general plan \u2014 C0\u2013C4 phases",
+      "path": "docs/review-pipeline/finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md",
+      "description": "FR-DG general plan \u2014 P0\u2013P4 phases",
       "scope": [
         "backend/**"
       ]

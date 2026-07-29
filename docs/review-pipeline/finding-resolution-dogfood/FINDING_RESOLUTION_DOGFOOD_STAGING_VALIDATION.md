@@ -2,7 +2,7 @@
 
 **Program:** [README.md](./README.md) · **Baseline:** [FINDING_RESOLUTION_DOGFOOD_FINDINGS.md](./FINDING_RESOLUTION_DOGFOOD_FINDINGS.md)
 
-**Status:** **Track C in progress** — [#68](https://github.com/raimondskrauklis/revy/pull/68) merged + deployed `2026-07-29T21:53:28Z`; [#67](https://github.com/raimondskrauklis/revy/pull/67) closed (evidence-only). Operator: [Track C memo](./FINDING_RESOLUTION_DOGFOOD_STAGING_VALIDATION.md#track-c--closure-scope-wave-c-68-deployed).
+**Status:** **Track C complete** — [#68](https://github.com/raimondskrauklis/revy/pull/68) deployed `2026-07-29T21:53:28Z`; [#69](https://github.com/raimondskrauklis/revy/pull/69) C3 **PASS**; [#67](https://github.com/raimondskrauklis/revy/pull/67) closed (evidence-only).
 
 ## Deploy boundaries
 
@@ -60,8 +60,8 @@
 | C3.1a | Probe publish (MD5) | **FAIL** | Revy rev 2 `6d9a9fe` — 0 publishable findings |
 | C3.1 | Probe publish (#67-style snippet) | **PASS** | rev 3 `7d63bd0`; group `019fafe7-938a-7f11-99b1-bb830afffcb4`; revision `019fafe5-c504-7805-920f-9131b7f73ee9`; run `019fafe5-d65e-72c0-b05e-15de100036f9`; `gen=1` / `pr=1` |
 | C3.2 | Age cohort (unrelated backend commit) | **PASS** | rev 5 `efc579c`; probe `last_seen` rev 3 `019fafe5-c504-7805-920f-9131b7f73ee9`; `gen=0` / `pr=1` |
-| C3.3 | Aged delete sign-off | **in progress** | `state`, `resolution_method`, G9 path-removed line |
-| C3.4 | Rename guard (optional) | pending | old-path groups stay active |
-| C3.5 | FR-Q13 re-open (optional) | pending | — |
+| C3.3 | Aged delete sign-off | **PASS** | rev 6 `bdb25a4`; group `resolved` + `absent_and_addressed`; `hygiene_path_removed_count=1`; run `019faff3-28aa-74c8-8812-671142ce9eef`; Revy **Closed as path removed: 1**; `pr_active=1` (memo meta finding — probe cohort PASS per VAL8) |
+| C3.4 | Rename guard (optional) | skipped | — |
+| C3.5 | FR-Q13 re-open (optional) | skipped | — |
 
 **Deploy boundary (`--since`):** `2026-07-29T21:53:28Z` (post-#68 droplet deploy)

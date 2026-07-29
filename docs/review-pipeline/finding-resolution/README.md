@@ -36,14 +36,14 @@
 
 **Next wave:** [judge-json-contract](../judge-json-contract/README.md) after merge to `main`.
 
-**Post-PSA dogfood (2026-07-29):** [finding-resolution-dogfood](../finding-resolution-dogfood/README.md) — FR-DG1 PASS; FR-DG2 partial → **[wave C](./FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md)** on [#68](https://github.com/raimondskrauklis/revy/pull/68); **C3 staging sign-off pending**.
+**Post-PSA dogfood (2026-07-29):** [finding-resolution-dogfood](../finding-resolution-dogfood/README.md) — FR-DG1/FR-DG2 **closed PASS**; wave C shipped ([#68](https://github.com/raimondskrauklis/revy/pull/68) + [#69](https://github.com/raimondskrauklis/revy/pull/69) C3).
 
 ## Wave C execution (LOOP)
 
 | Phase | Focus | File | Status |
 |-------|--------|------|--------|
-| C0 | SSOT + index | [C0](./waves/FINDING_RESOLUTION_CLOSURE_SCOPE_C0_EXECUTION.md) | pending |
-| C1 | HEAD hygiene + Pass 2 | [C1](./waves/FINDING_RESOLUTION_CLOSURE_SCOPE_C1_EXECUTION.md) | pending |
-| C2 | Manifest + G9 | [C2](./waves/FINDING_RESOLUTION_CLOSURE_SCOPE_C2_EXECUTION.md) | pending |
-| C3 | Staging Track C | [C3](./waves/FINDING_RESOLUTION_CLOSURE_SCOPE_C3_EXECUTION.md) | pending |
-| C4 | Doc sync | [C4](./waves/FINDING_RESOLUTION_CLOSURE_SCOPE_C4_EXECUTION.md) | pending |
+| C0 | SSOT + index | [C0](./waves/FINDING_RESOLUTION_CLOSURE_SCOPE_C0_EXECUTION.md) | done (`c7c84f1`) |
+| C1 | HEAD hygiene + Pass 2 | [C1](./waves/FINDING_RESOLUTION_CLOSURE_SCOPE_C1_EXECUTION.md) | done (`d4666aa`) |
+| C2 | Manifest + G9 | [C2](./waves/FINDING_RESOLUTION_CLOSURE_SCOPE_C2_EXECUTION.md) | done (`d4666aa`) |
+| C3 | Staging Track C | [C3](./waves/FINDING_RESOLUTION_CLOSURE_SCOPE_C3_EXECUTION.md) | done (`bdb25a4` / [#69](https://github.com/raimondskrauklis/revy/pull/69)) |
+| C4 | Doc sync | [C4](./waves/FINDING_RESOLUTION_CLOSURE_SCOPE_C4_EXECUTION.md) | done |
