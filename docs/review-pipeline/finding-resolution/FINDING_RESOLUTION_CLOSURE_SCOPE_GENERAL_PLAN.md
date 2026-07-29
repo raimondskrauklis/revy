@@ -1,105 +1,105 @@
 # Finding resolution — closure scope general plan (wave C)
 
-**Baseline:** [FINDING_RESOLUTION_CLOSURE_SCOPE_FINDINGS.md](./FINDING_RESOLUTION_CLOSURE_SCOPE_FINDINGS.md)  
-**Parent:** [FINDING_RESOLUTION_GENERAL_PLAN.md](./FINDING_RESOLUTION_GENERAL_PLAN.md) (P0–P5 shipped)  
-**Dogfood:** [finding-resolution-dogfood](../finding-resolution-dogfood/README.md) waves A + B complete; FR-DG2 **partial PASS**.
+**Baseline:** [FINDING_RESOLUTION_CLOSURE_SCOPE_FINDINGS.md](./FINDING_RESOLUTION_CLOSURE_SCOPE_FINDINGS.md) (rev 2)  
+**Peer review:** 2026-07-29 — Pass 2 widen + compare-first + CS-Q7 incorporated.
 
-**Thesis:** Split **metrics Pass 1** (pairing cohort, FR-Q12) from **hygiene Pass 1b** (all active groups on deleted `file_path`) so file removal closes stale groups across multi-push PRs without breaking transition-only rate math.
+**Thesis:** **HEAD-truth hygiene** (path gone on PR) closes stale groups across multi-push PRs via Pass 1b stamp + **widened Pass 2** query, while **FR-Q12 pairing metrics** stay on Pass 1a only.
 
-**North star:** PSA #63 class — **code/path gone → group resolved + thread collapsed** — on any push, not only when `last_seen == prior_revision`.
+**North star:** PSA #63 class — code/path gone on HEAD → group resolved + thread collapsed.
 
 ---
 
-## Locked decisions (proposed — confirm before execution)
+## Locked decisions (rev 2)
 
 | Q# | Decision |
 |----|----------|
-| **CS-Q3** | **Two Pass 1 tracks:** (a) pairing cohort — line region + unchanged FR-Q12; (b) hygiene — `file_path ∈ removed_paths` → `addressed` for **all active groups** on path. |
-| **CS-Q4** | Reuse `absent_and_addressed` on Pass 2; no new `resolution_method` v1. |
-| **CS-Q6** | Hygiene closures on aged cohort: either (i) count in `transitions_addressed` **and** expand denominator rule for path-gone, or (ii) separate manifest field `hygiene_closed_count` excluded from rate — **prefer (ii)** for FR-Q12 purity. |
-| **CS-OPS** | Staging dogfood: backend-only pushes; per-group DB evidence; no program-doc edits in repro pushes. |
+| **CS-Q3** | Pass 1a = pairing cohort (metrics). Pass 1b = hygiene path-gone on **all active groups** on affected `file_path`. |
+| **CS-Q7** | Hygiene path-gone keyed to **full-PR compare** (`base_sha → head_sha`), not push-delta only. |
+| **CS-Q8** | Hygiene stamp applies to **`deleted_paths` only** — not rename `previous_filename`. |
+| **CS-Q9** | **Pass 2 must widen** — candidates include pairing cohort **OR** `resolution_status == addressed` from hygiene; `should_close_absent_and_addressed` unchanged. |
+| **CS-Q4** | Reuse `absent_and_addressed`; no new `resolution_method` v1. |
+| **CS-Q6** | Exclude hygiene closures from `resolution_rate_pct`; **visible** G9 line (`Closed as path removed: N`). |
+| **CS-Q5** | Merge #67 **evidence-only** now; does not block C1 implementation. |
+| **CS-OPS** | Backend-only dogfood pushes; E2E tests mandatory. |
 
 ---
 
-## Phases (wave C)
+## Phases
 
-### C0 — Decision + doc lock
+### C0 — Lock decisions + peer-review sign-off
 
-**Goal:** Peer-review findings + this plan; lock CS-Q6 metrics split; update gap registry (FR-CS1 → planned).
+**Goal:** Lock CS-Q6, CS-Q7, CS-Q8, CS-Q9; merge #67 evidence to `main` (optional, non-blocking for C1 coding).
 
-**Deliverables:** Findings CS-Q* locked; amendment note on FR-Q12 if needed (doc only).
-
-**Depends on:** Dogfood #67 evidence merged to `main`.
+**Deliverables:** Findings rev 2; FR-Q12 hygiene exclusion note (doc).
 
 ---
 
-### C1 — Hygiene Pass 1b (code)
+### C1 — Hygiene pipeline (code) — **not Pass 1 only**
 
-**Goal:** `apply_resolution_status_for_synchronize` stamps `addressed` on **all active groups** where `group.file_path ∈ compare_result.removed_paths`, after pairing-cohort Pass 1a.
+**Goal:** End-to-end aged cohort closure.
 
-**Scope in:** `github_resolution_metrics.py`; unit tests (aged cohort + adjacent); manifest field if CS-Q6 (ii).
+**In scope:**
 
-**Scope out:** Pass 2 rule changes; Moonshot prompt.
+| Change | Detail |
+|--------|--------|
+| Compare-first | `apply_resolution_status_for_synchronize`: fetch compare before cohort check; never early-return before 1b |
+| `deleted_paths` split | Extend `ComparePatchesResult` — `deleted_paths` vs `renamed_from_paths` |
+| Pass 1a | Unchanged grain — pairing cohort, line region |
+| Pass 1b | All **active** groups with `file_path ∈ head_gone_paths` → `addressed` |
+| Pass 2 widen | `github_finding_closure.py` query — pairing cohort **OR** hygiene-addressed actives |
+| HEAD compare helper | Reuse/compare pattern from `fetch_compare_review_context` for path-gone set |
+| Tests | **E2E:** `apply_resolution_status_for_synchronize` → `apply_pass2_closure_for_review_run` on aged group |
 
-**Deliverables:** PR `fix/fr-closure-scope-hygiene-pass1b`; pytest gate.
+**Out of scope:** Pass 3 widen (note FR-CS4); Moonshot prompt.
 
----
+**R2 mitigation:** Evaluate durable `path_removed_at_revision_id` vs close-before-supersede in same worker — decision in C1 design note.
 
-### C2 — Manifest / G9 alignment (if CS-Q6 ii)
-
-**Goal:** Reconcile manifest exposes `hygiene_closed_count` (or similar) so G9 prose doesn’t imply false resolution rate spikes.
-
-**Scope in:** `build_resolution_pass_manifest`, `format_resolution_metrics_block`, formatter tests.
-
-**Deliverables:** Manifest schema documented in findings; no user-facing rate lie.
-
----
-
-### C3 — Staging sign-off (dogfood Track C)
-
-**Goal:** Close FR-DG2 + FR-CS1 on staging.
-
-**Protocol:**
-
-| Push | Action | Pass |
-|------|--------|------|
-| C3.1 | New chore PR; introduce minimal backend probe (1 defect) | ≥1 active group |
-| C3.2 | Unrelated backend commit (optional — ages cohort) | publish completes |
-| C3.3 | Delete probe file | target + aged groups `absent_and_addressed`; inline collapse |
-
-**Deploy boundary:** post-C1 merge droplet ISO.
-
-**Deliverables:** [FINDING_RESOLUTION_DOGFOOD_STAGING_VALIDATION.md](../finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_STAGING_VALIDATION.md) Track C rows; FR-DG2 → **closed PASS**.
+**Deliverables:** PR `fix/fr-closure-scope-hygiene` (Pass 1b + Pass 2 + compare split).
 
 ---
 
-### C4 — Program doc sync
+### C2 — Manifest + G9 (required with C1)
 
-**Goal:** Parent + dogfood README; close FR-CS*; SV-Q7 chore PR merge policy.
+**Goal:** CS-Q6 — exclude hygiene from rate **and** show on surface.
 
-**Out of scope:** MR-DG1 (wave B dogfood).
+**In scope:**
+
+- Predicate excluding hygiene-aged closures from `resolution_rate_pct` math.
+- `hygiene_path_removed_count` (or similar) on reconcile manifest.
+- `format_resolution_metrics_block` + G9 line: path-removed count outside push pair.
+- Formatter unit tests.
+
+**Not sufficient:** manifest field alone without exclusion predicate + visible prose.
+
+---
+
+### C3 — Staging sign-off
+
+| Step | Action |
+|------|--------|
+| **C3.0** | Smoke: delete-only push publishes (Moonshot + reconcile complete) |
+| **C3.1** | Introduce backend probe |
+| **C3.2** | Unrelated commit (age cohort) |
+| **C3.3** | Delete probe — aged + adjacent groups close; inline collapse |
+| **C3.4** | Rename scenario — no mass closure (R1) |
+
+**Deploy boundary:** post-C1+C2 droplet ISO.
+
+---
+
+### C4 — Doc sync
+
+Close FR-CS1/FR-CS6/FR-CS7 on PASS; FR-DG2 → closed PASS.
 
 ---
 
 ## Dependencies
 
 ```text
-C0 (lock) → C1 (code) → deploy → C3 (staging)
-                ↘ C2 (manifest) — parallel if CS-Q6 ii
-C3 PASS → C4 (docs)
+C0 (lock) → C1 (hygiene Pass 1b + Pass 2 widen) + C2 (manifest/G9) → deploy → C3 → C4
 ```
 
----
-
-## PR strategy
-
-| PR | Content |
-|----|---------|
-| `fix/fr-closure-scope-hygiene-pass1b` | C1 (+ C2 if needed) |
-| `chore/fr-dg2-track-c-staging` | C3 dogfood only |
-| Docs on `main` | C0 + C4 |
-
-**Do not** fold hygiene fix into open #67 — #67 is evidence PR; wave C is product fix + clean repro.
+C1 and C2 ship in **one PR** — shipping C1 without C2 risks silent metric lie.
 
 ---
 
@@ -107,15 +107,28 @@ C3 PASS → C4 (docs)
 
 | Check | Target |
 |-------|--------|
-| Unit: aged group on deleted path | `addressed` → Pass 2 → `absent_and_addressed` |
-| Staging C3.3 | Push-1 cohort closes after delete on rev ≥3 |
-| FR-Q12 rate | No false 100% from hygiene-only rows |
-| FR-Q13 | Re-report same fingerprint re-opens |
+| E2E unit: aged group | sync + Pass 2 → `absent_and_addressed` |
+| Staging C3.3 | `019faf58`-class orphan closes |
+| FR-Q12 rate | Hygiene excluded; visible path-removed line |
+| Rename R1 | No PR-wide closure on rename old path |
+| FR-Q13 | Re-report re-opens |
+
+---
+
+## What changed from wave C v1
+
+| v1 gap | v2 fix |
+|--------|--------|
+| Pass 2 out of scope | **CS-Q9** — Pass 2 widen in C1 |
+| Early return before compare | Compare-first restructure |
+| Push-delta `removed_paths` only | **CS-Q7** — full-PR HEAD path-gone |
+| CS-Q6 optional field | Exclusion predicate + **visible G9** |
+| Unit tests on resolver only | **E2E** sync → Pass 2 |
+| #67 merge circular | CS-Q5 evidence-only |
 
 ---
 
 ## References
 
 - [FINDING_RESOLUTION_CLOSURE_SCOPE_FINDINGS.md](./FINDING_RESOLUTION_CLOSURE_SCOPE_FINDINGS.md)
-- [#67 dogfood evidence](https://github.com/raimondskrauklis/revy/pull/67)
-- [#66 deletion stamp](https://github.com/raimondskrauklis/revy/pull/66)
+- [#67](https://github.com/raimondskrauklis/revy/pull/67) · [#66](https://github.com/raimondskrauklis/revy/pull/66)
