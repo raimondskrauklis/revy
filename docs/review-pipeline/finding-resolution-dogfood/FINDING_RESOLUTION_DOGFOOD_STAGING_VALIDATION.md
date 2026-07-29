@@ -59,8 +59,8 @@
 | C3.0 | Delete-only publish smoke | pending | — |
 | C3.1a | Probe publish (MD5) | **FAIL** | Revy rev 2 `6d9a9fe` — 0 publishable findings |
 | C3.1 | Probe publish (#67-style snippet) | **PASS** | rev 3 `7d63bd0`; group `019fafe7-938a-7f11-99b1-bb830afffcb4`; revision `019fafe5-c504-7805-920f-9131b7f73ee9`; run `019fafe5-d65e-72c0-b05e-15de100036f9`; `gen=1` / `pr=1` |
-| C3.2 | Age cohort (unrelated backend commit) | **in progress** | record `last_seen_revision_id` before delete |
-| C3.3 | Aged delete sign-off | pending | `state`, `resolution_method`, G9 path-removed line |
+| C3.2 | Age cohort (unrelated backend commit) | **PASS** | rev 5 `efc579c`; probe `last_seen` rev 3 `019fafe5-c504-7805-920f-9131b7f73ee9`; `gen=0` / `pr=1` |
+| C3.3 | Aged delete sign-off | **in progress** | `state`, `resolution_method`, G9 path-removed line |
 | C3.4 | Rename guard (optional) | pending | old-path groups stay active |
 | C3.5 | FR-Q13 re-open (optional) | pending | — |
 
