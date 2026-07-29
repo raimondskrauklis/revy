@@ -4,6 +4,7 @@
 Surface contract (PSA-D1–D4, PSA-D12):
 - Check + issue comment share ``format_summary_comment`` (this generation + still open on PR).
 - Verdict fields (confidence, merge, rationale, files, security rollups) use PR-wide active groups.
+- Verdict confidence applies generation resolution boost from ``ctx.groups`` (PSA-D3).
 - G9 / resolution metrics stay generation-scoped.
 - Inline publish remains generation-only; ``compute_check_conclusion`` unchanged (generation-scoped).
 """
@@ -247,7 +248,11 @@ def _confidence_ceiling(groups: list[GitHubFindingGroupORM]) -> int:
     return 5
 
 
-def compute_confidence(groups: list[GitHubFindingGroupORM]) -> int:
+def compute_confidence(
+    groups: list[GitHubFindingGroupORM],
+    *,
+    resolution_groups: list[GitHubFindingGroupORM] | None = None,
+) -> int:
     active = _active_groups(groups)
     if not active:
         return 5
@@ -258,7 +263,8 @@ def compute_confidence(groups: list[GitHubFindingGroupORM]) -> int:
     elif any(g.severity == FindingSeverity.warning for g in active):
         score -= 1
 
-    resolution = count_resolution_status(groups)
+    resolution_source = resolution_groups if resolution_groups is not None else groups
+    resolution = count_resolution_status(resolution_source)
     score += min(2, resolution[ResolutionStatus.addressed.value])
     dismissed_total = (
         resolution[ResolutionStatus.judge_dismissed.value]
@@ -267,6 +273,12 @@ def compute_confidence(groups: list[GitHubFindingGroupORM]) -> int:
     )
     score += min(1, dismissed_total)
     return max(0, min(_confidence_ceiling(groups), score))
+
+
+def compute_publish_confidence(ctx: PublishFormatContext) -> int:
+    """PR-wide severity with generation-scoped resolution boost (PSA-D3)."""
+    verdict = verdict_groups(ctx)
+    return compute_confidence(verdict, resolution_groups=ctx.groups)
 
 
 def build_g9_resolution_prose(groups: list[GitHubFindingGroupORM]) -> str:
@@ -347,7 +359,7 @@ def format_summary_comment(
 def build_check_run_summary(ctx: PublishFormatContext) -> str:
     """G3 compact body for GitHub check run output."""
     verdict = verdict_groups(ctx)
-    confidence = compute_confidence(verdict)
+    confidence = compute_publish_confidence(ctx)
     lines = [
         "## Revy review",
         "",
@@ -428,9 +440,14 @@ def _has_resolution_progress(groups: list[GitHubFindingGroupORM]) -> bool:
     )
 
 
-def _confidence_rationale(groups: list[GitHubFindingGroupORM]) -> str:
+def _confidence_rationale(
+    groups: list[GitHubFindingGroupORM],
+    *,
+    resolution_groups: list[GitHubFindingGroupORM] | None = None,
+) -> str:
     active = _active_groups(groups)
-    confidence = compute_confidence(groups)
+    confidence = compute_confidence(groups, resolution_groups=resolution_groups)
+    resolution_source = resolution_groups if resolution_groups is not None else groups
     if not active:
         return "Score is 5 because there are no active findings on this pull request."
     if confidence <= 2:
@@ -439,12 +456,17 @@ def _confidence_rationale(groups: list[GitHubFindingGroupORM]) -> str:
         return "Score is moderated by active findings that still need review before merge."
     if confidence == 4:
         base = "Score is good but not perfect: some active findings remain."
-        if _has_resolution_progress(groups):
+        if _has_resolution_progress(resolution_source):
             return f"{base} Prior fixes or dismissals improved confidence."
         return base
     if any(g.severity != FindingSeverity.info for g in active):
         return "Score is high relative to remaining active findings on this revision."
     return "Score is high with only informational findings on this revision."
+
+
+def publish_confidence_rationale(ctx: PublishFormatContext) -> str:
+    verdict = verdict_groups(ctx)
+    return _confidence_rationale(verdict, resolution_groups=ctx.groups)
 
 
 def _review_narrative_paragraph(ctx: PublishFormatContext) -> str:
@@ -573,7 +595,7 @@ def build_pr_review_comment_fallback(
     """Deterministic Greptile-shaped issue comment (G3 full narrative fallback)."""
     verdict = verdict_groups(ctx)
     pr_active = _active_groups(verdict)
-    confidence = compute_confidence(verdict)
+    confidence = compute_publish_confidence(ctx)
     resolution_prose = build_g9_resolution_prose(ctx.groups)
 
     lines = [
@@ -585,7 +607,7 @@ def build_pr_review_comment_fallback(
         "",
         f"**Confidence score:** {confidence}/5",
         "",
-        _confidence_rationale(verdict),
+        publish_confidence_rationale(ctx),
     ]
 
     if resolution_prose:
@@ -716,7 +738,7 @@ def _build_issue_comment_user_prompt(ctx: PublishFormatContext) -> str:
     verdict = verdict_groups(ctx)
     generation_active = _active_groups(ctx.groups)
     pr_active = _active_groups(verdict)
-    confidence = compute_confidence(verdict)
+    confidence = compute_publish_confidence(ctx)
     has_security = any(group.category == FindingCategory.security for group in pr_active)
     return (
         "Format the issue comment from this structured review context.\n\n"
@@ -724,7 +746,7 @@ def _build_issue_comment_user_prompt(ctx: PublishFormatContext) -> str:
         f"Confidence score (use this exact value): {confidence}/5\n"
         f"Label the section **Confidence score:** {confidence}/5 in the comment.\n"
         f"Confidence rationale (include as one sentence after the score): "
-        f"{_confidence_rationale(verdict)}\n"
+        f"{publish_confidence_rationale(ctx)}\n"
         f"Narrative hints (write 2-4 sentences in your own words): "
         f"{_review_narrative_paragraph(ctx)}\n"
         f"Merge recommendation (use this exact line): {_merge_recommendation(verdict)}\n"
@@ -793,7 +815,7 @@ async def build_pr_review_comment(ctx: PublishFormatContext) -> str:
 
 def _build_summary_json(ctx: PublishFormatContext) -> dict:
     verdict = verdict_groups(ctx)
-    confidence = compute_confidence(verdict)
+    confidence = compute_publish_confidence(ctx)
     return {
         "head_sha": ctx.head_sha,
         "revision_number": ctx.revision_number,

@@ -91,6 +91,39 @@ def test_confidence_rationale_four_without_resolution_omits_progress_claim():
     assert "some active findings remain" in rationale
 
 
+def test_publish_confidence_applies_generation_resolution_boost_to_pr_wide_verdict():
+    resolved = _group(
+        resolution_method=ResolutionMethod.absent_and_addressed,
+        state=GitHubFindingGroupState.resolved,
+        fingerprint="fixed",
+    )
+    prior_warning = _group(severity=FindingSeverity.warning, fingerprint="prior")
+    severity_only = compute_confidence([prior_warning])
+    with_boost = compute_confidence([prior_warning], resolution_groups=[resolved])
+    assert with_boost >= severity_only
+    from app.services.github_publish_formatter import _confidence_rationale
+
+    rationale = _confidence_rationale([prior_warning], resolution_groups=[resolved])
+    assert "Prior fixes or dismissals improved confidence" in rationale
+
+
+def test_summary_json_active_count_fields_psa_d11():
+    generation = [_group(severity=FindingSeverity.error, fingerprint="gen")]
+    prior = _group(severity=FindingSeverity.warning, fingerprint="prior")
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=42,
+        head_sha="abc123",
+        revision_number=2,
+        groups=generation,
+        pr_active_groups=[*generation, prior],
+    )
+    summary = build_publish_format_result(ctx).summary_json
+    assert summary["generation_active_count"] == 1
+    assert summary["pr_active_count"] == 2
+    assert summary["active_count"] == summary["pr_active_count"]
+
+
 def test_build_g9_resolution_prose_ignores_addressed_still_active():
     groups = [
         _group(
