@@ -2,7 +2,9 @@
 
 **Program:** [README.md](./README.md) · **Baseline:** [PUBLISH_SUMMARY_ALIGNMENT_FINDINGS.md](./PUBLISH_SUMMARY_ALIGNMENT_FINDINGS.md)
 
-**Status:** **push 1 PASS** (2026-07-29) — post-deploy dogfood PR [#63](https://github.com/raimondskrauklis/revy/pull/63); push 2–3 pending for resolution/collapse dogfood.
+**Status:** **push 1 PASS** (2026-07-29) — post-deploy dogfood PR [#63](https://github.com/raimondskrauklis/revy/pull/63); push 2–3 use **behavior probes** (not doc fixes).
+
+**Validation priority:** exercise two-block / G9 / collapse / `summary_json` on staging; fixing Greptile doc nits is **out of scope**.
 
 **Parallel tracks (do not block):**
 
@@ -50,8 +52,9 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
 
 1. ~~Open post-deploy dogfood PR~~ — **done** (#63).
 2. ~~Push 1 — two-block + inline + `summary_json`~~ — **done** (`ed95a5c`, rev 2).
-3. **Push 2** — fix one flagged doc finding; confirm G9 prose, GH-1v2 thread collapse, block 2 shrink.
-4. **Push 3** — re-introduce issue; block 1 new row; block 2 reflects PR-wide state.
+3. **Push 2** — add PSA staging probe (`backend/tests/fixtures/psa_staging/probe_module.py` + unit probes); expect new generation finding on unused `PSA_STAGING_PROBE_MARKER`.
+4. **Push 3** — wire marker into `psa_staging_probe_value()` return; expect G9 addressed prose, GH-1v2 thread collapse, block 2 shrink vs push 2.
+5. **Push 4 (optional)** — re-introduce unused marker; block 1 shows new generation row again.
 
 ## Pass criteria (push 1 — rev 2)
 
@@ -72,6 +75,8 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
 | — | `56963dc` | — | — | — | — | PR #62 rev5 pre-deploy — **excluded** |
 | 0 | `a6c03d1` | — | — | — | — | PR #63 rev1 — review completed; publish job not completed (superseded) |
 | 1 | `ed95a5c` | 1 | 2 | 1 | Review warnings | rev 2; run `019fadb4-f777-7445-bdb6-9aeab9da9a2b`; comment [#5117353181](https://github.com/raimondskrauklis/revy/pull/63#issuecomment-5117353181) |
+| 1b | `c57a9c0` | — | — | — | — | rev 3 memo-only; publish pending at operator check |
+| 2 | *(pending)* | — | — | — | — | probe files + behavior tests — triggers rev 4 |
 
 **`summary_json` sample (push 1):**
 
