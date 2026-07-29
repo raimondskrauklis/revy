@@ -16,7 +16,7 @@
 
 | PR | Program | Branch | Status |
 |----|---------|--------|--------|
-| [#63](https://github.com/raimondskrauklis/revy/pull/63) | PSA post-#62 deploy | `chore/psa-staging-dogfood` | **push 1 PASS** — push 2 probe files staged |
+| [#63](https://github.com/raimondskrauklis/revy/pull/63) | PSA post-#62 deploy | `chore/psa-staging-dogfood` | **push 2 PASS** — push 3 in flight |
 
 ## Related per-program validation memos
 
