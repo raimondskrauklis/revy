@@ -54,6 +54,16 @@
 
 ---
 
+## FR-DG-VAL6 — Push 2a wire did not surface Moonshot finding
+
+| Item | Locked decision |
+|------|-----------------|
+| **Evidence** | PR #65 rev 1 `cdea3cc` — `gen=0`, `pr=0`, 0 findings; G9 `n/a` |
+| **Cause** | Test-fixture-only wire insufficient for Moonshot publishable finding |
+| **Remediation** | Push **2b** adds PSA-class wrong-kwargs snippet in `probe_module.py`; push **2c** fixes → FR-DG1; push **3** removes probe |
+
+---
+
 ## FR-DG-VAL5 — `publish_summary` script usage
 
 | Window | `--since` | Use |

@@ -53,7 +53,8 @@
 | Push | `head_sha` | `review_run_id` | `gen` / `pr` | Notes |
 |------|------------|-----------------|--------------|-------|
 | 1 | `5bb55ea` | `019fae9b-afb0-7229-a827-992382310366` | 0 / 0 | #64 rev 1; probe unused; judge dismissed 1 FP |
-| 2a | — | — | — | pending |
+| 2a | `cdea3cc` | `019faf0d-469b-70ef-8815-5a6dd119a51a` | 0 / 0 | #65 rev 1; wire only; 0 findings — [VAL6](./FINDING_RESOLUTION_DOGFOOD_VALIDATION_FINDINGS.md#fr-dg-val6--push-2a-wire-did-not-surface-moonshot-finding) |
+| 2b | — | — | — | in progress |
 | 2b | — | — | — | FR-DG1 target |
 | 3 | — | — | — | FR-DG2 target |
 

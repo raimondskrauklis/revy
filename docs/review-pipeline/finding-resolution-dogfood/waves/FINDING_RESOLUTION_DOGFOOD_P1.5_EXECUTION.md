@@ -8,9 +8,10 @@ Phase **P1.5** of [FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md](../FINDING_RESOLU
 
 - **#64 merged wave A** — P1+P2 code live on staging after deploy `2026-07-29T17:50:43Z`; dogfood continues on **new open** chore PR ([FR-DG-VAL1](../FINDING_RESOLUTION_DOGFOOD_VALIDATION_FINDINGS.md#fr-dg-val1--wave-a-merged-in-one-pr-64)).
 - **FR-DG1 needs rev ≥ 2** on open dogfood PR — wire-only rev 1 does not sign off FR-DG1 ([FR-DG-VAL2](../FINDING_RESOLUTION_DOGFOOD_VALIDATION_FINDINGS.md#fr-dg-val2--fr-dg1-requires-rev--2-on-open-dogfood-pr)).
-- **Push 2a:** wire `FR_DOGFOOD_PROBE_MARKER` in `probe_module.py` (single commit); wait Revy.
-- **Push 2b:** minimal fix addressing active finding from 2a; FR-DG1 PASS criteria apply on **this** publish.
-- **Push 3 (P2.4):** separate commit removing probe — FR-DG2; not combined with 2b.
+- **Push 2a:** wire `FR_DOGFOOD_PROBE_MARKER` in `probe_module.py` (single commit); wait Revy. **Result:** 0 findings ([FR-DG-VAL6](../FINDING_RESOLUTION_DOGFOOD_VALIDATION_FINDINGS.md)).
+- **Push 2b:** add PSA-class wrong-kwargs review probe snippet (rev 2); wait Revy.
+- **Push 2c:** fix/remove probe snippet; FR-DG1 PASS criteria on **this** publish.
+- **Push 3 (P2.4):** remove probe tree — FR-DG2.
 - **One push per agent cycle** — human gate between 2a and 2b.
 
 ## Out of scope for P1.5
@@ -47,9 +48,17 @@ cd backend && pipenv run pytest tests/unit/test_fr_dogfood_probe.py -q
 
 ---
 
-## P1.5.3 — Push 2b fix (FR-DG1 sign-off)
+## P1.5.3 — Push 2b introduce review probe (rev 2)
 
-**What:** Single commit fixing active finding from 2a (touch flagged region); push; wait Revy; fill FR-DG1 pass table.
+**What:** Add `_fr_dogfood_review_probe_snippet` wrong-kwargs defect; push; **wait Revy**.
+
+**Deliverable:** ≥1 active finding on rev 2 publish (or document Moonshot miss).
+
+---
+
+## P1.5.4 — Push 2c fix (FR-DG1 sign-off)
+
+**What:** Remove/fix probe snippet from 2b; push; wait Revy; fill FR-DG1 pass table.
 
 **Pass criteria:** `denominator_active_prior` ≥ 1; `transitions_addressed` ≥ 1; G9 not `n/a`; `summary_json.resolution.addressed` ≥ 1.
 
