@@ -7,11 +7,24 @@
 
 ## Locked decisions (all phases)
 
-- CS-Q7: hygiene = **path absent at `revision.head_sha`** (Contents API 404); compare `deleted_paths` fast path only.
+- CS-Q7: hygiene = **path absent at `revision.head_sha`** (`fetch_repository_file_at_sha` 404); compare `deleted_paths` fast path only.
 - CS-Q8: hygiene **deletions only** — not `renamed_from_paths`.
 - CS-Q9: Pass 2 widen — pairing cohort **OR** `resolution_status == addressed`.
 - CS-Q6: exclude hygiene from `resolution_rate_pct`; visible G9 path-removed line.
+- R4: HEAD check `None` → fail closed + manifest visibility (`head_check_failed_count` in C2).
 - E2E test mandatory: sync → Pass 2 on **aged** cohort (not resolver unit alone).
+
+## Gap status (update each phase)
+
+| Gap | Closes | Status |
+|-----|--------|--------|
+| FR-CS1 | C3 PASS | planned |
+| FR-CS6 | C3 PASS | planned |
+| FR-CS7 | C3 PASS | planned |
+| FR-CS3 | C2 PASS | planned |
+| FR-DG2 | C3 PASS | partial PASS |
+| FR-CS4 | — | defer |
+| FR-CS8 | — | defer |
 
 ## Execution (LOOP order)
 

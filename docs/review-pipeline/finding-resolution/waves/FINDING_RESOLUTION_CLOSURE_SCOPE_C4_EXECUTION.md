@@ -8,10 +8,11 @@ Phase **C4** of [FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md](../FINDING_RE
 
 ## Decisions locked for C4
 
-- FR-CS1, FR-CS6, FR-CS7 → closed on C3 PASS
-- FR-DG2 → closed PASS
-- FR-CS4, FR-CS8 → remain open (documented deferrals)
-- No `changelog.json` — backend/GitHub surface only; no user-facing app feature
+- **Closed on C3 PASS:** FR-CS1, FR-CS6, FR-CS7, FR-DG2
+- **Closed on C2 PASS (verify in C4):** FR-CS3 (manifest rate skew / CS-Q6)
+- **Remain open:** FR-CS4, FR-CS8 (documented deferrals)
+- No `changelog.json` — backend/GitHub surface only
+- Optional: run `post-finish-gap-pass` skill before doc sync if scope drift suspected
 
 ## Out of scope for C4
 
@@ -22,17 +23,17 @@ Phase **C4** of [FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md](../FINDING_RE
 
 ## C4.1 — Gap registry + findings status
 
-**What:** Update closure-scope findings gap table statuses; dogfood README sign-off summary.
+**What:** Update closure-scope findings gap table: FR-CS1/6/7 → closed; FR-CS3 → closed (C2); FR-DG2 → closed PASS. Dogfood README sign-off summary.
 
 **Files:** `docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_CLOSURE_SCOPE_FINDINGS.md`, `docs/review-pipeline/finding-resolution-dogfood/README.md`
 
-**Deliverable:** FR-DG2 row = closed PASS; FR-CS* wave C items closed.
+**Deliverable:** Gap table shows FR-CS1/3/6/7 closed; FR-CS4/8 open.
 
 ---
 
 ## C4.2 — Execution table + parent README
 
-**What:** Mark C0–C4 Done with commit shas in [execution index](./FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md); update [finding-resolution README](../README.md) wave C status.
+**What:** Mark C0–C4 Done with commit shas in [execution index](./FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md); gap status → closed; update [finding-resolution README](../README.md) wave C status.
 
 **Files:** `docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md`, `docs/review-pipeline/finding-resolution/README.md`
 
@@ -40,7 +41,7 @@ Phase **C4** of [FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md](../FINDING_RE
 
 | Doc | Change |
 |-----|--------|
-| `waves/FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md` | C0–C4 Done + shas |
+| `waves/FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md` | C0–C4 Done + shas; gap table closed |
 | `finding-resolution/README.md` | Wave C shipped |
 | `finding-resolution-dogfood/README.md` | FR-DG2 closed PASS |
 
@@ -61,6 +62,7 @@ Phase **C4** of [FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md](../FINDING_RE
 ```bash
 test -f docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md
 grep -q "closed PASS" docs/review-pipeline/finding-resolution-dogfood/README.md
+grep -q "FR-CS3" docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_CLOSURE_SCOPE_FINDINGS.md
 ```
 
 **Human gate:** C3 staging memo signed.

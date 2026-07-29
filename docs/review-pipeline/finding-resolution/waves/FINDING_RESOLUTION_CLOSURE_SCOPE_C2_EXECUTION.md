@@ -2,15 +2,16 @@
 
 # C2 — Manifest + G9 honesty (execution)
 
-Phase **C2** of [FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md](../FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md). Baseline: findings § CS-Q6. **C2 only.**
+Phase **C2** of [FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md](../FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md). Baseline: findings § CS-Q6 + R4 manifest visibility. **C2 only.**
 
-**Goal:** Hygiene path-removed closures excluded from `resolution_rate_pct` and visible in G9 publish block.
+**Goal:** Hygiene path-removed closures excluded from `resolution_rate_pct`; HEAD-fail groups visible in manifest; G9 publish block honest.
 
 ## Decisions locked for C2
 
 - Hygiene closure predicate: `resolved` + `absent_and_addressed` + `resolved_at_revision_id == current` + `last_seen_revision_id NOT IN prior_revision_ids`.
-- Manifest field: `hygiene_path_removed_count` (int).
+- Manifest fields: `hygiene_path_removed_count` (int); `head_check_failed_count` (int) — groups with `closure_blocked_reason == compare_failed` from hygiene HEAD path this sync (R4); existing `compare_failed_count` unchanged for pairing cohort.
 - G9 line: `- **Closed as path removed:** N (outside this push pair)` when N > 0.
+- **FR-CS3** closes on C2 PASS (rate skew fixed).
 - Do **not** ship C1 without C2 (rate lie risk).
 
 ## Out of scope for C2
@@ -20,16 +21,16 @@ Phase **C2** of [FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md](../FINDING_RE
 
 ---
 
-## C2.1 — Manifest exclusion predicate
+## C2.1 — Manifest exclusion predicate + R4 counts
 
-**What:** Update `build_resolution_pass_manifest` to identify hygiene transitions, exclude from `transition_count` and `denominator_active_prior`, set `hygiene_path_removed_count`.
+**What:** Update `build_resolution_pass_manifest`: identify hygiene transitions, exclude from `transition_count` and `denominator_active_prior`, set `hygiene_path_removed_count`. Count hygiene-path HEAD failures in `head_check_failed_count` (or extend `compare_failed_count` docstring if merged — prefer separate field for operator clarity).
 
 **Files:** `backend/app/services/github_resolution_metrics.py`, `backend/tests/unit/test_github_resolution_metrics.py`
 
 **Deliverable:**
 
 ```bash
-cd backend && pipenv run pytest tests/unit/test_github_resolution_metrics.py -q -k "manifest and hygiene"
+cd backend && pipenv run pytest tests/unit/test_github_resolution_metrics.py -q -k "manifest and hygiene or head_check"
 ```
 
 ---
@@ -48,9 +49,9 @@ cd backend && pipenv run pytest tests/unit/test_github_publish_formatter.py -q -
 
 ---
 
-## C2.3 — Pipeline trace parity
+## C2.3 — Pipeline trace + staging metrics tolerance
 
-**What:** Ensure `resolution_pass` manifest written by reconcile includes new field; staging metrics script tolerates optional key (no crash if absent on old runs).
+**What:** Ensure `resolution_pass` manifest written by reconcile includes new fields; staging metrics script tolerates optional keys (no crash on old runs).
 
 **Files:** `backend/app/services/github_pipeline_trace.py` (if needed), `backend/tests/unit/test_github_pipeline_trace.py`, `backend/scripts/judge_json_contract_staging_metrics.py` (read-only tolerance only if required)
 
@@ -66,7 +67,7 @@ cd backend && pipenv run pytest tests/unit/test_github_pipeline_trace.py tests/u
 
 ```bash
 pipenv run lint
-pipenv run pytest tests/unit/test_github_resolution_metrics.py tests/unit/test_github_publish_formatter.py tests/unit/test_github_pipeline_trace.py -q
+pipenv run pytest tests/unit/test_github_resolution_metrics.py tests/unit/test_github_publish_formatter.py tests/unit/test_github_pipeline_trace.py tests/unit/test_judge_json_contract_staging_metrics.py -q
 ```
 
 **Deploy:** record droplet workflow completion ISO for C3 `--since`.

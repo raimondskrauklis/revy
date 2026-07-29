@@ -11,7 +11,7 @@ Phase **C0** of [FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md](../FINDING_RE
 - `active_program`: `finding-resolution-closure-scope`
 - `programs[]`: **exactly one entry** (remove `finding-resolution-dogfood` on switch)
 - Scope: `backend/**` + closure-scope doc paths
-- Gap registry FR-CS1/6/7 → `planned` in execution index (not closed until C3)
+- Gap registry: FR-CS1/6/7 → `planned`; FR-CS3 → `planned` (closes on C2); FR-DG2 → `partial` until C3
 
 ## PR review context (first commit)
 
@@ -42,23 +42,33 @@ cd backend && pipenv run pytest tests/unit/test_generate_greptile_files.py -q
 
 ---
 
-## C0.1 — Execution index + general plan link
+## C0.1 — Execution index + README links
 
-**What:** Ensure [FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md](./FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md) exists with C0–C4 table; link from [finding-resolution README](../README.md) and findings header.
+**What:** Ensure [FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md](./FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md) has C0–C4 table; link from [finding-resolution README](../README.md) and findings header.
 
-**Files:** `docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md`, `docs/review-pipeline/finding-resolution/README.md`, `docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_CLOSURE_SCOPE_FINDINGS.md` (execution link only if missing)
+**Files:** `docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md`, `docs/review-pipeline/finding-resolution/README.md`, `docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_CLOSURE_SCOPE_FINDINGS.md`
 
 **Deliverable:** README wave C row points to execution index.
 
 ---
 
-## C0.2 — FR-Q12 hygiene exclusion note
+## C0.2 — Gap registry status in execution index
 
-**What:** One-line cross-reference in [FINDING_RESOLUTION_GENERAL_PLAN.md](../FINDING_RESOLUTION_GENERAL_PLAN.md) FR-Q12 section: hygiene path-removed closures excluded from transition rate (CS-Q6) — detail in closure-scope findings.
+**What:** Add **Gap status** table to execution index: FR-CS1/6/7/3 → `planned`; FR-DG2 → `partial PASS`; FR-CS4/8 → `defer`. Update findings gap registry status column to `planned` where applicable.
 
-**Files:** `docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_GENERAL_PLAN.md`
+**Files:** `docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md`, `docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_CLOSURE_SCOPE_FINDINGS.md` (gap table Status column only)
 
-**Deliverable:** FR-Q12 mentions wave C exclusion; no open TBDs in C0.
+**Deliverable:** Execution index includes gap-status rows; grep `FR-CS1` shows `planned` in index.
+
+---
+
+## C0.3 — Verify FR-Q12 cross-ref (no new prose unless missing)
+
+**What:** Confirm [FINDING_RESOLUTION_GENERAL_PLAN.md](../FINDING_RESOLUTION_GENERAL_PLAN.md) FR-Q12 row already cross-links CS-Q6 / closure-scope findings. **Do not duplicate** if present.
+
+**Files:** none (verify only)
+
+**Deliverable:** `grep -q "closure-scope findings" docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_GENERAL_PLAN.md`
 
 ---
 
@@ -67,6 +77,7 @@ cd backend && pipenv run pytest tests/unit/test_generate_greptile_files.py -q
 ```bash
 pipenv run python -m scripts.generate_greptile_files_from_review_context --check
 pipenv run pytest tests/unit/test_generate_greptile_files.py -q
+grep -q "Gap status" docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_CLOSURE_SCOPE_EXECUTION.md
 ```
 
 **Deploy:** none.

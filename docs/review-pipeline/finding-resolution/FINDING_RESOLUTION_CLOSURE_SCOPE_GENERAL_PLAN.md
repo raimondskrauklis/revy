@@ -32,7 +32,7 @@
 
 **Goal:** Aged + adjacent file-delete groups close end-to-end (#67 VAL10, #66 regression).
 
-**Scope in:** Compare-first sync; `deleted_paths` / `renamed_from_paths` split; HEAD path-absent helper; Pass 1b (all active groups, PR-wide); Pass 2 candidate widen; E2E sync → Pass 2 tests.
+**Scope in:** Compare-first sync; `deleted_paths` / `renamed_from_paths` split; HEAD path-absent via `fetch_repository_file_at_sha` (+ compare `deleted_paths` fast path); Pass 1b; Pass 2 widen; R4 fail-closed; E2E tests.
 
 **Scope out:** Pass 3 widen; Moonshot prompt; FR-CS4 line-region; durable DB column (R2 defer).
 
@@ -46,7 +46,7 @@
 
 **Goal:** CS-Q6 — hygiene path-removed closures excluded from `resolution_rate_pct` and visible on publish surface.
 
-**Scope in:** `build_resolution_pass_manifest`, `format_resolution_metrics_block`, formatter tests.
+**Scope in:** `build_resolution_pass_manifest` (hygiene exclusion + `head_check_failed_count`); `format_resolution_metrics_block`; formatter tests. **Closes FR-CS3.**
 
 **Scope out:** Frontend; API schema changes.
 
@@ -60,11 +60,11 @@
 
 **Goal:** FR-DG2 + FR-CS1/6/7 closed PASS on staging post-deploy.
 
-**Scope in:** Backend-only probe PR; aged-delete + rename scenarios; staging validation memo rows.
+**Scope in:** Review-visible probe PR (import hook + unit test per dogfood protocol); aged-delete + rename + optional FR-Q13; staging memo rows.
 
 **Scope out:** Product code unless C3 repro finds gap → hotfix branch.
 
-**Deliverables:** Track C rows in dogfood staging memo; deploy-boundary `--since` ISO.
+**Deliverables:** Track C rows in dogfood staging memo; FR-DG2 + FR-CS1/6/7 → closed PASS; deploy-boundary `--since` ISO.
 
 **Depends on:** **C1 + C2** deployed to staging.
 
@@ -76,9 +76,9 @@
 
 **Goal:** Close gap registry; update parent + dogfood README status.
 
-**Scope in:** README tables; FR-DG2 → closed PASS; optional merge #67 evidence.
+**Scope in:** README tables; FR-CS1/3/6/7 + FR-DG2 → closed; optional merge #67 evidence.
 
-**Scope out:** MR-DG1; FR-CS4.
+**Scope out:** MR-DG1; FR-CS4; FR-CS8.
 
 **Deliverables:** Doc-only commit; execution table all Done.
 

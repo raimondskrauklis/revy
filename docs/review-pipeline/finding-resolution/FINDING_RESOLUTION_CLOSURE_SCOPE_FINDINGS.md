@@ -182,7 +182,7 @@ Compare PR base to current head; treat paths removed in that aggregate diff as g
 
 **Decision (CS-Q7 locked):** Hygiene uses **Signal 3** as source of truth. Compare `deleted_paths` may accelerate but must not be the only path for groups on paths added mid-PR.
 
-**Plumbing already in repo:** `fetch_repository_file_at_ref` in `github_api.py` (404 → `NotFoundError`). `fetch_compare_review_context` / `fetch_compare_patches` for deletion fast path and line-region Pass 1a.
+**Plumbing already in repo:** `fetch_repository_file_at_sha` in `github_api.py` (404 → `NotFoundError`). `fetch_compare_review_context` / `fetch_compare_patches` for deletion fast path and line-region Pass 1a.
 
 ---
 
@@ -269,7 +269,7 @@ That skill helps an **agent address human/bot review comments** on a PR. Revy’
 | **CS-Q4** | New `resolution_method` for path-gone? | **locked** | **No** — reuse `absent_and_addressed` |
 | **CS-Q5** | Merge #67 / close #65? | **locked** | **#67 evidence-only merge**; #65 optional close |
 | **CS-Q6** | Hygiene in rate + on surface? | **locked** | **Exclude from rate** + **visible G9 line** |
-| **CS-Q7** | Hygiene path-gone signal? | **locked** | **Path absent at `revision.head_sha`** (Signal 3); compare deletions as fast path only |
+| **CS-Q7** | Hygiene path-gone signal? | **locked** | **Path absent at `revision.head_sha`** via `fetch_repository_file_at_sha` (Signal 3); compare `deleted_paths` fast path only |
 | **CS-Q8** | Renames = path gone? | **locked** | **No** — deletions only for hygiene stamp |
 | **CS-Q9** | Pass 2 widen? | **locked** | Widen query; `should_close_absent_and_addressed` unchanged |
 | **CS-Q10** | Reliable vs perfect scope? | **locked** | Ship Track A hygiene first; FR-CS4 judge/heuristics later |
@@ -331,7 +331,7 @@ That skill helps an **agent address human/bot review comments** on a PR. Revy’
 | Manifest cohort / rate skew | `backend/app/services/github_resolution_metrics.py:274–288` |
 | Close rules (unchanged) | `backend/app/services/github_finding_closure_rules.py:17` |
 | Rename in remove paths | `backend/app/integrations/github_api.py:52–59` |
-| HEAD file fetch | `backend/app/integrations/github_api.py` — `fetch_repository_file_at_ref` |
+| HEAD file fetch | `backend/app/integrations/github_api.py` — `fetch_repository_file_at_sha` |
 | Full-PR compare (review ingest) | `backend/app/services/github_compare_patches.py` — `fetch_compare_review_context` |
 | pr-comments skill (HEAD pattern) | [agent-skills/pr-comments/SKILL.md](https://github.com/WhatIfWeDigDeeper/agent-skills/blob/9853a067e4a8149d8bdb592024fbfa522948db5d/skills/pr-comments/SKILL.md) |
 | Dogfood VAL10 | `docs/review-pipeline/finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_VALIDATION_FINDINGS.md` |
