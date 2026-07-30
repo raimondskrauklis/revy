@@ -14,6 +14,13 @@ logger = get_logger(__name__)
 
 MOONSHOT_API_URL = "https://api.moonshot.ai/v1/chat/completions"
 
+_PUBLISH_FORMATTER_API_CONTEXT = (
+    "Publish formatter API (tests may call with these keyword arguments): "
+    "format_summary_comment(*, generation_groups, pr_active_groups) in "
+    "app.services.github_publish_formatter — generation_groups and pr_active_groups "
+    "are valid parameter names, not typos."
+)
+
 REVIEW_SYSTEM_PROMPT = (
     "You are a senior code reviewer. Analyze the provided pull request context and "
     "return a single JSON object with shape "
@@ -26,7 +33,8 @@ REVIEW_SYSTEM_PROMPT = (
     "one physical line only — omit for architectural or multi-hunk fixes. "
     "Do not include style or lint findings. Return only valid JSON. "
     "Prioritize issues in the unified diff hunks below; use supplemental context "
-    "only to validate cross-file impact."
+    "only to validate cross-file impact. "
+    f"{_PUBLISH_FORMATTER_API_CONTEXT}"
 )
 
 ISSUE_COMMENT_FORMAT_SYSTEM_PROMPT = (
