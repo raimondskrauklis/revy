@@ -88,18 +88,25 @@
 | **2** | `afdfeca` | 2 | **FAIL** | Revy check PASS; **0 publishable findings**; bare `except` defect (D1-O1) — still silent |
 | **3** | `7f2b357` | 3 | **FAIL** (probe) | 2 publishable — **doc path drift only** (`D1_FINDINGS.md`, `D1_GENERAL_PLAN.md`); **0 findings on `app/dogfood/fr_cs4_probe.py`** |
 | **4** | `ce2b547` | 4 | **FAIL** (probe) | 0 new publishable; 1 prior doc finding closed; **1 doc finding still open**; probe silent |
-| **5** | pending | — | pending | **D1-O11** — `app/services/fr_cs4_staging_probe.py` + divide-by-zero; backend-only |
+| **5** | `71feceb` | 5 | **FAIL** (probe) | Revy skipped/0 probe findings (DB: no rows for `71feceb` sha — superseded by rev 6) |
+| **6** | `3754315` | 6 | **PARTIAL** | Probe group published — see captured fields below; **not Pass 3 eligible** (`warning`/`maintainability`) |
 
-**Captured fields (attempt 1):** none — no active group.
+**Captured fields (rev 6 — probe group):**
 
 | Field | Value |
 |-------|-------|
-| `head_sha` | `0bcfc81` (attempt 1 only) |
-| `group_id` | — |
-| `last_seen_revision_id` | — |
-| `review_run_id` | — |
-| `start_line` / `end_line` | — |
-| `fingerprint` | — |
+| `head_sha` | `3754315dadf9b10939f4813b53e38e74916ad4f5` |
+| `group_id` | `019fb43d-59eb-7554-96f0-ef889aa06277` |
+| `last_seen_revision_id` | `019fb438-5a20-7365-833e-ea11982783b1` |
+| `review_run_id` | `019fb43b-3960-75ba-a553-21b61c626b5f` |
+| `start_line` / `end_line` | `14` / `14` |
+| `fingerprint` | `d616fd67b517e6ec236bb82e4bd1da3d04e2a618a345607dcf565e4c25afc32d` |
+| `severity` / `category` | `warning` / `maintainability` |
+| `pr_active` (publish) | `4` |
+
+**D1-O7 DB result (revs 1–6):** Revs 1–2 had **zero** finding rows. Rev 3+ doc-only groups. Rev 6 first probe-file group. **Zero** `github_finding_judge_outcomes` rows on any rev (maintainability publishes without judge gate).
+
+**Blocker:** `is_judge_candidate` is **false** for `warning`/`maintainability` → Pass 3 will **not** run → `verification_dismissed` unreachable. **Do not push 2** with this cohort; need **error/critical** or **security** defect on probe file (attempt 6).
 
 #### Root cause (attempt 1)
 
@@ -110,7 +117,7 @@
 | `tests/fixtures/` path deprioritized | low | Track C and #67 used same path family; C3.1 published from `fr_dg2_track_c/`. |
 | Reachable vs `if False:` dead code | low | Attempt 1 used reachable call chain; unlikely sole cause vs post-M0 API context. |
 | Doc-heavy PR steals findings | **high** (rev 3) | Rev 3 published 2 doc maintainability warnings; probe code silent — avoid doc churn in probe pushes. |
-| Judge-gated probe defects dismissed | **high** (rev 4) | Error/security defects in `app/dogfood/` may not publish (discovery judge); doc maintainability publishes without judge gate. |
+| Judge-gated probe defects dismissed | **high** (rev 4) | Error/security in `app/dogfood/` unpublished; maintainability in `app/services/` publishes but **not Pass 3 eligible** (rev 6). |
 
 **Do not proceed to push 2** until attempt 2 yields ≥1 publishable finding with anchored lines recorded (D1 findings edge case).
 
@@ -119,32 +126,35 @@
 | ID | Option | Action | Pros | Cons | Verdict |
 |----|--------|--------|------|------|---------|
 | **D1-O1** | **Revise defect class** | Replace `format_summary_comment` misuse with non-formatter bug | Attempt 2 **FAIL** — bare `except` also 0 publishable | **Done** — insufficient alone |
-| **D1-O11** | Move to `app/services/` + logic defect | `fr_cs4_staging_probe.py` divide-by-zero; backend-only commit | Escapes `dogfood/` judge-dismiss path | Attempt 5 | **Proceed** |
+| **D1-O11** | Move to `app/services/` + logic defect | `fr_cs4_staging_probe.py` divide-by-zero | Rev 6 published group — **wrong severity** for Pass 3 | **Done** — partial |
+| **D1-O12** | Judge-eligible probe defect | `error`/`security` on anchored lines in `app/services/`; discovery judge must uphold | Enables Pass 3 `verification_dismissed` | **Proceed** (attempt 6) |
 | **D1-O5** | `@revy review` retry without code change | Comment on PR | Zero cost | Attempt 1 already clean PASS with 0 gen; **very low yield** | **Reject** |
 | **D1-O6** | Merge #72 and dogfood on `main` | Merge before publish | — | Push 1 already ran on PR head; merge does not retroactively create findings | **Reject** |
 | **D1-O7** | DB-only investigation first | Query rev 1 run for suppressed/dismissed findings before revising probe | Confirms judge-dismiss vs Moonshot silence | Does not unblock D1 alone | **Do in parallel** with D1-O1 |
 
-**Recommended path:** **D1-O4** attempt 3 (`app/dogfood` + `eval` defect) → wait for Revy rev 3. Parallel **D1-O7** on revs 1–2 if staging DB access available.
+**Recommended path:** **D1-O12** — revise anchored defect to judge-eligible class (`error`+`bug` or `security`); backend-only commit; confirm DB row has `severity`/`category` before push 2. Rev 6 group is **not** the FR-CS4 cohort.
 
-**Staging DB checks (D1-O7):**
+**Staging DB checks (D1-O7) — executed 2026-07-30:**
+
+```bash
+cd backend && DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.judge_json_contract_staging_metrics --since 2026-07-30T08:28:45Z --json
+```
+
+Rev 6 probe query (representative):
 
 ```sql
--- Replace with revision/run ids from staging after locating PR #72 rev 1
-SELECT g.id, g.fingerprint, g.state, g.resolution_status, f.start_line, f.end_line
+SELECT g.id, g.fingerprint, g.severity, g.category, g.state, f.start_line, f.end_line
 FROM github_finding_groups g
 JOIN github_findings f ON f.group_id = g.id
-JOIN github_review_runs r ON r.id = f.review_run_id
-WHERE r.head_sha = '0bcfc81f859a18992265c8dd1c336ae5c328ac81';
-
-SELECT judge_purpose, outcome, group_id FROM github_finding_judge_outcomes
-WHERE review_run_id IN (
-  SELECT id FROM github_review_runs WHERE head_sha = '0bcfc81f859a18992265c8dd1c336ae5c328ac81'
-);
+JOIN github_review_runs rr ON rr.id = f.review_run_id
+JOIN github_pull_request_revisions rev ON rev.id = rr.revision_id
+WHERE rev.head_sha = '3754315dadf9b10939f4813b53e38e74916ad4f5'
+  AND g.file_path LIKE '%fr_cs4_staging_probe%';
 ```
 
 ### Push 2 — structural fix outside line region (D1.2)
 
-**Blocked** until push 1 attempt 2 PASS (≥1 active group + memo fields filled).
+**Blocked** until push 1 yields judge-eligible probe group (`error`/`critical` or `security` — see rev 6 partial).
 
 Remove `_fr_cs4_structural_root` and change `fr_cs4_probe_composed` to return `fr_cs4_probe_value()` only (no defect call); **do not** edit `_fr_cs4_review_visible_defect` body. Module: `backend/app/services/fr_cs4_staging_probe.py`.
 
