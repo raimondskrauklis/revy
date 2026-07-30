@@ -86,7 +86,8 @@
 |---------|------------|----------|--------|----------|
 | **1** | `0bcfc81` | 1 | **FAIL** | Revy check PASS; **0 publishable findings**; comment [5128728008](https://github.com/raimondskrauklis/revy/pull/72#issuecomment-5128728008) — `format_summary_comment` kwargs (post-M0 silent) |
 | **2** | `afdfeca` | 2 | **FAIL** | Revy check PASS; **0 publishable findings**; bare `except` defect (D1-O1) — still silent |
-| **3** | pending | — | pending | **D1-O4** — `backend/app/dogfood/fr_cs4_probe.py` + `eval` anchored defect |
+| **3** | `7f2b357` | 3 | **FAIL** (probe) | 2 publishable — **doc path drift only** (`D1_FINDINGS.md`, `D1_GENERAL_PLAN.md`); **0 findings on `app/dogfood/fr_cs4_probe.py`** |
+| **4** | pending | — | pending | hardcoded secret + eval; fix doc paths; backend-focused commit |
 
 **Captured fields (attempt 1):** none — no active group.
 
@@ -107,6 +108,7 @@
 | Discovery judge pre-publish dismiss | medium | Check staging `github_finding_judge_outcomes` for discovery rows on rev 1 — may explain 0 publishable without Moonshot silence. |
 | `tests/fixtures/` path deprioritized | low | Track C and #67 used same path family; C3.1 published from `fr_dg2_track_c/`. |
 | Reachable vs `if False:` dead code | low | Attempt 1 used reachable call chain; unlikely sole cause vs post-M0 API context. |
+| Doc-heavy PR steals findings | **high** (rev 3) | Rev 3 published 2 doc maintainability warnings; probe `eval` silent — align doc paths; avoid new doc churn in probe pushes. |
 
 **Do not proceed to push 2** until attempt 2 yields ≥1 publishable finding with anchored lines recorded (D1 findings edge case).
 

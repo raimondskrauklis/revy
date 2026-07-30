@@ -52,7 +52,7 @@ print('effective_judge_provider:', settings.effective_judge_provider)
 
 **What:** Fixture module with defect on specific lines (Moonshot-visible); unit test imports fixture. After Revy publish on push 1: record group + revision ids **and** finding `start_line`/`end_line` in staging memo.
 
-**Files:** `backend/tests/fixtures/fr_cs4_probe/` (new), `backend/tests/unit/test_fr_cs4_probe.py`
+**Files:** `backend/app/dogfood/fr_cs4_probe.py` (new), `backend/tests/unit/test_fr_cs4_probe.py`
 
 **Deliverable:**
 

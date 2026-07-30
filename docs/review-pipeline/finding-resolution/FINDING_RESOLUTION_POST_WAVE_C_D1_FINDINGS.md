@@ -31,7 +31,7 @@
 | Pass 3 cap | **5/run** | `VERIFICATION_JUDGE_MAX_PER_RUN`; `_verification_judge_slots_remaining` — `github_finding_closure.py:66`, `141–155` |
 | Pass 3 fingerprint filter | **Shipped (D0)** | SQL `fingerprint.not_in(fingerprints_in_run)` + Python guard — `github_finding_closure.py:133–134`, `:309–311` |
 | Verification dismiss fields | **Shipped** | `apply_resolution_method_on_verification_dismiss` — `github_finding_closure_rules.py` |
-| FR-CS4 probe fixture | **Missing** | No `backend/tests/fixtures/fr_cs4_probe/` yet |
+| FR-CS4 probe fixture | **Shipped** | `backend/app/dogfood/fr_cs4_probe.py` (attempt 3+) |
 | Staging memo Wave D table | **Missing** | [dogfood staging validation](../finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_STAGING_VALIDATION.md) — Track C only |
 
 ---
@@ -51,7 +51,7 @@ Developer fixes a real defect **without** changing the diff hunk that contains t
 | Item | Decision |
 |------|----------|
 | **Branch** | `chore/fr-cs4-structural-fix-staging` |
-| **Fixture path** | `backend/tests/fixtures/fr_cs4_probe/` (new) |
+| **Fixture path** | `backend/app/dogfood/fr_cs4_probe.py` |
 | **Push 1** | Introduce review-visible defect on **specific lines** (error + bug category — judge-eligible). Unit test imports fixture. |
 | **Push 2** | Structural fix **elsewhere in the same file** — remove/refactor offending logic **outside** finding `start_line`/`end_line` region. **Not** file deletion. Probe fingerprint must be **absent** from push-2 review run (`gen=0`) — re-report excludes group from Pass 3. |
 | **Moonshot visibility** | Defect must be real enough for ≥1 Revy finding on push 1 with anchored lines recorded in DB. |
