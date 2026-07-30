@@ -10,7 +10,7 @@ Phase **M0** of [FINDING_RESOLUTION_POST_WAVE_C_GENERAL_PLAN.md](../FINDING_RESO
 
 - **Branch:** `chore/moonshot-formatter-signature` — not mixed with wave D.
 - **Prompt only:** formatter public API snippet in `moonshot_review.py` — no `github_publish_formatter.py` signature change.
-- **Test:** prompt contains `format_summary_comment`, `generation_groups`, `pr_active_groups`.
+- **Test:** `PUBLISH_FORMATTER_API_CONTEXT` appended verbatim to `REVIEW_SYSTEM_PROMPT` (not scattered substrings).
 - **SSOT:** no program switch — keep `finding-resolution-dogfood` active during M0.
 
 ## Out of scope for M0
@@ -52,6 +52,20 @@ cd backend && pipenv run pytest tests/unit/test_moonshot_review.py -q
 **Files:** `docs/review-pipeline/finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_FINDINGS.md`, `docs/review-pipeline/finding-resolution-dogfood/README.md`
 
 **Deliverable:** Registry row shows closed PASS.
+
+---
+
+## M0.3 — Review hardening (Revy #70)
+
+**What:** Export `PUBLISH_FORMATTER_API_CONTEXT` as public constant; regression test asserts the full block is appended to `REVIEW_SYSTEM_PROMPT` (contiguous API guard, not substring drift).
+
+**Files:** `backend/app/integrations/moonshot_review.py`, `backend/tests/unit/test_moonshot_review.py`
+
+**Deliverable:**
+
+```bash
+cd backend && pipenv run pytest tests/unit/test_moonshot_review.py -q
+```
 
 ---
 
