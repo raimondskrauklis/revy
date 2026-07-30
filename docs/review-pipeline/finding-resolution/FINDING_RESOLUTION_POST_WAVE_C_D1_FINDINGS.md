@@ -32,7 +32,7 @@
 | Pass 3 fingerprint filter | **Shipped (D0)** | SQL `fingerprint.not_in(fingerprints_in_run)` + Python guard — `github_finding_closure.py:133–134`, `:309–311` |
 | Verification dismiss fields | **Shipped** | `apply_resolution_method_on_verification_dismiss` — `github_finding_closure_rules.py` |
 | FR-CS4 probe fixture | **Shipped** | `backend/app/services/fr_cs4_staging_probe.py` |
-| Staging memo Wave D table | **Missing** | [dogfood staging validation](../finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_STAGING_VALIDATION.md) — Track C only |
+| Staging memo Wave D table | **Shipped** | [dogfood staging validation](../finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_STAGING_VALIDATION.md) Wave D |
 
 ---
 
