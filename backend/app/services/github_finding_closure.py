@@ -221,17 +221,6 @@ async def verify_still_open_escalation_groups(
     if prior_revision is None:
         return VerificationJudgeResult(judged_count=0, artifacts=[])
 
-    intermediate_revision_ids = await get_intermediate_revision_ids_between(
-        session,
-        pull_request_id=revision.pull_request_id,
-        prior_revision=prior_revision,
-        current_revision=revision,
-    )
-    pairing_revision_ids = prior_publish_pairing_revision_ids(
-        prior_revision=prior_revision,
-        intermediate_revision_ids=intermediate_revision_ids,
-    )
-
     pull_request = await session.get(GitHubPullRequestORM, revision.pull_request_id)
     if pull_request is None:
         return VerificationJudgeResult(judged_count=0, artifacts=[])
@@ -246,16 +235,22 @@ async def verify_still_open_escalation_groups(
     if compare_result.compare_failed:
         return VerificationJudgeResult(judged_count=0, artifacts=[])
 
+    fingerprints_in_run = await _fingerprints_in_review_run(session, review_run_id=review_run_id)
     candidates = list(
         await session.scalars(
             select(GitHubFindingGroupORM).where(
                 GitHubFindingGroupORM.pull_request_id == revision.pull_request_id,
-                GitHubFindingGroupORM.last_seen_revision_id.in_(pairing_revision_ids),
                 GitHubFindingGroupORM.state == GitHubFindingGroupState.active,
             )
         )
     )
-    escalation_groups = [group for group in candidates if is_verification_escalation_candidate(group=group)]
+    escalation_groups = [
+        group
+        for group in candidates
+        if is_verification_escalation_candidate(group=group)
+        and group.last_seen_revision_id != revision.id
+        and group.fingerprint not in fingerprints_in_run
+    ]
     if not escalation_groups:
         return VerificationJudgeResult(judged_count=0, artifacts=[])
 

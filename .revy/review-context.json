@@ -1,21 +1,21 @@
 {
-  "active_program": "finding-resolution-dogfood",
+  "active_program": "finding-resolution-post-wave-c",
   "programs": [
     {
-      "id": "finding-resolution-dogfood",
+      "id": "finding-resolution-post-wave-c",
       "scope": ["backend/**"],
       "paths": [
         {
-          "path": "docs/review-pipeline/finding-resolution-dogfood/waves/FINDING_RESOLUTION_DOGFOOD_EXECUTION.md",
-          "description": "FR-DG execution index — waves A–C sign-off complete"
+          "path": "docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_POST_WAVE_C_EXECUTION.md",
+          "description": "Post–wave C LOOP index — M0–D3 execution"
         },
         {
-          "path": "docs/review-pipeline/finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_FINDINGS.md",
-          "description": "FR-DG baseline — FR-DG1/2 closed PASS; MR-DG1 open"
+          "path": "docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_POST_WAVE_C_BACKLOG_FINDINGS.md",
+          "description": "Post–wave C backlog — MR-DG1, FR-CS4, FR-CS8 locks"
         },
         {
-          "path": "docs/review-pipeline/finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md",
-          "description": "FR-DG general plan — P0–P4 phases"
+          "path": "docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_POST_WAVE_C_GENERAL_PLAN.md",
+          "description": "Post–wave C general plan — M0 and wave D phases"
         }
       ]
     }

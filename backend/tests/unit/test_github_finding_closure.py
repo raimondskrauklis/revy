@@ -14,6 +14,7 @@ from app.constants.enums import (
     ResolutionMethod,
     ResolutionStatus,
 )
+from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
 from app.models.github_review_run import GitHubReviewRunORM
@@ -22,6 +23,7 @@ from app.services.github_finding_closure import (
     VERIFICATION_JUDGE_MAX_PER_RUN,
     apply_pass2_closure_for_review_run,
     is_verification_escalation_candidate,
+    verify_still_open_escalation_groups,
 )
 from app.services.github_finding_closure_rules import (
     COMPARE_FAILED_REASON,
@@ -496,4 +498,132 @@ async def test_apply_pass2_closure_after_file_deletion_pass1_stamp():
     assert closed == 1
     assert group.state == GitHubFindingGroupState.resolved
     assert group.resolution_method == ResolutionMethod.absent_and_addressed
+
+
+@pytest.mark.asyncio
+async def test_verify_still_open_escalation_outside_pairing():
+    """Pass 3 widen: aged still_open group outside pairing window is judged when LLM enabled."""
+    from unittest.mock import MagicMock
+
+    from app.services.github_compare_patches import ComparePatchesResult
+    from app.services.model_policy import ModelRef
+
+    review_run_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    rev1_id = uuid.uuid4()
+    rev2_id = uuid.uuid4()
+    rev3_id = uuid.uuid4()
+    group_id = uuid.uuid4()
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=workspace_id,
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=1,
+        title="PR",
+        state="open",
+        head_sha="head3",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=3,
+    )
+    pull_request.id = pull_request_id
+
+    published_prior = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=2,
+        head_sha="head2",
+        base_sha="base",
+    )
+    published_prior.id = rev2_id
+
+    current_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=3,
+        head_sha="head3",
+        base_sha="base",
+    )
+    current_revision.id = rev3_id
+
+    aged_group = GitHubFindingGroupORM(
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="aged-still-open",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Aged still open",
+        message="msg",
+        file_path="backend/probe/stale.py",
+        last_seen_revision_id=rev1_id,
+        resolution_status=ResolutionStatus.still_open,
+    )
+    aged_group.id = group_id
+
+    finding = GitHubFindingORM(
+        review_run_id=review_run_id,
+        workspace_id=workspace_id,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Aged still open",
+        message="msg",
+        file_path="backend/probe/stale.py",
+        group_id=group_id,
+        evidence_snippet="stale line",
+    )
+
+    run = GitHubReviewRunORM(
+        workspace_id=workspace_id,
+        revision_id=rev3_id,
+        status=GitHubReviewRunStatus.completed,
+    )
+    run.id = review_run_id
+
+    compare_result = ComparePatchesResult(patches_by_file={}, compare_failed=False)
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, current_revision, pull_request])
+    session.scalars = AsyncMock(return_value=[aged_group])
+    session.scalar = AsyncMock(side_effect=[None, finding])
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    with patch("app.services.github_finding_closure.settings") as mock_settings:
+        mock_settings.judge_llm_enabled.return_value = True
+        mock_settings.revy_revision_timeout_standard_seconds = 900
+        with patch(
+            "app.services.github_finding_closure.get_last_published_prior_revision",
+            AsyncMock(return_value=published_prior),
+        ):
+            with patch(
+                "app.services.github_finding_closure._fingerprints_in_review_run",
+                AsyncMock(return_value=set()),
+            ):
+                with patch(
+                    "app.services.github_compare_patches.fetch_compare_patches",
+                    AsyncMock(return_value=compare_result),
+                ):
+                    with patch(
+                        "app.services.github_finding_closure.resolve_model",
+                        AsyncMock(return_value=ModelRef(provider="anthropic", model_id="claude-test")),
+                    ):
+                        with patch(
+                            "app.services.github_finding_closure.call_judge_with_optional_retry",
+                            AsyncMock(
+                                return_value=(
+                                    {"outcome": "dismissed", "notes": "structural fix"},
+                                    0,
+                                )
+                            ),
+                        ):
+                            result = await verify_still_open_escalation_groups(
+                                session,
+                                review_run_id=review_run_id,
+                            )
+
+    assert result.judged_count == 1
+    assert aged_group.state == GitHubFindingGroupState.resolved
+    assert aged_group.resolution_method == ResolutionMethod.verification_dismissed
 

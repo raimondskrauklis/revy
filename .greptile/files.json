@@ -1,22 +1,22 @@
 {
   "files": [
     {
-      "path": "docs/review-pipeline/finding-resolution-dogfood/waves/FINDING_RESOLUTION_DOGFOOD_EXECUTION.md",
-      "description": "FR-DG execution index \u2014 waves A\u2013C sign-off complete",
+      "path": "docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_POST_WAVE_C_EXECUTION.md",
+      "description": "Post\u2013wave C LOOP index \u2014 M0\u2013D3 execution",
       "scope": [
         "backend/**"
       ]
     },
     {
-      "path": "docs/review-pipeline/finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_FINDINGS.md",
-      "description": "FR-DG baseline \u2014 FR-DG1/2 closed PASS; MR-DG1 open",
+      "path": "docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_POST_WAVE_C_BACKLOG_FINDINGS.md",
+      "description": "Post\u2013wave C backlog \u2014 MR-DG1, FR-CS4, FR-CS8 locks",
       "scope": [
         "backend/**"
       ]
     },
     {
-      "path": "docs/review-pipeline/finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md",
-      "description": "FR-DG general plan \u2014 P0\u2013P4 phases",
+      "path": "docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_POST_WAVE_C_GENERAL_PLAN.md",
+      "description": "Post\u2013wave C general plan \u2014 M0 and wave D phases",
       "scope": [
         "backend/**"
       ]

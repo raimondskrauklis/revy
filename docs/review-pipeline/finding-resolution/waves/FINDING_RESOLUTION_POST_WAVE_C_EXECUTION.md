@@ -26,7 +26,7 @@
 | Phase | Focus | File | Commit | Status |
 |-------|--------|------|--------|--------|
 | M0 | MR-DG1 Moonshot prompt | [M0](./FINDING_RESOLUTION_POST_WAVE_C_M0_EXECUTION.md) | — | **done** |
-| D0 | Pass 3 cohort widen | [D0](./FINDING_RESOLUTION_POST_WAVE_C_D0_EXECUTION.md) | — | pending |
+| D0 | Pass 3 cohort widen | [D0](./FINDING_RESOLUTION_POST_WAVE_C_D0_EXECUTION.md) | — | **done** |
 | D1 | FR-CS4 staging dogfood | [D1](./FINDING_RESOLUTION_POST_WAVE_C_D1_EXECUTION.md) | — | pending |
 | D2 | FR-CS8 observability (optional) | [D2](./FINDING_RESOLUTION_POST_WAVE_C_D2_EXECUTION.md) | — | optional |
 | D3 | Doc sync | [D3](./FINDING_RESOLUTION_POST_WAVE_C_D3_EXECUTION.md) | — | pending |
