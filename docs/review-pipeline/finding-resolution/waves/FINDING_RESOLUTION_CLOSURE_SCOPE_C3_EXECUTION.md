@@ -16,7 +16,7 @@ Phase **C3** of [FINDING_RESOLUTION_CLOSURE_SCOPE_GENERAL_PLAN.md](../FINDING_RE
 
 ## Out of scope for C3
 
-- Code changes unless repro fails → hotfix branch off `fix/fr-closure-scope-hygiene`
+- Code changes unless repro fails → hotfix branch off `main`
 - MR-DG1
 - R2 superseded-publish automated test — operator watches fast follow-up push on C3.3
 

@@ -210,16 +210,16 @@ That skill helps an **agent address human/bot review comments** on a PR. Revy’
 
 | ID | Gap | Severity | Status |
 |----|-----|----------|--------|
-| **FR-CS1** | Hygiene signals keyed to **push-pair** diff window only | **high** | **closed (code)** — C3 staging sign-off pending |
-| **FR-CS6** | Pass 2 (and Pass 3) use same pairing cohort filter as Pass 1 | **high** | **closed (code)** — C3 staging sign-off pending |
-| **FR-CS7** | No **HEAD-truth** path-gone signal (path absent at `head_sha`) | **high** | **closed (code)** — C3 staging sign-off pending |
+| **FR-CS1** | Hygiene signals keyed to **push-pair** diff window only | **high** | **closed PASS** — C3 [#69](https://github.com/raimondskrauklis/revy/pull/69) |
+| **FR-CS6** | Pass 2 (and Pass 3) use same pairing cohort filter as Pass 1 | **high** | **closed PASS** — C3 [#69](https://github.com/raimondskrauklis/revy/pull/69) |
+| **FR-CS7** | No **HEAD-truth** path-gone signal (path absent at `head_sha`) | **high** | **closed PASS** — C3 [#69](https://github.com/raimondskrauklis/revy/pull/69) |
 | **FR-CS3** | Hygiene closures skew `resolution_rate_pct` via `_in_sync_stamp_cohort` | **medium** | **closed** — C2 (`d4666aa`) |
 | **FR-CS4** | Line-region `addressed` false negatives; Pass 3 same cohort wall | **medium** | open — post wave C |
 | **FR-CS8** | `resolution_status` reset every sync — stamp ephemeral if publish superseded | **medium** | open — mitigate in C1 (same-run close) |
 | **FR-CS5** | Dogfood doc churn invalidates metrics | **low** | locked — VAL8 |
 | **FR-DG1** | Manifest / G9 | — | **closed PASS** |
 | **FR-DG2a** | Deletion stamp in pairing cohort (#66) | — | **closed PASS** |
-| **FR-DG2** | End-to-end file removal on PR | — | **partial PASS** → wave C |
+| **FR-DG2** | End-to-end file removal on PR | — | **closed PASS** — C3 [#69](https://github.com/raimondskrauklis/revy/pull/69) rev 6 |
 
 ---
 
@@ -263,7 +263,7 @@ That skill helps an **agent address human/bot review comments** on a PR. Revy’
 
 | ID | Question | Status | Resolution |
 |----|----------|--------|------------|
-| **CS-Q1** | FR-DG2 product-closed after #67? | **locked** | **No** — partial; FR-CS* open |
+| **CS-Q1** | FR-DG2 product-closed after #67? | **locked** | **Yes** — C3 PASS on [#69](https://github.com/raimondskrauklis/revy/pull/69); #67 evidence-only |
 | **CS-Q2** | Is #66 sufficient alone? | **locked** | **No** — pairing scope + Pass 2 gap |
 | **CS-Q3** | Split Pass 1a (metrics) vs 1b (hygiene)? | **locked** | **Yes** — three tracks |
 | **CS-Q4** | New `resolution_method` for path-gone? | **locked** | **No** — reuse `absent_and_addressed` |

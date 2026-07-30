@@ -23,7 +23,7 @@
 | ID | Gap | Severity | Target PR | Status |
 |----|-----|----------|-----------|--------|
 | **FR-DG1** | G9 / resolution manifest `0/0 prior active` | high | `chore/finding-resolution-staging-dogfood` | **closed PASS** — rev 3 `9d32ea2` ([#65](https://github.com/raimondskrauklis/revy/pull/65)) |
-| **FR-DG2** | Stale finding group survives code removal (block 2 + inline orphan) | high | follow-up after Track A | **partial** — doc cohort closed rev 3; probe deletion failed rev 4 — [post-validation](./FINDING_RESOLUTION_DOGFOOD_POST_VALIDATION_FINDINGS.md) |
+| **FR-DG2** | Stale finding group survives code removal (block 2 + inline orphan) | high | follow-up after Track A | **closed PASS** — C3 [#69](https://github.com/raimondskrauklis/revy/pull/69) |
 | **FR-DG2a** | Pass 1 does not stamp `addressed` when `file_path` deleted in compare | high | `fix/fr-dg2-file-deletion-pass1` | **code ready** — Track A shipped; Track B staging repro pending |
 | **MR-DG1** | Moonshot hallucinates `format_summary_comment` signature | medium | `chore/moonshot-formatter-signature` | open |
 
