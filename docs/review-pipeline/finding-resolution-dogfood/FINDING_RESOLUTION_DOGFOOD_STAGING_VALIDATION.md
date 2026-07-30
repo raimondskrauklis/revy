@@ -68,7 +68,7 @@
 
 ## Wave D — FR-CS4 structural fix (post–#71)
 
-**Probe branch:** `chore/fr-cs4-structural-fix-staging`. **Fixture:** `backend/tests/fixtures/fr_cs4_probe/`. **D0:** [#71](https://github.com/raimondskrauklis/revy/pull/71) deployed `2026-07-30T08:28:45Z`.
+**Probe PR:** [#72](https://github.com/raimondskrauklis/revy/pull/72) · **Branch:** `chore/fr-cs4-structural-fix-staging` · **Fixture:** `backend/tests/fixtures/fr_cs4_probe/`. **D0:** [#71](https://github.com/raimondskrauklis/revy/pull/71) deployed `2026-07-30T08:28:45Z`.
 
 | Boundary | `--since` ISO | Used for |
 |----------|---------------|----------|
@@ -78,20 +78,70 @@
 
 | Check | Status | Evidence |
 |-------|--------|----------|
-| `judge_llm_enabled()` on `revy-worker` | pending | — |
+| `judge_llm_enabled()` on `revy-worker` | **PASS** | `judge_llm_enabled: True`; `effective_judge_provider: anthropic` (operator 2026-07-30) |
 
 ### Push 1 — introduce probe (D1.1)
 
+| Attempt | `head_sha` | Revy rev | Status | Evidence |
+|---------|------------|----------|--------|----------|
+| **1** | `0bcfc81` | 1 | **FAIL** | Revy check PASS; **0 publishable findings**; comment [5128728008](https://github.com/raimondskrauklis/revy/pull/72#issuecomment-5128728008) — no `group_id` to capture |
+| 2 | pending | — | pending | probe revision (see options below) |
+
+**Captured fields (attempt 1):** none — no active group.
+
 | Field | Value |
 |-------|-------|
-| `head_sha` | pending |
-| `group_id` | pending |
-| `last_seen_revision_id` | pending |
-| `review_run_id` | pending |
-| `start_line` / `end_line` | pending |
-| `fingerprint` | pending |
+| `head_sha` | `0bcfc81` (attempt 1 only) |
+| `group_id` | — |
+| `last_seen_revision_id` | — |
+| `review_run_id` | — |
+| `start_line` / `end_line` | — |
+| `fingerprint` | — |
+
+#### Root cause (attempt 1)
+
+| Hypothesis | Likelihood | Notes |
+|------------|------------|-------|
+| **Post-M0 kwargs pattern neutralized** | **high** | Probe uses `format_summary_comment(groups=[])`. **M0 [#70](https://github.com/raimondskrauklis/revy/pull/70)** taught Moonshot the real formatter API; Track C C3.1 **PASS** used the same kwargs shape **before** M0 merged. |
+| Discovery judge pre-publish dismiss | medium | Check staging `github_finding_judge_outcomes` for discovery rows on rev 1 — may explain 0 publishable without Moonshot silence. |
+| `tests/fixtures/` path deprioritized | low | Track C and #67 used same path family; C3.1 published from `fr_dg2_track_c/`. |
+| Reachable vs `if False:` dead code | low | Attempt 1 used reachable call chain; unlikely sole cause vs post-M0 API context. |
+
+**Do not proceed to push 2** until attempt 2 yields ≥1 publishable finding with anchored lines recorded (D1 findings edge case).
+
+#### Proceed options (operator + implementer)
+
+| ID | Option | Action | Pros | Cons | Verdict |
+|----|--------|--------|------|------|---------|
+| **D1-O1** | **Revise defect class (recommended)** | Replace `format_summary_comment` misuse with a **non-formatter** bug on anchored lines (e.g. bare `except:`, mutable default, obvious logic error). Keep two-location shape: anchored defect block + `_fr_cs4_structural_root` removed on push 2. | Aligns with post-M0 pipeline; preserves FR-CS4 line-region + Pass 3 experiment | Requires code push + new Revy cycle | **Proceed** |
+| **D1-O2** | Revert to C3.1 `if False:` kwargs snippet | Same shape as Track C rev 3 `7d63bd0` | Proven pre-M0 | **Likely fails post-M0** — same API family M0 fixed | **Reject** |
+| **D1-O3** | MD5 / weak-hash only | `hashlib.md5(..., usedforsecurity=False)` | Simple | **Failed C3.1a** — 0 findings on staging | **Reject** |
+| **D1-O4** | Move probe out of `tests/fixtures/` | e.g. `backend/app/dogfood/fr_cs4_probe.py` | May increase review attention | Breaks dogfood fixture convention; VAL8 backend-only still OK but noisier diff | **Defer** — try D1-O1 first |
+| **D1-O5** | `@revy review` retry without code change | Comment on PR | Zero cost | Attempt 1 already clean PASS with 0 gen; **very low yield** | **Reject** |
+| **D1-O6** | Merge #72 and dogfood on `main` | Merge before publish | — | Push 1 already ran on PR head; merge does not retroactively create findings | **Reject** |
+| **D1-O7** | DB-only investigation first | Query rev 1 run for suppressed/dismissed findings before revising probe | Confirms judge-dismiss vs Moonshot silence | Does not unblock D1 alone | **Do in parallel** with D1-O1 |
+
+**Recommended path:** **D1-O7** (staging DB query for rev 1 `0bcfc81`) **then D1-O1** (probe revision commit on #72 → wait for Revy rev 2 → fill memo row).
+
+**Staging DB checks (D1-O7):**
+
+```sql
+-- Replace with revision/run ids from staging after locating PR #72 rev 1
+SELECT g.id, g.fingerprint, g.state, g.resolution_status, f.start_line, f.end_line
+FROM github_finding_groups g
+JOIN github_findings f ON f.group_id = g.id
+JOIN github_review_runs r ON r.id = f.review_run_id
+WHERE r.head_sha = '0bcfc81f859a18992265c8dd1c336ae5c328ac81';
+
+SELECT judge_purpose, outcome, group_id FROM github_finding_judge_outcomes
+WHERE review_run_id IN (
+  SELECT id FROM github_review_runs WHERE head_sha = '0bcfc81f859a18992265c8dd1c336ae5c328ac81'
+);
+```
 
 ### Push 2 — structural fix outside line region (D1.2)
+
+**Blocked** until push 1 attempt 2 PASS (≥1 active group + memo fields filled).
 
 Remove `_fr_cs4_structural_root` and change `fr_cs4_probe_composed` to return `fr_cs4_probe_value()` only (no defect call); **do not** edit `_fr_cs4_review_visible_defect` body.
 
@@ -102,6 +152,8 @@ Remove `_fr_cs4_structural_root` and change `fr_cs4_probe_composed` to return `f
 | line-region overlap | pending |
 
 ### Sign-off (D1.3)
+
+**Blocked** until push 2 publish complete.
 
 | Check | Status | Evidence |
 |-------|--------|----------|

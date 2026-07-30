@@ -83,9 +83,9 @@ Developer fixes a real defect **without** changing the diff hunk that contains t
 
 | Case | Handling |
 |------|----------|
-| Moonshot does not flag probe on push 1 | Revise fixture (stronger defect); do not proceed to push 2 |
+| Moonshot does not flag probe on push 1 | Revise fixture (stronger defect); do not proceed to push 2. **#72 rev 1:** 0 publishable — likely post-M0 `format_summary_comment` kwargs pattern; see staging memo Wave D options **D1-O1**. |
 | Moonshot re-reports probe finding on push 2 | **FAIL** — Pass 3 excludes `fingerprints_in_run`; revise push-2 fix so defect is gone without re-report |
-| Discovery judge dismisses on push 1 | Document; may need separate group — primary metric is **verification** on push 2 |
+| Discovery judge dismisses on push 1 | Document; may need separate group — primary metric is **verification** on push 2. Run D1-O7 DB query before probe revision. |
 | Group outside Pass 3 SQL cohort | Should not happen post-D0 if `still_open` + aged `last_seen`; file bug if it does |
 | `skipped_not_head` between pushes | Wait for publish; one push per cycle (FR-CS8 edge — monitor) |
 | Revy timeout (900s) | Retry review; do not stack pushes |
@@ -102,6 +102,7 @@ Developer fixes a real defect **without** changing the diff hunk that contains t
 | **D1-Q4** | Docs in dogfood pushes 1–2? | **locked** | **No** — VAL8 backend-only |
 | **D1-Q5** | Primary metrics script? | **locked** | `judge_json_contract_staging_metrics --since <D0_deploy_iso>` + per-group SQL |
 | **D1-Q6** | Push 2 may re-report probe finding? | **locked** | **No** — `fingerprints_in_run` excludes group from Pass 3; push 2 must leave `gen=0` for probe fingerprint |
+| **D1-Q7** | Push 1 rev 1 zero findings — next step? | **locked** | **D1-O1** — non-formatter defect class on anchored lines; parallel **D1-O7** DB check. Reject kwargs-only retry (post-M0). See [staging memo](../finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_STAGING_VALIDATION.md) Wave D. |
 
 ---
 
@@ -123,6 +124,7 @@ Developer fixes a real defect **without** changing the diff hunk that contains t
 | Judge disabled on staging | Pre-flight `judge_llm_enabled()`; block sign-off |
 | Pass 3 cap exhausts on noisy PR | Probe PR should be minimal; cap is 5/run |
 | Moonshot re-reports probe on push 2 | Document push-1 fingerprint; verify `gen=0` before sign-off; revise fixture if needed |
+| Post-M0 formatter kwargs probe silent | **#72 rev 1** — use non-formatter defect (D1-O1); kwargs shape worked pre-M0 only (C3.1) |
 | False PASS via Pass 2 | Require `verification_dismissed`, not `absent_and_addressed` |
 
 ---
@@ -133,6 +135,7 @@ Developer fixes a real defect **without** changing the diff hunk that contains t
 |------------|------|
 | `test_fr_cs4_probe.py` | Fixture import + defect shape unit test green |
 | Staging push 1 | ≥1 Revy finding on probe file with group id captured |
+| Staging push 1 retry | **#72 rev 1 FAIL** — 0 publishable; D1-O1 probe revision required |
 | Staging push 2 | Group `resolved` + `verification_dismissed` + verification judge outcome row |
 | Metrics window | `--since` post–#71 deploy shows verification judge activity |
 

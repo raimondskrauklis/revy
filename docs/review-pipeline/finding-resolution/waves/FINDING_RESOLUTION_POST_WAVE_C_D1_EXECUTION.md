@@ -62,6 +62,8 @@ cd backend && pipenv run pytest tests/unit/test_fr_cs4_probe.py -q
 
 **Operator (same subphase):** staging memo push-1 row with `head_sha`, `group_id`, `last_seen_revision_id`, `review_run_id`, finding `start_line`/`end_line`, probe `fingerprint`.
 
+**Push 1 retry (if 0 publishable findings):** do **not** proceed to D1.2. Record attempt in [staging memo](../../finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_STAGING_VALIDATION.md) Wave D; follow options **D1-O1** (revise defect class) + **D1-O7** (DB check). Reject kwargs-only / no-code retry — see D1 findings **D1-Q7**.
+
 ---
 
 ## D1.2 — Structural fix without line touch (push 2)
