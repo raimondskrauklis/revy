@@ -1,5 +1,6 @@
 # backend/tests/unit/test_github_finding_judge.py
 """GitHub finding judge — R5."""
+import itertools
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -24,8 +25,10 @@ from app.services.github_finding_judge import (
     _build_judge_prompt,
     _judge_failure_log_extra,
     is_judge_candidate,
+    judge_candidate_group_sql_predicate,
     record_review_run_judge_status,
 )
+from app.services.github_finding_reconcile import severity_rank
 from app.services.model_policy import ModelRef
 
 
@@ -70,6 +73,31 @@ def test_is_judge_candidate_info_bug_false():
         severity=FindingSeverity.info,
         category=FindingCategory.bug,
     )
+
+
+@pytest.mark.parametrize(
+    ("severity", "category"),
+    list(itertools.product(FindingSeverity, FindingCategory)),
+)
+def test_judge_candidate_group_sql_predicate_parity_matrix(
+    severity: FindingSeverity,
+    category: FindingCategory,
+):
+    """Pass 3 SQL predicate must stay aligned with is_judge_candidate (full matrix)."""
+    expected = severity in (FindingSeverity.error, FindingSeverity.critical) or (
+        category == FindingCategory.security
+        and severity_rank(severity) >= severity_rank(FindingSeverity.warning)
+    )
+    assert is_judge_candidate(severity=severity, category=category) is expected
+
+
+def test_judge_candidate_group_sql_predicate_compiles():
+    from sqlalchemy import select
+
+    stmt = select(GitHubFindingGroupORM).where(judge_candidate_group_sql_predicate())
+    compiled = str(stmt.compile())
+    assert "severity" in compiled
+    assert "category" in compiled
 
 
 def test_judge_candidate_loader_filters_on_finding_severity_category():

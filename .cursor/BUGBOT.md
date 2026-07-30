@@ -1,12 +1,12 @@
 # Bugbot — review pipeline contract
 
-**Active program:** finding-resolution-dogfood — FR-DG1/FR-DG2 **closed PASS** (wave C [#69](https://github.com/raimondskrauklis/revy/pull/69) Track C); MR-DG1 open.
+**Active program:** finding-resolution-post-wave-c — wave D (FR-CS4 Pass 3 widen, FR-CS4 dogfood).
 
 When reviewing **backend** changes that touch publish / formatter / pipeline / generation lifecycle / judge code, treat these as authoritative:
 
-- [FINDING_RESOLUTION_DOGFOOD_EXECUTION.md](../docs/review-pipeline/finding-resolution-dogfood/waves/FINDING_RESOLUTION_DOGFOOD_EXECUTION.md) — LOOP P0–P3, deploy cadence, FR-DG* locks
-- [FINDING_RESOLUTION_DOGFOOD_FINDINGS.md](../docs/review-pipeline/finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_FINDINGS.md) — FR-DG1/2 closed PASS; MR-DG1 gaps from PSA #63
-- [FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md](../docs/review-pipeline/finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md) — phase goals
+- [FINDING_RESOLUTION_POST_WAVE_C_EXECUTION.md](../docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_POST_WAVE_C_EXECUTION.md) — LOOP M0–D3 index
+- [FINDING_RESOLUTION_POST_WAVE_C_BACKLOG_FINDINGS.md](../docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_POST_WAVE_C_BACKLOG_FINDINGS.md) — MR-DG1, FR-CS4, FR-CS8 locks
+- [FINDING_RESOLUTION_POST_WAVE_C_GENERAL_PLAN.md](../docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_POST_WAVE_C_GENERAL_PLAN.md) — phase goals
 
 **Agent workflow:**
 

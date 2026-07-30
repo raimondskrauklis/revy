@@ -7,7 +7,7 @@ from typing import Any
 from uuid import UUID
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import (
@@ -178,6 +178,21 @@ def is_judge_candidate(*, severity: FindingSeverity, category: FindingCategory) 
     return (
         category == FindingCategory.security
         and severity_rank(severity) >= severity_rank(FindingSeverity.warning)
+    )
+
+
+def judge_candidate_group_sql_predicate():
+    """SQL mirror of is_judge_candidate for group row severity/category."""
+    return or_(
+        GitHubFindingGroupORM.severity.in_(
+            (FindingSeverity.error, FindingSeverity.critical),
+        ),
+        and_(
+            GitHubFindingGroupORM.category == FindingCategory.security,
+            GitHubFindingGroupORM.severity.in_(
+                (FindingSeverity.warning, FindingSeverity.error, FindingSeverity.critical),
+            ),
+        ),
     )
 
 
