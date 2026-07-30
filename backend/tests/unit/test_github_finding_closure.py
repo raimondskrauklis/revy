@@ -465,7 +465,7 @@ async def test_apply_pass2_closure_after_file_deletion_pass1_stamp():
                     new_revision=current_revision,
                 )
 
-    assert stamped == 2
+    assert stamped == 1
     assert group.resolution_status == ResolutionStatus.addressed
 
     run = GitHubReviewRunORM(

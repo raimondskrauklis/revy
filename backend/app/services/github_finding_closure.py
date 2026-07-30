@@ -49,6 +49,7 @@ from app.services.github_finding_judge import (
     _judge_failure_artifact,
     _judge_failure_log_extra,
     call_judge_with_optional_retry,
+    judge_candidate_group_sql_predicate,
 )
 from app.services.github_finding_reconcile import _ensure_pull_request_access
 from app.services.github_resolution_metrics import (
@@ -241,15 +242,18 @@ async def verify_still_open_escalation_groups(
             select(GitHubFindingGroupORM).where(
                 GitHubFindingGroupORM.pull_request_id == revision.pull_request_id,
                 GitHubFindingGroupORM.state == GitHubFindingGroupState.active,
+                GitHubFindingGroupORM.resolution_status == ResolutionStatus.still_open,
+                or_(
+                    GitHubFindingGroupORM.closure_blocked_reason.is_(None),
+                    GitHubFindingGroupORM.closure_blocked_reason != COMPARE_FAILED_REASON,
+                ),
+                GitHubFindingGroupORM.last_seen_revision_id != revision.id,
+                judge_candidate_group_sql_predicate(),
             )
         )
     )
     escalation_groups = [
-        group
-        for group in candidates
-        if is_verification_escalation_candidate(group=group)
-        and group.last_seen_revision_id != revision.id
-        and group.fingerprint not in fingerprints_in_run
+        group for group in candidates if group.fingerprint not in fingerprints_in_run
     ]
     if not escalation_groups:
         return VerificationJudgeResult(judged_count=0, artifacts=[])

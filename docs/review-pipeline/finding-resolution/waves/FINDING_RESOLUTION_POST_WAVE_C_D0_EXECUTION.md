@@ -9,7 +9,7 @@ Phase **D0** of [FINDING_RESOLUTION_POST_WAVE_C_GENERAL_PLAN.md](../FINDING_RESO
 ## Decisions locked for D0
 
 - **PW-Q4:** Pass 3 query widen only — **no** Pass 1a line-region change.
-- Widen pattern: select all `active` groups on PR, filter with `is_verification_escalation_candidate` (still `still_open` + judge-eligible); remove pairing-only `last_seen` filter on candidate query (`github_finding_closure.py:249–256`).
+- Widen pattern: PR-wide `still_open` escalation candidates with SQL predicates (`resolution_status`, `closure_blocked_reason`, judge severity/category, `last_seen != current`); fingerprint exclusion remains in Python.
 - Cap unchanged: `VERIFICATION_JUDGE_MAX_PER_RUN` (5).
 - **Branch:** separate from M0 — e.g. `fix/fr-cs4-pass3-widen`.
 
@@ -78,6 +78,20 @@ cd backend && pipenv run pytest tests/unit/test_github_finding_closure.py -q -k 
 cd backend && rg 'patch_touches_line_region' app/services/github_resolution_metrics.py app/services/github_finding_closure.py
 # expect: definition + callers only in github_resolution_metrics.py — no new callers in github_finding_closure.py
 pipenv run pytest tests/unit/test_github_resolution_metrics.py -q -k patch_touches
+```
+
+---
+
+## D0.4 — Pass 3 SQL predicate pushdown (Revy #71)
+
+**What:** Push `still_open`, `closure_blocked_reason != compare_failed`, judge severity/category, and `last_seen != current` into the Pass 3 SQL `where()` via `judge_candidate_group_sql_predicate()`. Fix stale `stamped == 2` assertion in FR-DG2a E2E (deduped counter returns 1).
+
+**Files:** `backend/app/services/github_finding_closure.py`, `backend/app/services/github_finding_judge.py`, `backend/tests/unit/test_github_finding_closure.py`, `backend/tests/unit/test_github_finding_judge.py`
+
+**Deliverable:**
+
+```bash
+cd backend && pipenv run pytest tests/unit/test_github_finding_closure.py tests/unit/test_github_finding_judge.py -q -k "verification or pass3 or escalation or outside_pairing or judge_candidate_group"
 ```
 
 ---

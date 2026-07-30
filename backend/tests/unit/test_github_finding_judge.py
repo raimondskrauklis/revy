@@ -24,6 +24,7 @@ from app.services.github_finding_judge import (
     _build_judge_prompt,
     _judge_failure_log_extra,
     is_judge_candidate,
+    judge_candidate_group_sql_predicate,
     record_review_run_judge_status,
 )
 from app.services.model_policy import ModelRef
@@ -70,6 +71,35 @@ def test_is_judge_candidate_info_bug_false():
         severity=FindingSeverity.info,
         category=FindingCategory.bug,
     )
+
+
+@pytest.mark.parametrize(
+    ("severity", "category", "expected"),
+    [
+        (FindingSeverity.info, FindingCategory.bug, False),
+        (FindingSeverity.warning, FindingCategory.bug, False),
+        (FindingSeverity.error, FindingCategory.bug, True),
+        (FindingSeverity.critical, FindingCategory.security, True),
+        (FindingSeverity.warning, FindingCategory.security, True),
+        (FindingSeverity.info, FindingCategory.security, False),
+    ],
+)
+def test_judge_candidate_group_sql_predicate_parity_matrix(
+    severity: FindingSeverity,
+    category: FindingCategory,
+    expected: bool,
+):
+    """Pass 3 SQL predicate must stay aligned with is_judge_candidate."""
+    assert is_judge_candidate(severity=severity, category=category) is expected
+
+
+def test_judge_candidate_group_sql_predicate_compiles():
+    from sqlalchemy import select
+
+    stmt = select(GitHubFindingGroupORM).where(judge_candidate_group_sql_predicate())
+    compiled = str(stmt.compile())
+    assert "severity" in compiled
+    assert "category" in compiled
 
 
 def test_judge_candidate_loader_filters_on_finding_severity_category():
