@@ -65,3 +65,47 @@
 | C3.5 | FR-Q13 re-open (optional) | skipped | — |
 
 **Deploy boundary (`--since`):** `2026-07-29T21:53:28Z` (post-#68 droplet deploy)
+
+## Wave D — FR-CS4 structural fix (post–#71)
+
+**Probe branch:** `chore/fr-cs4-structural-fix-staging`. **Fixture:** `backend/tests/fixtures/fr_cs4_probe/`. **D0:** [#71](https://github.com/raimondskrauklis/revy/pull/71) deployed `2026-07-30T08:28:45Z`.
+
+| Boundary | `--since` ISO | Used for |
+|----------|---------------|----------|
+| **Post-#71 deploy (D0)** | **`2026-07-30T08:28:45Z`** | D1 metrics (`judge_json_contract_staging_metrics`) |
+
+### Pre-flight (before push 1)
+
+| Check | Status | Evidence |
+|-------|--------|----------|
+| `judge_llm_enabled()` on `revy-worker` | pending | — |
+
+### Push 1 — introduce probe (D1.1)
+
+| Field | Value |
+|-------|-------|
+| `head_sha` | pending |
+| `group_id` | pending |
+| `last_seen_revision_id` | pending |
+| `review_run_id` | pending |
+| `start_line` / `end_line` | pending |
+| `fingerprint` | pending |
+
+### Push 2 — structural fix outside line region (D1.2)
+
+Remove `_fr_cs4_structural_root` and change `fr_cs4_probe_composed` to return `fr_cs4_probe_value()` only (no defect call); **do not** edit `_fr_cs4_review_visible_defect` body.
+
+| Field | Value |
+|-------|-------|
+| `head_sha` | pending |
+| push-2 `gen` for probe fingerprint | pending (must be **0**) |
+| line-region overlap | pending |
+
+### Sign-off (D1.3)
+
+| Check | Status | Evidence |
+|-------|--------|----------|
+| `state=resolved` | pending | — |
+| `resolution_method=verification_dismissed` | pending | — |
+| `judge_purpose=verification` outcome row | pending | — |
+| **FR-CS4 staging PASS** | pending | — |

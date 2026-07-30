@@ -47,11 +47,13 @@
 
 **Scope out:** Program doc churn in dogfood pushes (VAL8 backend-only for metric pushes).
 
-**Deliverables:** Staging memo sign-off; FR-CS4 → closed PASS in gap registry.
+**Deliverables:** Staging memo sign-off (FR-CS4 PASS at group level); gap registry close → **D3**.
 
-**Depends on:** **D0** merged + deployed to staging.
+**Depends on:** **D0** merged ([#71](https://github.com/raimondskrauklis/revy/pull/71)) + deployed to staging.
 
 **Human gate:** Operator one-push-per-Revy-cycle; LOOP stops until memo signed.
+
+**Planning:** [D1 findings](./FINDING_RESOLUTION_POST_WAVE_C_D1_FINDINGS.md) · [D1 general plan](./FINDING_RESOLUTION_POST_WAVE_C_D1_GENERAL_PLAN.md)
 
 ---
 
