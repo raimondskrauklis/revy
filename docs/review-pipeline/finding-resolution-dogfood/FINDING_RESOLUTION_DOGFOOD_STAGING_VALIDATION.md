@@ -68,7 +68,7 @@
 
 ## Wave D — FR-CS4 structural fix (post–#71)
 
-**Probe PR:** [#72](https://github.com/raimondskrauklis/revy/pull/72) · **Branch:** `chore/fr-cs4-structural-fix-staging` · **Fixture:** `backend/tests/fixtures/fr_cs4_probe/`. **D0:** [#71](https://github.com/raimondskrauklis/revy/pull/71) deployed `2026-07-30T08:28:45Z`.
+**Probe PR:** [#72](https://github.com/raimondskrauklis/revy/pull/72) · **Branch:** `chore/fr-cs4-structural-fix-staging` · **Fixture:** `backend/app/dogfood/fr_cs4_probe.py` (attempt 3+; was `tests/fixtures/fr_cs4_probe/`). **D0:** [#71](https://github.com/raimondskrauklis/revy/pull/71) deployed `2026-07-30T08:28:45Z`.
 
 | Boundary | `--since` ISO | Used for |
 |----------|---------------|----------|
@@ -84,8 +84,9 @@
 
 | Attempt | `head_sha` | Revy rev | Status | Evidence |
 |---------|------------|----------|--------|----------|
-| **1** | `0bcfc81` | 1 | **FAIL** | Revy check PASS; **0 publishable findings**; comment [5128728008](https://github.com/raimondskrauklis/revy/pull/72#issuecomment-5128728008) — no `group_id` to capture |
-| 2 | pending | — | pending | probe revision (see options below) |
+| **1** | `0bcfc81` | 1 | **FAIL** | Revy check PASS; **0 publishable findings**; comment [5128728008](https://github.com/raimondskrauklis/revy/pull/72#issuecomment-5128728008) — `format_summary_comment` kwargs (post-M0 silent) |
+| **2** | `afdfeca` | 2 | **FAIL** | Revy check PASS; **0 publishable findings**; bare `except` defect (D1-O1) — still silent |
+| **3** | pending | — | pending | **D1-O4** — `backend/app/dogfood/fr_cs4_probe.py` + `eval` anchored defect |
 
 **Captured fields (attempt 1):** none — no active group.
 
@@ -113,15 +114,13 @@
 
 | ID | Option | Action | Pros | Cons | Verdict |
 |----|--------|--------|------|------|---------|
-| **D1-O1** | **Revise defect class (recommended)** | Replace `format_summary_comment` misuse with a **non-formatter** bug on anchored lines (e.g. bare `except:`, mutable default, obvious logic error). Keep two-location shape: anchored defect block + `_fr_cs4_structural_root` removed on push 2. | Aligns with post-M0 pipeline; preserves FR-CS4 line-region + Pass 3 experiment | Requires code push + new Revy cycle | **Proceed** |
-| **D1-O2** | Revert to C3.1 `if False:` kwargs snippet | Same shape as Track C rev 3 `7d63bd0` | Proven pre-M0 | **Likely fails post-M0** — same API family M0 fixed | **Reject** |
-| **D1-O3** | MD5 / weak-hash only | `hashlib.md5(..., usedforsecurity=False)` | Simple | **Failed C3.1a** — 0 findings on staging | **Reject** |
-| **D1-O4** | Move probe out of `tests/fixtures/` | e.g. `backend/app/dogfood/fr_cs4_probe.py` | May increase review attention | Breaks dogfood fixture convention; VAL8 backend-only still OK but noisier diff | **Defer** — try D1-O1 first |
+| **D1-O1** | **Revise defect class** | Replace `format_summary_comment` misuse with non-formatter bug | Attempt 2 **FAIL** — bare `except` also 0 publishable | **Done** — insufficient alone |
+| **D1-O4** | Move probe out of `tests/fixtures/` | `backend/app/dogfood/fr_cs4_probe.py` + stronger defect (`eval`) | Attempt 3 in flight | **Proceed** |
 | **D1-O5** | `@revy review` retry without code change | Comment on PR | Zero cost | Attempt 1 already clean PASS with 0 gen; **very low yield** | **Reject** |
 | **D1-O6** | Merge #72 and dogfood on `main` | Merge before publish | — | Push 1 already ran on PR head; merge does not retroactively create findings | **Reject** |
 | **D1-O7** | DB-only investigation first | Query rev 1 run for suppressed/dismissed findings before revising probe | Confirms judge-dismiss vs Moonshot silence | Does not unblock D1 alone | **Do in parallel** with D1-O1 |
 
-**Recommended path:** **D1-O7** (staging DB query for rev 1 `0bcfc81`) **then D1-O1** (probe revision commit on #72 → wait for Revy rev 2 → fill memo row).
+**Recommended path:** **D1-O4** attempt 3 (`app/dogfood` + `eval` defect) → wait for Revy rev 3. Parallel **D1-O7** on revs 1–2 if staging DB access available.
 
 **Staging DB checks (D1-O7):**
 
@@ -143,7 +142,7 @@ WHERE review_run_id IN (
 
 **Blocked** until push 1 attempt 2 PASS (≥1 active group + memo fields filled).
 
-Remove `_fr_cs4_structural_root` and change `fr_cs4_probe_composed` to return `fr_cs4_probe_value()` only (no defect call); **do not** edit `_fr_cs4_review_visible_defect` body.
+Remove `_fr_cs4_structural_root` and change `fr_cs4_probe_composed` to return `fr_cs4_probe_value()` only (no defect call); **do not** edit `_fr_cs4_review_visible_defect` body. Module: `backend/app/dogfood/fr_cs4_probe.py`.
 
 | Field | Value |
 |-------|-------|
