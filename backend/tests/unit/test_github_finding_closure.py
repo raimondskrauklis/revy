@@ -21,8 +21,10 @@ from app.models.github_review_run import GitHubReviewRunORM
 from app.services import github_resolution_metrics
 from app.services.github_finding_closure import (
     VERIFICATION_JUDGE_MAX_PER_RUN,
+    _verification_judge_slots_remaining,
     apply_pass2_closure_for_review_run,
     is_verification_escalation_candidate,
+    pass3_verification_escalation_select,
     verify_still_open_escalation_groups,
 )
 from app.services.github_finding_closure_rules import (
@@ -205,6 +207,87 @@ def test_verification_escalation_candidate_skips_compare_failed():
         closure_blocked_reason=COMPARE_FAILED_REASON,
     )
     assert not is_verification_escalation_candidate(group=group)
+
+
+def test_verification_escalation_candidate_skips_current_revision():
+    current_revision_id = uuid.uuid4()
+    group = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=uuid.uuid4(),
+        fingerprint="fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Bug",
+        message="msg",
+        file_path="app/a.py",
+        last_seen_revision_id=current_revision_id,
+        resolution_status=ResolutionStatus.still_open,
+    )
+    assert not is_verification_escalation_candidate(
+        group=group,
+        current_revision_id=current_revision_id,
+    )
+
+
+def test_pass3_verification_escalation_select_orders_and_limits():
+    pull_request_id = uuid.uuid4()
+    current_revision_id = uuid.uuid4()
+    review_run_id = uuid.uuid4()
+    stmt = pass3_verification_escalation_select(
+        pull_request_id=pull_request_id,
+        current_revision_id=current_revision_id,
+        review_run_id=review_run_id,
+        fingerprints_in_run=frozenset({"fp-a"}),
+        limit=VERIFICATION_JUDGE_MAX_PER_RUN,
+    )
+    compiled = str(stmt.compile())
+    assert "last_seen_revision_id" in compiled
+    assert "LIMIT" in compiled.upper()
+    assert "fingerprint" in compiled
+
+
+@pytest.mark.parametrize(
+    ("resolution_status", "active", "same_revision", "compare_failed", "severity", "category", "expected"),
+    [
+        (ResolutionStatus.still_open, True, False, False, FindingSeverity.error, FindingCategory.bug, True),
+        (ResolutionStatus.addressed, True, False, False, FindingSeverity.error, FindingCategory.bug, False),
+        (ResolutionStatus.still_open, False, False, False, FindingSeverity.error, FindingCategory.bug, False),
+        (ResolutionStatus.still_open, True, True, False, FindingSeverity.error, FindingCategory.bug, False),
+        (ResolutionStatus.still_open, True, False, True, FindingSeverity.error, FindingCategory.bug, False),
+        (ResolutionStatus.still_open, True, False, False, FindingSeverity.info, FindingCategory.bug, False),
+        (ResolutionStatus.still_open, True, False, False, FindingSeverity.critical, FindingCategory.bug, True),
+        (ResolutionStatus.still_open, True, False, False, FindingSeverity.error, FindingCategory.security, True),
+    ],
+)
+def test_verification_escalation_candidate_matrix(
+    resolution_status: ResolutionStatus,
+    active: bool,
+    same_revision: bool,
+    compare_failed: bool,
+    severity: FindingSeverity,
+    category: FindingCategory,
+    expected: bool,
+):
+    current_revision_id = uuid.uuid4()
+    group = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=uuid.uuid4(),
+        fingerprint="fp",
+        state=GitHubFindingGroupState.active if active else GitHubFindingGroupState.resolved,
+        severity=severity,
+        category=category,
+        title="Bug",
+        message="msg",
+        file_path="app/a.py",
+        last_seen_revision_id=current_revision_id if same_revision else uuid.uuid4(),
+        resolution_status=resolution_status,
+        closure_blocked_reason=COMPARE_FAILED_REASON if compare_failed else None,
+    )
+    assert (
+        is_verification_escalation_candidate(group=group, current_revision_id=current_revision_id)
+        is expected
+    )
 
 
 def test_verification_judge_max_per_run_is_five():
@@ -602,28 +685,43 @@ async def test_verify_still_open_escalation_outside_pairing():
                 AsyncMock(return_value=set()),
             ):
                 with patch(
-                    "app.services.github_compare_patches.fetch_compare_patches",
-                    AsyncMock(return_value=compare_result),
+                    "app.services.github_finding_closure._verification_judge_slots_remaining",
+                    AsyncMock(return_value=VERIFICATION_JUDGE_MAX_PER_RUN),
                 ):
                     with patch(
-                        "app.services.github_finding_closure.resolve_model",
-                        AsyncMock(return_value=ModelRef(provider="anthropic", model_id="claude-test")),
+                        "app.services.github_compare_patches.fetch_compare_patches",
+                        AsyncMock(return_value=compare_result),
                     ):
                         with patch(
-                            "app.services.github_finding_closure.call_judge_with_optional_retry",
-                            AsyncMock(
-                                return_value=(
-                                    {"outcome": "dismissed", "notes": "structural fix"},
-                                    0,
-                                )
-                            ),
+                            "app.services.github_finding_closure.resolve_model",
+                            AsyncMock(return_value=ModelRef(provider="anthropic", model_id="claude-test")),
                         ):
-                            result = await verify_still_open_escalation_groups(
-                                session,
-                                review_run_id=review_run_id,
-                            )
+                            with patch(
+                                "app.services.github_finding_closure.call_judge_with_optional_retry",
+                                AsyncMock(
+                                    return_value=(
+                                        {"outcome": "dismissed", "notes": "structural fix"},
+                                        0,
+                                    )
+                                ),
+                            ):
+                                result = await verify_still_open_escalation_groups(
+                                    session,
+                                    review_run_id=review_run_id,
+                                )
 
     assert result.judged_count == 1
     assert aged_group.state == GitHubFindingGroupState.resolved
     assert aged_group.resolution_method == ResolutionMethod.verification_dismissed
+
+
+@pytest.mark.asyncio
+async def test_verification_judge_slots_remaining_accounts_for_prior_outcomes():
+    session = AsyncMock()
+    session.scalar = AsyncMock(return_value=VERIFICATION_JUDGE_MAX_PER_RUN)
+    remaining = await _verification_judge_slots_remaining(
+        session,
+        review_run_id=uuid.uuid4(),
+    )
+    assert remaining == 0
 

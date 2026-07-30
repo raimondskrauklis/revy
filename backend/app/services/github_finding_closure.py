@@ -7,7 +7,7 @@ from typing import Any
 from uuid import UUID
 
 import httpx
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import (
@@ -75,15 +75,85 @@ class VerificationJudgeResult:
 def is_verification_escalation_candidate(
     *,
     group: GitHubFindingGroupORM,
+    current_revision_id: UUID | None = None,
 ) -> bool:
     """FR-Q11: still_open escalation groups eligible for Pass 3 verification."""
     from app.services.github_finding_judge import is_judge_candidate
 
+    if group.state != GitHubFindingGroupState.active:
+        return False
     if group.resolution_status != ResolutionStatus.still_open:
         return False
     if group.closure_blocked_reason == COMPARE_FAILED_REASON:
         return False
+    if current_revision_id is not None and group.last_seen_revision_id == current_revision_id:
+        return False
     return is_judge_candidate(severity=group.severity, category=group.category)
+
+
+def verification_escalation_candidate_sql_filters(
+    *,
+    pull_request_id: UUID,
+    current_revision_id: UUID,
+) -> list[Any]:
+    """SQL filters mirroring is_verification_escalation_candidate (Pass 3 widen)."""
+    return [
+        GitHubFindingGroupORM.pull_request_id == pull_request_id,
+        GitHubFindingGroupORM.state == GitHubFindingGroupState.active,
+        GitHubFindingGroupORM.resolution_status == ResolutionStatus.still_open,
+        or_(
+            GitHubFindingGroupORM.closure_blocked_reason.is_(None),
+            GitHubFindingGroupORM.closure_blocked_reason != COMPARE_FAILED_REASON,
+        ),
+        GitHubFindingGroupORM.last_seen_revision_id != current_revision_id,
+        judge_candidate_group_sql_predicate(),
+    ]
+
+
+def pass3_verification_escalation_select(
+    *,
+    pull_request_id: UUID,
+    current_revision_id: UUID,
+    review_run_id: UUID,
+    fingerprints_in_run: frozenset[str],
+    limit: int,
+):
+    """Bounded, deterministic Pass 3 candidate query (SQL limit + order)."""
+    if limit <= 0:
+        raise ValueError("pass3_verification_escalation_limit_must_be_positive")
+    filters = verification_escalation_candidate_sql_filters(
+        pull_request_id=pull_request_id,
+        current_revision_id=current_revision_id,
+    )
+    already_judged = select(GitHubFindingJudgeOutcomeORM.group_id).where(
+        GitHubFindingJudgeOutcomeORM.review_run_id == review_run_id,
+        GitHubFindingJudgeOutcomeORM.judge_purpose == JudgePurpose.verification,
+    )
+    filters.append(GitHubFindingGroupORM.id.not_in(already_judged))
+    if fingerprints_in_run:
+        filters.append(GitHubFindingGroupORM.fingerprint.not_in(fingerprints_in_run))
+    return (
+        select(GitHubFindingGroupORM)
+        .where(*filters)
+        .order_by(GitHubFindingGroupORM.last_seen_revision_id.asc())
+        .limit(limit)
+    )
+
+
+async def _verification_judge_slots_remaining(
+    session: AsyncSession,
+    *,
+    review_run_id: UUID,
+) -> int:
+    judged = await session.scalar(
+        select(func.count())
+        .select_from(GitHubFindingJudgeOutcomeORM)
+        .where(
+            GitHubFindingJudgeOutcomeORM.review_run_id == review_run_id,
+            GitHubFindingJudgeOutcomeORM.judge_purpose == JudgePurpose.verification,
+        )
+    )
+    return max(0, VERIFICATION_JUDGE_MAX_PER_RUN - int(judged or 0))
 
 
 async def _load_prior_revision(
@@ -236,24 +306,35 @@ async def verify_still_open_escalation_groups(
     if compare_result.compare_failed:
         return VerificationJudgeResult(judged_count=0, artifacts=[])
 
-    fingerprints_in_run = await _fingerprints_in_review_run(session, review_run_id=review_run_id)
-    candidates = list(
+    fingerprints_in_run = frozenset(
+        await _fingerprints_in_review_run(session, review_run_id=review_run_id)
+    )
+    remaining_slots = await _verification_judge_slots_remaining(
+        session,
+        review_run_id=review_run_id,
+    )
+    if remaining_slots == 0:
+        return VerificationJudgeResult(judged_count=0, artifacts=[])
+
+    loaded = list(
         await session.scalars(
-            select(GitHubFindingGroupORM).where(
-                GitHubFindingGroupORM.pull_request_id == revision.pull_request_id,
-                GitHubFindingGroupORM.state == GitHubFindingGroupState.active,
-                GitHubFindingGroupORM.resolution_status == ResolutionStatus.still_open,
-                or_(
-                    GitHubFindingGroupORM.closure_blocked_reason.is_(None),
-                    GitHubFindingGroupORM.closure_blocked_reason != COMPARE_FAILED_REASON,
-                ),
-                GitHubFindingGroupORM.last_seen_revision_id != revision.id,
-                judge_candidate_group_sql_predicate(),
+            pass3_verification_escalation_select(
+                pull_request_id=revision.pull_request_id,
+                current_revision_id=revision.id,
+                review_run_id=review_run_id,
+                fingerprints_in_run=fingerprints_in_run,
+                limit=remaining_slots,
             )
         )
     )
     escalation_groups = [
-        group for group in candidates if group.fingerprint not in fingerprints_in_run
+        group
+        for group in loaded
+        if is_verification_escalation_candidate(
+            group=group,
+            current_revision_id=revision.id,
+        )
+        and group.fingerprint not in fingerprints_in_run
     ]
     if not escalation_groups:
         return VerificationJudgeResult(judged_count=0, artifacts=[])
@@ -270,7 +351,7 @@ async def verify_still_open_escalation_groups(
     artifacts: list[JudgeCandidateArtifact] = []
     judged = 0
     async with httpx.AsyncClient(timeout=float(settings.revy_revision_timeout_standard_seconds)) as client:
-        for group in escalation_groups[:VERIFICATION_JUDGE_MAX_PER_RUN]:
+        for group in escalation_groups:
             existing = await session.scalar(
                 select(GitHubFindingJudgeOutcomeORM.id).where(
                     GitHubFindingJudgeOutcomeORM.review_run_id == review_run_id,

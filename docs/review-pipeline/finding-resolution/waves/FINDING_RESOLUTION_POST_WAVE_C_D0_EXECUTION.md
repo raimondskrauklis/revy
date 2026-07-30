@@ -96,6 +96,20 @@ cd backend && pipenv run pytest tests/unit/test_github_finding_closure.py tests/
 
 ---
 
+## D0.5 — Pass 3 review hardening (Revy #71 rev 2)
+
+**What:** `pass3_verification_escalation_select()` with SQL `ORDER BY last_seen_revision_id`, `LIMIT 5`, fingerprint + already-judged exclusion; `is_verification_escalation_candidate` wired as post-load parity guard; full severity×category judge matrix.
+
+**Files:** `backend/app/services/github_finding_closure.py`, `backend/tests/unit/test_github_finding_closure.py`, `backend/tests/unit/test_github_finding_judge.py`
+
+**Deliverable:**
+
+```bash
+cd backend && pipenv run pytest tests/unit/test_github_finding_closure.py tests/unit/test_github_finding_judge.py -q
+```
+
+---
+
 **Phase gate** (from `backend/`):
 
 ```bash

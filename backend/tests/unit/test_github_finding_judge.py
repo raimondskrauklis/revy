@@ -1,5 +1,6 @@
 # backend/tests/unit/test_github_finding_judge.py
 """GitHub finding judge — R5."""
+import itertools
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -27,6 +28,7 @@ from app.services.github_finding_judge import (
     judge_candidate_group_sql_predicate,
     record_review_run_judge_status,
 )
+from app.services.github_finding_reconcile import severity_rank
 from app.services.model_policy import ModelRef
 
 
@@ -74,22 +76,18 @@ def test_is_judge_candidate_info_bug_false():
 
 
 @pytest.mark.parametrize(
-    ("severity", "category", "expected"),
-    [
-        (FindingSeverity.info, FindingCategory.bug, False),
-        (FindingSeverity.warning, FindingCategory.bug, False),
-        (FindingSeverity.error, FindingCategory.bug, True),
-        (FindingSeverity.critical, FindingCategory.security, True),
-        (FindingSeverity.warning, FindingCategory.security, True),
-        (FindingSeverity.info, FindingCategory.security, False),
-    ],
+    ("severity", "category"),
+    list(itertools.product(FindingSeverity, FindingCategory)),
 )
 def test_judge_candidate_group_sql_predicate_parity_matrix(
     severity: FindingSeverity,
     category: FindingCategory,
-    expected: bool,
 ):
-    """Pass 3 SQL predicate must stay aligned with is_judge_candidate."""
+    """Pass 3 SQL predicate must stay aligned with is_judge_candidate (full matrix)."""
+    expected = severity in (FindingSeverity.error, FindingSeverity.critical) or (
+        category == FindingCategory.security
+        and severity_rank(severity) >= severity_rank(FindingSeverity.warning)
+    )
     assert is_judge_candidate(severity=severity, category=category) is expected
 
 
