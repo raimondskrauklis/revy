@@ -35,7 +35,7 @@ docker exec revy-worker python -c "from app.core.config import settings; print('
 
 **Goal:** Review-visible defect on anchored lines; capture group + revision ids.
 
-**Scope in:** `backend/app/dogfood/fr_cs4_probe.py`; `test_fr_cs4_probe.py`; chore PR push 1.  
+**Scope in:** `backend/app/services/fr_cs4_staging_probe.py`; `test_fr_cs4_probe.py`; chore PR push 1.  
 **Scope out:** Program docs in push.
 
 **Deliverables:** pytest green; staging push 1 memo row with `head_sha`, `group_id`, `last_seen_revision_id`, finding lines.
