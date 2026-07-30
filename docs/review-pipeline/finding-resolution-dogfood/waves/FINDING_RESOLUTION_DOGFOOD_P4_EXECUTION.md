@@ -1,5 +1,7 @@
 # Finding resolution dogfood P4 — MR-DG1 Moonshot signature (execution)
 
+> **Superseded for LOOP** by [M0 execution](../finding-resolution/waves/FINDING_RESOLUTION_POST_WAVE_C_M0_EXECUTION.md) in the post–wave C program. Content retained for reference.
+
 Phase **P4** of [FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md](../FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md). Baseline: findings § MR-DG1. **P4 only** — wave B, separate branch.
 
 **Goal:** Moonshot does not flag valid `format_summary_comment(generation_groups=…, pr_active_groups=…)` as unknown kwargs.

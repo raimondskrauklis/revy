@@ -25,7 +25,7 @@
 | **FR-DG1** | G9 / resolution manifest `0/0 prior active` | high | `chore/finding-resolution-staging-dogfood` | **closed PASS** — rev 3 `9d32ea2` ([#65](https://github.com/raimondskrauklis/revy/pull/65)) |
 | **FR-DG2** | Stale finding group survives code removal (block 2 + inline orphan) | high | follow-up after Track A | **closed PASS** — C3 [#69](https://github.com/raimondskrauklis/revy/pull/69) |
 | **FR-DG2a** | Pass 1 does not stamp `addressed` when `file_path` deleted in compare | high | `fix/fr-dg2-file-deletion-pass1` | **code ready** — Track A shipped; Track B staging repro pending |
-| **MR-DG1** | Moonshot hallucinates `format_summary_comment` signature | medium | `chore/moonshot-formatter-signature` | open |
+| **MR-DG1** | Moonshot hallucinates `format_summary_comment` signature | medium | `chore/moonshot-formatter-signature` | **closed PASS** — M0 prompt API |
 
 ### Out of scope (this program)
 
@@ -158,6 +158,8 @@ Moonshot reviewer prompt does not include formatter API surface; model inferred 
 | Or judge dismiss | false positive dismissed before inline publish |
 
 **Note:** Separate PR from FR-DG1/DG2 — prompt-only change, no resolution pipeline dependency.
+
+**Resolution (M0):** `REVIEW_SYSTEM_PROMPT` now documents `format_summary_comment(*, generation_groups, pr_active_groups)` in `moonshot_review.py`; regression test in `test_moonshot_review.py`. **closed PASS** on `chore/moonshot-formatter-signature`.
 
 ---
 

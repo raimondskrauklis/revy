@@ -20,7 +20,7 @@
 | FR-DG1 | **PASS** — #65 rev 3 |
 | FR-DG2a | **PASS** — #66 deployed `2026-07-29T19:20:33Z` |
 | FR-DG2 | **closed PASS** — #69 Track C rev 6 `bdb25a4` |
-| MR-DG1 | open — P4 |
+| MR-DG1 | **closed PASS** — M0 `chore/moonshot-formatter-signature` |
 
 ## Operator rules
 
@@ -29,4 +29,4 @@
 3. Dogfood repro pushes: **backend only** ([VAL8](./FINDING_RESOLUTION_DOGFOOD_VALIDATION_FINDINGS.md#fr-dg-val8--dogfood-metrics-interpretation)).
 4. Primary metric: **per-group** `state` + `resolution_method`, not `pr_active_count` alone.
 
-**Next:** MR-DG1 (P4) optional; FR-CS4/8 → future wave. Close [#69](https://github.com/raimondskrauklis/revy/pull/69) after merge review.
+**Next:** [`phase-execution`](../finding-resolution/waves/FINDING_RESOLUTION_POST_WAVE_C_EXECUTION.md) from **M0** (MR-DG1); wave D (FR-CS4) after M0 merge.

@@ -9,6 +9,8 @@ import pytest
 from app.core.exceptions import ServiceUnavailableError
 from app.integrations.moonshot_review import (
     ISSUE_COMMENT_FORMAT_SYSTEM_PROMPT,
+    PUBLISH_FORMATTER_API_CONTEXT,
+    REVIEW_SYSTEM_PROMPT,
     _chat_completion_body,
     _extract_message_content,
     complete_issue_comment_markdown,
@@ -135,6 +137,15 @@ def test_extract_message_content_length_finish_reason():
         )
     assert exc.value.error_code == "llm_error"
     assert "truncated" in exc.value.message
+
+
+def test_review_system_prompt_appends_publish_formatter_api_block():
+    assert REVIEW_SYSTEM_PROMPT.endswith(PUBLISH_FORMATTER_API_CONTEXT)
+    assert (
+        "format_summary_comment(*, generation_groups, pr_active_groups)"
+        in PUBLISH_FORMATTER_API_CONTEXT
+    )
+    assert "valid parameter names, not typos" in PUBLISH_FORMATTER_API_CONTEXT
 
 
 def test_issue_comment_format_system_prompt_lists_required_sections():
