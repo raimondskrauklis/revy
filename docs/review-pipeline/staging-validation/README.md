@@ -16,7 +16,7 @@
 
 | PR | Program | Branch | Status |
 |----|---------|--------|--------|
-| *(open)* | Agent workflow pack E2E | `chore/agent-workflow-e2e-validation` | push 1 — bootstrap `.agent/` |
+| *(open)* | Agent workflow pack E2E | `chore/agent-workflow-e2e-validation` | [#73](https://github.com/raimondskrauklis/revy/pull/73) push 1 |
 | *(open)* | Finding resolution dogfood | `chore/finding-resolution-staging-dogfood` | P0 pushed — staging validation in progress |
 | [#63](https://github.com/raimondskrauklis/revy/pull/63) | PSA post-#62 deploy | `chore/psa-staging-dogfood` | **sign-off complete** — merged |
 

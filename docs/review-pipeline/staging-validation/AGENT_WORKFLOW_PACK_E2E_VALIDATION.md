@@ -23,7 +23,7 @@
 
 | PR | Branch | Status |
 |----|--------|--------|
-| *(this PR)* | `chore/agent-workflow-e2e-validation` | open — push 1 |
+| [#73](https://github.com/raimondskrauklis/revy/pull/73) | `chore/agent-workflow-e2e-validation` | open — push 1 |
 
 ---
 
@@ -39,7 +39,7 @@
 | Greptile generator `--check` (unchanged SSOT) | **PASS** | `generate_greptile_files_from_review_context --check` exit 0 |
 | Staging metrics script (real DB) | **PASS** | see metrics row below |
 | Local Bugbot before push | **PASS** | dual-SSOT fixed — `.revy` canonical in manifest |
-| `gh pr create` | pending | after push |
+| `gh pr create` | **PASS** | [#73](https://github.com/raimondskrauklis/revy/pull/73) |
 
 ---
 
@@ -71,6 +71,6 @@ Queried: 2026-07-31 (agent E2E session).
 | Bootstrap materialized without running pack scripts | **PASS** | agent wrote `.agent/*` from templates |
 | Greptile not required (off by default) | **PASS** | `integrations.greptile: false` |
 | Validation memo filled from real script output | **PASS** | metrics table above |
-| **E2E pack push 1** | **pending** | after PR open + Bugbot clean |
+| **E2E pack push 1** | **PASS** | PR #73 open; Bugbot clean after SSOT fix |
 
 **Next:** merge E2E PR → optional push 2 tests `staging-validation` update row on staging dogfood PR.
