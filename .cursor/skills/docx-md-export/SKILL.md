@@ -1,18 +1,18 @@
 ---
 name: docx-md-export
 description: >-
-  Convert Word (.docx) files to GitHub-flavored markdown via Pandoc with KP
+  Convert Word (.docx) files to GitHub-flavored markdown via Pandoc with
   post-processing. Use when the user asks to import docx, convert Word to MD,
-  reverse md-docx-export, or digitize LU/task/planning Word handoffs under
-  docs/ or internal_docs/.
+  reverse md-docx-export, or digitize Word handoffs under docs/ or
+  internal_docs/.
 ---
 
-# DOCX → MD export (KP)
+# DOCX → MD export
 
 ## When to use
 
 - Reverse of **`md-docx-export`**: Word handoff → editable `.md`
-- LU tasks, planning annexes, stakeholder docs under `internal_docs/` or `docs/`
+- Task specs, planning annexes, stakeholder docs under `internal_docs/` or `docs/`
 - User asks to **convert**, **import**, or **digitize** a `.docx`
 
 **Not** for platform code docs unless the user asks.
@@ -25,7 +25,7 @@ description: >-
 chmod +x .cursor/skills/docx-md-export/scripts/export_docx_to_md.sh
 
 .cursor/skills/docx-md-export/scripts/export_docx_to_md.sh \
-  internal_docs/project_planning/PIELIKUMS\ NR.1_Pirmais_Darba_Uzdevums_final.docx
+  docs/programs/example/HANDOFF.docx
 ```
 
 **Pandoc path:** script uses `PANDOC` env, else `/opt/homebrew/bin/pandoc`, else `/tmp/pandoc-arm64/pandoc-3.6.4-arm64/bin/pandoc`, else `pandoc` on PATH.
@@ -36,7 +36,7 @@ chmod +x .cursor/skills/docx-md-export/scripts/export_docx_to_md.sh
 
 1. Pandoc: `docx` → `gfm` (pipe tables, ATX headings where Word used heading styles)
 2. Post-process (`postprocess_md_from_docx.py`):
-   - KP path comment line 1 (`# internal_docs/.../file.md`)
+   - Repo path comment line 1 (`# docs/.../file.md` or `# internal_docs/.../file.md`)
    - Strip Pandoc attributes (`{.underline}`, etc.)
    - Remove empty `<!-- -->` list separators
    - Unescape `\"` → `"`

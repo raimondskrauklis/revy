@@ -9,6 +9,8 @@
 | Doc | Purpose |
 |-----|---------|
 | [STAGING_VALIDATION_FINDINGS.md](./STAGING_VALIDATION_FINDINGS.md) | Baseline — gaps, SV-Q registry, deploy-window rules, parallel-track model |
+| [TEMPLATE_STAGING_VALIDATION.md](./TEMPLATE_STAGING_VALIDATION.md) | Stub for new per-program `*_STAGING_VALIDATION.md` memos |
+| [TEMPLATE_VALIDATION_INDEX.md](./TEMPLATE_VALIDATION_INDEX.md) | Optional index stub (this README is the live index on Revy) |
 | *(later)* `STAGING_VALIDATION_GENERAL_PLAN.md` | Phased rollout (script extensions, memo templates, CI hooks) |
 | *(later)* `waves/STAGING_VALIDATION_EXECUTION.md` | LOOP when implementation is needed |
 
@@ -16,6 +18,7 @@
 
 | PR | Program | Branch | Status |
 |----|---------|--------|--------|
+| *(open)* | Agent workflow pack E2E | `chore/agent-workflow-e2e-validation` | [#73](https://github.com/raimondskrauklis/revy/pull/73) push 1 |
 | *(open)* | Finding resolution dogfood | `chore/finding-resolution-staging-dogfood` | P0 pushed — staging validation in progress |
 | [#63](https://github.com/raimondskrauklis/revy/pull/63) | PSA post-#62 deploy | `chore/psa-staging-dogfood` | **sign-off complete** — merged |
 
@@ -34,6 +37,7 @@
 | Review engineering context | [REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md](../review-engineering-context/REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md) |
 | Judge JSON contract | [JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](../judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) |
 | Finding resolution | [FINDING_RESOLUTION_STAGING_VALIDATION.md](../finding-resolution/FINDING_RESOLUTION_STAGING_VALIDATION.md) |
+| Agent workflow pack E2E | [AGENT_WORKFLOW_PACK_E2E_VALIDATION.md](./AGENT_WORKFLOW_PACK_E2E_VALIDATION.md) |
 
 ## Shared tooling
 

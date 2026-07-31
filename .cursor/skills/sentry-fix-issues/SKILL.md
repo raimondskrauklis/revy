@@ -26,23 +26,23 @@ Config lives in `.cursor/mcp.json`:
 {
   "mcpServers": {
     "sentry": {
-      "url": "https://mcp.sentry.dev/mcp/kp-platform"
+      "url": "https://mcp.sentry.dev/mcp/<org-slug>"
     }
   }
 }
 ```
 
-Optional org scope (`/kp-platform`) limits tools to the Revy org. Base URL works too.
+Replace `<org-slug>` with your Sentry organization slug (last path segment). Optional org scope limits tools to that org; base URL `https://mcp.sentry.dev/mcp` works too.
 
-1. **Cursor Settings → Features → MCP Servers** — enable `sentry`, complete OAuth (account with **kp-platform** access).
-2. **Discover server id** — `GetMcpTools` with `pattern: "sentry"`. Cursor registers it as something like `project-0-revy-sentry`, **not** `sentry`. Use the id from the catalog for all `CallMcpTool` calls.
-3. **Verify** — `find_organizations` should return `kp-platform` (`regionUrl`: `https://de.sentry.io`).
+1. **Cursor Settings → Features → MCP Servers** — enable `sentry`, complete OAuth (account with access to that org).
+2. **Discover server id** — `GetMcpTools` with `pattern: "sentry"`. Cursor registers it as something like `project-0-<repo>-sentry`, **not** `sentry`. Use the id from the catalog for all `CallMcpTool` calls.
+3. **Verify** — `find_organizations` should return your org slug.
 4. If tools are missing or auth failed — call `mcp_auth` on that server, then retry.
 
 ## Workflow
 
 1. **Anchor** — user's issue URL, short ID (e.g. `PYTHON-FASTAP-REVY-1`), or paste defines *which* bug.
-2. **Fetch via MCP** — `get_sentry_resource` with `url` set to the issue URL (preferred). Fallback: `resourceType: "issue"`, `organizationSlug: "kp-platform"`, `resourceId: "<short-id>"`. If fetch fails, use their paste; say what failed.
+2. **Fetch via MCP** — `get_sentry_resource` with `url` set to the issue URL (preferred). Fallback: `resourceType: "issue"`, `organizationSlug: "<org-slug>"` (from mcp.json URL), `resourceId: "<short-id>"`. If fetch fails, use their paste; say what failed.
 3. **Read the code** — stack trace frames; trace the failing path.
 4. **Fix** — minimal, production-ready change per `.cursorrules` (no silencing, no temp hacks).
 5. **Test when it earns it** — regression in `backend/tests/unit/` or colocated `*.test.ts(x)` when logic-shaped. Skip trivial fixes.
@@ -67,7 +67,7 @@ Do **not** call `search_issues` unless the user explicitly requests a search in 
 
 Do **not** call `analyze_issue_with_seer` automatically after `get_sentry_resource`.
 
-## KP defaults
+## Repo stack defaults
 
 - Backend → `app.core.exceptions`; async SQLAlchemy 2.0.
 - Frontend → `mapApiError()` / `showDomainErrorToast()`; `--app-*` if UI changes.

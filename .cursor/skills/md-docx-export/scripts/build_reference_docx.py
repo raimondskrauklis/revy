@@ -1,5 +1,5 @@
 # .cursor/skills/md-docx-export/scripts/build_reference_docx.py
-"""Build Pandoc reference.docx with KP compact typography (9pt body, narrow page)."""
+"""Build Pandoc reference.docx with compact typography (9pt body, narrow page)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from docx import Document
 from docx.enum.text import WD_LINE_SPACING
 from docx.shared import Cm, Pt
 
-OUT = Path(__file__).resolve().parent.parent / "assets" / "kp-compact-reference.docx"
+OUT = Path(__file__).resolve().parent.parent / "assets" / "compact-reference.docx"
 
 # Body 9pt; headings scale up proportionally
 FONT = "Calibri"

@@ -1,0 +1,23 @@
+{
+  "active_program": "finding-resolution-post-wave-c",
+  "programs": [
+    {
+      "id": "finding-resolution-post-wave-c",
+      "scope": ["backend/**"],
+      "paths": [
+        {
+          "path": "docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_POST_WAVE_C_EXECUTION.md",
+          "description": "Post–wave C LOOP index — M0–D3 execution"
+        },
+        {
+          "path": "docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_POST_WAVE_C_BACKLOG_FINDINGS.md",
+          "description": "Post–wave C backlog — MR-DG1, FR-CS4, FR-CS8 locks"
+        },
+        {
+          "path": "docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_POST_WAVE_C_GENERAL_PLAN.md",
+          "description": "Post–wave C general plan — M0 and wave D phases"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "pack_version": "1",
+  "project_name": "revy",
+  "docs_root": "docs/review-pipeline",
+  "agents_docs": "docs/review-pipeline/agents",
+  "backend_dir": "backend",
+  "frontend_dir": "frontend",
+  "default_scope": ["backend/**"],
+  "scopes": {
+    "layout": "full-stack — backend/ + frontend/ at repo root",
+    "default": ["backend/**"],
+    "available": ["backend/**", "frontend/**"],
+    "note": "Default backend only. Add frontend/** in review-context programs[].scope for full-stack programs."
+  },
+  "test_commands": {
+    "backend_lint": "cd backend && pipenv run ruff check .",
+    "backend_lint_fix": "cd backend && pipenv run ruff check --fix .",
+    "backend_test": "cd backend && pipenv run pytest tests/unit/ -q",
+    "frontend_lint": "cd frontend && npm run lint",
+    "frontend_test": "cd frontend && npm test"
+  },
+  "review_context": {
+    "ssot": ".revy/review-context.json",
+    "agent_mirror": ".agent/review-context.json",
+    "bugbot": ".cursor/BUGBOT.md",
+    "greptile_output": ".greptile/files.json",
+    "sync_rule": "On program switch: edit .revy first, then copy to .agent/review-context.json"
+  },
+  "integrations": {
+    "revy": true,
+    "greptile": false
+  },
+  "flows": {
+    "phase-loop": { "enabled": true, "skill": "phase-execution" },
+    "ship": { "enabled": true, "skill": "ship-changes" },
+    "greptile-parallel": { "enabled": false, "skill": "babysit-pr" }
+  },
+  "greptile": {
+    "generator_module": "scripts.generate_greptile_files_from_review_context",
+    "check_command": "cd backend && python -m scripts.generate_greptile_files_from_review_context --check",
+    "write_command": "cd backend && python -m scripts.generate_greptile_files_from_review_context --write",
+    "test_file": "tests/unit/test_generate_greptile_files.py"
+  },
+  "skills": {
+    "catalog": ".agent/skills.catalog.json",
+    "installed": [
+      "bootstrap-workflow",
+      "phase-execution",
+      "ship-changes",
+      "chunk-execution",
+      "create-findings",
+      "create-general-plan",
+      "create-execution-plan",
+      "architecture-peer-review",
+      "execution-peer-review",
+      "devils-advocate",
+      "post-finish-gap-pass",
+      "sentry-fix-issues",
+      "md-formatting",
+      "md-docx-export",
+      "docx-md-export",
+      "staging-validation"
+    ]
+  },
+  "validation": {
+    "index_doc": "docs/review-pipeline/staging-validation/README.md",
+    "memo_template": "docs/review-pipeline/staging-validation/TEMPLATE_STAGING_VALIDATION.md",
+    "memo_pattern": "docs/review-pipeline/{program_folder}/{PROGRAM}_STAGING_VALIDATION.md",
+    "e2e_memo": "docs/review-pipeline/staging-validation/AGENT_WORKFLOW_PACK_E2E_VALIDATION.md",
+    "metrics_scripts": [
+      {
+        "id": "judge_json_contract",
+        "command": "cd backend && DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.judge_json_contract_staging_metrics",
+        "since_flag": "--since"
+      }
+    ],
+    "evidence_runbook": "docs/utils/BACKEND_SCRIPTS_RUNBOOK.md"
+  }
+}

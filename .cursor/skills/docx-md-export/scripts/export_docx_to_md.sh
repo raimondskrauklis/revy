@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # .cursor/skills/docx-md-export/scripts/export_docx_to_md.sh
-# Convert one or more .docx files to .md (GFM + KP post-processing).
+# Convert one or more .docx files to .md (GFM + post-processing).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"

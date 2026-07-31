@@ -7,7 +7,7 @@ description: >-
   handoff documents under docs/ or internal_docs/.
 ---
 
-# Markdown formatting (KP)
+# Markdown formatting
 
 ## When to use
 
@@ -15,9 +15,9 @@ description: >-
 - **Fixing** MD that breaks in Word (lists on one line, tables as plain text)
 - **Before** export — pair with **`md-docx-export`** skill for `.docx`
 
-**Canonical reference (full detail):** `internal_docs/project_planning/MD_FORMATTING_PATTERN.md` — read when unsure.
+**Canonical reference (if present):** repo `docs/**/MD_FORMATTING_PATTERN.md` — read when unsure; otherwise follow this skill.
 
-## Repo file header (KP convention)
+## Repo file header (convention)
 
 First line = relative path comment (stripped on docx export):
 
@@ -110,7 +110,7 @@ Place at top **after** path comment only if you want a Word title page.
 Copy when finishing a doc:
 
 ```
-- [ ] Path comment line 1 (if KP handoff doc)
+- [ ] Path comment line 1 (if handoff doc for Word export)
 - [ ] ATX headings + blank lines around them
 - [ ] Blank line before every list
 - [ ] Pipe tables + |:---| row + blank lines around tables
