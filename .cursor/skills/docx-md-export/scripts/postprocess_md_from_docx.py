@@ -1,5 +1,5 @@
 # .cursor/skills/docx-md-export/scripts/postprocess_md_from_docx.py
-"""Post-process Pandoc GFM output for KP markdown conventions."""
+"""Post-process Pandoc GFM output for repo markdown conventions."""
 
 from __future__ import annotations
 

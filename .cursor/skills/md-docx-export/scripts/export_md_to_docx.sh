@@ -5,7 +5,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"
 SKILL_ASSETS="$(dirname "$0")/../assets"
-REF_DOC="${SKILL_ASSETS}/kp-compact-reference.docx"
+REF_DOC="${SKILL_ASSETS}/compact-reference.docx"
 PANDOC="${PANDOC:-}"
 
 if [[ -z "$PANDOC" ]]; then
@@ -35,7 +35,7 @@ for MD in "$@"; do
     exit 1
   fi
   OUT="${MD%.md}.docx"
-  # Skip KP path comment on line 1 only (# docs/.../file.md), not the title
+  # Skip repo path comment on line 1 only (# docs/.../file.md), not the title
   first_line=$(head -n 1 "$MD")
   if [[ "$first_line" =~ ^#[[:space:]].+\.md$ ]] && [[ "$first_line" == */* ]]; then
     "$PANDOC" --from=markdown --to=docx --reference-doc="$REF_DOC" -o "$OUT" < <(tail -n +2 "$MD")

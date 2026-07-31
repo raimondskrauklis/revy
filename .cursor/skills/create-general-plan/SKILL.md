@@ -31,7 +31,7 @@ A general plan = **phases and their goals/deliverables**. **NOT execution** (no 
 
 ## Cross-cutting (state once as first-class, woven through every phase)
 
-**Lineage/explainability, coverage + exclusion surfacing, visualization, i18n (EN+LV), unit tests** are not a final phase — each phase ships them. Call this out explicitly; for KP, visualization + full lineage + user-facing explainability are top priority.
+**Lineage/explainability, coverage + exclusion surfacing, visualization, i18n (EN+LV), unit tests** are not a final phase — each phase ships them. Call this out explicitly; when findings require it, prioritize visualization + full lineage + user-facing explainability.
 
 ## Rules
 

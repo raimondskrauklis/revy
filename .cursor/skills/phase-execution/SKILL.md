@@ -30,7 +30,7 @@ description: >-
    - Filename: `_C0_`, `_P7_`, `_UX0_`, `P7_…_execution`, etc.
    - Or first heading / “Phase **C0**” line in the doc.
 4. **Ordered phase list** (first match wins):
-   - **`README.md`** in plan folder — execution table (Phase → file). KP convention.
+   - **`README.md`** in plan folder — execution table (Phase → file). Common convention.
    - **`*_GENERAL_PLAN.md`** in plan folder — phase blocks (`## C0`, `## P0`, …) in doc order.
    - **Glob** `*EXECUTION*.md` / `*execution_plan*.md` in plan folder — sort by phase id (numeric suffix: 0, 1, 2…).
 5. **Scope** = every phase from **start phase** through **last** in the ordered list. Pointing at the first execution file = **full plan**.

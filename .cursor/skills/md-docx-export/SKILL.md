@@ -4,22 +4,22 @@ description: >-
   Format markdown for clean export and build compact Word (.docx) files with
   9pt body text, proportional headings, and narrow margins via Pandoc. Use when
   the user asks to create or export MD docs, generate docx, Word handoff,
-  smaller font, narrow layout, or Pandoc export for LU/task/findings documents.
+  smaller font, narrow layout, or Pandoc export for stakeholder handoff documents.
 ---
 
-# MD → compact DOCX export (KP)
+# MD → compact DOCX export
 
 ## When to use
 
 - Handoff `.md` specs to stakeholders who want **Word**
-- LU task/findings, investigation reports, planning docs under `docs/`
+- Task/findings, investigation reports, planning docs under `docs/` or `internal_docs/`
 - User asks for **smaller font (~9pt)**, **narrow page**, compact tables
 
 **Not** for platform refactor docs unless the user asks — LU and internal specs are the usual targets.
 
 ## MD source rules
 
-Use the **`md-formatting`** skill (or `internal_docs/project_planning/MD_FORMATTING_PATTERN.md`) when **writing** MD.
+Use the **`md-formatting`** skill when **writing** MD.
 
 This skill is **export + typography** only. Quick requirements:
 
@@ -47,7 +47,7 @@ Regenerate reference after changing sizes:
 cd backend && pipenv run python ../.cursor/skills/md-docx-export/scripts/build_reference_docx.py
 ```
 
-Output: `.cursor/skills/md-docx-export/assets/kp-compact-reference.docx`
+Output: `.cursor/skills/md-docx-export/assets/compact-reference.docx`
 
 ## Export workflow
 
@@ -57,8 +57,8 @@ Output: `.cursor/skills/md-docx-export/assets/kp-compact-reference.docx`
 chmod +x .cursor/skills/md-docx-export/scripts/export_md_to_docx.sh
 
 .cursor/skills/md-docx-export/scripts/export_md_to_docx.sh \
-  docs/ML/lu/LU_TEAM_CLUSTERING_TASK.md \
-  docs/ML/lu/LU_TEAM_CLUSTERING_COHORT_FINDINGS.md
+  docs/programs/example/EXAMPLE_TASK.md \
+  docs/programs/example/EXAMPLE_FINDINGS.md
 ```
 
 **Pandoc path:** script uses `PANDOC` env, else `/tmp/pandoc-arm64/pandoc-3.6.4-arm64/bin/pandoc`, else `pandoc` on PATH.
@@ -67,10 +67,10 @@ chmod +x .cursor/skills/md-docx-export/scripts/export_md_to_docx.sh
 
 ## Agent checklist
 
-1. Confirm MD follows `MD_FORMATTING_PATTERN.md` (lists/tables/headings).
-2. Ensure `kp-compact-reference.docx` exists (run `build_reference_docx.py` if missing).
+1. Confirm MD passes **`md-formatting`** checklist (lists/tables/headings).
+2. Ensure `compact-reference.docx` exists (run `build_reference_docx.py` if missing).
 3. Run `export_md_to_docx.sh` with absolute or repo-relative paths.
-4. Do **not** link LU docs to platform-only alignment docs unless user requests.
+4. Do **not** link handoff docs to unrelated platform docs unless user requests.
 
 ## PDF (optional)
 
