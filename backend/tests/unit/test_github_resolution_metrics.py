@@ -1196,6 +1196,256 @@ async def test_apply_resolution_status_clears_stale_compare_failed_on_success():
     assert aged_group.closure_blocked_reason is None
 
 
+@pytest.mark.asyncio
+async def test_apply_resolution_status_clears_stale_compare_failed_in_cohort():
+    """R3.1 — cohort group with stale compare_failed stamps addressed when compare succeeds."""
+    pull_request_id = uuid.uuid4()
+    prior_revision_id = uuid.uuid4()
+    new_revision_id = uuid.uuid4()
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=1,
+        title="PR",
+        state="open",
+        head_sha="newsha",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=2,
+    )
+    pull_request.id = pull_request_id
+
+    prior_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="oldsha",
+        base_sha="base1",
+    )
+    prior_revision.id = prior_revision_id
+
+    new_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=2,
+        head_sha="newsha",
+        base_sha="base1",
+    )
+    new_revision.id = new_revision_id
+
+    cohort_group = GitHubFindingGroupORM(
+        workspace_id=pull_request.workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="fp-cohort",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Bug",
+        message="msg",
+        file_path="app/handler.py",
+        last_seen_revision_id=prior_revision_id,
+        closure_blocked_reason="compare_failed",
+    )
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[prior_revision])
+    session.scalars = AsyncMock(return_value=[cohort_group])
+    session.flush = AsyncMock()
+
+    compare_ok = type(
+        "CompareResult",
+        (),
+        {
+            "patches_by_file": {"app/handler.py": "@@ -12,1 +12,1 @@\n-old\n+fixed\n"},
+            "compare_failed": False,
+            "removed_paths": frozenset(),
+            "deleted_paths": frozenset(),
+            "renamed_from_paths": frozenset(),
+        },
+    )()
+
+    with patch(
+        "app.services.github_resolution_metrics._fetch_compare_patches",
+        AsyncMock(return_value=compare_ok),
+    ):
+        with patch(
+            "app.services.github_resolution_metrics._latest_finding_lines",
+            AsyncMock(return_value=(12, 12)),
+        ):
+            with patch(
+                "app.services.github_resolution_metrics.paths_absent_at_head",
+                AsyncMock(return_value={"app/handler.py": False}),
+            ):
+                with patch(
+                    "app.services.github_resolution_metrics.get_fingerprint_published_revision_ids",
+                    AsyncMock(return_value={}),
+                ):
+                    updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
+                        session,
+                        pull_request=pull_request,
+                        new_revision=new_revision,
+                    )
+
+    assert updated == 1
+    assert cohort_group.closure_blocked_reason is None
+    assert cohort_group.resolution_status == ResolutionStatus.addressed
+
+
+@pytest.mark.asyncio
+async def test_apply_resolution_status_pairing_repair_includes_published_earlier_revision():
+    """R3.2 — group published on rev 10 included when pairing window starts at rev 11."""
+    pull_request_id = uuid.uuid4()
+    published_prior_id = uuid.uuid4()
+    gap_revision_id = uuid.uuid4()
+    new_revision_id = uuid.uuid4()
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=1,
+        title="PR",
+        state="open",
+        head_sha="head12",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=3,
+    )
+    pull_request.id = pull_request_id
+
+    published_prior = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=11,
+        head_sha="head11",
+        base_sha="base",
+    )
+    published_prior.id = published_prior_id
+
+    gap_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=10,
+        head_sha="head10",
+        base_sha="base",
+    )
+    gap_revision.id = gap_revision_id
+
+    new_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=12,
+        head_sha="head12",
+        base_sha="base",
+    )
+    new_revision.id = new_revision_id
+
+    group = GitHubFindingGroupORM(
+        workspace_id=pull_request.workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="pair-gap-fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Bug",
+        message="msg",
+        file_path="app/handler.py",
+        last_seen_revision_id=gap_revision_id,
+    )
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[published_prior])
+    session.scalars = AsyncMock(side_effect=[[group], [gap_revision]])
+    session.get = AsyncMock(return_value=gap_revision)
+    session.flush = AsyncMock()
+
+    compare_ok = type(
+        "CompareResult",
+        (),
+        {
+            "patches_by_file": {"app/handler.py": "@@ -12,1 +12,1 @@\n-old\n+fixed\n"},
+            "compare_failed": False,
+            "removed_paths": frozenset(),
+            "deleted_paths": frozenset(),
+            "renamed_from_paths": frozenset(),
+        },
+    )()
+
+    with patch(
+        "app.services.github_resolution_metrics.get_intermediate_revision_ids_between",
+        AsyncMock(return_value=frozenset()),
+    ):
+        with patch(
+            "app.services.github_resolution_metrics._fetch_compare_patches",
+            AsyncMock(return_value=compare_ok),
+        ):
+            with patch(
+                "app.services.github_resolution_metrics._latest_finding_lines",
+                AsyncMock(return_value=(12, 12)),
+            ):
+                with patch(
+                    "app.services.github_resolution_metrics.paths_absent_at_head",
+                    AsyncMock(return_value={"app/handler.py": False}),
+                ):
+                    with patch(
+                        "app.services.github_resolution_metrics.get_fingerprint_published_revision_ids",
+                        AsyncMock(return_value={"pair-gap-fp": gap_revision_id}),
+                    ):
+                        with patch(
+                            "app.services.github_resolution_metrics._revision_has_completed_publish",
+                            AsyncMock(return_value=True),
+                        ):
+                            updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
+                                session,
+                                pull_request=pull_request,
+                                new_revision=new_revision,
+                            )
+
+    assert updated == 1
+    assert group.resolution_status == ResolutionStatus.addressed
+
+
+@pytest.mark.asyncio
+async def test_resolve_pairing_last_seen_revision_id_maps_unpublished_gap():
+    """R3.3 — last_seen on unpublished revision pairs through to prior published."""
+    pull_request_id = uuid.uuid4()
+    published_prior_id = uuid.uuid4()
+    gap_revision_id = uuid.uuid4()
+
+    gap_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=13,
+        head_sha="gap",
+        base_sha="base",
+    )
+    gap_revision.id = gap_revision_id
+
+    published_prior = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=12,
+        head_sha="published",
+        base_sha="base",
+    )
+    published_prior.id = published_prior_id
+
+    session = AsyncMock()
+    session.get = AsyncMock(return_value=gap_revision)
+    with patch(
+        "app.services.github_resolution_metrics._revision_has_completed_publish",
+        AsyncMock(return_value=False),
+    ):
+        with patch(
+            "app.services.github_resolution_metrics.get_last_published_prior_revision",
+            AsyncMock(return_value=published_prior),
+        ):
+            resolved = await github_resolution_metrics.resolve_pairing_last_seen_revision_id(
+                session,
+                pull_request_id=pull_request_id,
+                last_seen_revision_id=gap_revision_id,
+            )
+
+    assert resolved == published_prior_id
+
+
 def test_build_resolution_pass_manifest_excludes_hygiene_from_rate():
     prior_revision_id = uuid.uuid4()
     aged_prior_id = uuid.uuid4()

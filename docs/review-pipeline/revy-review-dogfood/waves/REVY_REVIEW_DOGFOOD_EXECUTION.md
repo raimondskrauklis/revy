@@ -41,8 +41,8 @@ R3 may overlap R4 after R1 if suppression is independent — LOOP order still R3
 |-------|--------|-----------|--------|
 | R0 — Baseline | Evidence + RR-DG4 hypothesis + RR-V fixtures | [REVY_REVIEW_DOGFOOD_R0_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R0_EXECUTION.md) | done |
 | R1 — Ingest | Revision idempotency | [REVY_REVIEW_DOGFOOD_R1_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R1_EXECUTION.md) | done (local) |
-| R2 — Publish hygiene | Thread resolve taxonomy | [REVY_REVIEW_DOGFOOD_R2_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R2_EXECUTION.md) | pending |
-| R3 — Resolution | Stamp unblock | [REVY_REVIEW_DOGFOOD_R3_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R3_EXECUTION.md) | pending |
+| R2 — Publish hygiene | Thread resolve taxonomy | [REVY_REVIEW_DOGFOOD_R2_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R2_EXECUTION.md) | done (local) |
+| R3 — Resolution | Stamp unblock | [REVY_REVIEW_DOGFOOD_R3_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R3_EXECUTION.md) | done (local) |
 | R4 — Accuracy | HEAD suppression + inline 422 | [REVY_REVIEW_DOGFOOD_R4_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R4_EXECUTION.md) | pending |
 | R5 — Sign-off | Staging RR-V + doc sync | [REVY_REVIEW_DOGFOOD_R5_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R5_EXECUTION.md) | pending |
 

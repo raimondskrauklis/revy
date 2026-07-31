@@ -105,7 +105,7 @@
 
 1. **RR-V1 same SHA:** force-push or empty amend to same `head_sha` twice within 30s; expect one revision row.
 2. **RR-V1 different SHAs:** push `d915b4e` then `999ad17` within 15s (TenderPro rev-13 scenario); expect two rows, no worker `IntegrityError`.
-3. **RR-V2 cohort:** after R3 deploy, fix-push on PR #130 with line edits; expect resolution rate **> 0%** in publish summary.
+3. **RR-V2 cohort:** after R3 deploy, fix-push on PR #130 with line edits; expect resolution rate **> 0%** in publish summary (`resolution_pass.resolution_rate_pct` > 0 and `compare_failed_count` not stale from pre-R3 sync). Primary RR-DG4 tag: `stale_closure_blocked` — pass requires manifest stamp path, not hygiene-only closes.
 4. **RR-V3:** on successful publish, issue comment `head_sha` == check run == inline `commit_id`.
 5. **RR-V4:** after R2 deploy, thread resolve skips **0** or manifest breakdown (`thread_id_not_found`, `resolve_mutation_failed`).
 6. **RR-V5:** after R4 deploy, matrix items **1, 2, 3, 15, 17** — **0/5** false positives published.
