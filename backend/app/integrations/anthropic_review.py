@@ -14,7 +14,7 @@ import httpx
 from app.constants.enums import stored_enum_value
 from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError
-from app.integrations.judge_llm_errors import parse_judge_payload
+from app.integrations.judge_llm_errors import JudgeParseError, parse_judge_payload
 from app.services.judge_prompt_context import resolve_judge_prompt_file_patch
 
 ANTHROPIC_DIRECT_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
@@ -401,6 +401,14 @@ async def _post_judge_messages_for_profile(
         raise
 
 
+def _judge_profile_fallback_failure_class(exc: Exception) -> str:
+    if isinstance(exc, JudgeParseError):
+        return "parse"
+    if isinstance(exc, httpx.HTTPError):
+        return "http"
+    return "empty_body"
+
+
 async def _post_judge_with_profile_fallback(
     client: httpx.AsyncClient,
     profiles: list[_AnthropicProfile],
@@ -409,7 +417,7 @@ async def _post_judge_with_profile_fallback(
     user_prompt: str,
     max_tokens: int,
     timeout_seconds: float,
-) -> str:
+) -> dict[str, Any]:
     if not profiles:
         raise ServiceUnavailableError(
             message="Anthropic API is not configured",
@@ -418,7 +426,7 @@ async def _post_judge_with_profile_fallback(
     last_exc: Exception | None = None
     for index, profile in enumerate(profiles):
         try:
-            return await _post_judge_messages_for_profile(
+            text = await _post_judge_messages_for_profile(
                 client,
                 profile,
                 system=system,
@@ -426,16 +434,20 @@ async def _post_judge_with_profile_fallback(
                 max_tokens=max_tokens,
                 timeout_seconds=timeout_seconds,
             )
-        except (httpx.HTTPError, ServiceUnavailableError) as exc:
+            return parse_judge_payload(text)
+        except (httpx.HTTPError, ServiceUnavailableError, JudgeParseError) as exc:
             last_exc = exc
-            if index < len(profiles) - 1:
+            if profile.label == "gateway" and index < len(profiles) - 1:
                 logger.warning(
                     "judge_llm_profile_fallback",
                     extra={
                         **_profile_transport_fields(profile),
                         "error": str(exc),
+                        "failure_class": _judge_profile_fallback_failure_class(exc),
                     },
                 )
+                continue
+            raise
     if last_exc is not None:
         raise last_exc
     raise ServiceUnavailableError(
@@ -491,7 +503,7 @@ async def judge_finding(
 ) -> dict:
     _require_judge_anthropic_enabled()
     profiles = _judge_profiles(model_id)
-    text = await _post_judge_with_profile_fallback(
+    return await _post_judge_with_profile_fallback(
         client,
         profiles,
         system=system_prompt or JUDGE_SYSTEM_PROMPT,
@@ -499,7 +511,6 @@ async def judge_finding(
         max_tokens=1024,
         timeout_seconds=timeout_seconds or settings.revy_revision_timeout_standard_seconds,
     )
-    return parse_judge_payload(text)
 
 
 def build_verification_judge_prompt(

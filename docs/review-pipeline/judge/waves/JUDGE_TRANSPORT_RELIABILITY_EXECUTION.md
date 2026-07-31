@@ -42,7 +42,7 @@ each phase: implement → pytest gate (when code) → Bugbot → commit
 |-------|--------|-----------|--------|
 | T0 — Baseline | Incident manifest + env gate + metrics snapshot | [JUDGE_TRANSPORT_RELIABILITY_T0_EXECUTION.md](./JUDGE_TRANSPORT_RELIABILITY_T0_EXECUTION.md) | done |
 | T1 — Logging | Worker-visible judge transport events | [JUDGE_TRANSPORT_RELIABILITY_T1_EXECUTION.md](./JUDGE_TRANSPORT_RELIABILITY_T1_EXECUTION.md) | done |
-| T2 — Fallback | Gateway parse/empty → direct profile | [JUDGE_TRANSPORT_RELIABILITY_T2_EXECUTION.md](./JUDGE_TRANSPORT_RELIABILITY_T2_EXECUTION.md) | pending |
+| T2 — Fallback | Gateway parse/empty → direct profile | [JUDGE_TRANSPORT_RELIABILITY_T2_EXECUTION.md](./JUDGE_TRANSPORT_RELIABILITY_T2_EXECUTION.md) | done |
 | T3 — Staging gate | Smoke + metrics + validation memo + doc sync | [JUDGE_TRANSPORT_RELIABILITY_T3_EXECUTION.md](./JUDGE_TRANSPORT_RELIABILITY_T3_EXECUTION.md) | pending |
 
 **Peer review:** Incorporated 2026-07-31 (manifest SQL, T1 started event, T2.1 wording, gates).
