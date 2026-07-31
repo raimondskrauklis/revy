@@ -1,5 +1,6 @@
 # backend/tests/unit/test_github_resolution_metrics.py
 """Resolution metrics — RQ6."""
+
 import uuid
 from unittest.mock import AsyncMock, patch
 
@@ -225,7 +226,13 @@ async def test_apply_resolution_status_for_synchronize_updates_prior_groups():
             return_value=type(
                 "CompareResult",
                 (),
-                {"patches_by_file": {"app/handler.py": compare.files[0].patch}, "compare_failed": False, "removed_paths": frozenset(), "deleted_paths": frozenset(), "renamed_from_paths": frozenset()},
+                {
+                    "patches_by_file": {"app/handler.py": compare.files[0].patch},
+                    "compare_failed": False,
+                    "removed_paths": frozenset(),
+                    "deleted_paths": frozenset(),
+                    "renamed_from_paths": frozenset(),
+                },
             )()
         ),
     ):
@@ -725,9 +732,7 @@ async def test_apply_resolution_status_for_synchronize_skipped_not_head_uses_las
                     "CompareResult",
                     (),
                     {
-                        "patches_by_file": {
-                            "app/handler.py": "@@ -12,1 +12,1 @@\n-old\n+fixed\n"
-                        },
+                        "patches_by_file": {"app/handler.py": "@@ -12,1 +12,1 @@\n-old\n+fixed\n"},
                         "compare_failed": False,
                         "removed_paths": frozenset(),
                         "deleted_paths": frozenset(),
@@ -744,10 +749,12 @@ async def test_apply_resolution_status_for_synchronize_skipped_not_head_uses_las
                     "app.services.github_resolution_metrics.paths_absent_at_head",
                     AsyncMock(return_value={"app/handler.py": False}),
                 ):
-                    updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
-                        session,
-                        pull_request=pull_request,
-                        new_revision=new_revision,
+                    updated = (
+                        await github_resolution_metrics.apply_resolution_status_for_synchronize(
+                            session,
+                            pull_request=pull_request,
+                            new_revision=new_revision,
+                        )
                     )
 
     assert updated == 1
@@ -1281,10 +1288,12 @@ async def test_apply_resolution_status_clears_stale_compare_failed_in_cohort():
                     "app.services.github_resolution_metrics.get_fingerprint_published_revision_ids",
                     AsyncMock(return_value={}),
                 ):
-                    updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
-                        session,
-                        pull_request=pull_request,
-                        new_revision=new_revision,
+                    updated = (
+                        await github_resolution_metrics.apply_resolution_status_for_synchronize(
+                            session,
+                            pull_request=pull_request,
+                            new_revision=new_revision,
+                        )
                     )
 
     assert updated == 1

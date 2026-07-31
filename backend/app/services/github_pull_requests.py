@@ -1,5 +1,6 @@
 # backend/app/services/github_pull_requests.py
 """GitHub pull request ingestion — R2."""
+
 from __future__ import annotations
 
 import re
@@ -39,15 +40,17 @@ logger = get_logger(__name__)
 
 _UNIQUE_VIOLATION_PG_CODE = "23505"
 
-_PULL_REQUEST_ACTIONS = frozenset({
-    "opened",
-    "synchronize",
-    "closed",
-    "reopened",
-    "converted_to_draft",
-    "ready_for_review",
-    "edited",
-})
+_PULL_REQUEST_ACTIONS = frozenset(
+    {
+        "opened",
+        "synchronize",
+        "closed",
+        "reopened",
+        "converted_to_draft",
+        "ready_for_review",
+        "edited",
+    }
+)
 _REVIEW_ACTIONS = frozenset({"submitted", "edited", "dismissed"})
 _REVY_REVIEW_COMMAND = re.compile(r"@revy\s+review\b", re.IGNORECASE)
 
@@ -514,7 +517,11 @@ async def apply_pull_request_review_webhook_event(
     raw_review_id = review_payload.get("id")
     user = review_payload.get("user")
     state = review_payload.get("state")
-    if not isinstance(raw_review_id, int) or not isinstance(user, dict) or not isinstance(state, str):
+    if (
+        not isinstance(raw_review_id, int)
+        or not isinstance(user, dict)
+        or not isinstance(state, str)
+    ):
         return
 
     login = user.get("login")
@@ -677,7 +684,10 @@ async def list_github_pull_requests(
             raise ValidationError(message="Invalid cursor", field="cursor") from exc
         stmt = stmt.where(
             (GitHubPullRequestORM.created_at < cursor_ts)
-            | ((GitHubPullRequestORM.created_at == cursor_ts) & (GitHubPullRequestORM.id < cursor_id))
+            | (
+                (GitHubPullRequestORM.created_at == cursor_ts)
+                & (GitHubPullRequestORM.id < cursor_id)
+            )
         )
 
     stmt = stmt.order_by(

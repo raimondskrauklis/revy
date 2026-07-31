@@ -1,5 +1,6 @@
 # backend/app/services/github_resolution_metrics.py
 """Resolution metrics on synchronize — RQ6 (M2)."""
+
 from __future__ import annotations
 
 import logging
@@ -43,7 +44,10 @@ def patch_touches_line_region(
     if not patch.strip():
         return False
     if start_line is None:
-        return any(line.startswith(("+", "-")) and not line.startswith(("+++", "---")) for line in patch.splitlines())
+        return any(
+            line.startswith(("+", "-")) and not line.startswith(("+++", "---"))
+            for line in patch.splitlines()
+        )
 
     region_end = end_line if end_line is not None else start_line
     region = set(range(start_line, region_end + 1))
@@ -313,13 +317,10 @@ async def _build_synchronize_cohort_groups(
         )
         if not in_cohort:
             continue
-        if (
-            effective_last_seen != group.last_seen_revision_id
-            or (
-                published_revision_id is not None
-                and group.last_seen_revision_id not in pairing_revision_ids
-                and effective_last_seen not in pairing_revision_ids
-            )
+        if effective_last_seen != group.last_seen_revision_id or (
+            published_revision_id is not None
+            and group.last_seen_revision_id not in pairing_revision_ids
+            and effective_last_seen not in pairing_revision_ids
         ):
             logger.info(
                 "resolution_pairing_repaired",
@@ -396,9 +397,7 @@ async def apply_resolution_status_for_synchronize(
                 )
             )
         )
-        published_revision_numbers.update(
-            {row.id: row.revision_number for row in extra_rows}
-        )
+        published_revision_numbers.update({row.id: row.revision_number for row in extra_rows})
 
     cohort_groups = await _build_synchronize_cohort_groups(
         session,
@@ -480,10 +479,7 @@ async def apply_resolution_status_for_synchronize(
                         group.closure_blocked_reason = COMPARE_FAILED_REASON
                         group.resolution_status = ResolutionStatus.still_open
                         _count_group_update(group)
-                elif (
-                    absent is False
-                    and group.closure_blocked_reason == HEAD_CHECK_FAILED_REASON
-                ):
+                elif absent is False and group.closure_blocked_reason == HEAD_CHECK_FAILED_REASON:
                     group.closure_blocked_reason = None
             continue
 
@@ -536,8 +532,7 @@ def _in_sync_stamp_cohort(
     if group.resolved_at_revision_id == current_revision_id:
         return True
     return (
-        group.last_seen_revision_id == current_revision_id
-        and group.resolution_status is not None
+        group.last_seen_revision_id == current_revision_id and group.resolution_status is not None
     )
 
 
@@ -642,9 +637,7 @@ def build_resolution_pass_manifest(
     }
     transition_count = len(rate_transitions)
     denominator = len(denominator_groups)
-    resolution_rate_pct = (
-        round(100.0 * transition_count / denominator, 1) if denominator else 0.0
-    )
+    resolution_rate_pct = round(100.0 * transition_count / denominator, 1) if denominator else 0.0
     still_open_count = sum(
         1
         for group in denominator_groups

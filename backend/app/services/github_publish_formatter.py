@@ -8,6 +8,7 @@ Surface contract (PSA-D1–D4, PSA-D12):
 - G9 / resolution metrics stay generation-scoped.
 - Inline publish remains generation-only; ``compute_check_conclusion`` unchanged (generation-scoped).
 """
+
 from __future__ import annotations
 
 import json
@@ -807,7 +808,9 @@ def _issue_comment_meets_product_bar(text: str, ctx: PublishFormatContext) -> bo
     has_pr_block = "### Still open on PR" in normalized
     if "### Findings" in normalized and not has_generation_block:
         return False
-    return has_generation_block and has_pr_block and has_table and has_merge_signal and has_rationale
+    return (
+        has_generation_block and has_pr_block and has_table and has_merge_signal and has_rationale
+    )
 
 
 def _insert_resolution_metrics_block(text: str, ctx: PublishFormatContext) -> str:

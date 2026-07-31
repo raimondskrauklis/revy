@@ -1,5 +1,6 @@
 # backend/tests/unit/test_github_finding_head_suppression.py
 """HEAD contradiction suppression — RR-W1 R4."""
+
 import uuid
 from unittest.mock import AsyncMock
 

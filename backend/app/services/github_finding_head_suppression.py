@@ -1,5 +1,6 @@
 # backend/app/services/github_finding_head_suppression.py
 """HEAD contradiction suppression — RR-W1 R4 (RR-DG6)."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -118,7 +119,13 @@ async def _load_head_file_snippets(
                     path=file_path,
                     ref=head_sha,
                 )
-            except (httpx.HTTPError, OSError, NotFoundError, RateLimitedError, ServiceUnavailableError):
+            except (
+                httpx.HTTPError,
+                OSError,
+                NotFoundError,
+                RateLimitedError,
+                ServiceUnavailableError,
+            ):
                 continue
         return snippets
 

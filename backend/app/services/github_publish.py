@@ -1,5 +1,6 @@
 # backend/app/services/github_publish.py
 """GitHub publish pipeline — R6."""
+
 from __future__ import annotations
 
 import time
@@ -98,6 +99,7 @@ def _log_thread_resolve_skipped(
         extra["error"] = error[:500]
     logger.warning("github_publish_resolve_inline_thread_skipped", extra=extra)
 
+
 SUMMARY_ROW_CAP = 50
 
 _PUBLISH_GROUP_SEVERITY_ORDER = case(
@@ -117,12 +119,14 @@ _SKIP_PUBLISH_NEUTRAL_SUMMARY = "Superseded by newer commit"
 _INLINE_422_RECOVERED_COUNT_KEY = "inline_publish_422_recovered_count"
 _INLINE_422_RECOVERED_FINGERPRINTS_KEY = "inline_publish_422_recovered_fingerprints"
 
-_TERMINAL_PUBLISH_JOB_STATUSES = frozenset({
-    GitHubPublishJobStatus.completed,
-    GitHubPublishJobStatus.failed,
-    GitHubPublishJobStatus.skipped_not_head,
-    GitHubPublishJobStatus.skipped_superseded,
-})
+_TERMINAL_PUBLISH_JOB_STATUSES = frozenset(
+    {
+        GitHubPublishJobStatus.completed,
+        GitHubPublishJobStatus.failed,
+        GitHubPublishJobStatus.skipped_not_head,
+        GitHubPublishJobStatus.skipped_superseded,
+    }
+)
 
 _PUBLISH_SURFACE_REUSE_STATUSES = (
     GitHubPublishJobStatus.completed,
@@ -331,9 +335,7 @@ async def create_publish_job_for_review_run(
 ) -> UUID | None:
     """Create a pending publish job under row lock, or None if skipped."""
     run = await session.scalar(
-        select(GitHubReviewRunORM)
-        .where(GitHubReviewRunORM.id == review_run_id)
-        .with_for_update()
+        select(GitHubReviewRunORM).where(GitHubReviewRunORM.id == review_run_id).with_for_update()
     )
     if run is None or run.status != GitHubReviewRunStatus.completed:
         return None
@@ -530,11 +532,7 @@ def serialize_inline_thread_map(
             if isinstance(prior_entry, dict):
                 prior_comment_id = prior_entry.get("comment_id")
                 thread_id = prior_entry.get("thread_id")
-                if (
-                    prior_comment_id == comment_id
-                    and isinstance(thread_id, str)
-                    and thread_id
-                ):
+                if prior_comment_id == comment_id and isinstance(thread_id, str) and thread_id:
                     entry["thread_id"] = thread_id
         result[fingerprint] = entry
     return result
@@ -693,8 +691,7 @@ async def _fingerprints_to_resolve_inline_threads(
                         ),
                         and_(
                             GitHubFindingGroupORM.fingerprint.in_(tracked_fingerprints),
-                            GitHubFindingGroupORM.resolution_status
-                            == ResolutionStatus.addressed,
+                            GitHubFindingGroupORM.resolution_status == ResolutionStatus.addressed,
                         ),
                     ),
                 )
@@ -1003,10 +1000,7 @@ def _format_inline_422_fallback_block(spec: InlinePostSpec) -> str:
         severity=spec.severity,
         suggestion=spec.suggestion,
     )
-    return (
-        f"### Inline fallback ({spec.file_path}:{spec.start_line})\n\n"
-        f"{body}"
-    )
+    return f"### Inline fallback ({spec.file_path}:{spec.start_line})\n\n{body}"
 
 
 async def _create_inline_review_comment_with_422_retry(
@@ -1220,9 +1214,7 @@ async def _build_publish_surface(
         and existing.github_check_run_id is not None
     )
     post_inline = not job.inline_comments_posted and (
-        not is_update_from_other
-        or existing is None
-        or not existing.inline_comments_posted
+        not is_update_from_other or existing is None or not existing.inline_comments_posted
     )
 
     if job.github_comment_id is None:
@@ -1617,9 +1609,8 @@ async def _flush_publish_surface(
                 }
                 await _commit_publish_job_progress(session)
             if inline_422_fallback_blocks and job.github_comment_id is not None:
-                issue_comment_body = (
-                    f"{issue_comment_body.rstrip()}\n\n"
-                    + "\n\n".join(inline_422_fallback_blocks)
+                issue_comment_body = f"{issue_comment_body.rstrip()}\n\n" + "\n\n".join(
+                    inline_422_fallback_blocks
                 )
                 await github_api.update_issue_comment(
                     client,
@@ -1770,7 +1761,9 @@ async def run_publish_job(
 
         job.status = GitHubPublishJobStatus.completed
         await session.flush()
-        pipeline_run = await get_pipeline_run_for_review_run(session, review_run_id=job.review_run_id)
+        pipeline_run = await get_pipeline_run_for_review_run(
+            session, review_run_id=job.review_run_id
+        )
         if pipeline_run is not None:
             await record_publish_pipeline_step(
                 session,
@@ -1806,7 +1799,9 @@ async def run_publish_job(
             job.status = GitHubPublishJobStatus.failed
             job.error_message = str(exc)[:2000]
             await session.flush()
-        pipeline_run = await get_pipeline_run_for_review_run(session, review_run_id=job.review_run_id)
+        pipeline_run = await get_pipeline_run_for_review_run(
+            session, review_run_id=job.review_run_id
+        )
         if pipeline_run is not None:
             await record_publish_pipeline_step(
                 session,

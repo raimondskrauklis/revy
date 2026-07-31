@@ -8,6 +8,7 @@ Harness notes (GH-6):
 - Build phase (`_build_publish_surface`) runs before flush; scalars order is groups → revision ids (×2) → inline findings → resolve queries.
 - Inline posts persist partial `summary_json` via `session.flush` per comment (retry-safe); one `_checkpoint_publish_surface` after full flush.
 """
+
 import uuid
 from contextlib import nullcontext
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -794,7 +795,9 @@ async def test_resolve_stale_inline_threads_counts_resolve_mutation_failed():
     client = AsyncMock()
     with patch(
         "app.services.github_publish.github_api.resolve_review_thread",
-        AsyncMock(side_effect=ServiceUnavailableError(message="fail", error_code="github_api_error")),
+        AsyncMock(
+            side_effect=ServiceUnavailableError(message="fail", error_code="github_api_error")
+        ),
     ):
         skipped = await github_publish._resolve_stale_inline_threads(
             client,
@@ -914,7 +917,9 @@ async def test_run_publish_job_persists_thread_map_after_resolve_when_inline_ski
                     "app.services.github_publish.github_api.installation_auth_headers",
                     AsyncMock(return_value={"Authorization": "Bearer t"}),
                 ):
-                    with patch("app.services.github_publish.github_api.update_check_run", AsyncMock()):
+                    with patch(
+                        "app.services.github_publish.github_api.update_check_run", AsyncMock()
+                    ):
                         with patch(
                             "app.services.github_publish.github_api.update_issue_comment",
                             AsyncMock(),
@@ -1014,9 +1019,16 @@ async def test_run_publish_job_creates_check_run():
         "app.services.github_publish.github_api.installation_auth_headers",
         AsyncMock(return_value={"Authorization": "Bearer t"}),
     ):
-        with patch("app.services.github_publish.github_api.create_check_run", AsyncMock(return_value=100)):
-            with patch("app.services.github_publish.github_api.create_issue_comment", AsyncMock(return_value=200)):
-                result = await github_publish.run_publish_job(session, publish_job_id=publish_job_id)
+        with patch(
+            "app.services.github_publish.github_api.create_check_run", AsyncMock(return_value=100)
+        ):
+            with patch(
+                "app.services.github_publish.github_api.create_issue_comment",
+                AsyncMock(return_value=200),
+            ):
+                result = await github_publish.run_publish_job(
+                    session, publish_job_id=publish_job_id
+                )
 
     assert result.status == GitHubPublishJobStatus.completed
     assert result.github_check_run_id == 100
@@ -1114,7 +1126,10 @@ async def test_run_publish_job_posts_formatted_issue_comment():
             "app.services.github_publish.github_api.installation_auth_headers",
             AsyncMock(return_value={"Authorization": "Bearer t"}),
         ):
-            with patch("app.services.github_publish.github_api.create_check_run", AsyncMock(return_value=100)):
+            with patch(
+                "app.services.github_publish.github_api.create_check_run",
+                AsyncMock(return_value=100),
+            ):
                 with patch(
                     "app.services.github_publish.github_api.create_issue_comment",
                     comment_mock,
@@ -1208,9 +1223,16 @@ async def test_run_publish_job_updates_linked_pipeline_check_run():
         AsyncMock(return_value={"Authorization": "Bearer t"}),
     ):
         with patch("app.services.github_publish.github_api.update_check_run", update_mock):
-            with patch("app.services.github_publish.github_api.create_issue_comment", AsyncMock(return_value=200)):
-                with patch("app.services.github_publish.github_api.create_check_run", create_check_mock):
-                    result = await github_publish.run_publish_job(session, publish_job_id=publish_job_id)
+            with patch(
+                "app.services.github_publish.github_api.create_issue_comment",
+                AsyncMock(return_value=200),
+            ):
+                with patch(
+                    "app.services.github_publish.github_api.create_check_run", create_check_mock
+                ):
+                    result = await github_publish.run_publish_job(
+                        session, publish_job_id=publish_job_id
+                    )
 
     assert result.status == GitHubPublishJobStatus.completed
     assert result.github_check_run_id == 100
@@ -1338,8 +1360,13 @@ async def test_run_publish_job_posts_inline_for_warning_finding():
                     "app.services.github_publish.github_api.installation_auth_headers",
                     AsyncMock(return_value={"Authorization": "Bearer t"}),
                 ):
-                    with patch("app.services.github_publish.github_api.update_check_run", AsyncMock()):
-                        with patch("app.services.github_publish.github_api.update_issue_comment", AsyncMock()):
+                    with patch(
+                        "app.services.github_publish.github_api.update_check_run", AsyncMock()
+                    ):
+                        with patch(
+                            "app.services.github_publish.github_api.update_issue_comment",
+                            AsyncMock(),
+                        ):
                             with patch(
                                 "app.services.github_publish.github_api.create_pull_request_review_comment",
                                 inline_mock,
@@ -1512,9 +1539,16 @@ async def test_run_publish_job_updates_existing_sha():
             AsyncMock(return_value={"Authorization": "Bearer t"}),
         ):
             with patch("app.services.github_publish.github_api.update_check_run", update_mock):
-                with patch("app.services.github_publish.github_api.update_issue_comment", comment_update_mock):
-                    with patch("app.services.github_publish.github_api.create_check_run", create_check_mock):
-                        result = await github_publish.run_publish_job(session, publish_job_id=publish_job_id)
+                with patch(
+                    "app.services.github_publish.github_api.update_issue_comment",
+                    comment_update_mock,
+                ):
+                    with patch(
+                        "app.services.github_publish.github_api.create_check_run", create_check_mock
+                    ):
+                        result = await github_publish.run_publish_job(
+                            session, publish_job_id=publish_job_id
+                        )
 
     assert result.status == GitHubPublishJobStatus.completed
     assert result.github_check_run_id == 50
@@ -1753,7 +1787,9 @@ async def test_run_publish_job_posts_inline_when_prior_job_failed_before_inline(
                 AsyncMock(return_value={"Authorization": "Bearer t"}),
             ):
                 with patch("app.services.github_publish.github_api.update_check_run", AsyncMock()):
-                    with patch("app.services.github_publish.github_api.update_issue_comment", AsyncMock()):
+                    with patch(
+                        "app.services.github_publish.github_api.update_issue_comment", AsyncMock()
+                    ):
                         with patch(
                             "app.services.github_publish.github_api.create_check_run",
                             create_check_mock,
@@ -1994,7 +2030,9 @@ async def test_run_publish_job_posts_inline_after_surface_checkpoint():
                 AsyncMock(return_value={"Authorization": "Bearer t"}),
             ):
                 with patch("app.services.github_publish.github_api.update_check_run", AsyncMock()):
-                    with patch("app.services.github_publish.github_api.update_issue_comment", AsyncMock()):
+                    with patch(
+                        "app.services.github_publish.github_api.update_issue_comment", AsyncMock()
+                    ):
                         with patch(
                             "app.services.github_publish.github_api.create_pull_request_review_comment",
                             inline_mock,
@@ -2102,7 +2140,9 @@ async def test_run_publish_job_resolves_superseded_threads_when_inline_already_p
                 AsyncMock(return_value={"Authorization": "Bearer t"}),
             ):
                 with patch("app.services.github_publish.github_api.update_check_run", AsyncMock()):
-                    with patch("app.services.github_publish.github_api.update_issue_comment", AsyncMock()):
+                    with patch(
+                        "app.services.github_publish.github_api.update_issue_comment", AsyncMock()
+                    ):
                         with patch(
                             "app.services.github_publish.github_api.create_pull_request_review_comment",
                             inline_mock,
@@ -2219,7 +2259,9 @@ async def test_run_publish_job_same_sha_re_publish_persists_thread_map():
                         "app.services.github_publish.github_api.installation_auth_headers",
                         AsyncMock(return_value={"Authorization": "Bearer t"}),
                     ):
-                        with patch("app.services.github_publish.github_api.update_check_run", AsyncMock()):
+                        with patch(
+                            "app.services.github_publish.github_api.update_check_run", AsyncMock()
+                        ):
                             with patch(
                                 "app.services.github_publish.github_api.update_issue_comment",
                                 AsyncMock(),
@@ -2328,8 +2370,13 @@ async def test_run_publish_job_inline_skipped_no_group(caplog):
             "app.services.github_publish.github_api.installation_auth_headers",
             AsyncMock(return_value={"Authorization": "Bearer t"}),
         ):
-            with patch("app.services.github_publish.github_api.create_check_run", AsyncMock(return_value=1)):
-                with patch("app.services.github_publish.github_api.create_issue_comment", AsyncMock(return_value=2)):
+            with patch(
+                "app.services.github_publish.github_api.create_check_run", AsyncMock(return_value=1)
+            ):
+                with patch(
+                    "app.services.github_publish.github_api.create_issue_comment",
+                    AsyncMock(return_value=2),
+                ):
                     with patch(
                         "app.services.github_publish.github_api.create_pull_request_review_comment",
                         inline_mock,
@@ -2440,7 +2487,17 @@ async def test_run_publish_job_reactivates_inline_same_publish():
 
     session = AsyncMock()
     session.get = AsyncMock(
-        side_effect=[job, run, revision, pull_request, repository, installation, group, group, group]
+        side_effect=[
+            job,
+            run,
+            revision,
+            pull_request,
+            repository,
+            installation,
+            group,
+            group,
+            group,
+        ]
     )
     session.scalars = AsyncMock(
         side_effect=[
@@ -2481,7 +2538,10 @@ async def test_run_publish_job_reactivates_inline_same_publish():
                             "app.services.github_publish.github_api.installation_auth_headers",
                             AsyncMock(return_value={"Authorization": "Bearer t"}),
                         ):
-                            with patch("app.services.github_publish.github_api.create_check_run", AsyncMock(return_value=1)):
+                            with patch(
+                                "app.services.github_publish.github_api.create_check_run",
+                                AsyncMock(return_value=1),
+                            ):
                                 with patch(
                                     "app.services.github_publish.github_api.create_issue_comment",
                                     AsyncMock(return_value=2),
@@ -2913,7 +2973,10 @@ async def test_run_publish_job_persists_inline_progress_between_posts():
                 "app.services.github_publish.github_api.installation_auth_headers",
                 AsyncMock(return_value={"Authorization": "Bearer t"}),
             ):
-                with patch("app.services.github_publish.github_api.create_check_run", AsyncMock(return_value=100)):
+                with patch(
+                    "app.services.github_publish.github_api.create_check_run",
+                    AsyncMock(return_value=100),
+                ):
                     with patch(
                         "app.services.github_publish.github_api.create_issue_comment",
                         AsyncMock(return_value=200),
@@ -3124,7 +3187,10 @@ async def test_run_publish_job_skipped_superseded_mid_flush_before_inline():
                     "app.services.github_publish.github_api.installation_auth_headers",
                     AsyncMock(return_value={"Authorization": "Bearer t"}),
                 ):
-                    with patch("app.services.github_publish.github_api.create_check_run", AsyncMock(return_value=100)) as check_mock:
+                    with patch(
+                        "app.services.github_publish.github_api.create_check_run",
+                        AsyncMock(return_value=100),
+                    ) as check_mock:
                         with patch(
                             "app.services.github_publish.github_api.create_issue_comment",
                             AsyncMock(return_value=200),
@@ -3260,7 +3326,10 @@ async def test_run_publish_job_neutralizes_check_when_skipped_after_surface_writ
     neutral_check_mock.assert_awaited_once()
     assert neutral_check_mock.await_args.kwargs["conclusion"] == "neutral"
     neutral_comment_mock.assert_awaited_once()
-    assert neutral_comment_mock.await_args.kwargs["body"] == github_publish._SKIP_PUBLISH_NEUTRAL_SUMMARY
+    assert (
+        neutral_comment_mock.await_args.kwargs["body"]
+        == github_publish._SKIP_PUBLISH_NEUTRAL_SUMMARY
+    )
 
 
 @pytest.mark.asyncio
@@ -3595,8 +3664,7 @@ def test_inline_comments_posted_true_when_all_recovered_via_422():
     inline_threads: dict[str, int] = {}
     inline_422_recovered = {"fp-a"}
     posted = all(
-        spec.group_fingerprint in inline_threads
-        or spec.group_fingerprint in inline_422_recovered
+        spec.group_fingerprint in inline_threads or spec.group_fingerprint in inline_422_recovered
         for spec in specs
     )
     assert posted is True
