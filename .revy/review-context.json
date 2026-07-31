@@ -6,16 +6,16 @@
       "scope": ["backend/**"],
       "paths": [
         {
-          "path": "docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_POST_WAVE_C_EXECUTION.md",
-          "description": "Post–wave C LOOP index — M0–D3 execution"
+          "path": "docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_POST_WAVE_C_D1_EXECUTION.md",
+          "description": "D1 FR-CS4 staging dogfood execution"
         },
         {
-          "path": "docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_POST_WAVE_C_BACKLOG_FINDINGS.md",
-          "description": "Post–wave C backlog — MR-DG1, FR-CS4, FR-CS8 locks"
+          "path": "docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_POST_WAVE_C_D1_FINDINGS.md",
+          "description": "D1 findings — probe design, pass criteria, edge cases"
         },
         {
-          "path": "docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_POST_WAVE_C_GENERAL_PLAN.md",
-          "description": "Post–wave C general plan — M0 and wave D phases"
+          "path": "docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_POST_WAVE_C_D1_GENERAL_PLAN.md",
+          "description": "D1 general plan — subphases D1.0–D1.3"
         }
       ]
     }
