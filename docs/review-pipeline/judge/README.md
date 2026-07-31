@@ -2,7 +2,7 @@
 
 **Status:** P0–P5 **implemented** on `feat/judge-input-quality` — staging human gate pending ([validation memo](./JUDGE_INPUT_QUALITY_STAGING_VALIDATION.md)).
 
-**Transport reliability (T0–T2):** **implemented** on `feat/judge-transport-reliability` — [PR #75](https://github.com/raimondskrauklis/revy/pull/75); staging sign-off **pending** ([validation memo](./JUDGE_TRANSPORT_RELIABILITY_STAGING_VALIDATION.md)).
+**Transport reliability (T0–T3):** **closed partial PASS** — [#75](https://github.com/raimondskrauklis/revy/pull/75) `1c416a0` merged; direct judge + T1 logging verified via evidence-only probe [#76](https://github.com/raimondskrauklis/revy/pull/76); gateway fallback deferred to JT-Q6 ops ([validation memo](./JUDGE_TRANSPORT_RELIABILITY_STAGING_VALIDATION.md)).
 
 **Design direction (findings + web research):** Moonshot gets the full diff for discovery; the judge should **verify Moonshot’s specific claims** with scoped code evidence (hunk/patch), not re-review the entire PR. See findings § Industry practice.
 

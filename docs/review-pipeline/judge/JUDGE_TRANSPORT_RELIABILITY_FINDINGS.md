@@ -126,7 +126,7 @@
 | **JT-2** | Gateway down visible only as absence of RTU URL | **medium** | **addressed (T1)** — `judge_llm_request_started` + `judge_llm_profile_fallback` with URL |
 | **JT-3** | Fallback scope too narrow | **high** | **addressed (T2)** — gateway empty-body + parse → direct |
 | **JT-4** | No `usage` / latency logged | **medium** | **addressed (T1)** — `duration_ms`, token usage on completion log |
-| **JT-5** | RTU health unknown while down | **medium** | Cannot re-run P0 smoke; staging may be direct-only de facto |
+| **JT-5** | RTU health unknown while down | **medium** | RTU down 2026-07-31; staging worker direct-only on probe #76 — fallback deferred to JT-Q6 ops |
 | **JT-6** | Same `model_ref` for both profiles | **low** | `resolve_model` returns `revy_anthropic_model`; gateway overrides model via `REVY_ANTHROPIC_GATEWAY_MODEL` inside profile — correct but opaque in logs |
 | **JT-7** | `skipped_unavailable` aggregate hides per-candidate cause | **medium** | Metrics script counts runs; manifest has detail per candidate |
 | **JT-8** | Pass 3 transport shares discovery failures | **medium** | Same adapter; fix benefits both — but Pass 3 also blocked by FR-CS4 supersede (separate) |
