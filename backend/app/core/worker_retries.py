@@ -1,5 +1,6 @@
 # backend/app/core/worker_retries.py
 """Celery worker retry policy — transient vs permanent pipeline failures."""
+
 from __future__ import annotations
 
 import httpx
@@ -14,6 +15,20 @@ class WorkerRetryableError(Exception):
 
 def is_retryable_http_status(status_code: int) -> bool:
     return status_code in RETRYABLE_HTTP_STATUS_CODES
+
+
+def is_retryable_immediate_mutation_error(exc: BaseException) -> bool:
+    """Whether a single immediate retry may help (excludes rate limits and client errors)."""
+    from app.core.exceptions import RateLimitedError, ServiceUnavailableError
+
+    if isinstance(exc, RateLimitedError):
+        return False
+    if isinstance(exc, ServiceUnavailableError):
+        return True
+    if isinstance(exc, httpx.HTTPStatusError):
+        status_code = exc.response.status_code
+        return is_retryable_http_status(status_code) and status_code != 429
+    return classify_transient_error(exc) is not None
 
 
 def classify_transient_error(exc: BaseException) -> WorkerRetryableError | None:

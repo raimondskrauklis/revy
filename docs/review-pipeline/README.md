@@ -50,6 +50,13 @@ docs/review-pipeline/
     waves/
       FINDING_RESOLUTION_EXECUTION.md
       FINDING_RESOLUTION_P0_EXECUTION.md … P5
+  finding-resolution-dogfood/            ← post-PSA FR-DG* validation (Revy repo)
+    README.md
+  revy-review-dogfood/                   ← cross-repo staging dogfood (TenderPro #130 → RR-W1)
+    README.md
+    REVY_REVIEW_DOGFOOD_FINDINGS.md
+    REVY_REVIEW_DOGFOOD_GENERAL_PLAN.md
+    REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md
   judge-json-contract/                   ← judge outcome JSON, observability, structured output
     README.md
     JUDGE_JSON_CONTRACT_FINDINGS.md

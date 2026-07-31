@@ -1,5 +1,6 @@
 # backend/tests/unit/test_github_publish_formatter.py
 """GitHub publish formatter — RQ7 + PSA two-block parity (staging dogfood post-#62)."""
+
 import uuid
 from unittest.mock import AsyncMock, patch
 
@@ -17,6 +18,7 @@ from app.constants.enums import (
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.services.github_publish_formatter import (
     PublishFormatContext,
+    append_thread_resolve_skipped_block,
     build_check_run_summary,
     build_g9_resolution_prose,
     build_g9_resolution_prose_from_manifest,
@@ -27,6 +29,7 @@ from app.services.github_publish_formatter import (
     extract_summary_blocks_section,
     format_resolution_metrics_block,
     format_summary_comment,
+    format_thread_resolve_skipped_block,
     normalize_llm_issue_comment,
     resolution_counts_from_manifest,
     splice_deterministic_findings_tables,
@@ -183,9 +186,7 @@ def test_summary_json_resolution_uses_manifest_when_present():
         },
     )
     summary = build_publish_format_result(ctx).summary_json
-    assert summary["resolution"] == resolution_counts_from_manifest(
-        ctx.resolution_metrics_manifest
-    )
+    assert summary["resolution"] == resolution_counts_from_manifest(ctx.resolution_metrics_manifest)
     assert summary["resolution"]["addressed"] == 1
     assert summary["resolution"]["verification_dismissed"] == 1
     assert summary["resolution"]["still_open"] == 2
@@ -273,6 +274,37 @@ def test_format_resolution_metrics_block_path_removed_line():
     )
     assert "Closed as path removed" in block
     assert "outside this push pair" in block
+
+
+def test_format_thread_resolve_skipped_block():
+    block = format_thread_resolve_skipped_block(
+        {
+            "thread_id_not_found": 3,
+            "resolve_mutation_failed": 2,
+            "already_resolved": 0,
+            "thread_not_revy_owned": 0,
+        }
+    )
+    assert block is not None
+    assert "**Thread resolve skipped:** 5" in block
+    assert "thread_id_not_found: 3" in block
+    assert "resolve_mutation_failed: 2" in block
+
+
+def test_append_thread_resolve_skipped_block_noop_when_zero():
+    text = "## Revy review\n\nBody"
+    assert (
+        append_thread_resolve_skipped_block(
+            text,
+            {
+                "thread_id_not_found": 0,
+                "resolve_mutation_failed": 0,
+                "already_resolved": 0,
+                "thread_not_revy_owned": 0,
+            },
+        )
+        == text
+    )
 
 
 def test_build_pr_review_comment_fallback_includes_resolution_metrics_block():
@@ -415,9 +447,7 @@ def test_build_pr_review_comment_fallback_includes_g9_and_metadata():
 
 
 def test_normalize_llm_issue_comment_unwraps_json_body():
-    wrapped = (
-        '{"body":"## Revy code review\\n\\n**Confidence score:** 4/5\\n\\n### Findings"}'
-    )
+    wrapped = '{"body":"## Revy code review\\n\\n**Confidence score:** 4/5\\n\\n### Findings"}'
     assert normalize_llm_issue_comment(wrapped).startswith("## Revy code review")
     assert "Confidence score" in normalize_llm_issue_comment(wrapped)
 
@@ -468,9 +498,9 @@ async def test_build_pr_review_comment_unwraps_json_body_from_moonshot():
     moonshot_json = (
         '{"body":"## Revy code review\\n\\nTwo warnings on this revision.\\n\\n'
         "**Merge recommendation:** Review warnings before merge — no critical blockers flagged.\\n\\n"
-        '**Confidence score:** 4/5\\n\\nScore is moderated by warning-level findings.\\n\\n'
+        "**Confidence score:** 4/5\\n\\nScore is moderated by warning-level findings.\\n\\n"
         "### This generation\\n\\n| Severity | Category | Title | File |\\n"
-        '| --- | --- | --- | --- |\\n| warning | bug | Issue | app/main.py |\\n\\n'
+        "| --- | --- | --- | --- |\\n| warning | bug | Issue | app/main.py |\\n\\n"
         "### Still open on PR\\n\\n| Severity | Category | Title | File |\\n"
         '| --- | --- | --- | --- |\\n| warning | bug | Issue | app/main.py |"}'
     )

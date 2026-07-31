@@ -1,5 +1,6 @@
 # backend/tests/unit/test_github_pull_requests.py
 """GitHub pull request service — R2 PR ingestion."""
+
 import uuid
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -16,9 +17,10 @@ from app.constants.enums import (
 )
 from app.core.pagination import CursorParams
 from app.models.github_installation import GitHubInstallationORM
-from app.models.github_pull_request import GitHubPullRequestORM
+from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
 from app.models.github_repository import GitHubRepositoryORM
 from app.services.github_pull_requests import (
+    _append_revision,
     apply_issue_comment_webhook_event,
     apply_pull_request_review_webhook_event,
     apply_pull_request_webhook_event,
@@ -224,8 +226,8 @@ async def test_apply_pull_request_synchronize_appends_revision():
     )
     existing.id = uuid.uuid4()
 
-    session = AsyncMock()
-    session.scalar = AsyncMock(side_effect=[installation, repository, existing])
+    session = _session_with_nested()
+    session.scalar = AsyncMock(side_effect=[installation, repository, existing, None, None])
     session.add = MagicMock()
     session.flush = AsyncMock()
 
@@ -270,7 +272,7 @@ async def test_apply_pull_request_synchronize_updates_is_draft():
     existing.id = uuid.uuid4()
 
     session = _session_with_nested()
-    session.scalar = AsyncMock(side_effect=[installation, repository, existing])
+    session.scalar = AsyncMock(side_effect=[installation, repository, existing, None, None])
     session.add = MagicMock()
     session.flush = AsyncMock()
 
@@ -502,3 +504,223 @@ async def test_apply_pull_request_converted_to_draft_updates_flag():
 
     assert result is None
     assert existing.is_draft is True
+
+
+@pytest.mark.asyncio
+async def test_synchronize_returns_existing_revision_when_head_sha_row_exists():
+    installation = _installation()
+    repository = _repository(installation)
+    existing = GitHubPullRequestORM(
+        repository_id=repository.id,
+        workspace_id=repository.workspace_id,
+        installation_id=repository.installation_id,
+        github_pull_request_id=_PR_GITHUB_ID,
+        number=7,
+        title="Add feature",
+        state=GitHubPullRequestState.open,
+        head_sha="oldsha",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=2,
+    )
+    existing.id = uuid.uuid4()
+    prior_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=existing.id,
+        revision_number=2,
+        head_sha="retry-sha",
+        base_sha="base000",
+    )
+    prior_revision.id = uuid.uuid4()
+
+    session = _session_with_nested()
+    session.scalar = AsyncMock(
+        side_effect=[installation, repository, existing, prior_revision],
+    )
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    with patch(
+        "app.services.github_pull_requests.apply_resolution_status_for_synchronize",
+        AsyncMock(return_value=0),
+    ):
+        with patch(
+            "app.services.github_pull_requests.supersede_stale_generations_for_new_revision",
+            AsyncMock(),
+        ) as supersede_mock:
+            result = await apply_pull_request_webhook_event(
+                session,
+                _pull_request_payload(action="synchronize", head_sha="retry-sha"),
+            )
+
+    assert result is not None
+    assert result.revision_id == prior_revision.id
+    assert existing.revision_count == 2
+    session.add.assert_not_called()
+    supersede_mock.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_append_revision_pre_check_dedupe_flushes_head_sha():
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=_PR_GITHUB_ID,
+        number=7,
+        title="Add feature",
+        state=GitHubPullRequestState.open,
+        head_sha="oldsha",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=2,
+    )
+    pull_request.id = uuid.uuid4()
+    existing = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request.id,
+        revision_number=2,
+        head_sha="dedupe-sha",
+        base_sha="base000",
+    )
+    existing.id = uuid.uuid4()
+
+    session = _session_with_nested()
+    session.scalar = AsyncMock(return_value=existing)
+    session.flush = AsyncMock()
+
+    revision = await _append_revision(
+        session,
+        pull_request=pull_request,
+        head_sha="dedupe-sha",
+        base_sha="base000",
+    )
+
+    assert revision.id == existing.id
+    assert pull_request.head_sha == "dedupe-sha"
+    session.flush.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_append_revision_recovers_same_head_sha_after_unique_violation():
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=_PR_GITHUB_ID,
+        number=7,
+        title="Add feature",
+        state=GitHubPullRequestState.open,
+        head_sha="oldsha",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=1,
+    )
+    pull_request.id = uuid.uuid4()
+    raced_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request.id,
+        revision_number=2,
+        head_sha="newsha",
+        base_sha="base000",
+    )
+    raced_revision.id = uuid.uuid4()
+
+    session = _session_with_nested()
+    session.scalar = AsyncMock(side_effect=[None, raced_revision])
+    session.add = MagicMock()
+    session.flush = AsyncMock(
+        side_effect=[IntegrityError("insert", {}, _UniqueViolation("unique")), None],
+    )
+    session.refresh = AsyncMock()
+
+    revision = await _append_revision(
+        session,
+        pull_request=pull_request,
+        head_sha="newsha",
+        base_sha="base000",
+    )
+
+    assert revision.id == raced_revision.id
+    assert pull_request.head_sha == "newsha"
+    assert session.flush.await_count == 2
+    assert session.refresh.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_append_revision_expunges_failed_revision_before_retry():
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=_PR_GITHUB_ID,
+        number=7,
+        title="Add feature",
+        state=GitHubPullRequestState.open,
+        head_sha="sha-a",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=12,
+    )
+    pull_request.id = uuid.uuid4()
+
+    session = _session_with_nested()
+    session.scalar = AsyncMock(side_effect=[None, None])
+    session.flush = AsyncMock(
+        side_effect=[IntegrityError("insert", {}, _UniqueViolation("unique")), None],
+    )
+
+    async def _refresh_stub(pr: GitHubPullRequestORM) -> None:
+        pr.revision_count = 13
+
+    session.refresh = AsyncMock(side_effect=_refresh_stub)
+    session.expunge = MagicMock()
+
+    await _append_revision(
+        session,
+        pull_request=pull_request,
+        head_sha="sha-b",
+        base_sha="base000",
+    )
+
+    session.expunge.assert_called_once()
+    session.refresh.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_append_revision_retries_next_revision_number_after_different_sha_collision():
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=_PR_GITHUB_ID,
+        number=7,
+        title="Add feature",
+        state=GitHubPullRequestState.open,
+        head_sha="sha-a",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=12,
+    )
+    pull_request.id = uuid.uuid4()
+
+    session = _session_with_nested()
+    session.scalar = AsyncMock(side_effect=[None, None])
+    session.add = MagicMock()
+    session.flush = AsyncMock(
+        side_effect=[IntegrityError("insert", {}, _UniqueViolation("unique")), None],
+    )
+
+    async def _refresh_stub(pr: GitHubPullRequestORM) -> None:
+        pr.revision_count = 13
+
+    session.refresh = AsyncMock(side_effect=_refresh_stub)
+
+    revision = await _append_revision(
+        session,
+        pull_request=pull_request,
+        head_sha="sha-b",
+        base_sha="base000",
+    )
+
+    assert revision.revision_number == 14
+    assert revision.head_sha == "sha-b"
+    assert pull_request.revision_count == 14
+    assert pull_request.head_sha == "sha-b"

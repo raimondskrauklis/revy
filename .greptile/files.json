@@ -1,22 +1,22 @@
 {
   "files": [
     {
-      "path": "docs/review-pipeline/judge/waves/JUDGE_TRANSPORT_RELIABILITY_EXECUTION.md",
-      "description": "Judge transport reliability LOOP index \u2014 T0\u2013T3 execution",
+      "path": "docs/review-pipeline/revy-review-dogfood/waves/REVY_REVIEW_DOGFOOD_EXECUTION.md",
+      "description": "RR-W1 LOOP index \u2014 R0\u2013R5 cross-repo dogfood execution",
       "scope": [
         "backend/**"
       ]
     },
     {
-      "path": "docs/review-pipeline/judge/JUDGE_TRANSPORT_RELIABILITY_FINDINGS.md",
-      "description": "Transport baseline \u2014 RTU/direct fallback, worker logging gaps",
+      "path": "docs/review-pipeline/revy-review-dogfood/REVY_REVIEW_DOGFOOD_FINDINGS.md",
+      "description": "TenderPro #130 gap catalog RR-DG*; R0 locks RR-Q5 and RR-DG4 tag",
       "scope": [
         "backend/**"
       ]
     },
     {
-      "path": "docs/review-pipeline/judge/JUDGE_TRANSPORT_RELIABILITY_GENERAL_PLAN.md",
-      "description": "T0\u2013T3 transport hardening program",
+      "path": "docs/review-pipeline/revy-review-dogfood/REVY_REVIEW_DOGFOOD_GENERAL_PLAN.md",
+      "description": "RR-W1 general plan \u2014 ingest, publish hygiene, resolution stamp, HEAD suppression",
       "scope": [
         "backend/**"
       ]

@@ -8,6 +8,7 @@ Surface contract (PSA-D1–D4, PSA-D12):
 - G9 / resolution metrics stay generation-scoped.
 - Inline publish remains generation-only; ``compute_check_conclusion`` unchanged (generation-scoped).
 """
+
 from __future__ import annotations
 
 import json
@@ -228,6 +229,34 @@ def format_resolution_metrics_block(manifest: dict[str, object]) -> str:
     if isinstance(head_check_failed, int) and head_check_failed > 0:
         lines.append(f"- **HEAD path check blocked:** {head_check_failed} group(s)")
     return "\n".join(lines)
+
+
+def format_thread_resolve_skipped_block(skipped: dict[str, int]) -> str | None:
+    """RR-W1 R2 — operator-visible thread resolve skip breakdown."""
+    parts: list[str] = []
+    labels = (
+        ("thread_id_not_found", "thread_id_not_found"),
+        ("resolve_mutation_failed", "resolve_mutation_failed"),
+        ("already_resolved", "already_resolved"),
+        ("thread_not_revy_owned", "thread_not_revy_owned"),
+    )
+    total = 0
+    for key, label in labels:
+        count = skipped.get(key, 0)
+        if isinstance(count, int) and count > 0:
+            parts.append(f"{label}: {count}")
+            total += count
+    if total == 0:
+        return None
+    breakdown = ", ".join(parts)
+    return f"- **Thread resolve skipped:** {total} ({breakdown})"
+
+
+def append_thread_resolve_skipped_block(text: str, skipped: dict[str, int]) -> str:
+    block = format_thread_resolve_skipped_block(skipped)
+    if block is None:
+        return text
+    return f"{text.rstrip()}\n\n{block}"
 
 
 def _severity_rank(severity: FindingSeverity | str) -> int:
@@ -779,7 +808,9 @@ def _issue_comment_meets_product_bar(text: str, ctx: PublishFormatContext) -> bo
     has_pr_block = "### Still open on PR" in normalized
     if "### Findings" in normalized and not has_generation_block:
         return False
-    return has_generation_block and has_pr_block and has_table and has_merge_signal and has_rationale
+    return (
+        has_generation_block and has_pr_block and has_table and has_merge_signal and has_rationale
+    )
 
 
 def _insert_resolution_metrics_block(text: str, ctx: PublishFormatContext) -> str:

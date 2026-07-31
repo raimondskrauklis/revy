@@ -1,7 +1,9 @@
 # backend/app/services/github_publish.py
 """GitHub publish pipeline — R6."""
+
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass
 from uuid import UUID
@@ -19,9 +21,18 @@ from app.constants.enums import (
     stored_enum_value,
 )
 from app.core.config import settings
-from app.core.exceptions import ConflictError, NotFoundError, ServiceUnavailableError
+from app.core.exceptions import (
+    ConflictError,
+    NotFoundError,
+    RateLimitedError,
+    ServiceUnavailableError,
+)
 from app.core.logging import get_logger
-from app.core.worker_retries import WorkerRetryableError, classify_transient_error
+from app.core.worker_retries import (
+    WorkerRetryableError,
+    classify_transient_error,
+    is_retryable_immediate_mutation_error,
+)
 from app.integrations import github_api
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
@@ -49,11 +60,55 @@ from app.services.github_pipeline_trace import (
 )
 from app.services.github_publish_formatter import (
     PublishFormatContext,
+    append_thread_resolve_skipped_block,
     build_publish_format_result_async,
 )
 from app.services.github_suggestion import is_publishable_suggestion
 
 logger = get_logger(__name__)
+
+THREAD_RESOLVE_SKIP_ALREADY_RESOLVED = "already_resolved"
+THREAD_RESOLVE_SKIP_THREAD_ID_NOT_FOUND = "thread_id_not_found"
+THREAD_RESOLVE_SKIP_RESOLVE_MUTATION_FAILED = "resolve_mutation_failed"
+THREAD_RESOLVE_SKIP_THREAD_NOT_REVY_OWNED = "thread_not_revy_owned"
+
+_THREAD_RESOLVE_SKIP_REASONS = (
+    THREAD_RESOLVE_SKIP_ALREADY_RESOLVED,
+    THREAD_RESOLVE_SKIP_THREAD_ID_NOT_FOUND,
+    THREAD_RESOLVE_SKIP_RESOLVE_MUTATION_FAILED,
+    THREAD_RESOLVE_SKIP_THREAD_NOT_REVY_OWNED,
+)
+
+
+def empty_thread_resolve_skipped() -> dict[str, int]:
+    return {reason: 0 for reason in _THREAD_RESOLVE_SKIP_REASONS}
+
+
+def increment_thread_resolve_skip(skipped: dict[str, int], reason: str) -> None:
+    if reason not in skipped:
+        skipped[reason] = 0
+    skipped[reason] += 1
+
+
+def _log_thread_resolve_skipped(
+    *,
+    pull_request_id: UUID,
+    fingerprint: str,
+    comment_id: int | None,
+    reason: str,
+    error: str | None = None,
+) -> None:
+    extra: dict[str, object] = {
+        "pull_request_id": str(pull_request_id),
+        "fingerprint": fingerprint,
+        "reason": reason,
+    }
+    if comment_id is not None:
+        extra["comment_id"] = comment_id
+    if error is not None:
+        extra["error"] = error[:500]
+    logger.warning("github_publish_resolve_inline_thread_skipped", extra=extra)
+
 
 SUMMARY_ROW_CAP = 50
 
@@ -71,12 +126,23 @@ class PublishJobRetryableError(WorkerRetryableError):
 
 _SKIP_PUBLISH_NEUTRAL_SUMMARY = "Superseded by newer commit"
 
-_TERMINAL_PUBLISH_JOB_STATUSES = frozenset({
-    GitHubPublishJobStatus.completed,
-    GitHubPublishJobStatus.failed,
-    GitHubPublishJobStatus.skipped_not_head,
-    GitHubPublishJobStatus.skipped_superseded,
-})
+_INLINE_422_RECOVERED_COUNT_KEY = "inline_publish_422_recovered_count"
+_INLINE_422_RECOVERED_FINGERPRINTS_KEY = "inline_publish_422_recovered_fingerprints"
+_INLINE_422_FALLBACK_MARKER_PREFIX = "<!-- revy:inline-422:"
+_INLINE_422_FALLBACK_MARKER_RE = re.compile(
+    rf"^{re.escape(_INLINE_422_FALLBACK_MARKER_PREFIX)}([^\s>]+)\s+-->$",
+    re.MULTILINE,
+)
+INLINE_COMMENT_RECOVERABLE_STATUS_CODES = frozenset({404, 422})
+
+_TERMINAL_PUBLISH_JOB_STATUSES = frozenset(
+    {
+        GitHubPublishJobStatus.completed,
+        GitHubPublishJobStatus.failed,
+        GitHubPublishJobStatus.skipped_not_head,
+        GitHubPublishJobStatus.skipped_superseded,
+    }
+)
 
 _PUBLISH_SURFACE_REUSE_STATUSES = (
     GitHubPublishJobStatus.completed,
@@ -285,9 +351,7 @@ async def create_publish_job_for_review_run(
 ) -> UUID | None:
     """Create a pending publish job under row lock, or None if skipped."""
     run = await session.scalar(
-        select(GitHubReviewRunORM)
-        .where(GitHubReviewRunORM.id == review_run_id)
-        .with_for_update()
+        select(GitHubReviewRunORM).where(GitHubReviewRunORM.id == review_run_id).with_for_update()
     )
     if run is None or run.status != GitHubReviewRunStatus.completed:
         return None
@@ -484,11 +548,7 @@ def serialize_inline_thread_map(
             if isinstance(prior_entry, dict):
                 prior_comment_id = prior_entry.get("comment_id")
                 thread_id = prior_entry.get("thread_id")
-                if (
-                    prior_comment_id == comment_id
-                    and isinstance(thread_id, str)
-                    and thread_id
-                ):
+                if prior_comment_id == comment_id and isinstance(thread_id, str) and thread_id:
                     entry["thread_id"] = thread_id
         result[fingerprint] = entry
     return result
@@ -647,8 +707,7 @@ async def _fingerprints_to_resolve_inline_threads(
                         ),
                         and_(
                             GitHubFindingGroupORM.fingerprint.in_(tracked_fingerprints),
-                            GitHubFindingGroupORM.resolution_status
-                            == ResolutionStatus.addressed,
+                            GitHubFindingGroupORM.resolution_status == ResolutionStatus.addressed,
                         ),
                     ),
                 )
@@ -660,6 +719,126 @@ async def _fingerprints_to_resolve_inline_threads(
             if group.fingerprint in inline_threads:
                 fingerprints_to_resolve.add(group.fingerprint)
     return fingerprints_to_resolve
+
+
+def inline_422_fallback_marker(fingerprint: str) -> str:
+    return f"{_INLINE_422_FALLBACK_MARKER_PREFIX}{fingerprint} -->"
+
+
+def recovered_inline_422_fingerprints_in_comment(issue_comment_body: str) -> frozenset[str]:
+    return frozenset(_INLINE_422_FALLBACK_MARKER_RE.findall(issue_comment_body))
+
+
+def _inline_422_fallback_blocks_for_specs(
+    inline_posts: list[InlinePostSpec],
+    recovered_fingerprints: set[str],
+) -> list[str]:
+    return [
+        _format_inline_422_fallback_block(spec)
+        for spec in inline_posts
+        if spec.group_fingerprint in recovered_fingerprints
+    ]
+
+
+def _append_missing_inline_422_fallback_blocks(
+    issue_comment_body: str,
+    fallback_blocks: list[str],
+) -> str | None:
+    already_present = recovered_inline_422_fingerprints_in_comment(issue_comment_body)
+    missing = [
+        block
+        for block in fallback_blocks
+        if block
+        and all(
+            fingerprint not in already_present
+            for fingerprint in _INLINE_422_FALLBACK_MARKER_RE.findall(block)
+        )
+    ]
+    if not missing:
+        return None
+    return f"{issue_comment_body.rstrip()}\n\n" + "\n\n".join(missing)
+
+
+def _issue_comment_id_for_publish_flush(
+    job: GitHubPublishJobORM,
+    build: PublishSurfaceBuild,
+) -> int | None:
+    if job.github_comment_id is not None:
+        return job.github_comment_id
+    return build.existing_github_comment_id
+
+
+async def _append_recovered_inline_422_blocks_to_issue_comment(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+    owner: str,
+    repo_name: str,
+    pull_number: int,
+    job: GitHubPublishJobORM,
+    build: PublishSurfaceBuild,
+    issue_comment_body: str,
+    recovered_fingerprints: set[str],
+    auth_headers: dict[str, str],
+) -> str:
+    updated_body = _append_missing_inline_422_fallback_blocks(
+        issue_comment_body,
+        _inline_422_fallback_blocks_for_specs(build.inline_posts, recovered_fingerprints),
+    )
+    if updated_body is None:
+        return issue_comment_body
+
+    comment_id = _issue_comment_id_for_publish_flush(job, build)
+    if comment_id is None:
+        comment_id = await github_api.create_issue_comment(
+            client,
+            github_installation_id=github_installation_id,
+            owner=owner,
+            repo=repo_name,
+            issue_number=pull_number,
+            body=updated_body,
+            auth_headers=auth_headers,
+        )
+        job.github_comment_id = comment_id
+        return updated_body
+
+    await github_api.update_issue_comment(
+        client,
+        github_installation_id=github_installation_id,
+        owner=owner,
+        repo=repo_name,
+        comment_id=comment_id,
+        body=updated_body,
+        auth_headers=auth_headers,
+    )
+    if job.github_comment_id is None:
+        job.github_comment_id = comment_id
+    return updated_body
+
+
+async def _resolve_review_thread_with_retry(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+    thread_id: str,
+    auth_headers: dict[str, str],
+) -> None:
+    try:
+        await github_api.resolve_review_thread(
+            client,
+            github_installation_id=github_installation_id,
+            thread_id=thread_id,
+            auth_headers=auth_headers,
+        )
+    except Exception as exc:
+        if not is_retryable_immediate_mutation_error(exc):
+            raise
+        await github_api.resolve_review_thread(
+            client,
+            github_installation_id=github_installation_id,
+            thread_id=thread_id,
+            auth_headers=auth_headers,
+        )
 
 
 async def _resolve_stale_inline_threads(
@@ -677,9 +856,10 @@ async def _resolve_stale_inline_threads(
     thread_index: dict[int, str] | None = None,
     outdated_comment_ids: frozenset[int] | None = None,
     resolved_comment_ids: frozenset[int] | None = None,
-) -> None:
+) -> dict[str, int]:
+    skipped = empty_thread_resolve_skipped()
     if not inline_threads:
-        return
+        return skipped
 
     fingerprints_to_resolve = await _fingerprints_to_resolve_inline_threads(
         session,
@@ -694,6 +874,7 @@ async def _resolve_stale_inline_threads(
         if comment_id is None:
             continue
         if resolved_comment_ids and comment_id in resolved_comment_ids:
+            increment_thread_resolve_skip(skipped, THREAD_RESOLVE_SKIP_ALREADY_RESOLVED)
             inline_threads.pop(fingerprint, None)
             continue
         try:
@@ -710,24 +891,32 @@ async def _resolve_stale_inline_threads(
                     thread_index=thread_index,
                 )
             if thread_id is None:
+                _log_thread_resolve_skipped(
+                    pull_request_id=pull_request_id,
+                    fingerprint=fingerprint,
+                    comment_id=comment_id,
+                    reason=THREAD_RESOLVE_SKIP_THREAD_ID_NOT_FOUND,
+                )
+                increment_thread_resolve_skip(skipped, THREAD_RESOLVE_SKIP_THREAD_ID_NOT_FOUND)
                 continue
-            await github_api.resolve_review_thread(
+            await _resolve_review_thread_with_retry(
                 client,
                 github_installation_id=github_installation_id,
                 thread_id=thread_id,
                 auth_headers=auth_headers,
             )
             inline_threads.pop(fingerprint, None)
-        except (httpx.HTTPError, ServiceUnavailableError) as exc:
-            logger.warning(
-                "github_publish_resolve_inline_thread_skipped",
-                extra={
-                    "pull_request_id": str(pull_request_id),
-                    "fingerprint": fingerprint,
-                    "comment_id": comment_id,
-                    "error": str(exc),
-                },
+        except (httpx.HTTPError, RateLimitedError, ServiceUnavailableError) as exc:
+            _log_thread_resolve_skipped(
+                pull_request_id=pull_request_id,
+                fingerprint=fingerprint,
+                comment_id=comment_id,
+                reason=THREAD_RESOLVE_SKIP_RESOLVE_MUTATION_FAILED,
+                error=str(exc),
             )
+            increment_thread_resolve_skip(skipped, THREAD_RESOLVE_SKIP_RESOLVE_MUTATION_FAILED)
+
+    return skipped
 
 
 async def find_publish_job_for_head_sha(
@@ -904,6 +1093,83 @@ class InlinePostSpec:
     suggestion: str | None
 
 
+def _nearest_inline_retry_line(start_line: int) -> int:
+    return start_line - 1 if start_line > 1 else start_line + 1
+
+
+def _load_inline_422_recovered_fingerprints(summary_json: dict | None) -> frozenset[str]:
+    if not isinstance(summary_json, dict):
+        return frozenset()
+    raw = summary_json.get(_INLINE_422_RECOVERED_FINGERPRINTS_KEY)
+    if not isinstance(raw, list):
+        return frozenset()
+    return frozenset(fp for fp in raw if isinstance(fp, str) and fp)
+
+
+def _format_inline_422_fallback_block(spec: InlinePostSpec) -> str:
+    body = github_api.format_inline_comment_body(
+        title=spec.title,
+        message=spec.message,
+        severity=spec.severity,
+        suggestion=spec.suggestion,
+    )
+    marker = inline_422_fallback_marker(spec.group_fingerprint)
+    return f"{marker}\n### Inline fallback ({spec.file_path}:{spec.start_line})\n\n{body}"
+
+
+@dataclass(frozen=True)
+class InlineReviewCommentPostResult:
+    comment_id: int | None
+    recovered_to_issue_comment: bool = False
+    recovery_http_status: int | None = None
+
+
+async def _create_inline_review_comment_with_422_retry(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+    owner: str,
+    repo_name: str,
+    pull_number: int,
+    commit_id: str,
+    spec: InlinePostSpec,
+    auth_headers: dict[str, str],
+) -> InlineReviewCommentPostResult:
+    lines_to_try = (spec.start_line, _nearest_inline_retry_line(spec.start_line))
+    last_recoverable_status: int | None = None
+    for line in lines_to_try:
+        try:
+            comment_id = await github_api.create_pull_request_review_comment(
+                client,
+                github_installation_id=github_installation_id,
+                owner=owner,
+                repo=repo_name,
+                pull_number=pull_number,
+                commit_id=commit_id,
+                path=spec.file_path,
+                line=line,
+                body=github_api.format_inline_comment_body(
+                    title=spec.title,
+                    message=spec.message,
+                    severity=spec.severity,
+                    suggestion=spec.suggestion,
+                ),
+                auth_headers=auth_headers,
+            )
+            return InlineReviewCommentPostResult(comment_id=comment_id)
+        except httpx.HTTPStatusError as exc:
+            status_code = exc.response.status_code
+            if status_code in INLINE_COMMENT_RECOVERABLE_STATUS_CODES:
+                last_recoverable_status = status_code
+                continue
+            raise
+    return InlineReviewCommentPostResult(
+        comment_id=None,
+        recovered_to_issue_comment=True,
+        recovery_http_status=last_recoverable_status,
+    )
+
+
 @dataclass(frozen=True)
 class PublishSurfaceBuild:
     check_summary: str
@@ -1077,9 +1343,7 @@ async def _build_publish_surface(
         and existing.github_check_run_id is not None
     )
     post_inline = not job.inline_comments_posted and (
-        not is_update_from_other
-        or existing is None
-        or not existing.inline_comments_posted
+        not is_update_from_other or existing is None or not existing.inline_comments_posted
     )
 
     if job.github_comment_id is None:
@@ -1224,7 +1488,7 @@ async def _flush_publish_surface(
         if skipped_before_resolve is not None:
             return skipped_before_resolve
 
-        await _resolve_stale_inline_threads(
+        thread_resolve_skipped = await _resolve_stale_inline_threads(
             client,
             session=session,
             review_run_id=job.review_run_id,
@@ -1240,6 +1504,18 @@ async def _flush_publish_surface(
             resolved_comment_ids=resolved_comment_ids,
         )
 
+        issue_comment_body = build.issue_comment
+        check_summary_body = build.check_summary
+        if any(thread_resolve_skipped.values()):
+            issue_comment_body = append_thread_resolve_skipped_block(
+                issue_comment_body,
+                thread_resolve_skipped,
+            )
+            check_summary_body = append_thread_resolve_skipped_block(
+                check_summary_body,
+                thread_resolve_skipped,
+            )
+
         indexed_thread_ids = _fingerprint_thread_ids_from_index(inline_threads, thread_index)
         job.summary_json = {
             **(job.summary_json or {}),
@@ -1248,6 +1524,7 @@ async def _flush_publish_surface(
                 prior_v2=build.prior_v2_inline,
                 thread_ids=indexed_thread_ids,
             ),
+            "thread_resolve_skipped": thread_resolve_skipped,
         }
 
         skipped_after_resolve = await _recheck_publish_authority_before_flush(
@@ -1269,7 +1546,7 @@ async def _flush_publish_surface(
                 repo=build.repo_name,
                 check_run_id=job.github_check_run_id,
                 conclusion=build.conclusion,
-                summary=build.check_summary,
+                summary=check_summary_body,
                 auth_headers=auth_headers,
             )
             github_check_written = True
@@ -1282,7 +1559,7 @@ async def _flush_publish_surface(
                 repo=build.repo_name,
                 check_run_id=build.existing_github_check_run_id,
                 conclusion=build.conclusion,
-                summary=build.check_summary,
+                summary=check_summary_body,
                 auth_headers=auth_headers,
             )
             github_check_written = True
@@ -1295,7 +1572,7 @@ async def _flush_publish_surface(
                 head_sha=job.head_sha,
                 external_id=build.external_id,
                 conclusion=build.conclusion,
-                summary=build.check_summary,
+                summary=check_summary_body,
                 auth_headers=auth_headers,
             )
             job.github_check_run_id = check_run_id
@@ -1308,7 +1585,7 @@ async def _flush_publish_surface(
                 owner=build.owner,
                 repo=build.repo_name,
                 comment_id=job.github_comment_id,
-                body=build.issue_comment,
+                body=issue_comment_body,
                 auth_headers=auth_headers,
             )
             github_comment_written = True
@@ -1320,7 +1597,7 @@ async def _flush_publish_surface(
                 owner=build.owner,
                 repo=build.repo_name,
                 comment_id=build.existing_github_comment_id,
-                body=build.issue_comment,
+                body=issue_comment_body,
                 auth_headers=auth_headers,
             )
             github_comment_written = True
@@ -1331,7 +1608,7 @@ async def _flush_publish_surface(
                 owner=build.owner,
                 repo=build.repo_name,
                 issue_number=pull_request.number,
-                body=build.issue_comment,
+                body=issue_comment_body,
                 auth_headers=auth_headers,
             )
             job.github_comment_id = comment_id
@@ -1381,10 +1658,16 @@ async def _flush_publish_surface(
 
         inline_thread_ids: dict[str, str] = {}
         inline_written_this_flush: list[int] = []
+        inline_422_recovered_count = 0
+        inline_422_recovered_fingerprints = set(
+            _load_inline_422_recovered_fingerprints(job.summary_json)
+        )
         if build.post_inline:
             for spec in build.inline_posts:
                 if spec.group_fingerprint in retry_posted:
                     inline_threads[spec.group_fingerprint] = retry_posted[spec.group_fingerprint]
+                    continue
+                if spec.group_fingerprint in inline_422_recovered_fingerprints:
                     continue
                 skipped_during_inline = await _recheck_publish_authority_before_flush(
                     session,
@@ -1406,55 +1689,80 @@ async def _flush_publish_surface(
                         inline_comment_ids=inline_written_this_flush,
                     )
                     return skipped_during_inline
-                try:
-                    comment_id = await github_api.create_pull_request_review_comment(
-                        client,
-                        github_installation_id=installation.github_installation_id,
-                        owner=build.owner,
-                        repo=build.repo_name,
-                        pull_number=pull_request.number,
-                        commit_id=job.head_sha,
-                        path=spec.file_path,
-                        line=spec.start_line,
-                        body=github_api.format_inline_comment_body(
-                            title=spec.title,
-                            message=spec.message,
-                            severity=spec.severity,
-                            suggestion=spec.suggestion,
-                        ),
-                        auth_headers=auth_headers,
+                post_result = await _create_inline_review_comment_with_422_retry(
+                    client,
+                    github_installation_id=installation.github_installation_id,
+                    owner=build.owner,
+                    repo_name=build.repo_name,
+                    pull_number=pull_request.number,
+                    commit_id=job.head_sha,
+                    spec=spec,
+                    auth_headers=auth_headers,
+                )
+                if post_result.recovered_to_issue_comment:
+                    logger.warning(
+                        "github_publish_inline_comment_skipped",
+                        extra={
+                            "publish_job_id": str(publish_job_id),
+                            "file_path": spec.file_path,
+                            "line": spec.start_line,
+                            "status_code": post_result.recovery_http_status,
+                            "recovered": True,
+                        },
                     )
-                    inline_threads[spec.group_fingerprint] = comment_id
-                    inline_written_this_flush.append(comment_id)
-                    thread_id = thread_index.get(comment_id)
-                    if isinstance(thread_id, str) and thread_id:
-                        inline_thread_ids[spec.group_fingerprint] = thread_id
+                    inline_422_recovered_count += 1
+                    inline_422_recovered_fingerprints.add(spec.group_fingerprint)
                     job.summary_json = {
                         **(job.summary_json or {}),
-                        "github_inline_threads": serialize_inline_thread_map(
-                            inline_threads,
-                            prior_v2=(job.summary_json or {}).get("github_inline_threads")
-                            if isinstance((job.summary_json or {}).get("github_inline_threads"), dict)
-                            else build.prior_v2_inline,
-                            thread_ids=inline_thread_ids,
+                        _INLINE_422_RECOVERED_FINGERPRINTS_KEY: sorted(
+                            inline_422_recovered_fingerprints
                         ),
                     }
-                    await _commit_publish_job_progress(session)
-                except httpx.HTTPStatusError as exc:
-                    if exc.response.status_code in (404, 422):
-                        logger.warning(
-                            "github_publish_inline_comment_skipped",
-                            extra={
-                                "publish_job_id": str(publish_job_id),
-                                "file_path": spec.file_path,
-                                "line": spec.start_line,
-                                "status_code": exc.response.status_code,
-                            },
-                        )
-                        continue
-                    raise
+                    continue
+                comment_id = post_result.comment_id
+                if comment_id is None:
+                    continue
+                inline_threads[spec.group_fingerprint] = comment_id
+                inline_written_this_flush.append(comment_id)
+                thread_id = thread_index.get(comment_id)
+                if isinstance(thread_id, str) and thread_id:
+                    inline_thread_ids[spec.group_fingerprint] = thread_id
+                job.summary_json = {
+                    **(job.summary_json or {}),
+                    "github_inline_threads": serialize_inline_thread_map(
+                        inline_threads,
+                        prior_v2=(job.summary_json or {}).get("github_inline_threads")
+                        if isinstance((job.summary_json or {}).get("github_inline_threads"), dict)
+                        else build.prior_v2_inline,
+                        thread_ids=inline_thread_ids,
+                    ),
+                }
+                await _commit_publish_job_progress(session)
+            if inline_422_recovered_fingerprints and build.inline_posts:
+                issue_comment_body = await _append_recovered_inline_422_blocks_to_issue_comment(
+                    client,
+                    github_installation_id=installation.github_installation_id,
+                    owner=build.owner,
+                    repo_name=build.repo_name,
+                    pull_number=pull_request.number,
+                    job=job,
+                    build=build,
+                    issue_comment_body=issue_comment_body,
+                    recovered_fingerprints=inline_422_recovered_fingerprints,
+                    auth_headers=auth_headers,
+                )
+            if inline_422_recovered_count:
+                job.summary_json = {
+                    **(job.summary_json or {}),
+                    _INLINE_422_RECOVERED_COUNT_KEY: inline_422_recovered_count,
+                    _INLINE_422_RECOVERED_FINGERPRINTS_KEY: sorted(
+                        inline_422_recovered_fingerprints
+                    ),
+                }
             job.inline_comments_posted = all(
-                spec.group_fingerprint in inline_threads for spec in build.inline_posts
+                spec.group_fingerprint in inline_threads
+                or spec.group_fingerprint in inline_422_recovered_fingerprints
+                for spec in build.inline_posts
             )
             if inline_thread_ids:
                 job.summary_json = {
@@ -1583,7 +1891,9 @@ async def run_publish_job(
 
         job.status = GitHubPublishJobStatus.completed
         await session.flush()
-        pipeline_run = await get_pipeline_run_for_review_run(session, review_run_id=job.review_run_id)
+        pipeline_run = await get_pipeline_run_for_review_run(
+            session, review_run_id=job.review_run_id
+        )
         if pipeline_run is not None:
             await record_publish_pipeline_step(
                 session,
@@ -1619,7 +1929,9 @@ async def run_publish_job(
             job.status = GitHubPublishJobStatus.failed
             job.error_message = str(exc)[:2000]
             await session.flush()
-        pipeline_run = await get_pipeline_run_for_review_run(session, review_run_id=job.review_run_id)
+        pipeline_run = await get_pipeline_run_for_review_run(
+            session, review_run_id=job.review_run_id
+        )
         if pipeline_run is not None:
             await record_publish_pipeline_step(
                 session,

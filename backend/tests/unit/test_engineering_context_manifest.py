@@ -15,7 +15,7 @@ def test_parse_committed_ssot_file():
     repo_root = Path(__file__).resolve().parents[3]
     raw_text = (repo_root / SSOT_RELATIVE_PATH).read_text(encoding="utf-8")
     manifest = parse_review_context_manifest_json(raw_text)
-    assert manifest.active_program == "judge-transport-reliability"
+    assert manifest.active_program == "revy-review-dogfood"
     assert len(manifest.programs) == 1
     active = manifest.programs[0]
     assert active.id == manifest.active_program

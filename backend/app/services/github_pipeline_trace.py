@@ -481,6 +481,7 @@ async def record_reconcile_pipeline_step(
     group_count: int,
     duration_ms: int,
     resolution_pass: dict[str, Any] | None = None,
+    head_contradiction_suppressed_count: int = 0,
 ) -> None:
     step = await _create_completed_step(
         session,
@@ -491,6 +492,8 @@ async def record_reconcile_pipeline_step(
     manifest: dict[str, Any] = {"linked_group_count": group_count}
     if resolution_pass is not None:
         manifest["resolution_pass"] = resolution_pass
+    if head_contradiction_suppressed_count > 0:
+        manifest["head_contradiction_suppressed_count"] = head_contradiction_suppressed_count
     await add_step_artifact(
         session,
         step_id=step.id,
