@@ -1,5 +1,6 @@
 # backend/tests/unit/test_github_pull_requests.py
 """GitHub pull request service — R2 PR ingestion."""
+
 import uuid
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -559,6 +560,46 @@ async def test_synchronize_returns_existing_revision_when_head_sha_row_exists():
 
 
 @pytest.mark.asyncio
+async def test_append_revision_pre_check_dedupe_flushes_head_sha():
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=_PR_GITHUB_ID,
+        number=7,
+        title="Add feature",
+        state=GitHubPullRequestState.open,
+        head_sha="oldsha",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=2,
+    )
+    pull_request.id = uuid.uuid4()
+    existing = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request.id,
+        revision_number=2,
+        head_sha="dedupe-sha",
+        base_sha="base000",
+    )
+    existing.id = uuid.uuid4()
+
+    session = _session_with_nested()
+    session.scalar = AsyncMock(return_value=existing)
+    session.flush = AsyncMock()
+
+    revision = await _append_revision(
+        session,
+        pull_request=pull_request,
+        head_sha="dedupe-sha",
+        base_sha="base000",
+    )
+
+    assert revision.id == existing.id
+    assert pull_request.head_sha == "dedupe-sha"
+    session.flush.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_append_revision_recovers_same_head_sha_after_unique_violation():
     pull_request = GitHubPullRequestORM(
         repository_id=uuid.uuid4(),
@@ -586,7 +627,7 @@ async def test_append_revision_recovers_same_head_sha_after_unique_violation():
     session.scalar = AsyncMock(side_effect=[None, raced_revision])
     session.add = MagicMock()
     session.flush = AsyncMock(
-        side_effect=[IntegrityError("insert", {}, _UniqueViolation("unique"))],
+        side_effect=[IntegrityError("insert", {}, _UniqueViolation("unique")), None],
     )
     session.refresh = AsyncMock()
 
@@ -599,6 +640,7 @@ async def test_append_revision_recovers_same_head_sha_after_unique_violation():
 
     assert revision.id == raced_revision.id
     assert pull_request.head_sha == "newsha"
+    assert session.flush.await_count == 2
     session.refresh.assert_awaited_once()
 
 

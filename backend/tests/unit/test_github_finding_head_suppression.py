@@ -45,6 +45,16 @@ def test_matches_head_contradiction_matrix_row_missing_or_import():
     assert matches_head_contradiction(group, head) == "missing_or_import"
 
 
+def test_matches_head_contradiction_matrix_row_missing_or_import_uppercase_or_in_head():
+    group = _group(
+        title="Missing sqlalchemy or_ import",
+        message="entities.py does not import or_ from sqlalchemy",
+        file_path="backend/app/models/entities.py",
+    )
+    head = "from sqlalchemy import Column, OR_\n"
+    assert matches_head_contradiction(group, head) == "missing_or_import"
+
+
 def test_matches_head_contradiction_matrix_row_system_status_bar_props():
     group = _group(
         title="SystemStatusBar missing required props",

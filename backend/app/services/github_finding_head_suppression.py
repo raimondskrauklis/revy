@@ -36,7 +36,7 @@ def _matches_missing_or_import(group: GitHubFindingGroupORM, head_content: str) 
     if "import" not in claim and "sqlalchemy" not in claim:
         return False
     lowered = head_content.lower()
-    return "or_" in head_content and "sqlalchemy" in lowered
+    return "or_" in lowered and "sqlalchemy" in lowered
 
 
 def _matches_system_status_bar_props(group: GitHubFindingGroupORM, head_content: str) -> bool:

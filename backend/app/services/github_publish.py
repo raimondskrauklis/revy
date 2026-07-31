@@ -20,7 +20,12 @@ from app.constants.enums import (
     stored_enum_value,
 )
 from app.core.config import settings
-from app.core.exceptions import ConflictError, NotFoundError, ServiceUnavailableError
+from app.core.exceptions import (
+    ConflictError,
+    NotFoundError,
+    RateLimitedError,
+    ServiceUnavailableError,
+)
 from app.core.logging import get_logger
 from app.core.worker_retries import WorkerRetryableError, classify_transient_error
 from app.integrations import github_api
@@ -719,7 +724,7 @@ async def _resolve_review_thread_with_retry(
             thread_id=thread_id,
             auth_headers=auth_headers,
         )
-    except (httpx.HTTPError, ServiceUnavailableError):
+    except (httpx.HTTPError, RateLimitedError, ServiceUnavailableError):
         await github_api.resolve_review_thread(
             client,
             github_installation_id=github_installation_id,
@@ -793,7 +798,7 @@ async def _resolve_stale_inline_threads(
                 auth_headers=auth_headers,
             )
             inline_threads.pop(fingerprint, None)
-        except (httpx.HTTPError, ServiceUnavailableError) as exc:
+        except (httpx.HTTPError, RateLimitedError, ServiceUnavailableError) as exc:
             _log_thread_resolve_skipped(
                 pull_request_id=pull_request_id,
                 fingerprint=fingerprint,

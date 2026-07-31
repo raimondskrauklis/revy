@@ -2,7 +2,7 @@
 """Resolution metrics — RQ6."""
 
 import uuid
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -1500,6 +1500,42 @@ def test_build_resolution_pass_manifest_excludes_hygiene_from_rate():
     assert manifest["transition_count"] == 1
     assert manifest["transitions_addressed"] == 1
     assert manifest["resolution_rate_pct"] == 100.0
+
+
+@pytest.mark.asyncio
+async def test_get_fingerprint_published_revision_ids_includes_review_run_findings():
+    """R3.2 — issue-comment/check-run publishes map via review_run findings."""
+    pull_request_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    review_run_id = uuid.uuid4()
+
+    current_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=5,
+        head_sha="head5",
+        base_sha="base",
+    )
+    current_revision.id = uuid.uuid4()
+
+    publish_rows = MagicMock()
+    publish_rows.__iter__ = lambda self: iter(
+        [
+            ({}, revision_id, review_run_id, 4),
+        ]
+    )
+    finding_rows = MagicMock()
+    finding_rows.__iter__ = lambda self: iter([(review_run_id, "issue-comment-fp")])
+
+    session = AsyncMock()
+    session.execute = AsyncMock(side_effect=[publish_rows, finding_rows])
+
+    published = await github_resolution_metrics.get_fingerprint_published_revision_ids(
+        session,
+        pull_request_id=pull_request_id,
+        current_revision=current_revision,
+    )
+
+    assert published == {"issue-comment-fp": revision_id}
 
 
 def test_build_resolution_pass_manifest_hygiene_count_outside_stamp_cohort():

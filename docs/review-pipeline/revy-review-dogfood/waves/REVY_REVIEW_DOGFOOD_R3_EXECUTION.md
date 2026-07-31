@@ -13,7 +13,7 @@ Phase **R3** of [REVY_REVIEW_DOGFOOD_GENERAL_PLAN.md](../REVY_REVIEW_DOGFOOD_GEN
 | R0 tag | Subphase |
 |--------|----------|
 | `stale_closure_blocked` | **R3.1** (always) |
-| `pairing_gap` (primary or secondary in R0.2) | **R3.2** — implement when memo lists secondary `pairing_gap`; re-evaluate after R3.1 if RR-V2 still fails |
+| `pairing_gap` (primary or secondary in R0.2) | **R3.2** — **always** when R0.2 memo lists secondary `pairing_gap` (current TenderPro memo); re-evaluate after R3.1 if RR-V2 still fails |
 | `line_region_miss` | **R3.4** |
 | `api_compare_failed` | **R3.5** |
 | RR-DG11 (any tag) | **R3.3** after R1 |

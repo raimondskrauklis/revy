@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import logging
 import re
 from uuid import UUID
 
@@ -16,6 +15,7 @@ from app.constants.enums import (
     ResolutionMethod,
     ResolutionStatus,
 )
+from app.core.logging import get_logger
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_publish_job import GitHubPublishJobORM
@@ -29,7 +29,7 @@ from app.services.github_finding_closure_rules import (
 from app.services.github_path_hygiene import hygiene_path_gone, paths_absent_at_head
 from app.services.github_publish import deserialize_inline_thread_map
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 _HUNK_HEADER_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 
@@ -233,6 +233,38 @@ async def resolve_pairing_last_seen_revision_id(
     return prior_published.id
 
 
+async def _fingerprints_by_review_run_ids(
+    session: AsyncSession,
+    review_run_ids: frozenset[UUID],
+) -> dict[UUID, frozenset[str]]:
+    if not review_run_ids:
+        return {}
+    rows = await session.execute(
+        select(GitHubFindingORM.review_run_id, GitHubFindingGroupORM.fingerprint)
+        .join(
+            GitHubFindingGroupORM,
+            GitHubFindingGroupORM.id == GitHubFindingORM.group_id,
+        )
+        .where(
+            GitHubFindingORM.review_run_id.in_(review_run_ids),
+            GitHubFindingORM.group_id.is_not(None),
+        )
+    )
+    grouped: dict[UUID, set[str]] = {}
+    for review_run_id, fingerprint in rows:
+        if review_run_id is None or not isinstance(fingerprint, str) or not fingerprint:
+            continue
+        grouped.setdefault(review_run_id, set()).add(fingerprint)
+    return {run_id: frozenset(fingerprints) for run_id, fingerprints in grouped.items()}
+
+
+def _fingerprints_from_publish_summary(summary_json: object) -> frozenset[str]:
+    if not isinstance(summary_json, dict):
+        return frozenset()
+    inline = summary_json.get("github_inline_threads")
+    return frozenset(deserialize_inline_thread_map(inline))
+
+
 async def get_fingerprint_published_revision_ids(
     session: AsyncSession,
     *,
@@ -244,6 +276,7 @@ async def get_fingerprint_published_revision_ids(
         select(
             GitHubPublishJobORM.summary_json,
             GitHubPublishJobORM.revision_id,
+            GitHubPublishJobORM.review_run_id,
             GitHubPullRequestRevisionORM.revision_number,
         )
         .join(
@@ -260,12 +293,16 @@ async def get_fingerprint_published_revision_ids(
             GitHubPublishJobORM.created_at.asc(),
         )
     )
+    row_list = list(rows)
+    fingerprints_by_run = await _fingerprints_by_review_run_ids(
+        session,
+        frozenset(review_run_id for *_rest, review_run_id, _num in row_list),
+    )
     published: dict[str, UUID] = {}
-    for summary_json, revision_id, _revision_number in rows:
-        if not isinstance(summary_json, dict):
-            continue
-        inline = summary_json.get("github_inline_threads")
-        for fingerprint in deserialize_inline_thread_map(inline):
+    for summary_json, revision_id, review_run_id, _revision_number in row_list:
+        fingerprints = set(_fingerprints_from_publish_summary(summary_json))
+        fingerprints |= set(fingerprints_by_run.get(review_run_id, frozenset()))
+        for fingerprint in fingerprints:
             published[fingerprint] = revision_id
     return published
 

@@ -219,6 +219,7 @@ async def _append_revision(
             },
         )
         pull_request.head_sha = head_sha
+        await session.flush()
         return existing_revision
 
     last_error: IntegrityError | None = None
@@ -241,6 +242,7 @@ async def _append_revision(
                     },
                 )
                 pull_request.head_sha = head_sha
+                await session.flush()
                 return raced_revision
 
         next_revision_number = pull_request.revision_count + 1
