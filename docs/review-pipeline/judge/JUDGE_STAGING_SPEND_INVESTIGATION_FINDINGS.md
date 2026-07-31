@@ -15,7 +15,32 @@ On **2026-07-31** staging executed **38 judge HTTP calls** (discovery + verifica
 
 **Judge does not run on every review run.** R5 policy escalates only `error` / `critical` / `security≥warning` findings, max **10 per run**. Of **54** review runs today, **24** had `judge_status=not_applicable` (zero escalation candidates).
 
-**Gaps found:** (1) **token usage not persisted** to `github_pipeline_steps` or judge manifests — spend reconciliation requires Anthropic console or worker logs; (2) **10 discovery judge failures** (`Anthropic response invalid`, empty content) drove `skipped_unavailable` on 10 runs including PR #80 rev 1–2; (3) `skipped_unavailable` is a **misleading status** when verification judge succeeded but discovery candidate failed.
+**Gaps found (judge):** JT-SP2–SP5 **shipped** on PR #80 (`1a47c48`+) — token persistence, response previews, post-verification status finalize. Historical rows pre-deploy lack judge token capture.
+
+**Moonshot (reviewer):** Dominates LLM spend — ~2 API calls per review run (large diff review + small publish summary). See § Moonshot request log below.
+
+---
+
+## Moonshot request log (last 3 days — `misc/request_log_part_0001.csv`)
+
+**Model:** `kimi-k2.7-code` · **API key:** `revy-main` · **Window:** 2026-07-30 – 2026-08-01 UTC (partial Aug 1).
+
+| Day | Moonshot calls | Input tokens | Output tokens | `review_like` (in ≥10k) | DB completed runs |
+|-----|----------------|--------------|---------------|-------------------------|-------------------|
+| 2026-07-30 | 74 | 833k | 420k | 38 | **12** |
+| 2026-07-31 | 53 | 1.03M | 461k | 31 (+9 XL ≥50k) | **50** |
+| 2026-08-01 *(to 05:23 UTC)* | 50 | 1.06M | 520k | 27 (+11 XL) | — |
+| **3-day total** | **177** | **~2.9M** | **~1.4M** | — | **62** (Jul 30–31) |
+
+**Pattern:** each review cycle ≈ **2 Moonshot calls** — large input (~12k–65k) for `review_pull_request_revision`, then small input (~600–1.2k) for publish summary. PR #80 dogfood (Jul 31 19–21 UTC): **12 calls** ≈ 6 cycles × 2.
+
+**Jul 31 aligns with DB** (53 calls vs 50 review runs + publish summaries). **Jul 30 mismatch** (74 calls vs 12 DB runs) — likely extra testing on `revy-main` key outside staging review runs (burst 03:00 UTC).
+
+**Output cap hits** (`output_tokens = 32_768`): **4** in window — truncated max output on very large PRs; monitor finding JSON completeness.
+
+**vs judge:** Moonshot is **orders of magnitude** more tokens than Anthropic judge (~$0.18/day on `revy-judge` for Jul 31).
+
+**Operator script:** `python -m scripts.moonshot_staging_spend_metrics --csv ../misc/request_log_part_0001.csv --days 3`
 
 ---
 
@@ -24,6 +49,7 @@ On **2026-07-31** staging executed **38 judge HTTP calls** (discovery + verifica
 | Artifact | Location | Notes |
 |----------|----------|-------|
 | Anthropic cost export | `misc/claude_api_cost_2026_07_01_to_2026_07_31.csv` | `revy-judge` key; 2026-07-31 = 2 rows (input + output) |
+| Moonshot request log | `misc/request_log_part_0001.csv` | Per-request tokens; `revy-main` key |
 | Worker log slice | `misc/loglast.txt` | Ends `2026-07-31 20:18:55` — rev 5–6 PR #80; `judge_llm_request_started/completed` + `api.anthropic.com` 200 |
 | Staging DB | `github_review_runs`, `github_finding_judge_outcomes`, judge pipeline manifests | Queried 2026-07-31 UTC |
 
@@ -139,6 +165,7 @@ Failures clustered before evening dogfood pushes; **20:00 UTC hour clean** — a
 | P1 | **Investigate JT-SP4** empty-body 200s — response preview now in exception details + manifest on failure paths. |
 | P2 | Split `judge_status` — **deferred**; `finalize_review_run_judge_status` re-evaluates after verification instead. |
 | P2 | **`scripts/judge_staging_spend_metrics.py`** — daily roll-up for operator reconciliation. |
+| P2 | **`scripts/moonshot_staging_spend_metrics.py`** — Moonshot CSV vs DB review-run reconciliation. |
 
 ---
 
@@ -148,7 +175,9 @@ Failures clustered before evening dogfood pushes; **20:00 UTC hour clean** — a
 
 **Judge is working** in the latest log window (`loglast.txt` rev 5–6). Earlier failures (`Anthropic response invalid`) explain `skipped_unavailable` on PR #80 pushes 1–2 and align with known transport empty-response class.
 
-**Primary engineering gap:** spend and token observability in DB — operators cannot reconcile Anthropic invoices from pipeline tables today (JT-SP2, JT-SP3).
+**Moonshot billing is proportional** to review volume (~2 calls per run, ~30k–65k input tokens per review). Use `moonshot_staging_spend_metrics.py` to reconcile CSV exports against `github_review_runs`.
+
+**Judge token observability:** shipped post-`1a47c48` — new runs persist usage on pipeline steps and manifests.
 
 ---
 
@@ -161,4 +190,6 @@ Failures clustered before evening dogfood pushes; **20:00 UTC hour clean** — a
 | Verification judge | `backend/app/services/github_finding_closure.py` |
 | Transport logging | `backend/app/integrations/anthropic_review.py` (`judge_llm_request_*`) |
 | Judge manifest | `backend/app/services/github_pipeline_trace.py` (`record_judge_pipeline_step`) |
+| Judge spend script | `backend/scripts/judge_staging_spend_metrics.py` |
+| Moonshot spend script | `backend/scripts/moonshot_staging_spend_metrics.py` |
 | Existing metrics script | `backend/scripts/judge_json_contract_staging_metrics.py` |

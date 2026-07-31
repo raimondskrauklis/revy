@@ -66,4 +66,18 @@ DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.judge_staging_spend_metrics
 
 See [JUDGE_STAGING_SPEND_INVESTIGATION_FINDINGS.md](../review-pipeline/judge/JUDGE_STAGING_SPEND_INVESTIGATION_FINDINGS.md).
 
+## Moonshot staging spend (`moonshot_staging_spend_metrics.py`)
+
+Reconcile Moonshot request-log CSV (`revy-main` / `kimi-k2.7-code`) vs staging DB completed review runs.
+
+```bash
+cd backend
+
+pipenv run python -m scripts.moonshot_staging_spend_metrics \
+  --csv ../misc/request_log_part_0001.csv --days 3
+
+DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.moonshot_staging_spend_metrics \
+  --csv ../misc/request_log_part_0001.csv --since 2026-07-30T00:00:00Z --json
+```
+
 **RR-V4:** Gate checks **latest publish only** for `resolve_mutation_failed`. Historical failures before App **Contents: Write** upgrade are documented, not blocking. Permission fix: [RR-V4 findings](../review-pipeline/revy-review-dogfood/REVY_REVIEW_DOGFOOD_RR_V4_FINDINGS.md) · [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) § Contents Write.
