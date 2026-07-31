@@ -79,6 +79,7 @@
 | **RR-DG9** | Silent skip when `thread_id` is None | medium | open | `github_publish.py:712-713` — `continue` with no log or manifest count |
 | **RR-DG10** | `publish_skipped_not_head` / mixed GitHub surfaces | medium | open | HEAD advances mid-publish → check/comment at older generation while inline partial |
 | **RR-DG11** | Intermediate revision gap after failed ingest | medium | open | Failed rev 13 leaves hole; `get_intermediate_revision_ids_between` / pairing may exclude groups from restamp |
+| **RR-DG12** | App missing `contents:write` for `resolveReviewThread` | **high** | **fix identified** | PR #80 RR-V4 findings — upgrade Contents to Read and write on GitHub App |
 
 ---
 

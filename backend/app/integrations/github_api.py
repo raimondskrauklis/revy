@@ -28,6 +28,16 @@ _INDEXABLE_COMPARE_STATUSES = frozenset({"added", "modified", "copied", "renamed
 _REMOVED_COMPARE_STATUSES = frozenset({"removed"})
 
 
+def _graphql_errors_message(errors: list[Any]) -> str:
+    parts: list[str] = []
+    for err in errors:
+        if isinstance(err, dict):
+            parts.append(str(err.get("message") or err))
+        else:
+            parts.append(str(err))
+    return "; ".join(parts)[:500]
+
+
 @dataclass(frozen=True)
 class CompareFileChange:
     filename: str
@@ -863,8 +873,9 @@ async def resolve_review_thread(
     response.raise_for_status()
     errors = response.json().get("errors")
     if errors:
+        detail = _graphql_errors_message(errors)
         raise ServiceUnavailableError(
-            message="GitHub resolveReviewThread failed",
+            message=f"GitHub resolveReviewThread failed: {detail}",
             error_code="github_api_error",
         )
 

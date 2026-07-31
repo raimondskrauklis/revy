@@ -84,7 +84,7 @@ DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.revy_review_dogfood_staging
 | **RR-V1** | One revision row per `head_sha`; no IntegrityError | **PASS** | 5 revisions; `rows_per_head_sha=1` each |
 | **RR-V2** | ≥5 completed runs; `resolution_rate_pct > 0` + `transitions_addressed ≥ 1` | **PASS** | rev 3 manifest: `transitions_addressed=1`, rate 100% |
 | **RR-V3** | `publish_head_sha` == revision `head_sha` on all completed publishes | **PASS** | 5/5 parity |
-| **RR-V4** | `thread_resolve_skipped` zero or manifest breakdown only | **PENDING** | `resolve_mutation_failed=2` (rev 2–4), `=4` (rev 5) — GitHub thread resolve API failures |
+| **RR-V4** | `thread_resolve_skipped` zero or manifest breakdown only | **PENDING** | `resolve_mutation_failed` — **fix:** GitHub App **Contents: Write** ([RR-V4 findings](./REVY_REVIEW_DOGFOOD_RR_V4_FINDINGS.md)) |
 | **RR-V5** | HEAD suppression unit matrix + `head_contradiction_suppressed_count` when applicable | **pending** | pytest matrix not re-run this session |
 | **Judge** | Escalation run with persisted `github_finding_judge_outcomes` | **PASS** | 3/3 escalation runs with outcomes; rev 5 `judge_status=completed` |
 | **Closure** | Finding groups `resolved` or `resolution_status=addressed` after fix push | **PASS** | probe group `019fb9b3…` `resolved`/`absent_and_addressed` on push 3 |

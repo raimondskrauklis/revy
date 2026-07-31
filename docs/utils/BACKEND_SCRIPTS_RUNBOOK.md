@@ -48,3 +48,5 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
 ```
 
 Exit code **1** when any RR-V check is `PENDING` or `FAIL`. See [REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md](../review-pipeline/revy-review-dogfood/REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md).
+
+**RR-V4 blocked?** Upgrade GitHub App **Contents** to **Read and write** and accept on installation — [RR-V4 findings](../review-pipeline/revy-review-dogfood/REVY_REVIEW_DOGFOOD_RR_V4_FINDINGS.md) · [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) § Contents Write.

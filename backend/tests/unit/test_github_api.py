@@ -304,3 +304,26 @@ async def test_fetch_repository_file_at_sha_404_raises_not_found():
                 ref="abc123",
             )
     assert exc.value.error_code == "github_contents_not_found"
+
+
+@pytest.mark.asyncio
+async def test_resolve_review_thread_includes_graphql_error_message():
+    client = AsyncMock()
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = {
+        "errors": [{"message": "Resource not accessible by integration"}],
+    }
+    client.post = AsyncMock(return_value=response)
+
+    with patch(
+        "app.integrations.github_api._resolve_auth_headers",
+        AsyncMock(return_value={"Authorization": "token"}),
+    ):
+        with pytest.raises(ServiceUnavailableError) as exc:
+            await github_api.resolve_review_thread(
+                client,
+                github_installation_id=1,
+                thread_id="PRRT_test",
+            )
+    assert "Resource not accessible by integration" in exc.value.message
