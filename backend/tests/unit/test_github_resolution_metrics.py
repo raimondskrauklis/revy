@@ -2,6 +2,7 @@
 """Resolution metrics — RQ6."""
 
 import uuid
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -1582,12 +1583,14 @@ async def test_get_fingerprint_published_revision_ids_includes_review_run_findin
     )
     current_revision.id = uuid.uuid4()
 
-    publish_rows = MagicMock()
-    publish_rows.__iter__ = lambda self: iter(
-        [
-            ({}, revision_id, review_run_id, 4),
-        ]
+    row = SimpleNamespace(
+        summary_json={},
+        revision_id=revision_id,
+        review_run_id=review_run_id,
+        revision_number=4,
     )
+    publish_rows = MagicMock()
+    publish_rows.all = lambda: [row]
     finding_rows = MagicMock()
     finding_rows.__iter__ = lambda self: iter([(review_run_id, "issue-comment-fp")])
 

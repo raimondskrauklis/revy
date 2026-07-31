@@ -3732,6 +3732,50 @@ async def test_resolve_review_thread_with_retry_does_not_retry_client_error():
 
 
 @pytest.mark.asyncio
+async def test_append_recovered_inline_422_blocks_creates_comment_when_id_unavailable():
+    spec = _inline_post_spec()
+    job = MagicMock()
+    job.github_comment_id = None
+    build = github_publish.PublishSurfaceBuild(
+        check_summary="check",
+        issue_comment="Summary body",
+        conclusion="neutral",
+        summary_json={},
+        inline_threads={},
+        prior_v2_inline={},
+        inline_posts=[spec],
+        post_inline=True,
+        is_update_from_other=False,
+        existing_github_check_run_id=None,
+        existing_github_comment_id=None,
+        existing_inline_comments_posted=False,
+        external_id="ext",
+        owner="acme",
+        repo_name="demo",
+    )
+    client = AsyncMock()
+    create_mock = AsyncMock(return_value=9009)
+    with patch("app.services.github_publish.github_api.create_issue_comment", create_mock):
+        updated = await github_publish._append_recovered_inline_422_blocks_to_issue_comment(
+            client,
+            github_installation_id=12345,
+            owner="acme",
+            repo_name="demo",
+            pull_number=42,
+            job=job,
+            build=build,
+            issue_comment_body=build.issue_comment,
+            recovered_fingerprints={"fp-a"},
+            auth_headers={"Authorization": "Bearer t"},
+        )
+
+    assert github_publish.inline_422_fallback_marker("fp-a") in updated
+    assert job.github_comment_id == 9009
+    create_mock.assert_awaited_once()
+    assert create_mock.await_args.kwargs["issue_number"] == 42
+
+
+@pytest.mark.asyncio
 async def test_append_recovered_inline_422_blocks_uses_existing_github_comment_id():
     spec = _inline_post_spec()
     job = MagicMock()
@@ -3761,6 +3805,7 @@ async def test_append_recovered_inline_422_blocks_uses_existing_github_comment_i
             github_installation_id=12345,
             owner="acme",
             repo_name="demo",
+            pull_number=7,
             job=job,
             build=build,
             issue_comment_body=build.issue_comment,

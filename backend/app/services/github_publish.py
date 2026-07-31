@@ -774,22 +774,33 @@ async def _append_recovered_inline_422_blocks_to_issue_comment(
     github_installation_id: int,
     owner: str,
     repo_name: str,
+    pull_number: int,
     job: GitHubPublishJobORM,
     build: PublishSurfaceBuild,
     issue_comment_body: str,
     recovered_fingerprints: set[str],
     auth_headers: dict[str, str],
 ) -> str:
-    comment_id = _issue_comment_id_for_publish_flush(job, build)
-    if comment_id is None:
-        return issue_comment_body
-
     updated_body = _append_missing_inline_422_fallback_blocks(
         issue_comment_body,
         _inline_422_fallback_blocks_for_specs(build.inline_posts, recovered_fingerprints),
     )
     if updated_body is None:
         return issue_comment_body
+
+    comment_id = _issue_comment_id_for_publish_flush(job, build)
+    if comment_id is None:
+        comment_id = await github_api.create_issue_comment(
+            client,
+            github_installation_id=github_installation_id,
+            owner=owner,
+            repo=repo_name,
+            issue_number=pull_number,
+            body=updated_body,
+            auth_headers=auth_headers,
+        )
+        job.github_comment_id = comment_id
+        return updated_body
 
     await github_api.update_issue_comment(
         client,
@@ -1733,6 +1744,7 @@ async def _flush_publish_surface(
                     github_installation_id=installation.github_installation_id,
                     owner=build.owner,
                     repo_name=build.repo_name,
+                    pull_number=pull_request.number,
                     job=job,
                     build=build,
                     issue_comment_body=issue_comment_body,

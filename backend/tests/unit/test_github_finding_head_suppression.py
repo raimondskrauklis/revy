@@ -15,7 +15,7 @@ from app.constants.enums import (
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.services import github_finding_head_suppression
 from app.services.github_finding_head_suppression import (
-    HEAD_CONTRADICTION_MATCHERS,
+    HEAD_CONTRADICTION_RULES,
     matches_head_contradiction,
     suppress_head_contradictions,
 )
@@ -133,8 +133,8 @@ def test_matches_head_contradiction_returns_none_when_claim_still_valid():
     assert matches_head_contradiction(group, head) is None
 
 
-def test_head_contradiction_matchers_cover_rr_v5_rows():
-    assert {rule_id for rule_id, _ in HEAD_CONTRADICTION_MATCHERS} == {
+def test_head_contradiction_rules_cover_rr_v5_rows():
+    assert {rule.rule_id for rule in HEAD_CONTRADICTION_RULES} == {
         "missing_or_import",
         "system_status_bar_props",
         "kpi_skeleton_count",

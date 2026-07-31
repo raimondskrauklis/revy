@@ -362,10 +362,10 @@ async def get_fingerprint_published_revision_ids(
     """Latest completed publish revision per fingerprint on this PR up to current."""
     rows = await session.execute(
         select(
-            GitHubPublishJobORM.summary_json,
-            GitHubReviewRunORM.revision_id,
-            GitHubPublishJobORM.review_run_id,
-            GitHubPullRequestRevisionORM.revision_number,
+            GitHubPublishJobORM.summary_json.label("summary_json"),
+            GitHubReviewRunORM.revision_id.label("revision_id"),
+            GitHubPublishJobORM.review_run_id.label("review_run_id"),
+            GitHubPullRequestRevisionORM.revision_number.label("revision_number"),
         )
         .join(
             GitHubReviewRunORM,
@@ -385,17 +385,17 @@ async def get_fingerprint_published_revision_ids(
             GitHubPublishJobORM.created_at.asc(),
         )
     )
-    row_list = list(rows)
+    row_list = rows.all()
     fingerprints_by_run = await _fingerprints_by_review_run_ids(
         session,
-        frozenset(review_run_id for *_rest, review_run_id, _num in row_list),
+        frozenset(row.review_run_id for row in row_list),
     )
     published: dict[str, UUID] = {}
-    for summary_json, revision_id, review_run_id, _revision_number in row_list:
-        fingerprints = set(_fingerprints_from_publish_summary(summary_json))
-        fingerprints |= set(fingerprints_by_run.get(review_run_id, frozenset()))
+    for row in row_list:
+        fingerprints = set(_fingerprints_from_publish_summary(row.summary_json))
+        fingerprints |= set(fingerprints_by_run.get(row.review_run_id, frozenset()))
         for fingerprint in fingerprints:
-            published[fingerprint] = revision_id
+            published[fingerprint] = row.revision_id
     return published
 
 

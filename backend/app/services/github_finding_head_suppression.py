@@ -69,7 +69,7 @@ _CLAIM_PROP_MIGRATION_RE = re.compile(r"\b(?:prop|caller)s?\b", re.IGNORECASE)
 class HeadContradictionRule:
     rule_id: str
     matrix_ref: str
-    claim_pattern: Pattern[str]
+    claim_predicate: Callable[[GitHubFindingGroupORM], bool]
     head_predicate: HeadContentPredicate
 
 
@@ -111,77 +111,37 @@ def _claim_system_status_bar_required(group: GitHubFindingGroupORM) -> bool:
     )
 
 
-def _matches_missing_or_import(group: GitHubFindingGroupORM, head_content: str) -> bool:
-    return _claim_matches(_CLAIM_SQLALCHEMY_OR_MISSING_RE, group) and _head_imports_sqlalchemy_or(
-        head_content
-    )
-
-
-def _matches_system_status_bar_props(group: GitHubFindingGroupORM, head_content: str) -> bool:
-    return _claim_system_status_bar_required(group) and _head_system_status_bar_optional_props(
-        head_content
-    )
-
-
-def _matches_kpi_skeleton_count(group: GitHubFindingGroupORM, head_content: str) -> bool:
-    return _claim_matches(_CLAIM_KPI_SKELETON_RE, group) and _head_has_overview_kpi_count_four(
-        head_content
-    )
-
-
-def _matches_export_label(group: GitHubFindingGroupORM, head_content: str) -> bool:
-    return _claim_matches(_CLAIM_EXPORT_LABEL_RE, group) and _head_has_conditional_export_labels(
-        head_content
-    )
-
-
-def _matches_prop_migration(group: GitHubFindingGroupORM, head_content: str) -> bool:
-    return _claim_matches(
-        _CLAIM_PROP_MIGRATION_RE, group
-    ) and _head_system_status_bar_optional_props(head_content)
-
-
 HEAD_CONTRADICTION_RULES: tuple[HeadContradictionRule, ...] = (
     HeadContradictionRule(
         rule_id="missing_or_import",
         matrix_ref="RR-V5 row 1",
-        claim_pattern=_CLAIM_SQLALCHEMY_OR_MISSING_RE,
+        claim_predicate=lambda group: _claim_matches(_CLAIM_SQLALCHEMY_OR_MISSING_RE, group),
         head_predicate=_head_imports_sqlalchemy_or,
     ),
     HeadContradictionRule(
         rule_id="system_status_bar_props",
         matrix_ref="RR-V5 row 2",
-        claim_pattern=_CLAIM_SYSTEM_STATUS_BAR_REQUIRED_RE,
+        claim_predicate=_claim_system_status_bar_required,
         head_predicate=_head_system_status_bar_optional_props,
     ),
     HeadContradictionRule(
         rule_id="kpi_skeleton_count",
         matrix_ref="RR-V5 row 3",
-        claim_pattern=_CLAIM_KPI_SKELETON_RE,
+        claim_predicate=lambda group: _claim_matches(_CLAIM_KPI_SKELETON_RE, group),
         head_predicate=_head_has_overview_kpi_count_four,
     ),
     HeadContradictionRule(
         rule_id="export_label",
         matrix_ref="RR-V5 row 15",
-        claim_pattern=_CLAIM_EXPORT_LABEL_RE,
+        claim_predicate=lambda group: _claim_matches(_CLAIM_EXPORT_LABEL_RE, group),
         head_predicate=_head_has_conditional_export_labels,
     ),
     HeadContradictionRule(
         rule_id="prop_migration",
         matrix_ref="RR-V5 row 17",
-        claim_pattern=_CLAIM_PROP_MIGRATION_RE,
+        claim_predicate=lambda group: _claim_matches(_CLAIM_PROP_MIGRATION_RE, group),
         head_predicate=_head_system_status_bar_optional_props,
     ),
-)
-
-HEAD_CONTRADICTION_MATCHERS: tuple[
-    tuple[str, Callable[[GitHubFindingGroupORM, str], bool]], ...
-] = (
-    ("missing_or_import", _matches_missing_or_import),
-    ("system_status_bar_props", _matches_system_status_bar_props),
-    ("kpi_skeleton_count", _matches_kpi_skeleton_count),
-    ("export_label", _matches_export_label),
-    ("prop_migration", _matches_prop_migration),
 )
 
 
@@ -189,9 +149,9 @@ def matches_head_contradiction(
     group: GitHubFindingGroupORM,
     head_content: str,
 ) -> str | None:
-    for rule_id, matcher in HEAD_CONTRADICTION_MATCHERS:
-        if matcher(group, head_content):
-            return rule_id
+    for rule in HEAD_CONTRADICTION_RULES:
+        if rule.claim_predicate(group) and rule.head_predicate(head_content):
+            return rule.rule_id
     return None
 
 
