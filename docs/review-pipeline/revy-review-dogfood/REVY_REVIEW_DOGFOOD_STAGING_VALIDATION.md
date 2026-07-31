@@ -1,8 +1,10 @@
 # Revy review — cross-repo dogfood staging validation
 
 **Program:** [README.md](./README.md) · **Findings:** [REVY_REVIEW_DOGFOOD_FINDINGS.md](./REVY_REVIEW_DOGFOOD_FINDINGS.md)  
-**Case study:** TenderPro [PR #130](https://github.com/raimondskrauklis/tender_pro/pull/130) (super-admin dashboard wave 1)  
-**Status:** R0 baseline locked 2026-07-31 — **Revy product FAIL** / **customer app PASS**
+**Case study (symptom evidence only):** TenderPro [PR #130](https://github.com/raimondskrauklis/tender_pro/pull/130) — motivated RR-DG* catalog; **not** the validation venue.  
+**Validation venue:** `raimondskrauklis/revy` staging dogfood PR with **≥5 completed review runs** and DB-backed RR-V gate.  
+**Status:** RR-W1 code shipped `deda3c9` — **R5 RR-V sign-off PENDING** (real multi-push protocol below).  
+**Invalidated:** [#79](https://github.com/raimondskrauklis/revy/pull/79) closed — premature PASS + push during Revy run.
 
 ---
 
@@ -27,15 +29,71 @@
 
 ---
 
-## Dogfood PR (external)
-
-| PR | Repo | Status |
-|----|------|--------|
-| [#130](https://github.com/raimondskrauklis/tender_pro/pull/130) | `tender_pro` | open — app merge-ready; Revy RR-W1 in progress |
+| RR-W1 R0 lock | 2026-07-31 | RR-Q5=A; RR-DG4 tag below |
+| **RR-W1 R1–R4 ship** | `deda3c9` deployed `2026-07-31T19:13:21Z` | [Actions #30657955604](https://github.com/raimondskrauklis/revy/actions/runs/30657955604) |
 
 ---
 
-## Revy platform log events
+## Dogfood PR (validation venue — `raimondskrauklis/revy`)
+
+| PR | Branch | Status |
+|----|--------|--------|
+| [#78](https://github.com/raimondskrauklis/revy/pull/78) | `docs/revy-review-dogfood-findings` | merged `deda3c9` — implementation only |
+| *(open)* | `chore/rr-w1-r5-staging-validation` | **active** — RR-V multi-push protocol |
+
+**Fixture:** `backend/app/services/rr_w1_staging_probe.py` (pattern: FR-CS4 / FR-DG2 probes).
+
+**DB script (operator):**
+
+```bash
+cd backend
+DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.revy_review_dogfood_staging_validation \
+  --pr-number <N> --since 2026-07-31T19:08:32Z --json
+
+# Sign-off gate (exit 1 until all checks PASS):
+DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.revy_review_dogfood_staging_validation \
+  --pr-number <N> --since 2026-07-31T19:08:32Z --rr-v-gate
+```
+
+---
+
+## Multi-push protocol (≥5 completed review runs)
+
+| Push | Intent | Status |
+|------|--------|--------|
+| 1 | Introduce `rr_w1_staging_probe` defect (`subprocess` + `shell=True`) | pending |
+| 2 | Structural fix — `rr_w1_probe_composed()` only; verify `transitions_addressed` ≥ 1 | pending |
+| 3 | Unrelated backend commit (pairing / last_seen drift) | pending |
+| 4 | Same-`head_sha` double-push OR rapid second SHA (RR-V1) | pending |
+| 5 | Confirm finding groups `resolved` / `addressed`; judge outcomes on escalation run | pending |
+
+**Rules:** wait for Revy check **complete** before next push; record `head_sha`, `review_run_id`, group IDs per push in Results table.
+
+### Results (operator — fill per push)
+
+| Push | `head_sha` | Revy rev | `review_run_id` | Notes |
+|------|------------|----------|-----------------|-------|
+| 1 | — | — | — | pending |
+
+---
+
+## RR-V gates (DB-backed — all pending until `--rr-v-gate` PASS)
+
+| Gate | Pass criteria | Status | Evidence |
+|------|---------------|--------|----------|
+| **RR-V1** | One revision row per `head_sha`; no IntegrityError | **pending** | script `RR-V1_revision_idempotency` |
+| **RR-V2** | ≥5 completed runs; `resolution_rate_pct > 0` + `transitions_addressed ≥ 1` | **pending** | reconcile `resolution_pass` |
+| **RR-V3** | `publish_head_sha` == revision `head_sha` on all completed publishes | **pending** | script `RR-V3_publish_head_sha_parity` |
+| **RR-V4** | `thread_resolve_skipped` zero or manifest breakdown only | **pending** | publish `summary_json` |
+| **RR-V5** | HEAD suppression unit matrix + `head_contradiction_suppressed_count` when applicable | **pending** | pytest + reconcile manifest |
+| **Judge** | Escalation run with persisted `github_finding_judge_outcomes` | **pending** | script `judge_transport` |
+| **Closure** | Finding groups `resolved` or `resolution_status=addressed` after fix push | **pending** | script `finding_groups_closure` |
+
+---
+
+| [#130](https://github.com/raimondskrauklis/tender_pro/pull/130) | `tender_pro` | Symptom catalog only (merged) |
+
+---
 
 | Event | Count | Severity | RR-DG |
 |-------|-------|----------|-------|
@@ -99,32 +157,15 @@
 
 ---
 
-## RR-V gates (R0.4 — staging repro)
-
-**Repro protocol:**
-
-1. **RR-V1 same SHA:** force-push or empty amend to same `head_sha` twice within 30s; expect one revision row.
-2. **RR-V1 different SHAs:** push `d915b4e` then `999ad17` within 15s (TenderPro rev-13 scenario); expect two rows, no worker `IntegrityError`.
-3. **RR-V2 cohort:** after R3 deploy, fix-push on PR #130 with line edits; expect resolution rate **> 0%** in publish summary (`resolution_pass.resolution_rate_pct` > 0 and `compare_failed_count` not stale from pre-R3 sync). Primary RR-DG4 tag: `stale_closure_blocked` — pass requires manifest stamp path, not hygiene-only closes.
-4. **RR-V3:** on successful publish, issue comment `head_sha` == check run == inline `commit_id`.
-5. **RR-V4:** after R2 deploy, thread resolve skips **0** or manifest breakdown (`thread_id_not_found`, `resolve_mutation_failed`).
-6. **RR-V5:** after R4 deploy, matrix items **1, 2, 3, 15, 17** — **0/5** false positives published.
-
-| Gate | Pass (findings authority) | R0 status |
-|------|---------------------------|-----------|
-| RR-V1 | One revision row per `head_sha`; no IntegrityError; concurrent append unit test | pending (R1) |
-| RR-V2 | Resolution rate **> 0%** on fix-push cohort (manifest confirms stamp path) | pending (R3/R5) |
-| RR-V3 | Successful publish: summary `head_sha` == revision `head_sha` == inline batch | pending (R1/R5) |
-| RR-V4 | Thread resolve skips **0** or manifest skip breakdown | pending (R2/R5) |
-| RR-V5 | Matrix items **1, 2, 3, 15, 17** — **0/5** false positives | pending (R4/R5) |
-
 ---
 
 ## Sign-off
 
 | Party | Verdict | Date |
 |-------|---------|------|
-| TenderPro wave 1 | **PASS** | 2026-07-31 |
-| Revy cross-repo dogfood (pre-RR-W1) | **FAIL** — drives **RR-W1** | 2026-07-31 |
-| RR-W1 R0 baseline | **PASS** (log-based RR-DG4 tag) | 2026-07-31 |
-| RR-W1 R1–R5 | pending | — |
+| TenderPro wave 1 (app) | **PASS** | 2026-07-31 |
+| Revy pre-RR-W1 symptoms (TenderPro evidence) | **FAIL** — motivated RR-W1 | 2026-07-31 |
+| RR-W1 R0 baseline | **PASS** | 2026-07-31 |
+| RR-W1 R1–R4 code ship | **PASS** — `deda3c9` | 2026-07-31 |
+| RR-W1 R5 RR-V gates | **pending** — `--rr-v-gate` on revy dogfood PR | — |
+| RR-Q4 product gate | **pending** — after RR-V2 PASS | — |

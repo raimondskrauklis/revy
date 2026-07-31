@@ -32,3 +32,19 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
 **RCX gate:** Primary source is `github_review_runs.context_stats`; retrieve manifest `engineering_context_injected` is cross-checked. Exit code **1** when any check is `FAIL` (`INCONCLUSIVE` does not fail the gate).
 
 See [REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md](../review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md) and [JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](../review-pipeline/judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md).
+
+## RR-W1 dogfood gate (`revy_review_dogfood_staging_validation.py`)
+
+Per-PR closure-loop validation on `raimondskrauklis/revy` staging dogfood PRs. Requires **≥5 completed review runs** and DB evidence for resolution/judge/publish parity.
+
+```bash
+cd backend
+
+DATABASE_SSL_INSECURE=1 pipenv run sh -c \
+  'python -m scripts.revy_review_dogfood_staging_validation --pr-number <N> --since 2026-07-31T19:08:32Z --json'
+
+DATABASE_SSL_INSECURE=1 pipenv run sh -c \
+  'python -m scripts.revy_review_dogfood_staging_validation --pr-number <N> --since 2026-07-31T19:08:32Z --rr-v-gate'
+```
+
+Exit code **1** when any RR-V check is `PENDING` or `FAIL`. See [REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md](../review-pipeline/revy-review-dogfood/REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md).
