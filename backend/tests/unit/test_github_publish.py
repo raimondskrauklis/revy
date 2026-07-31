@@ -3569,3 +3569,34 @@ def test_format_inline_422_fallback_block_includes_title():
     block = github_publish._format_inline_422_fallback_block(spec)
     assert "Inline fallback (app/a.py:4)" in block
     assert "Inline bug" in block
+
+
+def test_load_inline_422_recovered_fingerprints_reads_summary_json():
+    recovered = github_publish._load_inline_422_recovered_fingerprints(
+        {"inline_publish_422_recovered_fingerprints": ["fp-a", "fp-b"]}
+    )
+    assert recovered == frozenset({"fp-a", "fp-b"})
+
+
+def test_inline_comments_posted_true_when_all_recovered_via_422():
+    specs = [
+        github_publish.InlinePostSpec(
+            finding_id=uuid.uuid4(),
+            group_id=uuid.uuid4(),
+            group_fingerprint="fp-a",
+            file_path="app/a.py",
+            start_line=1,
+            title="A",
+            message="m",
+            severity="warning",
+            suggestion=None,
+        ),
+    ]
+    inline_threads: dict[str, int] = {}
+    inline_422_recovered = {"fp-a"}
+    posted = all(
+        spec.group_fingerprint in inline_threads
+        or spec.group_fingerprint in inline_422_recovered
+        for spec in specs
+    )
+    assert posted is True

@@ -47,11 +47,21 @@ def test_matches_head_contradiction_matrix_row_missing_or_import():
 def test_matches_head_contradiction_matrix_row_system_status_bar_props():
     group = _group(
         title="SystemStatusBar missing required props",
-        message="SystemStatusBar requires connectionId and compact",
+        message="SystemStatusBar requires connectionId and compact as required props",
         file_path="frontend/src/components/SystemStatusBar.tsx",
     )
     head = "type Props = { connectionId?: string; compact?: boolean }\n"
     assert matches_head_contradiction(group, head) == "system_status_bar_props"
+
+
+def test_matches_head_contradiction_system_status_bar_single_optional_prop_no_match():
+    group = _group(
+        title="SystemStatusBar missing required props",
+        message="SystemStatusBar requires connectionId and compact",
+        file_path="frontend/src/components/SystemStatusBar.tsx",
+    )
+    head = "type Props = { connectionId?: string }\n"
+    assert matches_head_contradiction(group, head) is None
 
 
 def test_matches_head_contradiction_matrix_row_kpi_skeleton_count():
@@ -125,3 +135,28 @@ async def test_suppress_head_contradictions_resolves_contradicted_group():
     assert group.state == GitHubFindingGroupState.resolved
     assert group.resolution_method == ResolutionMethod.head_contradiction
     assert group.resolved_at_revision_id == revision_id
+    assert group.closure_blocked_reason is None
+    assert group.resolution_status is None
+
+
+@pytest.mark.asyncio
+async def test_suppress_head_contradictions_clears_stale_closure_blocked_reason():
+    revision_id = uuid.uuid4()
+    group = _group(
+        title="Missing sqlalchemy or_ import",
+        message="entities.py does not import or_",
+        file_path="backend/app/models/entities.py",
+    )
+    group.closure_blocked_reason = "compare_failed"
+    group.resolution_status = "still_open"
+    session = AsyncMock()
+    await suppress_head_contradictions(
+        session,
+        groups=[group],
+        head_file_snippets={
+            "backend/app/models/entities.py": "from sqlalchemy import or_\n",
+        },
+        current_revision_id=revision_id,
+    )
+    assert group.closure_blocked_reason is None
+    assert group.resolution_status is None

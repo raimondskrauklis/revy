@@ -115,6 +115,7 @@ class PublishJobRetryableError(WorkerRetryableError):
 _SKIP_PUBLISH_NEUTRAL_SUMMARY = "Superseded by newer commit"
 
 _INLINE_422_RECOVERED_COUNT_KEY = "inline_publish_422_recovered_count"
+_INLINE_422_RECOVERED_FINGERPRINTS_KEY = "inline_publish_422_recovered_fingerprints"
 
 _TERMINAL_PUBLISH_JOB_STATUSES = frozenset({
     GitHubPublishJobStatus.completed,
@@ -986,6 +987,15 @@ def _nearest_inline_retry_line(start_line: int) -> int:
     return start_line - 1 if start_line > 1 else start_line + 1
 
 
+def _load_inline_422_recovered_fingerprints(summary_json: dict | None) -> frozenset[str]:
+    if not isinstance(summary_json, dict):
+        return frozenset()
+    raw = summary_json.get(_INLINE_422_RECOVERED_FINGERPRINTS_KEY)
+    if not isinstance(raw, list):
+        return frozenset()
+    return frozenset(fp for fp in raw if isinstance(fp, str) and fp)
+
+
 def _format_inline_422_fallback_block(spec: InlinePostSpec) -> str:
     body = github_api.format_inline_comment_body(
         title=spec.title,
@@ -1528,11 +1538,16 @@ async def _flush_publish_surface(
         inline_thread_ids: dict[str, str] = {}
         inline_written_this_flush: list[int] = []
         inline_422_recovered_count = 0
+        inline_422_recovered_fingerprints = set(
+            _load_inline_422_recovered_fingerprints(job.summary_json)
+        )
         inline_422_fallback_blocks: list[str] = []
         if build.post_inline:
             for spec in build.inline_posts:
                 if spec.group_fingerprint in retry_posted:
                     inline_threads[spec.group_fingerprint] = retry_posted[spec.group_fingerprint]
+                    continue
+                if spec.group_fingerprint in inline_422_recovered_fingerprints:
                     continue
                 skipped_during_inline = await _recheck_publish_authority_before_flush(
                     session,
@@ -1576,7 +1591,14 @@ async def _flush_publish_surface(
                         },
                     )
                     inline_422_recovered_count += 1
+                    inline_422_recovered_fingerprints.add(spec.group_fingerprint)
                     inline_422_fallback_blocks.append(_format_inline_422_fallback_block(spec))
+                    job.summary_json = {
+                        **(job.summary_json or {}),
+                        _INLINE_422_RECOVERED_FINGERPRINTS_KEY: sorted(
+                            inline_422_recovered_fingerprints
+                        ),
+                    }
                     continue
                 inline_threads[spec.group_fingerprint] = comment_id
                 inline_written_this_flush.append(comment_id)
@@ -1612,9 +1634,14 @@ async def _flush_publish_surface(
                 job.summary_json = {
                     **(job.summary_json or {}),
                     _INLINE_422_RECOVERED_COUNT_KEY: inline_422_recovered_count,
+                    _INLINE_422_RECOVERED_FINGERPRINTS_KEY: sorted(
+                        inline_422_recovered_fingerprints
+                    ),
                 }
             job.inline_comments_posted = all(
-                spec.group_fingerprint in inline_threads for spec in build.inline_posts
+                spec.group_fingerprint in inline_threads
+                or spec.group_fingerprint in inline_422_recovered_fingerprints
+                for spec in build.inline_posts
             )
             if inline_thread_ids:
                 job.summary_json = {

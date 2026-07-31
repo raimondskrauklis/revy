@@ -41,7 +41,10 @@ def _matches_missing_or_import(group: GitHubFindingGroupORM, head_content: str) 
 def _matches_system_status_bar_props(group: GitHubFindingGroupORM, head_content: str) -> bool:
     if "systemstatusbar" not in _claim_text(group):
         return False
-    return "connectionId?" in head_content or "compact?" in head_content
+    claim = _claim_text(group)
+    if "required" not in claim and "missing" not in claim:
+        return False
+    return "connectionId?" in head_content and "compact?" in head_content
 
 
 def _matches_kpi_skeleton_count(group: GitHubFindingGroupORM, head_content: str) -> bool:
@@ -150,6 +153,8 @@ async def suppress_head_contradictions(
         group.state = GitHubFindingGroupState.resolved
         group.resolution_method = ResolutionMethod.head_contradiction
         group.resolved_at_revision_id = current_revision_id
+        group.closure_blocked_reason = None
+        group.resolution_status = None
         suppressed += 1
         logger.info(
             "finding_suppressed_head_contradiction",
