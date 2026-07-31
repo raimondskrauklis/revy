@@ -171,6 +171,7 @@ class ResolutionMethod(str, Enum):
     judge_dismissed = "judge_dismissed"
     verification_dismissed = "verification_dismissed"
     human_dismissed = "human_dismissed"
+    head_contradiction = "head_contradiction"
 
 
 class JudgePurpose(str, Enum):

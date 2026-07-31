@@ -3471,3 +3471,101 @@ async def test_create_publish_job_for_review_run_after_skipped_not_head():
         )
 
     assert job_id == new_job_id
+
+
+@pytest.mark.asyncio
+async def test_create_inline_review_comment_with_422_retry_succeeds_on_nearest_line():
+    spec = github_publish.InlinePostSpec(
+        finding_id=uuid.uuid4(),
+        group_id=uuid.uuid4(),
+        group_fingerprint="fp",
+        file_path="app/a.py",
+        start_line=12,
+        title="Bug",
+        message="msg",
+        severity="warning",
+        suggestion=None,
+    )
+    client = AsyncMock()
+    create_mock = AsyncMock(
+        side_effect=[
+            httpx.HTTPStatusError(
+                "422",
+                request=httpx.Request("POST", "https://api.github.com"),
+                response=httpx.Response(422),
+            ),
+            9001,
+        ],
+    )
+    with patch(
+        "app.services.github_publish.github_api.create_pull_request_review_comment",
+        create_mock,
+    ):
+        comment_id = await github_publish._create_inline_review_comment_with_422_retry(
+            client,
+            github_installation_id=12345,
+            owner="acme",
+            repo_name="demo",
+            pull_number=7,
+            commit_id="sha",
+            spec=spec,
+            auth_headers={"Authorization": "Bearer t"},
+        )
+
+    assert comment_id == 9001
+    assert create_mock.await_count == 2
+    assert create_mock.await_args_list[1].kwargs["line"] == 11
+
+
+@pytest.mark.asyncio
+async def test_create_inline_review_comment_with_422_retry_returns_none_after_double_422():
+    spec = github_publish.InlinePostSpec(
+        finding_id=uuid.uuid4(),
+        group_id=uuid.uuid4(),
+        group_fingerprint="fp",
+        file_path="app/a.py",
+        start_line=1,
+        title="Bug",
+        message="msg",
+        severity="warning",
+        suggestion=None,
+    )
+    client = AsyncMock()
+    error_422 = httpx.HTTPStatusError(
+        "422",
+        request=httpx.Request("POST", "https://api.github.com"),
+        response=httpx.Response(422),
+    )
+    with patch(
+        "app.services.github_publish.github_api.create_pull_request_review_comment",
+        AsyncMock(side_effect=[error_422, error_422]),
+    ):
+        comment_id = await github_publish._create_inline_review_comment_with_422_retry(
+            client,
+            github_installation_id=12345,
+            owner="acme",
+            repo_name="demo",
+            pull_number=7,
+            commit_id="sha",
+            spec=spec,
+            auth_headers={"Authorization": "Bearer t"},
+        )
+
+    assert comment_id is None
+
+
+def test_format_inline_422_fallback_block_includes_title():
+    spec = github_publish.InlinePostSpec(
+        finding_id=uuid.uuid4(),
+        group_id=uuid.uuid4(),
+        group_fingerprint="fp",
+        file_path="app/a.py",
+        start_line=4,
+        title="Inline bug",
+        message="details",
+        severity="error",
+        suggestion=None,
+    )
+    block = github_publish._format_inline_422_fallback_block(spec)
+    assert "Inline fallback (app/a.py:4)" in block
+    assert "Inline bug" in block

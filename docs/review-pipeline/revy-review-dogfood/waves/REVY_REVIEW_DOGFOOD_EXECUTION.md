@@ -43,7 +43,7 @@ R3 may overlap R4 after R1 if suppression is independent — LOOP order still R3
 | R1 — Ingest | Revision idempotency | [REVY_REVIEW_DOGFOOD_R1_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R1_EXECUTION.md) | done (local) |
 | R2 — Publish hygiene | Thread resolve taxonomy | [REVY_REVIEW_DOGFOOD_R2_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R2_EXECUTION.md) | done (local) |
 | R3 — Resolution | Stamp unblock | [REVY_REVIEW_DOGFOOD_R3_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R3_EXECUTION.md) | done (local) |
-| R4 — Accuracy | HEAD suppression + inline 422 | [REVY_REVIEW_DOGFOOD_R4_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R4_EXECUTION.md) | pending |
+| R4 — Accuracy | HEAD suppression + inline 422 | [REVY_REVIEW_DOGFOOD_R4_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R4_EXECUTION.md) | done (local) |
 | R5 — Sign-off | Staging RR-V + doc sync | [REVY_REVIEW_DOGFOOD_R5_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R5_EXECUTION.md) | pending |
 
 **Peer review:** Findings + general plan (2026-07-31); execution files peer-reviewed + tightened same day (RR-V gate order, R1 collision retry, R3 tag map, R4 reconcile hook).

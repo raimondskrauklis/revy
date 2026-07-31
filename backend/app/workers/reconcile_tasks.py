@@ -13,6 +13,7 @@ from app.services.github_finding_closure import (
     apply_pass2_closure_for_review_run,
     verify_still_open_escalation_groups,
 )
+from app.services.github_finding_head_suppression import suppress_head_contradictions_for_review_run
 from app.services.github_finding_judge import (
     JudgeCandidateArtifact,
     record_review_run_judge_status,
@@ -48,6 +49,13 @@ def reconcile_review_run_task(self, review_run_id: str) -> None:
             started = time.monotonic()
             group_ids = await reconcile_review_run(session, review_run_id=UUID(review_run_id))
             reconcile_ms = int((time.monotonic() - started) * 1000)
+
+            head_suppression_started = time.monotonic()
+            head_contradiction_suppressed_count = await suppress_head_contradictions_for_review_run(
+                session,
+                review_run_id=UUID(review_run_id),
+            )
+            head_suppression_ms = int((time.monotonic() - head_suppression_started) * 1000)
 
             pass2_started = time.monotonic()
             closed_count = await apply_pass2_closure_for_review_run(
@@ -108,8 +116,9 @@ def reconcile_review_run_task(self, review_run_id: str) -> None:
                     session,
                     pipeline_run_id=pipeline_run.id,
                     group_count=len(group_ids),
-                    duration_ms=max(reconcile_ms + pass2_ms, 0),
+                    duration_ms=max(reconcile_ms + pass2_ms + head_suppression_ms, 0),
                     resolution_pass=resolution_pass,
+                    head_contradiction_suppressed_count=head_contradiction_suppressed_count,
                 )
                 await record_judge_pipeline_step(
                     session,
