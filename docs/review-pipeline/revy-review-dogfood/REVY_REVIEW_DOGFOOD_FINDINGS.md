@@ -71,11 +71,14 @@
 | **RR-DG1** | Inline thread resolve skipped at publish | **high** | open | 18× warning in `tenderprolog.txt` L20–56; `github_publish.py:721-730` logs and continues |
 | **RR-DG2** | Inline comment post 422 skipped | medium | open | `tenderprolog.txt` L64–65; `github_publish.py:1443-1454` |
 | **RR-DG3** | Duplicate PR revision on concurrent synchronize | **high** | open | `tenderprolog.txt` L114–116 — `uq_github_pr_revisions_pr_number` rev 13; `_append_revision` (`github_pull_requests.py:196-213`) has no upsert/idempotency |
-| **RR-DG4** | Compare blocked after merge-base disruption | **high** | open | Summary "Compare blocked: 6 group(s)" + 0% resolution after `f1e6325` merge `origin/main`; `github_resolution_metrics.py` + `closure_blocked_reason=compare_failed` |
-| **RR-DG5** | Summary `head_sha` lags inline generation | medium | open | Rev 12 summary `b4ba498` vs inline on `999ad17` (`SUPER_ADMIN_DASHBOARD_STAGING_VALIDATION.md`) |
-| **RR-DG6** | False positives on HEAD file content | **high** | open | 3/3 active rev-12 items operator-verified false/fixed; reviewer/judge uses diff context not full file at `head_sha` |
-| **RR-DG7** | Resolution UX — fixed code, open threads | medium | open | Operator notes (was in finding-resolution README); multi-push iteration cost |
+| **RR-DG4** | Resolution cohort stuck — 0% rate / compare-blocked summary | **high** | open — **hypothesis split** | Summary "Compare blocked: 6"; worker log shows **successful** compare for relevant SHAs — may be stale `closure_blocked_reason`, pairing gap (`last_seen_revision_id` ∉ pairing), or `patch_touches_line_region` miss — **not proven API compare_failed** |
+| **RR-DG5** | Summary `head_sha` lags inline generation | medium | open — **likely symptom** | Rev 12 summary `b4ba498` vs inline on `999ad17`; intra-job publish uses single `job.head_sha` — aligns with **no successful publish** for newer SHA after rev-13 IntegrityError (RR-DG3), not intra-job drift |
+| **RR-DG6** | False positives on HEAD file content | **high** | open — **reframed** | Contents API already used at `head_sha` (log + engineering context); false positives are **reviewer/judge reasoning on diff hunks**, not missing HEAD fetch — needs post-reconcile **suppression** |
+| **RR-DG7** | Resolution UX — fixed code, open threads | medium | open | Operator notes; multi-push iteration cost |
 | **RR-DG8** | Judge transport (cross-repo) | — | **verified fixed** | `judge_llm_request_*` + publish complete rev 12; [#75](https://github.com/raimondskrauklis/revy/pull/75) |
+| **RR-DG9** | Silent skip when `thread_id` is None | medium | open | `github_publish.py:712-713` — `continue` with no log or manifest count |
+| **RR-DG10** | `publish_skipped_not_head` / mixed GitHub surfaces | medium | open | HEAD advances mid-publish → check/comment at older generation while inline partial |
+| **RR-DG11** | Intermediate revision gap after failed ingest | medium | open | Failed rev 13 leaves hole; `get_intermediate_revision_ids_between` / pairing may exclude groups from restamp |
 
 ---
 
@@ -119,17 +122,27 @@
 
 Concurrent `synchronize` webhooks (or push + webhook overlap) both call `_append_revision` with incremented `revision_count`. Second insert hits `uq_github_pr_revisions_pr_number`. PR **create** handles `IntegrityError`; **revision append does not** — task retries/fails (`github_webhook_task_failed`).
 
-### RC-2 — Thread resolve failures are silent (RR-DG1)
+### RC-2 — Thread resolve failures under-reported (RR-DG1, RR-DG9)
 
-`resolve_review_threads_for_addressed_groups` catches HTTP/ServiceUnavailable errors per fingerprint and logs `github_publish_resolve_inline_thread_skipped` without surfacing count in publish summary. Operator sees "still open" with no actionable Revy signal.
+18 skips in log follow GraphQL **200 OK** then `github_publish_resolve_inline_thread_skipped` — likely `resolveReviewThread` GraphQL errors → `ServiceUnavailableError` (`github_api.py`). Separate path: `thread_id is None` at `github_publish.py:712-713` skips **silently** (no log, no manifest). R2 must taxonomy: `resolve_mutation_failed` vs `thread_id_not_found`.
 
-### RC-3 — Merge commit breaks compare pairing (RR-DG4)
+### RC-3 — Resolution cohort stuck — multiple hypotheses (RR-DG4, RR-DG11)
 
-After merging `origin/main` into feature branch (`f1e6325`), GitHub compare base for resolution Pass 1 no longer aligns with operator mental model of "I fixed these findings." Groups get `compare_failed`; resolution rate stays 0% even when code is correct.
+**Not confirmed:** GitHub compare API failed for TenderPro fix pushes (worker log shows 200 compare for `b4ba498…d915b4e` and `b4ba498…999ad17`). Plausible causes:
 
-### RC-4 — Review model reads diff, not HEAD truth (RR-DG6)
+1. **Stale** `closure_blocked_reason=compare_failed` from an earlier sync
+2. **Pairing gap** — `last_seen_revision_id` not in `pairing_revision_ids` after merge or skipped rev 13
+3. **Line-region miss** — compare succeeds but fix outside prior→new diff window (`patch_touches_line_region`)
 
-Revy flags `or_` missing when import exists on `999ad17`; SystemStatusBar "missing props" when optional props only. Operator must manually triage — undermines merge gate on long PRs.
+Existing partial fallback: `paths_absent_at_head` + `head_check_failed` when compare fails (`github_resolution_metrics.py:291-307`). R3 extends line-region HEAD check — does not duplicate path-absence logic.
+
+### RC-4 — False positives are reasoning, not missing HEAD fetch (RR-DG6)
+
+Review pipeline already fetches file contents at `head_sha`. Operator matrix items 1–3 false/fixed on `999ad17` need **post-reconcile suppression** when claim contradicts HEAD text — not a new contents API.
+
+### RC-5 — Summary SHA lag is failed publish, not publish bug (RR-DG5)
+
+Single publish job uses `job.head_sha` for check run, issue comment, and inline posts. Stale summary on older SHA when newer pushes fail ingest (RR-DG3) or `publish_skipped_not_head` (RR-DG10).
 
 ---
 
@@ -137,12 +150,12 @@ Revy flags `or_` missing when import exists on `999ad17`; SystemStatusBar "missi
 
 | Priority | Track | Addresses | Approach sketch |
 |----------|-------|-----------|-----------------|
-| P0 | **Revision idempotency** | RR-DG3 | Upsert revision by `(pull_request_id, head_sha)` or catch unique violation → fetch existing rev |
-| P0 | **Thread resolve diagnostics** | RR-DG1 | Fail-soft but **count** skips in summary; optional retry; log GraphQL error body |
-| P1 | **Merge-base compare fallback** | RR-DG4 | When compare fails post-merge, fallback compare window or HEAD file fetch for Pass 1 |
-| P1 | **Summary SHA parity** | RR-DG5 | Issue comment + check run always reflect same `head_sha` as inline batch |
-| P2 | **HEAD file verification** | RR-DG6 | Reconcile/judge/summary generation: verify finding against file at `head_sha` before publish |
-| P2 | **Inline 422 recovery** | RR-DG2 | Retry with line adjustment or degrade to issue-comment-only for that finding |
+| P0 | **Revision idempotency** | RR-DG3, RR-DG11 | Pre-check `_get_revision_for_head_sha`; IntegrityError recovery; optional row lock on `revision_count`; **no** `head_sha` unique index unless R0 decides migration |
+| P0 | **Thread resolve diagnostics** | RR-DG1, RR-DG9 | Skip taxonomy in manifest; GraphQL error body; count `thread_id_not_found` separately |
+| P1 | **Resolution stamp unblock** | RR-DG4 | Distinguish API compare_failed vs pairing vs line-region; extend `head_check_failed` / line-region HEAD verify |
+| P1 | **Publish generation coherence** | RR-DG5, RR-DG10 | Treat SHA lag as blocked publish until R1 green; surface `publish_skipped_not_head` |
+| P2 | **HEAD contradiction suppression** | RR-DG6 | Post-reconcile suppress when claim contradicted by file at `head_sha` (fixtures: matrix items 1–3, 15, 17) |
+| P2 | **Inline 422 recovery** | RR-DG2 | Retry adjacent line or issue-comment fallback |
 
 **Defer:** Re-litigating FR-CS4 Pass 3 supersede — orthogonal to this dogfood session.
 
@@ -155,7 +168,8 @@ Revy flags `or_` missing when import exists on `999ad17`; SystemStatusBar "missi
 | **RR-Q1** | Is finding-resolution "done"? | **locked** | **Mechanisms shipped**; cross-repo operator gate **not** done |
 | **RR-Q2** | Next pass scope? | **locked** | **RR-W1** — ingest + publish hygiene + HEAD truth (findings above) |
 | **RR-Q3** | Use external repo for staging probes? | **locked** | TenderPro #130 validated for RR-W1; no dedicated probe repo required |
-| **RR-Q4** | Block merge on 0% resolution rate? | **open** | Defer until R5 — see general plan |
+| **RR-Q4** | Block merge on 0% resolution rate? | **locked** | **Defer product gate until R5** — metric not trustworthy until R1–R3 green |
+| **RR-Q5** | `head_sha` unique DB constraint? | **open** | R0 decides: application-level dedupe + IntegrityError recovery vs Alembic unique on `(pull_request_id, head_sha)` |
 
 ---
 
@@ -173,11 +187,17 @@ Revy flags `or_` missing when import exists on `999ad17`; SystemStatusBar "missi
 
 | Gate | Pass criteria |
 |------|---------------|
-| RR-V1 | Rapid double-push on staging PR → **one** revision row per `head_sha`; no IntegrityError |
-| RR-V2 | After fix push, resolution rate **> 0%** on cohort with line edits |
-| RR-V3 | Publish summary `head_sha` == latest inline comment commit |
-| RR-V4 | Thread resolve skip count **0** or surfaced in summary with reason |
-| RR-V5 | Re-run TenderPro-class PR — false positive rate drop on HEAD-verified items |
+| RR-V1 | Rapid double-push → **one** revision row per `head_sha`; no IntegrityError; unit test for concurrent `_append_revision` |
+| RR-V2 | After fix push, resolution rate **> 0%** on cohort with line edits — **requires R0 manifest** confirming stamp mechanism (not stale `compare_failed`) |
+| RR-V3 | Successful publish: summary `head_sha` == revision `head_sha` == inline batch (cohort where R1 completes) |
+| RR-V4 | Thread resolve: skip count **0** or manifest shows `thread_id_not_found` / `resolve_mutation_failed` breakdown — test on cohort where R3 stamps `addressed` |
+| RR-V5 | Frozen checklist: operator matrix items **1, 2, 3, 15, 17** — **0/5** false positives published on re-run (`misc/SUPER_ADMIN_DASHBOARD_STAGING_VALIDATION.md`) |
+
+---
+
+## Peer review (2026-07-31) — incorporated
+
+Architecture peer review against `main` **accepted** with tightenings above. **Valid:** R1 DB model detail, R2 skip taxonomy, R3 hypothesis split for RR-DG4, R4 suppression not new HEAD API, RR-DG9–11, RR-Q4 lock, RR-V5 fixtures. **Open for R0:** reconcile manifest / DB snapshot for the push that showed "Compare blocked: 6" (confirm `closure_blocked_reason` vs pairing); whether skipped threads were Revy-owned bot comments.
 
 ---
 

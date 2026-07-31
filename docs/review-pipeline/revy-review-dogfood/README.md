@@ -1,6 +1,6 @@
 # Revy review — cross-repo staging dogfood
 
-**Status:** **general plan ready** (2026-07-31) — first case study [TenderPro PR #130](https://github.com/raimondskrauklis/tender_pro/pull/130); execution **not started**.
+**Status:** **general plan ready** (peer-review tightened 2026-07-31) — case study [TenderPro PR #130](https://github.com/raimondskrauklis/tender_pro/pull/130); execution **not started**.
 
 **Thesis:** Finding-resolution (FR-DG*, wave C, wave D) proved closure **mechanisms** on Revy's own repo. Cross-repo dogfood exposes **operator UX**, **publish hygiene**, and **ingestion reliability** gaps that block trusting resolution metrics on real customer PRs.
 
@@ -25,10 +25,10 @@
 | Phase | Focus | Gaps |
 |-------|--------|------|
 | R0 | Baseline + RR-V gates | — |
-| R1 | Revision ingest idempotency | RR-DG3 |
-| R2 | Thread resolve hygiene | RR-DG1, RR-DG7 |
-| R3 | Compare fallback + summary SHA | RR-DG4, RR-DG5 |
-| R4 | HEAD truth + inline 422 recovery | RR-DG6, RR-DG2 |
-| R5 | Cross-repo staging sign-off | RR-V1–V5 |
+| R1 | Revision ingest idempotency | RR-DG3, RR-DG11 |
+| R2 | Thread resolve hygiene | RR-DG1, RR-DG7, RR-DG9 |
+| R3 | Resolution stamp unblock (compare vs pairing vs line-region) | RR-DG4, RR-DG11 |
+| R4 | HEAD contradiction suppression + inline 422 | RR-DG6, RR-DG2 |
+| R5 | Cross-repo sign-off + publish coherence | RR-DG5, RR-DG10, RR-V1–V5 |
 
 **Next:** `create-execution-plan` → `waves/REVY_REVIEW_DOGFOOD_EXECUTION.md`.

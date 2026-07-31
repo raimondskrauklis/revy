@@ -2,22 +2,23 @@
 
 # Revy review — cross-repo dogfood general plan (RR-W1)
 
-**Baseline:** [REVY_REVIEW_DOGFOOD_FINDINGS.md](./REVY_REVIEW_DOGFOOD_FINDINGS.md) (2026-07-31)  
+**Baseline:** [REVY_REVIEW_DOGFOOD_FINDINGS.md](./REVY_REVIEW_DOGFOOD_FINDINGS.md) (2026-07-31, peer-review tightened)  
 **Validation:** [REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md](./REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md)  
 **Prerequisite:** Finding-resolution P0–P5 + wave C/D shipped; judge transport #75 merged.
 
-**Thesis:** Closure **mechanisms** work on Revy-repo dogfood; **cross-repo operator trust** fails on ingest races, silent publish skips, compare-blocked resolution, and diff-only false positives. RR-W1 hardens the path TenderPro #130 exercised — extend existing modules; no parallel closure system.
+**Thesis:** Closure **mechanisms** work on Revy-repo dogfood; **cross-repo operator trust** fails on ingest races, silent publish skips, stuck resolution cohorts, and diff-hunk false positives. RR-W1 hardens the TenderPro #130 path — extend existing modules; no parallel closure system.
 
 **Gap IDs:** **RR-DG*** in findings; **R0–R5** = program phases below.
 
-**Locked (from findings):**
+**Locked (from findings + peer review):**
 
 | ID | Resolution |
 |----|------------|
 | RR-Q1 | Finding-resolution mechanisms shipped; cross-repo gate **not** done |
-| RR-Q2 | RR-W1 scope: ingest → publish hygiene → resolution compare → HEAD truth |
-| RR-Q3 | TenderPro #130 is valid staging evidence; no dedicated probe repo required for R0–R4 |
-| RR-Q4 | Do **not** block merge on resolution rate until R3 proves metric — defer product gate |
+| RR-Q2 | RR-W1 scope: ingest → publish hygiene → resolution stamp → HEAD suppression |
+| RR-Q3 | TenderPro #130 is valid staging evidence; no dedicated probe repo required |
+| RR-Q4 | **Defer** product merge gate on resolution rate until **R5** |
+| RR-Q5 | `head_sha` DB unique index — **R0 decides** (app dedupe may suffice) |
 | FR-CS4 Pass 3 supersede | **Out of scope** |
 | RR-DG8 | Judge transport — **closed** (#75) |
 
@@ -25,23 +26,23 @@
 
 ## Cross-cutting (every phase)
 
-- **Tests:** `backend/tests/unit/` per changed service; replay TenderPro log scenarios where possible.
-- **Reuse:** `github_pull_requests.py`, `github_publish.py`, `github_resolution_metrics.py`, `github_publish_formatter.py` — extend, don't fork.
-- **Observability:** Skips and failures visible in publish manifest + summary (operator-readable counts, not only worker WARNING).
+- **Tests:** `backend/tests/unit/` per changed service; concurrent `_append_revision` race test required for R1.
+- **Reuse:** `github_pull_requests.py`, `github_publish.py`, `github_resolution_metrics.py`, `github_publish_formatter.py`.
+- **Observability:** Skip/failure counts in publish **manifest + summary**, not only worker WARNING.
 - **i18n:** Backend-only — no new frontend strings.
-- **RG-6:** Withhold publish without judge outcome — unchanged.
+- **RG-6:** Unchanged.
 
 ---
 
 ## R0 — Baseline & prerequisites
 
-**Goal:** Lock RR-Q* decisions, capture TenderPro #130 baseline metrics, and define RR-V1–V5 pass criteria in the validation memo.
+**Goal:** Lock RR-Q*, capture TenderPro cohort evidence, and **split RR-DG4 hypothesis** before code.
 
-**Scope — in:** Update validation memo with cohort SHAs, log event counts, operator finding matrix pointer; document staging repro protocol (rapid double-push, merge-base push); baseline `judge_json_contract_staging_metrics` / resolution manifest fields for TenderPro PR.
+**Scope — in:** Validation memo R0 row; RR-V1–V5 fixtures (RR-V5 = operator matrix items 1, 2, 3, 15, 17); staging DB or pipeline manifest for push showing "Compare blocked: 6" (`closure_blocked_reason`, pairing_revision_ids, `last_seen_revision_id`); decide RR-Q5 (head_sha unique index vs app dedupe only).
 
-**Scope — out:** Product code changes.
+**Scope — out:** Product code.
 
-**Deliverables:** Findings decisions RR-Q3/Q4 locked; validation memo R0 row filled; RR-V gates copied to staging validation § sign-off.
+**Deliverables:** RR-Q4/Q5 locked; RR-DG4 root cause tagged (API fail | pairing | line-region | stale stamp); repro protocol for rapid double-push + merge-base push.
 
 **Depends on:** None.
 
@@ -49,13 +50,13 @@
 
 ## R1 — Revision ingest idempotency
 
-**Goal:** One revision row per `(pull_request_id, head_sha)` — concurrent `synchronize` webhooks must not abort the pipeline (**RR-DG3**).
+**Goal:** One logical revision per `head_sha`; no `uq_github_pr_revisions_pr_number` abort (**RR-DG3**, **RR-DG11**).
 
-**Scope — in:** Idempotent `_append_revision` / `_upsert_pull_request` path: catch `uq_github_pr_revisions_pr_number`, return existing revision for same `head_sha`; dedupe by `head_sha` before incrementing `revision_count`; worker task succeeds without IntegrityError retry storm.
+**Scope — in:** (a) Pre-check via existing `_get_revision_for_head_sha` before `_append_revision`; (b) `IntegrityError` on `(pull_request_id, revision_number)` → re-fetch revision for `head_sha`; (c) optional `SELECT … FOR UPDATE` on PR row for `revision_count`; (d) RR-Q5 outcome — migration only if invariant requires DB-enforced `head_sha` uniqueness.
 
-**Scope — out:** GitHub delivery dedupe changes (already exists); generation lifecycle supersede logic.
+**Scope — out:** Changing GitHub delivery dedupe; supersede lifecycle.
 
-**Deliverables:** Unit tests for concurrent-append race; RR-V1 pass on staging rapid double-push.
+**Deliverables:** Unit test simulating concurrent append (two workers, same/different SHAs); RR-V1 pass.
 
 **Depends on:** R0.
 
@@ -63,71 +64,73 @@
 
 ## R2 — Publish thread resolve hygiene
 
-**Goal:** Addressed findings collapse GitHub threads reliably, or the operator sees **why not** (**RR-DG1**, **RR-DG7**).
+**Goal:** Operator sees **why** threads stayed open (**RR-DG1**, **RR-DG7**, **RR-DG9**).
 
-**Scope — in:** Surface `thread_resolve_skipped_count` + per-reason snippet in publish manifest/summary; optional single retry on GraphQL resolve; log GraphQL error body (truncated); do not inflate "still open" without manifest signal.
+**Scope — in:** Manifest/summary fields: `thread_resolve_skipped_count`, `thread_id_not_found_count`, `resolve_mutation_failed_count`; log GraphQL error body (truncated) on mutation path; optional single retry; **no silent `continue`** when `thread_id is None`.
 
-**Scope — out:** Re-implementing GH-1v2 triggers; human dismiss UI.
+**Scope — out:** GH-1v2 re-design; foreign/human thread ownership policy (document in R0 if needed).
 
-**Deliverables:** Summary line for thread resolve outcomes; unit tests for skip counting; RR-V4 partial (count surfaced even if skips remain).
-
-**Depends on:** R1 (pipeline must complete to publish).
-
----
-
-## R3 — Resolution compare fallback & summary SHA parity
-
-**Goal:** Fix pushes after merge-base disruption can stamp `addressed` and show non-zero resolution rate; summary and inline share one `head_sha` (**RR-DG4**, **RR-DG5**).
-
-**Scope — in:** When GitHub compare fails for Pass 1, bounded fallback (e.g. prior-published SHA window or HEAD file fetch for line-region check); clear `compare_failed` when fallback succeeds; issue comment + check run + manifest `head_sha` aligned to revision under publish.
-
-**Scope — out:** Full three-way merge simulation; changing FR-Q3 pairing model.
-
-**Deliverables:** Compare-fallback path with tests; RR-V2 + RR-V3 pass on staging fix-push cohort.
+**Deliverables:** Formatter summary line; unit tests for skip taxonomy; RR-V4 on cohort where R3 stamps `addressed`.
 
 **Depends on:** R1.
 
 ---
 
-## R4 — HEAD truth & inline recovery
+## R3 — Resolution stamp unblock
 
-**Goal:** Reduce false positives on long external PRs; recover from inline 422 (**RR-DG6**, **RR-DG2**).
+**Goal:** Fix pushes stamp `addressed` and resolution rate **> 0%** where operator expects (**RR-DG4**, **RR-DG11**).
 
-**Scope — in:** Before publish (or at reconcile): verify finding claims against file content at `head_sha` via GitHub contents API where diff context is insufficient; suppress or downgrade findings contradicted by HEAD; inline 422 → retry adjacent line or issue-comment fallback for that group.
+**Scope — in:** Per R0 hypothesis: extend **line-region HEAD verification** and existing `head_check_failed` path — **not** duplicate `paths_absent_at_head`; fix stale `closure_blocked_reason`; repair pairing when intermediate revision missing after R1; clear `compare_failed` only when compare API actually failed.
 
-**Scope — out:** Re-training Moonshot; full-repo static analysis.
+**Scope — out:** FR-Q3 pairing model rewrite; three-way merge simulation.
 
-**Deliverables:** HEAD verification hook with tests; false-positive suppression manifest field; RR-V5 improvement on TenderPro-class items.
+**Deliverables:** Tests per hypothesis branch; RR-V2 pass on fix-push cohort.
 
-**Depends on:** R3 (resolution stamp must work for real fixes).
+**Depends on:** R0, R1.
 
 ---
 
-## R5 — Staging sign-off
+## R4 — HEAD contradiction suppression & inline recovery
 
-**Goal:** RR-W1 **PASS** on cross-repo dogfood — TenderPro #130 re-run or equivalent external PR.
+**Goal:** Suppress claims contradicted by file at `head_sha`; recover inline 422 (**RR-DG6**, **RR-DG2**).
 
-**Scope — in:** Execute RR-V1–V5; update staging validation sign-off; doc sync (README, finding-resolution cross-link); optional TenderPro operator handoff note.
+**Scope — in:** Post-reconcile hook: if finding claim fails HEAD text check, suppress or downgrade before publish (fixtures from operator matrix items 1–3, 15, 17); inline 422 → line retry or issue-comment fallback.
 
-**Scope — out:** Customer repo code changes.
+**Scope — out:** New contents API infrastructure (already exists); Moonshot prompt retrain.
 
-**Deliverables:** Validation memo sign-off PASS/FAIL; program status line in README; execution index with commit SHAs.
+**Deliverables:** Suppression manifest field; unit tests with matrix fixtures; RR-V5 **0/5** false positives on checklist.
+
+**Depends on:** R3 preferred (real fixes stamped); suppression can ship in parallel with R3 if independent.
+
+---
+
+## R5 — Staging sign-off & publish coherence
+
+**Goal:** RR-W1 **PASS** on cross-repo dogfood; confirm publish surfaces coherent (**RR-DG5**, **RR-DG10**).
+
+**Scope — in:** RR-V1–V5 on TenderPro #130 re-run or equivalent; verify successful publish has single `head_sha` across check/comment/inline; document `publish_skipped_not_head` behavior when HEAD advances.
+
+**Scope — out:** Customer repo merges.
+
+**Deliverables:** Validation memo PASS/FAIL; README status; execution index with SHAs; RR-Q4 product gate recommendation.
 
 **Depends on:** R1–R4.
 
 ---
 
-## Parking lot (unchanged)
+## Parking lot
 
 | Item | Notes |
 |------|-------|
-| RR-Q4 product merge gate on resolution rate | Revisit after R5 if metric trustworthy |
-| Block merge on 0% resolution | Product — not RR-W1 |
+| Product FAIL check on 0% resolution | RR-Q4 — decide after R5 |
+| Bot vs human thread resolve policy | R0/R2 if GraphQL differs |
 
 ---
 
-## Open item
+## Open items (R0)
 
-**RR-Q4** — whether production should NEUTRAL/FAIL check runs when resolution rate is 0% but findings are stale — decide after R5 evidence.
+1. Reconcile manifest / DB for "Compare blocked: 6" push.
+2. RR-Q5 — `head_sha` unique constraint vs application dedupe.
+3. Were 18 skipped threads Revy-owned bot comments on #130?
 
-**Next step:** `create-execution-plan` → `waves/REVY_REVIEW_DOGFOOD_EXECUTION.md` + `R0`–`R5` execution files.
+**Next step:** `create-execution-plan` → `waves/REVY_REVIEW_DOGFOOD_EXECUTION.md` + R0–R5 execution files.
