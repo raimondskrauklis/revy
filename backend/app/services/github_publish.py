@@ -27,7 +27,11 @@ from app.core.exceptions import (
     ServiceUnavailableError,
 )
 from app.core.logging import get_logger
-from app.core.worker_retries import WorkerRetryableError, classify_transient_error
+from app.core.worker_retries import (
+    WorkerRetryableError,
+    classify_transient_error,
+    is_retryable_http_status,
+)
 from app.integrations import github_api
 from app.models.github_finding import GitHubFindingORM
 from app.models.github_finding_group import GitHubFindingGroupORM
@@ -123,6 +127,7 @@ _SKIP_PUBLISH_NEUTRAL_SUMMARY = "Superseded by newer commit"
 
 _INLINE_422_RECOVERED_COUNT_KEY = "inline_publish_422_recovered_count"
 _INLINE_422_RECOVERED_FINGERPRINTS_KEY = "inline_publish_422_recovered_fingerprints"
+_INLINE_422_FALLBACK_MARKER_PREFIX = "<!-- revy:inline-422:"
 
 _TERMINAL_PUBLISH_JOB_STATUSES = frozenset(
     {
@@ -710,6 +715,21 @@ async def _fingerprints_to_resolve_inline_threads(
     return fingerprints_to_resolve
 
 
+def inline_422_fallback_marker(fingerprint: str) -> str:
+    return f"{_INLINE_422_FALLBACK_MARKER_PREFIX}{fingerprint} -->"
+
+
+def _is_transient_thread_resolve_error(exc: BaseException) -> bool:
+    if isinstance(exc, ServiceUnavailableError):
+        return True
+    if isinstance(exc, RateLimitedError):
+        return False
+    if isinstance(exc, httpx.HTTPStatusError):
+        status_code = exc.response.status_code
+        return is_retryable_http_status(status_code) and status_code != 429
+    return isinstance(exc, httpx.TransportError)
+
+
 def _inline_422_fallback_blocks_for_specs(
     inline_posts: list[InlinePostSpec],
     recovered_fingerprints: set[str],
@@ -728,7 +748,15 @@ def _append_missing_inline_422_fallback_blocks(
     missing = [
         block
         for block in fallback_blocks
-        if block and block.splitlines()[0] not in issue_comment_body
+        if block
+        and all(
+            marker not in issue_comment_body
+            for marker in (
+                line
+                for line in block.splitlines()
+                if line.startswith(_INLINE_422_FALLBACK_MARKER_PREFIX)
+            )
+        )
     ]
     if not missing:
         return None
@@ -795,7 +823,9 @@ async def _resolve_review_thread_with_retry(
             thread_id=thread_id,
             auth_headers=auth_headers,
         )
-    except (httpx.HTTPError, ServiceUnavailableError):
+    except Exception as exc:
+        if not _is_transient_thread_resolve_error(exc):
+            raise
         await github_api.resolve_review_thread(
             client,
             github_installation_id=github_installation_id,
@@ -1076,7 +1106,8 @@ def _format_inline_422_fallback_block(spec: InlinePostSpec) -> str:
         severity=spec.severity,
         suggestion=spec.suggestion,
     )
-    return f"### Inline fallback ({spec.file_path}:{spec.start_line})\n\n{body}"
+    marker = inline_422_fallback_marker(spec.group_fingerprint)
+    return f"{marker}\n### Inline fallback ({spec.file_path}:{spec.start_line})\n\n{body}"
 
 
 async def _create_inline_review_comment_with_422_retry(

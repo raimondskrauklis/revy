@@ -3636,6 +3636,7 @@ def test_format_inline_422_fallback_block_includes_title():
         suggestion=None,
     )
     block = github_publish._format_inline_422_fallback_block(spec)
+    assert github_publish.inline_422_fallback_marker("fp") in block
     assert "Inline fallback (app/a.py:4)" in block
     assert "Inline bug" in block
 
@@ -3663,11 +3664,19 @@ def _inline_post_spec(
     )
 
 
-def test_append_missing_inline_422_fallback_blocks_skips_existing_header():
+def test_append_missing_inline_422_fallback_blocks_skips_existing_marker():
     spec = _inline_post_spec()
     block = github_publish._format_inline_422_fallback_block(spec)
     body = f"Summary\n\n{block}"
     assert github_publish._append_missing_inline_422_fallback_blocks(body, [block]) is None
+
+
+def test_append_missing_inline_422_fallback_blocks_appends_when_marker_absent():
+    spec = _inline_post_spec()
+    block = github_publish._format_inline_422_fallback_block(spec)
+    updated = github_publish._append_missing_inline_422_fallback_blocks("Summary", [block])
+    assert updated is not None
+    assert github_publish.inline_422_fallback_marker("fp-a") in updated
 
 
 def test_issue_comment_id_for_publish_flush_uses_existing_when_job_unset():
@@ -3686,6 +3695,30 @@ async def test_resolve_review_thread_with_retry_does_not_retry_rate_limited():
         AsyncMock(side_effect=RateLimitedError(message="slow down", error_code="rate_limited")),
     ) as resolve_mock:
         with pytest.raises(RateLimitedError):
+            await github_publish._resolve_review_thread_with_retry(
+                client,
+                github_installation_id=12345,
+                thread_id="PRRT_test",
+                auth_headers={"Authorization": "Bearer t"},
+            )
+    assert resolve_mock.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_resolve_review_thread_with_retry_does_not_retry_client_error():
+    client = AsyncMock()
+    response = httpx.Response(400, request=httpx.Request("POST", "https://api.github.com/graphql"))
+    with patch(
+        "app.services.github_publish.github_api.resolve_review_thread",
+        AsyncMock(
+            side_effect=httpx.HTTPStatusError(
+                "bad request",
+                request=response.request,
+                response=response,
+            )
+        ),
+    ) as resolve_mock:
+        with pytest.raises(httpx.HTTPStatusError):
             await github_publish._resolve_review_thread_with_retry(
                 client,
                 github_installation_id=12345,
@@ -3733,6 +3766,7 @@ async def test_append_recovered_inline_422_blocks_uses_existing_github_comment_i
         )
 
     assert "Inline fallback (app/a.py:4)" in updated
+    assert github_publish.inline_422_fallback_marker("fp-a") in updated
     assert job.github_comment_id == 8001
     update_mock.assert_awaited_once()
     assert update_mock.await_args.kwargs["comment_id"] == 8001

@@ -262,6 +262,7 @@ async def _append_revision(
         except IntegrityError as exc:
             if not _is_unique_violation(exc):
                 raise
+            session.expunge(revision)
             last_error = exc
             logger.info(
                 "github_revision_append_deduped",

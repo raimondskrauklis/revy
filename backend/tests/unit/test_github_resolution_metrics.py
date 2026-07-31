@@ -19,6 +19,22 @@ from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullReque
 from app.services import github_resolution_metrics
 
 
+async def _identity_pairing_last_seen_map(
+    _session,
+    *,
+    pull_request_id,
+    last_seen_revision_ids,
+):
+    return {revision_id: revision_id for revision_id in last_seen_revision_ids}
+
+
+def _patch_identity_pairing_resolve():
+    return patch(
+        "app.services.github_resolution_metrics.resolve_pairing_last_seen_revision_ids",
+        AsyncMock(side_effect=_identity_pairing_last_seen_map),
+    )
+
+
 def test_patch_touches_line_region_detects_modified_line():
     patch = "@@ -10,3 +10,4 @@\n def foo():\n-    old()\n+    new_call()\n     return x\n"
     assert github_resolution_metrics.patch_touches_line_region(
@@ -842,11 +858,14 @@ async def test_apply_resolution_status_hygiene_aged_cohort_empty_pairing():
                 "app.services.github_resolution_metrics.paths_absent_at_head",
                 AsyncMock(return_value={"backend/probe/deleted.py": True}),
             ):
-                updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
-                    session,
-                    pull_request=pull_request,
-                    new_revision=new_revision,
-                )
+                with _patch_identity_pairing_resolve():
+                    updated = (
+                        await github_resolution_metrics.apply_resolution_status_for_synchronize(
+                            session,
+                            pull_request=pull_request,
+                            new_revision=new_revision,
+                        )
+                    )
 
     assert updated == 1
     assert aged_group.resolution_status == ResolutionStatus.addressed
@@ -927,11 +946,12 @@ async def test_apply_resolution_status_head_fail_closed():
             "app.services.github_resolution_metrics.paths_absent_at_head",
             AsyncMock(return_value={"app/missing.py": None}),
         ):
-            updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
-                session,
-                pull_request=pull_request,
-                new_revision=new_revision,
-            )
+            with _patch_identity_pairing_resolve():
+                updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
+                    session,
+                    pull_request=pull_request,
+                    new_revision=new_revision,
+                )
 
     assert updated == 1
     assert group.resolution_status == ResolutionStatus.still_open
@@ -1014,11 +1034,12 @@ async def test_apply_resolution_status_head_fail_closed_when_compare_failed():
             "app.services.github_resolution_metrics.paths_absent_at_head",
             AsyncMock(return_value={"app/missing.py": None}),
         ):
-            updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
-                session,
-                pull_request=pull_request,
-                new_revision=new_revision,
-            )
+            with _patch_identity_pairing_resolve():
+                updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
+                    session,
+                    pull_request=pull_request,
+                    new_revision=new_revision,
+                )
 
     assert updated == 1
     assert aged_group.resolution_status == ResolutionStatus.still_open
@@ -1101,11 +1122,12 @@ async def test_apply_resolution_status_compare_failed_path_gone_still_open():
             "app.services.github_resolution_metrics.paths_absent_at_head",
             AsyncMock(return_value={"app/gone.py": True}),
         ):
-            updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
-                session,
-                pull_request=pull_request,
-                new_revision=new_revision,
-            )
+            with _patch_identity_pairing_resolve():
+                updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
+                    session,
+                    pull_request=pull_request,
+                    new_revision=new_revision,
+                )
 
     assert updated == 1
     assert aged_group.resolution_status == ResolutionStatus.still_open
@@ -1193,11 +1215,14 @@ async def test_apply_resolution_status_clears_stale_compare_failed_on_success():
                 "app.services.github_resolution_metrics.paths_absent_at_head",
                 AsyncMock(return_value={"app/handler.py": False}),
             ):
-                updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
-                    session,
-                    pull_request=pull_request,
-                    new_revision=new_revision,
-                )
+                with _patch_identity_pairing_resolve():
+                    updated = (
+                        await github_resolution_metrics.apply_resolution_status_for_synchronize(
+                            session,
+                            pull_request=pull_request,
+                            new_revision=new_revision,
+                        )
+                    )
 
     assert updated == 1
     assert aged_group.closure_blocked_reason is None
@@ -1363,7 +1388,15 @@ async def test_apply_resolution_status_pairing_repair_includes_published_earlier
 
     session = AsyncMock()
     session.scalar = AsyncMock(side_effect=[published_prior])
-    session.scalars = AsyncMock(side_effect=[[group], [gap_revision]])
+    session.scalars = AsyncMock(
+        side_effect=[
+            [group],
+            [gap_revision],
+            [],
+            [published_prior],
+            [gap_revision],
+        ],
+    )
     session.get = AsyncMock(return_value=gap_revision)
     session.flush = AsyncMock()
 
@@ -1399,15 +1432,13 @@ async def test_apply_resolution_status_pairing_repair_includes_published_earlier
                         "app.services.github_resolution_metrics.get_fingerprint_published_revision_ids",
                         AsyncMock(return_value={"pair-gap-fp": gap_revision_id}),
                     ):
-                        with patch(
-                            "app.services.github_resolution_metrics._revision_has_completed_publish",
-                            AsyncMock(return_value=True),
-                        ):
-                            updated = await github_resolution_metrics.apply_resolution_status_for_synchronize(
+                        updated = (
+                            await github_resolution_metrics.apply_resolution_status_for_synchronize(
                                 session,
                                 pull_request=pull_request,
                                 new_revision=new_revision,
                             )
+                        )
 
     assert updated == 1
     assert group.resolution_status == ResolutionStatus.addressed
@@ -1437,22 +1468,56 @@ async def test_resolve_pairing_last_seen_revision_id_maps_unpublished_gap():
     published_prior.id = published_prior_id
 
     session = AsyncMock()
-    session.get = AsyncMock(return_value=gap_revision)
-    with patch(
-        "app.services.github_resolution_metrics._revision_has_completed_publish",
-        AsyncMock(return_value=False),
-    ):
-        with patch(
-            "app.services.github_resolution_metrics.get_last_published_prior_revision",
-            AsyncMock(return_value=published_prior),
-        ):
-            resolved = await github_resolution_metrics.resolve_pairing_last_seen_revision_id(
-                session,
-                pull_request_id=pull_request_id,
-                last_seen_revision_id=gap_revision_id,
-            )
+    session.scalars = AsyncMock(side_effect=[[gap_revision], [], [published_prior]])
+    resolved = await github_resolution_metrics.resolve_pairing_last_seen_revision_id(
+        session,
+        pull_request_id=pull_request_id,
+        last_seen_revision_id=gap_revision_id,
+    )
 
     assert resolved == published_prior_id
+
+
+@pytest.mark.asyncio
+async def test_resolve_pairing_last_seen_revision_ids_batches_groups():
+    pull_request_id = uuid.uuid4()
+    published_id = uuid.uuid4()
+    gap_a_id = uuid.uuid4()
+    gap_b_id = uuid.uuid4()
+
+    gap_a = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=11,
+        head_sha="gap-a",
+        base_sha="base",
+    )
+    gap_a.id = gap_a_id
+    gap_b = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=12,
+        head_sha="gap-b",
+        base_sha="base",
+    )
+    gap_b.id = gap_b_id
+    published = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=10,
+        head_sha="published",
+        base_sha="base",
+    )
+    published.id = published_id
+
+    session = AsyncMock()
+    session.scalars = AsyncMock(side_effect=[[gap_a, gap_b], [], [published]])
+
+    resolved = await github_resolution_metrics.resolve_pairing_last_seen_revision_ids(
+        session,
+        pull_request_id=pull_request_id,
+        last_seen_revision_ids=frozenset({gap_a_id, gap_b_id}),
+    )
+
+    assert resolved == {gap_a_id: published_id, gap_b_id: published_id}
+    assert session.scalars.await_count == 3
 
 
 def test_build_resolution_pass_manifest_excludes_hygiene_from_rate():

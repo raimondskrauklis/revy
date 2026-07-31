@@ -6,6 +6,8 @@ Phase **R3** of [REVY_REVIEW_DOGFOOD_GENERAL_PLAN.md](../REVY_REVIEW_DOGFOOD_GEN
 
 **Goal:** Active groups on current HEAD can close when fix is present; stale `closure_blocked_reason` cleared; pairing survives merge + ingest gaps after R1.
 
+**Doc authority:** R3.2 trigger matches [staging validation § R3 subphase map](../REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md) — when R0.2 lists secondary `pairing_gap`, implement R3.2 + R3.3 alongside R3.1 (not gated on primary tag alone).
+
 ## Decisions locked for R3
 
 - Implement fixes **per RR-DG4 primary tag** from R0 § R0.2 — subphase map:

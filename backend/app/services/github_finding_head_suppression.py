@@ -1,9 +1,15 @@
 # backend/app/services/github_finding_head_suppression.py
-"""HEAD contradiction suppression — RR-W1 R4 (RR-DG6)."""
+"""HEAD contradiction suppression — RR-W1 R4 (RR-DG6).
+
+Matchers are pluggable rules keyed by ``rule_id``. RR-V5 staging fixtures
+(operator matrix rows 1, 2, 3, 15, 17) seed the default registry; add new
+``HeadContradictionRule`` entries for other repos without changing reconcile hook.
+"""
 
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from uuid import UUID
 
 import httpx
@@ -25,56 +31,97 @@ logger = get_logger(__name__)
 HeadContradictionMatcher = Callable[[GitHubFindingGroupORM, str], bool]
 
 
+@dataclass(frozen=True, slots=True)
+class HeadContradictionRule:
+    rule_id: str
+    matrix_ref: str
+    matcher: HeadContradictionMatcher
+
+
 def _claim_text(group: GitHubFindingGroupORM) -> str:
     return f"{group.title}\n{group.message}".lower()
 
 
-def _matches_missing_or_import(group: GitHubFindingGroupORM, head_content: str) -> bool:
+def _claim_mentions_sqlalchemy_or_import(group: GitHubFindingGroupORM) -> bool:
     claim = _claim_text(group)
-    if "or_" not in claim and "or " not in claim:
-        return False
-    if "import" not in claim and "sqlalchemy" not in claim:
-        return False
+    return ("or_" in claim or "or " in claim) and ("import" in claim or "sqlalchemy" in claim)
+
+
+def _head_imports_sqlalchemy_or(head_content: str) -> bool:
     lowered = head_content.lower()
     return "or_" in lowered and "sqlalchemy" in lowered
 
 
-def _matches_system_status_bar_props(group: GitHubFindingGroupORM, head_content: str) -> bool:
-    if "systemstatusbar" not in _claim_text(group):
-        return False
+def _claim_mentions_system_status_bar_required_props(group: GitHubFindingGroupORM) -> bool:
     claim = _claim_text(group)
-    if "required" not in claim and "missing" not in claim:
-        return False
+    return "systemstatusbar" in claim and ("required" in claim or "missing" in claim)
+
+
+def _head_system_status_bar_optional_props(head_content: str) -> bool:
     return "connectionId?" in head_content and "compact?" in head_content
 
 
-def _matches_kpi_skeleton_count(group: GitHubFindingGroupORM, head_content: str) -> bool:
+def _claim_mentions_kpi_skeleton(group: GitHubFindingGroupORM) -> bool:
     claim = _claim_text(group)
-    if "kpi" not in claim and "skeleton" not in claim:
-        return False
-    return "OVERVIEW_KPI_COUNT = 4" in head_content
+    return "kpi" in claim or "skeleton" in claim
+
+
+def _matches_missing_or_import(group: GitHubFindingGroupORM, head_content: str) -> bool:
+    return _claim_mentions_sqlalchemy_or_import(group) and _head_imports_sqlalchemy_or(head_content)
+
+
+def _matches_system_status_bar_props(group: GitHubFindingGroupORM, head_content: str) -> bool:
+    return _claim_mentions_system_status_bar_required_props(
+        group
+    ) and _head_system_status_bar_optional_props(head_content)
+
+
+def _matches_kpi_skeleton_count(group: GitHubFindingGroupORM, head_content: str) -> bool:
+    return _claim_mentions_kpi_skeleton(group) and "OVERVIEW_KPI_COUNT = 4" in head_content
 
 
 def _matches_export_label(group: GitHubFindingGroupORM, head_content: str) -> bool:
     claim = _claim_text(group)
-    if "export" not in claim:
-        return False
-    return "Export List" in head_content and "Export Selected" in head_content
+    return "export" in claim and "Export List" in head_content and "Export Selected" in head_content
 
 
 def _matches_prop_migration(group: GitHubFindingGroupORM, head_content: str) -> bool:
     claim = _claim_text(group)
-    if "prop" not in claim and "caller" not in claim:
-        return False
-    return "connectionId?" in head_content and "compact?" in head_content
+    return ("prop" in claim or "caller" in claim) and _head_system_status_bar_optional_props(
+        head_content
+    )
 
 
-HEAD_CONTRADICTION_MATCHERS: tuple[tuple[str, HeadContradictionMatcher], ...] = (
-    ("missing_or_import", _matches_missing_or_import),
-    ("system_status_bar_props", _matches_system_status_bar_props),
-    ("kpi_skeleton_count", _matches_kpi_skeleton_count),
-    ("export_label", _matches_export_label),
-    ("prop_migration", _matches_prop_migration),
+HEAD_CONTRADICTION_RULES: tuple[HeadContradictionRule, ...] = (
+    HeadContradictionRule(
+        rule_id="missing_or_import",
+        matrix_ref="RR-V5 row 1",
+        matcher=_matches_missing_or_import,
+    ),
+    HeadContradictionRule(
+        rule_id="system_status_bar_props",
+        matrix_ref="RR-V5 row 2",
+        matcher=_matches_system_status_bar_props,
+    ),
+    HeadContradictionRule(
+        rule_id="kpi_skeleton_count",
+        matrix_ref="RR-V5 row 3",
+        matcher=_matches_kpi_skeleton_count,
+    ),
+    HeadContradictionRule(
+        rule_id="export_label",
+        matrix_ref="RR-V5 row 15",
+        matcher=_matches_export_label,
+    ),
+    HeadContradictionRule(
+        rule_id="prop_migration",
+        matrix_ref="RR-V5 row 17",
+        matcher=_matches_prop_migration,
+    ),
+)
+
+HEAD_CONTRADICTION_MATCHERS: tuple[tuple[str, HeadContradictionMatcher], ...] = tuple(
+    (rule.rule_id, rule.matcher) for rule in HEAD_CONTRADICTION_RULES
 )
 
 
@@ -82,9 +129,9 @@ def matches_head_contradiction(
     group: GitHubFindingGroupORM,
     head_content: str,
 ) -> str | None:
-    for rule_id, matcher in HEAD_CONTRADICTION_MATCHERS:
-        if matcher(group, head_content):
-            return rule_id
+    for rule in HEAD_CONTRADICTION_RULES:
+        if rule.matcher(group, head_content):
+            return rule.rule_id
     return None
 
 

@@ -645,6 +645,45 @@ async def test_append_revision_recovers_same_head_sha_after_unique_violation():
 
 
 @pytest.mark.asyncio
+async def test_append_revision_expunges_failed_revision_before_retry():
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=_PR_GITHUB_ID,
+        number=7,
+        title="Add feature",
+        state=GitHubPullRequestState.open,
+        head_sha="sha-a",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=12,
+    )
+    pull_request.id = uuid.uuid4()
+
+    session = _session_with_nested()
+    session.scalar = AsyncMock(side_effect=[None, None])
+    session.flush = AsyncMock(
+        side_effect=[IntegrityError("insert", {}, _UniqueViolation("unique")), None],
+    )
+
+    async def _refresh_stub(pr: GitHubPullRequestORM) -> None:
+        pr.revision_count = 13
+
+    session.refresh = AsyncMock(side_effect=_refresh_stub)
+    session.expunge = MagicMock()
+
+    await _append_revision(
+        session,
+        pull_request=pull_request,
+        head_sha="sha-b",
+        base_sha="base000",
+    )
+
+    session.expunge.assert_called_once()
+
+
+@pytest.mark.asyncio
 async def test_append_revision_retries_next_revision_number_after_different_sha_collision():
     pull_request = GitHubPullRequestORM(
         repository_id=uuid.uuid4(),

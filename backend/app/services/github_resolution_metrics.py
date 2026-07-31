@@ -93,15 +93,35 @@ async def _latest_finding_lines(
     *,
     group_id: UUID,
 ) -> tuple[int | None, int | None]:
-    finding = await session.scalar(
-        select(GitHubFindingORM)
-        .where(GitHubFindingORM.group_id == group_id)
-        .order_by(GitHubFindingORM.created_at.desc())
-        .limit(1)
+    lines_by_group = await _latest_finding_lines_by_group_ids(session, frozenset({group_id}))
+    return lines_by_group.get(group_id, (None, None))
+
+
+async def _latest_finding_lines_by_group_ids(
+    session: AsyncSession,
+    group_ids: frozenset[UUID],
+) -> dict[UUID, tuple[int | None, int | None]]:
+    if not group_ids:
+        return {}
+    rows = await session.execute(
+        select(
+            GitHubFindingORM.group_id,
+            GitHubFindingORM.start_line,
+            GitHubFindingORM.end_line,
+            GitHubFindingORM.created_at,
+        )
+        .where(
+            GitHubFindingORM.group_id.in_(group_ids),
+            GitHubFindingORM.group_id.is_not(None),
+        )
+        .order_by(GitHubFindingORM.group_id, GitHubFindingORM.created_at.desc())
     )
-    if finding is None:
-        return None, None
-    return finding.start_line, finding.end_line
+    lines_by_group: dict[UUID, tuple[int | None, int | None]] = {}
+    for group_id, start_line, end_line, _created_at in rows:
+        if group_id is None or group_id in lines_by_group:
+            continue
+        lines_by_group[group_id] = (start_line, end_line)
+    return lines_by_group
 
 
 def file_path_deleted_in_compare(
@@ -195,20 +215,90 @@ async def get_last_published_prior_revision(
     )
 
 
-async def _revision_has_completed_publish(
+async def _revisions_with_completed_publish(
     session: AsyncSession,
-    *,
-    revision_id: UUID,
-) -> bool:
-    row = await session.scalar(
-        select(GitHubPublishJobORM.id)
+    revision_ids: frozenset[UUID],
+) -> frozenset[UUID]:
+    if not revision_ids:
+        return frozenset()
+    rows = await session.scalars(
+        select(GitHubPublishJobORM.revision_id)
         .where(
-            GitHubPublishJobORM.revision_id == revision_id,
+            GitHubPublishJobORM.revision_id.in_(revision_ids),
             GitHubPublishJobORM.status == GitHubPublishJobStatus.completed,
         )
-        .limit(1)
+        .distinct()
     )
-    return row is not None
+    return frozenset(rows)
+
+
+async def _published_revisions_for_pull_request(
+    session: AsyncSession,
+    *,
+    pull_request_id: UUID,
+) -> list[GitHubPullRequestRevisionORM]:
+    return list(
+        await session.scalars(
+            select(GitHubPullRequestRevisionORM)
+            .join(
+                GitHubReviewRunORM,
+                GitHubReviewRunORM.revision_id == GitHubPullRequestRevisionORM.id,
+            )
+            .join(
+                GitHubPublishJobORM,
+                GitHubPublishJobORM.review_run_id == GitHubReviewRunORM.id,
+            )
+            .where(
+                GitHubPullRequestRevisionORM.pull_request_id == pull_request_id,
+                GitHubPublishJobORM.status == GitHubPublishJobStatus.completed,
+            )
+            .order_by(GitHubPullRequestRevisionORM.revision_number.asc())
+        )
+    )
+
+
+async def resolve_pairing_last_seen_revision_ids(
+    session: AsyncSession,
+    *,
+    pull_request_id: UUID,
+    last_seen_revision_ids: frozenset[UUID],
+) -> dict[UUID, UUID]:
+    if not last_seen_revision_ids:
+        return {}
+
+    targets = {
+        row.id: row
+        for row in await session.scalars(
+            select(GitHubPullRequestRevisionORM).where(
+                GitHubPullRequestRevisionORM.id.in_(last_seen_revision_ids),
+            )
+        )
+    }
+    published_ids = await _revisions_with_completed_publish(session, last_seen_revision_ids)
+    published_revisions = await _published_revisions_for_pull_request(
+        session,
+        pull_request_id=pull_request_id,
+    )
+    published_by_number = [
+        (revision.id, revision.revision_number) for revision in published_revisions
+    ]
+
+    resolved: dict[UUID, UUID] = {}
+    for last_seen_id in last_seen_revision_ids:
+        target = targets.get(last_seen_id)
+        if target is None or target.pull_request_id != pull_request_id:
+            resolved[last_seen_id] = last_seen_id
+            continue
+        if last_seen_id in published_ids:
+            resolved[last_seen_id] = last_seen_id
+            continue
+        prior_id = last_seen_id
+        for published_id, published_number in reversed(published_by_number):
+            if published_number < target.revision_number:
+                prior_id = published_id
+                break
+        resolved[last_seen_id] = prior_id
+    return resolved
 
 
 async def resolve_pairing_last_seen_revision_id(
@@ -218,19 +308,12 @@ async def resolve_pairing_last_seen_revision_id(
     last_seen_revision_id: UUID,
 ) -> UUID:
     """R3.3 — map last_seen on an unpublished revision to nearest prior published revision."""
-    revision = await session.get(GitHubPullRequestRevisionORM, last_seen_revision_id)
-    if revision is None or revision.pull_request_id != pull_request_id:
-        return last_seen_revision_id
-    if await _revision_has_completed_publish(session, revision_id=last_seen_revision_id):
-        return last_seen_revision_id
-    prior_published = await get_last_published_prior_revision(
+    resolved = await resolve_pairing_last_seen_revision_ids(
         session,
         pull_request_id=pull_request_id,
-        current_revision=revision,
+        last_seen_revision_ids=frozenset({last_seen_revision_id}),
     )
-    if prior_published is None:
-        return last_seen_revision_id
-    return prior_published.id
+    return resolved.get(last_seen_revision_id, last_seen_revision_id)
 
 
 async def _fingerprints_by_review_run_ids(
@@ -336,12 +419,24 @@ async def _build_synchronize_cohort_groups(
     fingerprint_published_revision_ids: dict[str, UUID],
     published_revision_numbers: dict[UUID, int],
 ) -> list[GitHubFindingGroupORM]:
-    cohort: list[GitHubFindingGroupORM] = []
-    for group in stale_groups:
-        effective_last_seen = await resolve_pairing_last_seen_revision_id(
+    last_seen_ids_to_resolve = frozenset(
+        group.last_seen_revision_id
+        for group in stale_groups
+        if group.last_seen_revision_id not in pairing_revision_ids
+    )
+    if last_seen_ids_to_resolve:
+        effective_last_seen_by_group = await resolve_pairing_last_seen_revision_ids(
             session,
             pull_request_id=pull_request_id,
-            last_seen_revision_id=group.last_seen_revision_id,
+            last_seen_revision_ids=last_seen_ids_to_resolve,
+        )
+    else:
+        effective_last_seen_by_group = {}
+    cohort: list[GitHubFindingGroupORM] = []
+    for group in stale_groups:
+        effective_last_seen = effective_last_seen_by_group.get(
+            group.last_seen_revision_id,
+            group.last_seen_revision_id,
         )
         published_revision_id = fingerprint_published_revision_ids.get(group.fingerprint)
         in_cohort = _group_in_synchronize_cohort(
@@ -479,6 +574,9 @@ async def apply_resolution_status_for_synchronize(
         updated_group_ids.add(group.id)
         updated += 1
 
+    cohort_group_ids = frozenset(group.id for group in cohort_groups)
+    finding_lines_by_group = await _latest_finding_lines_by_group_ids(session, cohort_group_ids)
+
     for group in cohort_groups:
         if compare_result.compare_failed:
             group.closure_blocked_reason = COMPARE_FAILED_REASON
@@ -487,7 +585,7 @@ async def apply_resolution_status_for_synchronize(
             continue
 
         group.closure_blocked_reason = None
-        start_line, end_line = await _latest_finding_lines(session, group_id=group.id)
+        start_line, end_line = finding_lines_by_group.get(group.id, (None, None))
         group.resolution_status = resolve_group_resolution_status(
             group=group,
             patches_by_file=compare_result.patches_by_file,

@@ -13,6 +13,7 @@ from app.constants.enums import (
     ResolutionMethod,
 )
 from app.models.github_finding_group import GitHubFindingGroupORM
+from app.services import github_finding_head_suppression
 from app.services.github_finding_head_suppression import (
     HEAD_CONTRADICTION_MATCHERS,
     matches_head_contradiction,
@@ -33,6 +34,17 @@ def _group(*, title: str, message: str, file_path: str = "app/example.py") -> Gi
         file_path=file_path,
         last_seen_revision_id=uuid.uuid4(),
     )
+
+
+def test_head_contradiction_rules_expose_rr_v5_matrix_refs():
+    refs = {rule.matrix_ref for rule in github_finding_head_suppression.HEAD_CONTRADICTION_RULES}
+    assert refs == {
+        "RR-V5 row 1",
+        "RR-V5 row 2",
+        "RR-V5 row 3",
+        "RR-V5 row 15",
+        "RR-V5 row 17",
+    }
 
 
 def test_matches_head_contradiction_matrix_row_missing_or_import():
