@@ -20,7 +20,7 @@
 | ID | Gap | Verdict | Wave | Effort | Why |
 |----|-----|---------|------|--------|-----|
 | **MR-DG1** | Moonshot hallucinates `format_summary_comment` kwargs | **Implement** | P4 (dogfood B) | **S** | Prompt-only; execution doc ready; no pipeline coupling |
-| **FR-CS4** | Line-region `addressed` false negatives; Pass 3 pairing wall | **Defer** | Wave D | **M–L** | Different failure mode than hygiene; needs repro + Pass 3 widen + judge budget |
+| **FR-CS4** | Line-region `addressed` false negatives; Pass 3 pairing wall | **Dogfood (D1)** | Wave D | **M** | D0 code shipped [#71](https://github.com/raimondskrauklis/revy/pull/71); staging repro pending |
 | **FR-CS8** | Ephemeral `resolution_status` on fast supersede | **Defer** (monitor) | Wave D optional | **S** | C3 happy path OK; edge case only; durable column optional |
 
 **Suggested order:** MR-DG1 → (pause) → wave D scoping when a real structural-fix dogfood repro is prioritized.
@@ -34,7 +34,7 @@
 | Track A hygiene | **Shipped** | `github_resolution_metrics.py` Pass 1b + `paths_absent_at_head`; Pass 2 widen `resolution_status == addressed` (`github_finding_closure.py:171–174`) |
 | Track B metrics | **Shipped** | Pass 1a pairing + `deleted_paths` only (CS-Q11); manifest excludes hygiene from rate (CS-Q6) |
 | FR-DG2 sign-off | **PASS** | #69 rev 6 — `absent_and_addressed`, `hygiene_path_removed_count=1` |
-| Pass 3 verification | **Shipped but narrow** | `verify_still_open_escalation_groups` — candidates filtered `last_seen_revision_id.in_(pairing_revision_ids)` (`github_finding_closure.py:249–256`) |
+| Pass 3 verification | **Shipped (D0 #71)** | `pass3_verification_escalation_select` — PR-wide `still_open` + SQL predicates (`github_finding_closure.py:94–140`) |
 | Moonshot reviewer prompt | **No formatter API** | `moonshot_review.py` — `REVIEW_SYSTEM_PROMPT` only; no `format_summary_comment` / `generation_groups` |
 | Formatter signature | **Stable** | `format_summary_comment(*, generation_groups, pr_active_groups)` — `github_publish_formatter.py:379–383` |
 | MR-DG1 execution | **Written, not run** | [P4 execution](../finding-resolution-dogfood/waves/FINDING_RESOLUTION_DOGFOOD_P4_EXECUTION.md) |
@@ -159,7 +159,7 @@ Re-open only if staging/production shows re-orphan after supersede **without** p
 | ID | Question | Status | Resolution |
 |----|----------|--------|------------|
 | **PW-Q1** | Implement MR-DG1 next? | **recommended** | **Yes** — P4 prompt-only on `chore/moonshot-formatter-signature` |
-| **PW-Q2** | Implement FR-CS4 now? | **recommended** | **No** — wave D after dedicated dogfood repro |
+| **PW-Q2** | Implement FR-CS4 now? | **locked** | **D0 done** — D1 staging dogfood in progress |
 | **PW-Q3** | Implement FR-CS8 now? | **recommended** | **No** — monitor; observability optional |
 | **PW-Q4** | Pass 3 widen without Pass 1 line change? | **locked** | **Yes** — D0 only; see [D0 execution](./waves/FINDING_RESOLUTION_POST_WAVE_C_D0_EXECUTION.md) |
 | **PW-Q5** | MR-DG1 same PR as wave D? | **locked** | **No** — separate branch per P4 execution |

@@ -1,12 +1,12 @@
 # Bugbot — review pipeline contract
 
-**Active program:** finding-resolution-post-wave-c — wave D (FR-CS4 Pass 3 widen, FR-CS4 dogfood).
+**Active program:** finding-resolution-post-wave-c — **D1** FR-CS4 staging dogfood.
 
 When reviewing **backend** changes that touch publish / formatter / pipeline / generation lifecycle / judge code, treat these as authoritative:
 
-- [FINDING_RESOLUTION_POST_WAVE_C_EXECUTION.md](../docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_POST_WAVE_C_EXECUTION.md) — LOOP M0–D3 index
-- [FINDING_RESOLUTION_POST_WAVE_C_BACKLOG_FINDINGS.md](../docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_POST_WAVE_C_BACKLOG_FINDINGS.md) — MR-DG1, FR-CS4, FR-CS8 locks
-- [FINDING_RESOLUTION_POST_WAVE_C_GENERAL_PLAN.md](../docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_POST_WAVE_C_GENERAL_PLAN.md) — phase goals
+- [FINDING_RESOLUTION_POST_WAVE_C_D1_EXECUTION.md](../docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_POST_WAVE_C_D1_EXECUTION.md) — D1 execution (probe protocol, phase gate)
+- [FINDING_RESOLUTION_POST_WAVE_C_D1_FINDINGS.md](../docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_POST_WAVE_C_D1_FINDINGS.md) — probe design, Pass 3 fingerprint rule, sign-off criteria
+- [FINDING_RESOLUTION_POST_WAVE_C_D1_GENERAL_PLAN.md](../docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_POST_WAVE_C_D1_GENERAL_PLAN.md) — D1.0–D1.3 goals
 
 **Agent workflow:**
 
