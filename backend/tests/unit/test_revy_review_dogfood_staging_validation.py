@@ -1,9 +1,19 @@
 # backend/tests/unit/test_revy_review_dogfood_staging_validation.py
 """RR-W1 staging validation script — gate evaluation."""
-from scripts.revy_review_dogfood_staging_validation import _evaluate_rr_v_gates
+from scripts.revy_review_dogfood_staging_validation import (
+    _evaluate_rr_v_gates,
+    _staging_database_url,
+)
 
 
-def test_rr_v_gate_pending_with_insufficient_runs():
+def test_staging_database_url_preserves_non_ssl_query_params(monkeypatch):
+    monkeypatch.setenv(
+        "PRODUCTION_DATABASE_URL",
+        "postgresql+asyncpg://u:p@host:5432/revy-staging?sslmode=require&application_name=rr-v",
+    )
+    url = _staging_database_url()
+    assert "application_name=rr-v" in url
+    assert "sslmode" not in url
     gate = _evaluate_rr_v_gates(
         {
             "revisions": [{"rows_per_head_sha": 1}],

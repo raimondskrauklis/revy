@@ -7,9 +7,10 @@ import asyncio
 import json
 import os
 import ssl
+import sys
 from datetime import UTC, datetime
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 import asyncpg
 
@@ -51,7 +52,13 @@ FROM github_review_runs rr
 JOIN github_pull_request_revisions rev ON rev.id = rr.revision_id
 JOIN github_pull_requests pr ON pr.id = rev.pull_request_id
 JOIN github_repositories repo ON repo.id = pr.repository_id
-LEFT JOIN github_publish_jobs pj ON pj.review_run_id = rr.id
+LEFT JOIN LATERAL (
+    SELECT pj2.status, pj2.head_sha
+    FROM github_publish_jobs pj2
+    WHERE pj2.review_run_id = rr.id
+    ORDER BY pj2.created_at DESC
+    LIMIT 1
+) pj ON true
 WHERE repo.full_name = $1
   AND pr.number = $2
   AND ($3::timestamptz IS NULL OR rr.created_at >= $3::timestamptz)
@@ -117,17 +124,33 @@ ORDER BY pj.created_at ASC;
 """
 
 
+_SSL_QUERY_KEYS = frozenset({"ssl", "sslmode", "sslrootcert", "sslcert", "sslkey"})
+_INSECURE_SSL_WARNED = False
+
+
 def _staging_database_url() -> str:
     url = os.environ.get("PRODUCTION_DATABASE_URL", "").strip()
     if not url:
         raise SystemExit(
             "PRODUCTION_DATABASE_URL not set — add revy-staging URL to backend/.env"
         )
-    return url.replace("postgresql+asyncpg://", "postgresql://").split("?")[0]
+    normalized = url.replace("postgresql+asyncpg://", "postgresql://")
+    parsed = urlparse(normalized)
+    if not parsed.query:
+        return normalized
+    kept = [(k, v) for k, v in parse_qsl(parsed.query) if k.lower() not in _SSL_QUERY_KEYS]
+    return urlunparse(parsed._replace(query=urlencode(kept)))
 
 
 def _ssl_context() -> ssl.SSLContext | bool:
+    global _INSECURE_SSL_WARNED
     if os.environ.get("DATABASE_SSL_INSECURE", "").strip().lower() in ("1", "true", "yes"):
+        if not _INSECURE_SSL_WARNED:
+            sys.stderr.write(
+                "WARNING: DATABASE_SSL_INSECURE=1 — TLS verification disabled "
+                "(staging operator script only).\n"
+            )
+            _INSECURE_SSL_WARNED = True
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE

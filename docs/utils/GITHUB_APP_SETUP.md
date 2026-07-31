@@ -492,6 +492,7 @@ Check nginx routes public API at `https://<host>/api/v1` (`deploy/nginx/revy.cre
 |-------|------------|----------------------------------|------------------|
 | **R2** | **Pull requests: Read** | **Pull request** ✓ | `pull_request` |
 | **R6** | **Contents: Write**, **Pull requests: Write**, **Checks: Write** | (same + check run events if needed) | `check_run`, etc. |
+| **OAuth install UI** | — | Callback URL + **Request user authorization during installation** ✓ | — |
 
 ### Contents Write — inline thread resolve (required for publish)
 
@@ -507,6 +508,5 @@ GraphQL `resolveReviewThread` (used when findings are addressed) is gated on **C
 Verify: publish `summary_json.thread_resolve_skipped.resolve_mutation_failed` → `0`; GitHub PR **Files changed** threads collapse on fix pushes.
 
 Authority: [REVY_REVIEW_DOGFOOD_RR_V4_FINDINGS.md](../review-pipeline/revy-review-dogfood/REVY_REVIEW_DOGFOOD_RR_V4_FINDINGS.md).
-| **OAuth install UI** | — | Callback URL + **Request user authorization during installation** ✓ | — |
 
 Track program status: [docs/review-pipeline/README.md](../review-pipeline/README.md).
