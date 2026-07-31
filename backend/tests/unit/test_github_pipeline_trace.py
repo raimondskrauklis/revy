@@ -433,9 +433,11 @@ async def test_record_judge_pipeline_step_includes_verification_manifest():
         group_id=uuid.uuid4(),
         evidence_snippet="snippet",
         user_prompt="verify",
-        raw_response={"outcome": "dismissed"},
+        raw_response={"outcome": "dismissed", "usage": {"input_tokens": 50, "output_tokens": 5}},
         outcome="dismissed",
         file_patch_chars=42,
+        input_tokens=50,
+        output_tokens=5,
     )
 
     await record_judge_pipeline_step(
@@ -447,6 +449,14 @@ async def test_record_judge_pipeline_step_includes_verification_manifest():
         verification_judged_count=1,
         verification_candidates=[verification_artifact],
     )
+
+    step = next(
+        call.args[0]
+        for call in session.add.call_args_list
+        if getattr(call.args[0], "step_type", None) == PipelineStepType.judge
+    )
+    assert step.input_tokens == 50
+    assert step.output_tokens == 5
 
     manifest_artifact = next(
         call.args[0]

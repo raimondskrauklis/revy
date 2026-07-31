@@ -68,18 +68,18 @@
 
 | ID | Gap | Severity | Status | Evidence |
 |----|-----|----------|--------|----------|
-| **RR-DG1** | Inline thread resolve skipped at publish | **high** | open | 18× warning in `tenderprolog.txt` L20–56; `github_publish.py:721-730` logs and continues |
-| **RR-DG2** | Inline comment post 422 skipped | medium | open | `tenderprolog.txt` L64–65; `github_publish.py:1443-1454` |
-| **RR-DG3** | Duplicate PR revision on concurrent synchronize | **high** | open | `tenderprolog.txt` L114–116 — `uq_github_pr_revisions_pr_number` rev 13; `_append_revision` (`github_pull_requests.py:196-213`) has no upsert/idempotency |
-| **RR-DG4** | Resolution cohort stuck — 0% rate / compare-blocked summary | **high** | open — **R0 tag locked** | Primary tag **`stale_closure_blocked`** (validation memo § R0.2); worker log compare 200 at `b4ba498`/`d915b4e`/`999ad17`; secondary `pairing_gap` + RR-DG11 |
-| **RR-DG5** | Summary `head_sha` lags inline generation | medium | open — **likely symptom** | Rev 12 summary `b4ba498` vs inline on `999ad17`; intra-job publish uses single `job.head_sha` — aligns with **no successful publish** for newer SHA after rev-13 IntegrityError (RR-DG3), not intra-job drift |
-| **RR-DG6** | False positives on HEAD file content | **high** | open — **reframed** | Contents API already used at `head_sha` (log + engineering context); false positives are **reviewer/judge reasoning on diff hunks**, not missing HEAD fetch — needs post-reconcile **suppression** |
-| **RR-DG7** | Resolution UX — fixed code, open threads | medium | open | Operator notes; multi-push iteration cost |
+| **RR-DG1** | Inline thread resolve skipped at publish | **high** | **verified fixed** | R2 taxonomy + App **Contents: Write** — rev 7+ `resolve_mutation_failed=0` on [#80](https://github.com/raimondskrauklis/revy/pull/80) |
+| **RR-DG2** | Inline comment post 422 skipped | medium | **shipped R4** | `github_publish.py` retry/fallback on `deda3c9` |
+| **RR-DG3** | Duplicate PR revision on concurrent synchronize | **high** | **verified fixed** | R1 idempotency on `deda3c9`; RR-V1 PASS — 10 revisions, 1 row per `head_sha` on #80 |
+| **RR-DG4** | Resolution cohort stuck — 0% rate / compare-blocked summary | **high** | **verified fixed** | R3 stamp unblock; RR-V2 PASS — `transitions_addressed≥1`, rate 100% on #80 push 3+ |
+| **RR-DG5** | Summary `head_sha` lags inline generation | medium | **verified fixed** | RR-V3 PASS — 9/9 publish `head_sha` parity on #80 |
+| **RR-DG6** | False positives on HEAD file content | **high** | **shipped R4** | HEAD contradiction suppression on `deda3c9`; RR-V5 manual pytest matrix |
+| **RR-DG7** | Resolution UX — fixed code, open threads | medium | **improved** | DB closure SSOT + thread collapse after Contents write (rev 8+: `already_resolved=11`) |
 | **RR-DG8** | Judge transport (cross-repo) | — | **verified fixed** | `judge_llm_request_*` + publish complete rev 12; [#75](https://github.com/raimondskrauklis/revy/pull/75) |
-| **RR-DG9** | Silent skip when `thread_id` is None | medium | open | `github_publish.py:712-713` — `continue` with no log or manifest count |
-| **RR-DG10** | `publish_skipped_not_head` / mixed GitHub surfaces | medium | open | HEAD advances mid-publish → check/comment at older generation while inline partial |
-| **RR-DG11** | Intermediate revision gap after failed ingest | medium | open | Failed rev 13 leaves hole; `get_intermediate_revision_ids_between` / pairing may exclude groups from restamp |
-| **RR-DG12** | App missing `contents:write` for `resolveReviewThread` | **high** | **fix identified** | PR #80 RR-V4 findings — upgrade Contents to Read and write on GitHub App |
+| **RR-DG9** | Silent skip when `thread_id` is None | medium | **shipped R2** | Skip taxonomy in manifest on `deda3c9` |
+| **RR-DG10** | `publish_skipped_not_head` / mixed GitHub surfaces | medium | **verified** | RR-V3 parity on successful publish cohort; no mixed-surface failure on #80 |
+| **RR-DG11** | Intermediate revision gap after failed ingest | medium | **addressed R1** | Idempotent `_append_revision` + IntegrityError recovery on `deda3c9` |
+| **RR-DG12** | App missing `contents:write` for `resolveReviewThread` | **high** | **verified fixed** | App upgraded Contents **Read and write** — [RR-V4 findings](./REVY_REVIEW_DOGFOOD_RR_V4_FINDINGS.md) |
 
 ---
 
@@ -169,7 +169,11 @@ Single publish job uses `job.head_sha` for check run, issue comment, and inline 
 | **RR-Q1** | Is finding-resolution "done"? | **locked** | **Mechanisms shipped**; cross-repo operator gate **not** done |
 | **RR-Q2** | Next pass scope? | **locked** | **RR-W1** — ingest + publish hygiene + HEAD truth (findings above) |
 | **RR-Q3** | Use external repo for staging probes? | **locked** | TenderPro #130 validated for RR-W1; no dedicated probe repo required |
-| **RR-Q4** | Block merge on 0% resolution rate? | **locked** | **Defer product gate until R5** — metric not trustworthy until R1–R3 green |
+| **RR-Q4** | Block merge on 0% resolution rate? | **locked** | **defer** — do **not** add product FAIL on resolution rate for cross-repo dogfood; RR-V2 PASS on revy #80 proves DB stamp path works. Use `scripts.revy_review_dogfood_staging_validation --rr-v-gate` as operator health check, not app merge blocker. Revisit after customer re-validation. |
+
+### RR-Q4 recommendation (R5 — 2026-07-31)
+
+**Defer** enabling a hard product merge gate on 0% resolution rate. TenderPro #130 showed 0% because ingest/publish/permissions were broken — not because the resolution metric is useless. After RR-W1 R1–R4 (`deda3c9`) and R5 validation on revy [#80](https://github.com/raimondskrauklis/revy/pull/80), DB-backed closure (`transitions_addressed`, `resolution_rate_pct`) is trustworthy when RR-V1–V3 pass. Operators should run the staging validation script; engineering should not block unrelated app merges on a single PR's resolution percentage.
 | **RR-Q5** | `head_sha` unique DB constraint? | **locked** | **(A) Application dedupe** — `_get_revision_for_head_sha` + `IntegrityError` recovery + optional `FOR UPDATE`; **no** Alembic unique on `(pull_request_id, head_sha)` unless R1.4 proves insufficient |
 
 ---

@@ -448,15 +448,18 @@ async def verify_still_open_escalation_groups(
                 for key, value in dismiss_fields.items():
                     setattr(group, key, value)
 
+            input_tokens, output_tokens = anthropic_review.judge_token_usage_from_transport()
             artifacts.append(
                 JudgeCandidateArtifact(
                     group_id=group.id,
                     evidence_snippet=evidence_snippet,
                     user_prompt=user_prompt,
-                    raw_response=raw,
+                    raw_response=anthropic_review.judge_raw_response_with_usage(raw),
                     outcome=outcome_str,
                     file_patch_chars=patch_chars,
                     retry_count=retry_count,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
                 )
             )
             judged += 1

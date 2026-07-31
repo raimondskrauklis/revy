@@ -14,10 +14,10 @@
 
 | ID | Resolution |
 |----|------------|
-| RR-Q1 | Finding-resolution mechanisms shipped; cross-repo gate **not** done |
+| RR-Q1 | Finding-resolution mechanisms shipped; cross-repo gate **complete** (R5 2026-07-31) |
 | RR-Q2 | RR-W1 scope: ingest → publish hygiene → resolution stamp → HEAD suppression |
-| RR-Q3 | TenderPro #130 is valid staging evidence; no dedicated probe repo required |
-| RR-Q4 | **Defer** product merge gate on resolution rate until **R5** |
+| RR-Q3 | TenderPro #130 symptoms + **Revy #80** validation venue |
+| RR-Q4 | **Defer** product merge gate on resolution rate — recommendation locked R5 |
 | RR-Q5 | **(A) Application dedupe** locked — no `head_sha` DB unique unless R1.4 forces migration |
 | FR-CS4 Pass 3 supersede | **Out of scope** |
 | RR-DG8 | Judge transport — **closed** (#75) |
@@ -108,11 +108,13 @@
 
 **Goal:** RR-W1 **PASS** on cross-repo dogfood; confirm publish surfaces coherent (**RR-DG5**, **RR-DG10**).
 
-**Scope — in:** RR-V1–V5 on TenderPro #130 re-run or equivalent; verify successful publish has single `head_sha` across check/comment/inline; document `publish_skipped_not_head` behavior when HEAD advances.
+**Status:** **complete** 2026-07-31 — validation on [Revy PR #80](https://github.com/raimondskrauklis/revy/pull/80) `b8a589e`; RR-V1–V4/judge/closure PASS; RR-Q4 **defer**.
+
+**Scope — in:** RR-V1–V5 on revy-repo dogfood PR; verify successful publish has single `head_sha` across check/comment/inline; App **Contents: Write** for thread resolve.
 
 **Scope — out:** Customer repo merges.
 
-**Deliverables:** Validation memo PASS/FAIL; README status; execution index with SHAs; RR-Q4 product gate recommendation.
+**Deliverables:** Validation memo PASS; README status; execution index with SHAs; RR-Q4 recommendation — **done**.
 
 **Depends on:** R1–R4.
 
@@ -122,15 +124,16 @@
 
 | Item | Notes |
 |------|-------|
-| Product FAIL check on 0% resolution | RR-Q4 — decide after R5 |
-| Bot vs human thread resolve policy | R0/R2 if GraphQL differs |
+| Product FAIL check on 0% resolution | RR-Q4 — **defer** (R5 locked) |
+| Bot vs human thread resolve policy | R2 taxonomy shipped; ownership filter deferred |
+| Production GitHub App Contents write | Staging fixed; verify prod app before customer rollout |
 
 ---
 
-## Open items (R0)
+## Open items (R0) — closed
 
-1. Reconcile manifest / DB for "Compare blocked: 6" push.
-2. RR-Q5 — `head_sha` unique constraint vs application dedupe.
-3. Were 18 skipped threads Revy-owned bot comments on #130?
+1. ~~Reconcile manifest / DB for "Compare blocked: 6" push.~~ → R3 + revy #80 RR-V2 PASS
+2. ~~RR-Q5 — `head_sha` unique constraint vs application dedupe.~~ → **(A) app dedupe** locked
+3. ~~Were 18 skipped threads Revy-owned bot comments on #130?~~ → RR-DG12 root cause: missing `contents:write`
 
-**Next step:** `create-execution-plan` → `waves/REVY_REVIEW_DOGFOOD_EXECUTION.md` + R0–R5 execution files.
+**Program complete.** Execution: [waves/REVY_REVIEW_DOGFOOD_EXECUTION.md](./waves/REVY_REVIEW_DOGFOOD_EXECUTION.md).

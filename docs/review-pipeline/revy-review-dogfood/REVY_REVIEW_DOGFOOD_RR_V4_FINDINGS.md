@@ -1,7 +1,8 @@
 # RR-V4 — Thread resolve mutation failures (findings)
 
 **Date:** 2026-07-31  
-**Trigger:** RR-W1 R5 dogfood on [PR #80](https://github.com/raimondskrauklis/revy/pull/80) — `--rr-v-gate` blocked on `RR-V4_thread_resolve_taxonomy`  
+**Trigger:** RR-W1 R5 dogfood on [PR #80](https://github.com/raimondskrauklis/revy/pull/80) — `--rr-v-gate` blocked on `RR-V4_thread_resolve_taxonomy` until App permission fix  
+**Status:** **verified fixed** 2026-07-31 — Contents **Read and write** + rev 7+ `resolve_mutation_failed=0`; rev 10 latest publish clean.
 **Authority:** [REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md](./REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md) · [GITHUB_APP_TARGET_CONFIG.md](../../utils/GITHUB_APP_TARGET_CONFIG.md)  
 **Deploy boundary:** `deda3c9` (RR-W1 R1–R4)
 
@@ -29,11 +30,15 @@ Revy publish calls GraphQL `resolveReviewThread` with the **installation token**
 | 2–4 | `ee4668c`…`38dd7b4` | **2** each | 0 |
 | 5 | `8aec926` | **4** | 0 |
 | 6 | `114aecd` | **6** | 0 |
+| 7 | `0cc1db3` | **0** | 0 |
+| 8 | `7b99148` | **0** (`already_resolved=11`) | 0 |
+| 10 | `b8a589e` | **0** | 0 |
 
 ### GitHub UI
 
-- 11 Revy `revybot` review threads on PR #80 — **all unresolved** before permission fix
-- Operator PAT (`gh api graphql resolveReviewThread`) **succeeds** on same `PRRT_*` id → confirms code path + thread id are correct; **token permission** is the gap
+- 11 Revy `revybot` review threads on PR #80 — **all unresolved** before permission fix (rev 6)
+- After Contents **Read and write** (rev 7+): 14+ threads resolved; only **new active findings** stay open
+- Operator PAT (`gh api graphql resolveReviewThread`) **succeeds** on same `PRRT_*` id → confirms code path + thread id are correct; **token permission** was the gap
 
 ### Code path (working as designed)
 
@@ -66,7 +71,7 @@ flush_publish_surfaces
 
 | ID | Gap | Severity | Status |
 |----|-----|----------|--------|
-| **RR-DG12** | App missing `contents:write` for `resolveReviewThread` | **high** | **fix identified** — GitHub App permission upgrade |
+| **RR-DG12** | App missing `contents:write` for `resolveReviewThread` | **high** | **verified fixed** — Contents Read and write on staging app |
 
 Supersedes prior RR-DG12 hypothesis (“App cannot resolve at all”) — installation token **can** resolve when **Contents: Write** is granted (same as Greptile).
 
@@ -79,7 +84,7 @@ Supersedes prior RR-DG12 hypothesis (“App cannot resolve at all”) — instal
 | App installation shows `contents: write` | GitHub installation settings |
 | Publish manifest `resolve_mutation_failed=0` on addressed cohort | staging DB |
 | GitHub `reviewThreads.isResolved=true` for addressed fingerprints | GraphQL |
-| `--rr-v-gate` `RR-V4_thread_resolve_taxonomy` | **PASS** |
+| `--rr-v-gate` `RR-V4_thread_resolve_taxonomy` | **PASS** (rev 10 latest publish) |
 
 ---
 

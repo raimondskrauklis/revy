@@ -17,6 +17,7 @@ from app.services.github_finding_closure import (
 from app.services.github_finding_head_suppression import suppress_head_contradictions_for_review_run
 from app.services.github_finding_judge import (
     JudgeCandidateArtifact,
+    finalize_review_run_judge_status,
     record_review_run_judge_status,
 )
 from app.services.github_finding_reconcile import reconcile_review_run
@@ -76,6 +77,10 @@ def reconcile_review_run_task(self, review_run_id: str) -> None:
 
             verification_started = time.monotonic()
             verification_result = await verify_still_open_escalation_groups(
+                session,
+                review_run_id=UUID(review_run_id),
+            )
+            await finalize_review_run_judge_status(
                 session,
                 review_run_id=UUID(review_run_id),
             )

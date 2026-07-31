@@ -35,18 +35,35 @@ See [REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md](../review-pipeline/review
 
 ## RR-W1 dogfood gate (`revy_review_dogfood_staging_validation.py`)
 
-Per-PR closure-loop validation on `raimondskrauklis/revy` staging dogfood PRs. Requires **≥5 completed review runs** and DB evidence for resolution/judge/publish parity.
+Per-PR closure-loop validation on `raimondskrauklis/revy` staging dogfood PRs. Requires **≥5 completed review runs** and DB evidence for resolution/judge/publish parity. Uses `STAGING_DATABASE_URL` when set (falls back to `DATABASE_URL`).
 
 ```bash
 cd backend
 
-DATABASE_SSL_INSECURE=1 pipenv run sh -c \
-  'python -m scripts.revy_review_dogfood_staging_validation --pr-number <N> --since 2026-07-31T19:08:32Z --json'
+# Example: PR #80 after RR-W1 deploy (deda3c9)
+DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.revy_review_dogfood_staging_validation \
+  --pr-number 80 --since 2026-07-31T19:08:32Z --json
 
-DATABASE_SSL_INSECURE=1 pipenv run sh -c \
-  'python -m scripts.revy_review_dogfood_staging_validation --pr-number <N> --since 2026-07-31T19:08:32Z --rr-v-gate'
+DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.revy_review_dogfood_staging_validation \
+  --pr-number 80 --since 2026-07-31T19:08:32Z --rr-v-gate
 ```
 
-Exit code **1** when any RR-V check is `PENDING` or `FAIL`. See [REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md](../review-pipeline/revy-review-dogfood/REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md).
+Exit code **1** when any RR-V check is `PENDING` or `FAIL` (RR-V5 manual pytest matrix reports `PENDING` by design). See [REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md](../review-pipeline/revy-review-dogfood/REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md).
 
-**RR-V4 blocked?** Upgrade GitHub App **Contents** to **Read and write** and accept on installation — [RR-V4 findings](../review-pipeline/revy-review-dogfood/REVY_REVIEW_DOGFOOD_RR_V4_FINDINGS.md) · [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) § Contents Write.
+## Judge staging spend (`judge_staging_spend_metrics.py`)
+
+Reconcile Anthropic `revy-judge` billing vs staging DB judge manifests and pipeline step tokens.
+
+```bash
+cd backend
+
+DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.judge_staging_spend_metrics \
+  --since 2026-07-31T00:00:00Z
+
+DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.judge_staging_spend_metrics \
+  --since 2026-07-31T00:00:00Z --json
+```
+
+See [JUDGE_STAGING_SPEND_INVESTIGATION_FINDINGS.md](../review-pipeline/judge/JUDGE_STAGING_SPEND_INVESTIGATION_FINDINGS.md).
+
+**RR-V4:** Gate checks **latest publish only** for `resolve_mutation_failed`. Historical failures before App **Contents: Write** upgrade are documented, not blocking. Permission fix: [RR-V4 findings](../review-pipeline/revy-review-dogfood/REVY_REVIEW_DOGFOOD_RR_V4_FINDINGS.md) · [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) § Contents Write.

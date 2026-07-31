@@ -42,6 +42,30 @@ def get_judge_transport_log_fields() -> dict[str, object]:
     return dict(ctx)
 
 
+def judge_token_usage_from_transport() -> tuple[int | None, int | None]:
+    """Input/output token counts from the last judge HTTP attempt."""
+    transport = get_judge_transport_log_fields()
+    input_tokens = transport.get("input_tokens")
+    output_tokens = transport.get("output_tokens")
+    return (
+        input_tokens if isinstance(input_tokens, int) else None,
+        output_tokens if isinstance(output_tokens, int) else None,
+    )
+
+
+def judge_raw_response_with_usage(raw: dict[str, Any]) -> dict[str, Any]:
+    """Attach usage block from transport context for manifest persistence."""
+    input_tokens, output_tokens = judge_token_usage_from_transport()
+    if input_tokens is None and output_tokens is None:
+        return raw
+    usage: dict[str, int] = {}
+    if input_tokens is not None:
+        usage["input_tokens"] = input_tokens
+    if output_tokens is not None:
+        usage["output_tokens"] = output_tokens
+    return {**raw, "usage": usage}
+
+
 def _set_judge_transport_context(fields: dict[str, object]) -> None:
     _judge_transport_context.set(fields)
 
@@ -173,24 +197,35 @@ def _require_judge_anthropic_enabled() -> None:
         )
 
 
+def _response_preview(data: object) -> str:
+    try:
+        text = json.dumps(data, ensure_ascii=False)
+    except (TypeError, ValueError):
+        text = repr(data)
+    return truncate_judge_response_text(text)
+
+
 def _extract_message_text(data: dict) -> str:
     content_blocks = data.get("content")
     if not isinstance(content_blocks, list) or not content_blocks:
         raise ServiceUnavailableError(
             message="Anthropic response invalid",
             error_code="llm_error",
+            details={"response_body_preview": _response_preview(data)},
         )
     first = content_blocks[0]
     if not isinstance(first, dict):
         raise ServiceUnavailableError(
             message="Anthropic response invalid",
             error_code="llm_error",
+            details={"response_body_preview": _response_preview(data)},
         )
     text = first.get("text")
     if not isinstance(text, str) or not text.strip():
         raise ServiceUnavailableError(
             message="Anthropic response invalid",
             error_code="llm_error",
+            details={"response_body_preview": _response_preview(data)},
         )
     return text
 
