@@ -152,6 +152,16 @@ def _json_load(value: Any) -> dict[str, Any]:
     return {}
 
 
+def _thread_resolve_blocking_skips(skipped: dict[str, Any]) -> list[str]:
+    issues: list[str] = []
+    if not isinstance(skipped, dict):
+        return issues
+    for key, count in skipped.items():
+        if key != "already_resolved" and (count or 0) > 0:
+            issues.append(f"{key}={count}")
+    return issues
+
+
 def _evaluate_rr_v_gates(metrics: dict[str, Any]) -> dict[str, Any]:
     revisions = metrics.get("revisions", [])
     review_runs = metrics.get("review_runs", [])
@@ -262,25 +272,33 @@ def _evaluate_rr_v_gates(metrics: dict[str, Any]) -> dict[str, Any]:
 
     thread_issues = []
     for job in publish_jobs:
-        skipped = job.get("thread_resolve_skipped") or {}
-        if isinstance(skipped, dict):
-            for key, count in skipped.items():
-                if key != "already_resolved" and (count or 0) > 0:
-                    thread_issues.append(f"{key}={count}")
-    if thread_issues:
+        thread_issues.extend(_thread_resolve_blocking_skips(job.get("thread_resolve_skipped") or {}))
+    latest_job = publish_jobs[-1] if publish_jobs else None
+    latest_issues = _thread_resolve_blocking_skips(
+        (latest_job or {}).get("thread_resolve_skipped") or {}
+    )
+    if not publish_jobs:
+        add("RR-V4_thread_resolve_taxonomy", "PENDING", "no completed publish jobs yet")
+    elif latest_issues:
+        rev = (latest_job or {}).get("revision_number")
+        rev_label = f"rev {rev} " if rev is not None else ""
         add(
             "RR-V4_thread_resolve_taxonomy",
             "PENDING",
-            f"non-zero skip counters: {', '.join(thread_issues)}",
+            f"{rev_label}latest publish: {', '.join(latest_issues)}",
         )
-    elif publish_jobs:
+    elif thread_issues:
+        add(
+            "RR-V4_thread_resolve_taxonomy",
+            "PASS",
+            f"latest publish clean; historical skips: {', '.join(thread_issues)}",
+        )
+    else:
         add(
             "RR-V4_thread_resolve_taxonomy",
             "PASS",
             "thread_resolve_skipped counters zero or absent on completed publishes",
         )
-    else:
-        add("RR-V4_thread_resolve_taxonomy", "PENDING", "no completed publish jobs yet")
 
     if judge_runs and judge_with_outcomes:
         add(

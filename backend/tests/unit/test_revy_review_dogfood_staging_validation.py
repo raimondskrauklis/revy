@@ -57,8 +57,41 @@ def test_rr_v_gate_passes_with_five_runs_and_addressed():
             "resolution_passes": [
                 {"resolution_pass": {"transitions_addressed": 1, "resolution_rate_pct": 50.0}}
             ],
-            "publish_jobs": [{"thread_resolve_skipped": {"thread_id_not_found": 0}}],
+            "publish_jobs": [
+                {"thread_resolve_skipped": {"resolve_mutation_failed": 2}},
+                {"revision_number": 7, "thread_resolve_skipped": {"already_resolved": 1}},
+            ],
             "finding_groups": [{"state": "resolved", "resolution_status": "addressed"}],
         }
     )
     assert gate["ready_for_signoff"] is True
+
+
+def test_rr_v4_passes_when_latest_publish_clean_despite_historical_skips():
+    gate = _evaluate_rr_v_gates(
+        {
+            "revisions": [{"rows_per_head_sha": 1}] * 7,
+            "review_runs": [
+                {
+                    "status": "completed",
+                    "publish_status": "completed",
+                    "head_sha": f"sha{i}",
+                    "publish_head_sha": f"sha{i}",
+                }
+                for i in range(7)
+            ],
+            "resolution_passes": [
+                {"resolution_pass": {"transitions_addressed": 1, "resolution_rate_pct": 100.0}}
+            ],
+            "publish_jobs": [
+                {"revision_number": 2, "thread_resolve_skipped": {"resolve_mutation_failed": 2}},
+                {"revision_number": 7, "thread_resolve_skipped": {"already_resolved": 1}},
+            ],
+            "finding_groups": [{"state": "resolved", "resolution_status": "addressed"}],
+        }
+    )
+    statuses = {c["name"]: c["status"] for c in gate["checks"]}
+    assert statuses["RR-V4_thread_resolve_taxonomy"] == "PASS"
+    assert "historical skips" in next(
+        c["detail"] for c in gate["checks"] if c["name"] == "RR-V4_thread_resolve_taxonomy"
+    )
