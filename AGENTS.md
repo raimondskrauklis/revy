@@ -56,17 +56,20 @@ Root [`.cursorrules`](.cursorrules) is a short pointer.
 
 ## Skills (Revy)
 
-| Skill | When |
-|-------|------|
-| `ship-changes` | Ship: branch, commit, push, PR |
-| `sentry-fix-issues` | User points at one Sentry issue URL/ID |
-| `phase-execution` | Full program LOOP — scaffold (`docs/starter-pack/`) or review-quality (`docs/review-pipeline/waves/REVIEW_QUALITY_EXECUTION.md`); see [agents/](docs/review-pipeline/agents/README.md) |
-| `chunk-execution` | One scaffold subphase only |
-| `babysit-pr` | Triage/fix Greptile review comments on an open PR (optional — Greptile off by default) |
-| `bootstrap-workflow` | Install/upgrade agent-workflow-pack; audit skills per repo |
-| `staging-validation` | Create/update `*_STAGING_VALIDATION.md` from scripts, staging DB, GitHub — on user demand |
+Full installed set: [.agent/manifest.json](.agent/manifest.json) → `skills.installed` · tiers: [.agent/skills.catalog.json](.agent/skills.catalog.json).
 
-Scaffold planning skills (`create-findings`, `create-general-plan`, `create-execution-plan`, peer-review, `devils-advocate`, `post-finish-gap-pass`) apply to `docs/starter-pack/` program work only.
+| Tier | Skills |
+|------|--------|
+| **Meta** | `bootstrap-workflow` |
+| **Core** | `phase-execution`, `ship-changes`, `chunk-execution` |
+| **Planning** | `create-findings`, `create-general-plan`, `create-execution-plan`, `architecture-peer-review`, `execution-peer-review`, `devils-advocate`, `post-finish-gap-pass` |
+| **Sentry** | `sentry-fix-issues` |
+| **Docs export** | `md-formatting`, `md-docx-export`, `docx-md-export` |
+| **Staging validation** | `staging-validation` |
+
+`babysit-pr` is in the catalog but **not installed** — Greptile off (`integrations.greptile: false`). Enable Greptile in manifest first, then install via `bootstrap-workflow` audit.
+
+Planning skills apply to phased program work under `docs/starter-pack/` or `docs/review-pipeline/`.
 
 ## Backend quick ref
 

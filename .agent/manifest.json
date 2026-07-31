@@ -71,7 +71,9 @@
       {
         "id": "judge_json_contract",
         "command": "cd backend && DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.judge_json_contract_staging_metrics",
-        "since_flag": "--since"
+        "since_flag": "--since",
+        "json_flag": "--json",
+        "note": "DATABASE_SSL_INSECURE=1 — staging operator only; see docs/utils/BACKEND_SCRIPTS_RUNBOOK.md"
       }
     ],
     "evidence_runbook": "docs/utils/BACKEND_SCRIPTS_RUNBOOK.md"

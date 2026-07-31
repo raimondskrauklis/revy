@@ -45,7 +45,7 @@ User says *update validation*, *fill table*, *record push N*, *sign off*:
 
 ### B. Run metrics scripts first
 
-From `manifest.validation.metrics_scripts[]`:
+From `manifest.validation.metrics_scripts[]` — append `since_flag` and `json_flag` when present:
 
 ```bash
 # example — adapt per manifest

@@ -65,7 +65,16 @@ Follow `patterns/skills-audit.md`.
 
 ## 4. Review context SSOT
 
-Create `.agent/review-context.json`. Mirror to `.revy/` when `integrations.revy: true`.
+Read `manifest.review_context` after writing `.agent/manifest.json`.
+
+**When `integrations.revy: true` (Revy product):**
+
+1. Create or update **`.revy/review-context.json` first** — product SSOT (`engineering_context` reads this path).
+2. Mirror to **`.agent/review-context.json`** per `manifest.review_context.sync_rule` (edit `.revy` first on every program switch).
+
+**Otherwise:**
+
+Create **`.agent/review-context.json`** as SSOT (`manifest.review_context.ssot`).
 
 Set `programs[].scope` from execution doc or manifest `default_scope`. Full-stack: `["backend/**", "frontend/**"]`. Frontend-only: `["frontend/**"]`.
 
@@ -100,7 +109,7 @@ Implement from `patterns/backend/` in target `backend/`. Do not implement otherw
 ```text
 [ ] .agent/manifest.json + skills.catalog.json
 [ ] Skill audit table executed; skills.installed matches .cursor/skills/
-[ ] .agent/review-context.json valid
+[ ] Review context: `.revy` canonical when `integrations.revy`; `.agent` mirror in sync
 [ ] .cursor/BUGBOT.md links resolve
 [ ] AGENTS.md skills table matches installed set
 [ ] If greptile: generator --check passes
