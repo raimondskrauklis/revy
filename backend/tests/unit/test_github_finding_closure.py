@@ -716,6 +716,157 @@ async def test_verify_still_open_escalation_outside_pairing():
 
 
 @pytest.mark.asyncio
+async def test_verify_still_open_logs_transport_fields_on_judge_failure():
+    """Pass 3 failure path uses _judge_failure_log_extra with transport context."""
+    from unittest.mock import MagicMock
+
+    from app.integrations import anthropic_review
+    from app.integrations.judge_llm_errors import JudgeParseError
+    from app.services.github_compare_patches import ComparePatchesResult
+    from app.services.model_policy import ModelRef
+
+    review_run_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    rev1_id = uuid.uuid4()
+    rev2_id = uuid.uuid4()
+    rev3_id = uuid.uuid4()
+    group_id = uuid.uuid4()
+
+    pull_request = GitHubPullRequestORM(
+        repository_id=uuid.uuid4(),
+        workspace_id=workspace_id,
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=1,
+        title="PR",
+        state="open",
+        head_sha="head3",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=3,
+    )
+    pull_request.id = pull_request_id
+
+    published_prior = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=2,
+        head_sha="head2",
+        base_sha="base",
+    )
+    published_prior.id = rev2_id
+
+    current_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=3,
+        head_sha="head3",
+        base_sha="base",
+    )
+    current_revision.id = rev3_id
+
+    aged_group = GitHubFindingGroupORM(
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="aged-still-open",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Aged still open",
+        message="msg",
+        file_path="backend/probe/stale.py",
+        last_seen_revision_id=rev1_id,
+        resolution_status=ResolutionStatus.still_open,
+    )
+    aged_group.id = group_id
+
+    finding = GitHubFindingORM(
+        review_run_id=review_run_id,
+        workspace_id=workspace_id,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Aged still open",
+        message="msg",
+        file_path="backend/probe/stale.py",
+        group_id=group_id,
+        evidence_snippet="stale line",
+    )
+
+    run = GitHubReviewRunORM(
+        workspace_id=workspace_id,
+        revision_id=rev3_id,
+        status=GitHubReviewRunStatus.completed,
+    )
+    run.id = review_run_id
+
+    compare_result = ComparePatchesResult(patches_by_file={}, compare_failed=False)
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, current_revision, pull_request])
+    session.scalars = AsyncMock(return_value=[aged_group])
+    session.scalar = AsyncMock(side_effect=[None, finding])
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    anthropic_review._set_judge_transport_context(
+        {
+            "profile": "gateway",
+            "messages_url": "https://llm.ai.rtu.lv/v1/messages",
+            "model_id": "claude-sonnet-5",
+            "duration_ms": 88,
+        }
+    )
+
+    with patch("app.services.github_finding_closure.settings") as mock_settings:
+        mock_settings.judge_llm_enabled.return_value = True
+        mock_settings.revy_revision_timeout_standard_seconds = 900
+        with patch(
+            "app.services.github_finding_closure.get_last_published_prior_revision",
+            AsyncMock(return_value=published_prior),
+        ):
+            with patch(
+                "app.services.github_finding_closure._fingerprints_in_review_run",
+                AsyncMock(return_value=set()),
+            ):
+                with patch(
+                    "app.services.github_finding_closure._verification_judge_slots_remaining",
+                    AsyncMock(return_value=VERIFICATION_JUDGE_MAX_PER_RUN),
+                ):
+                    with patch(
+                        "app.services.github_compare_patches.fetch_compare_patches",
+                        AsyncMock(return_value=compare_result),
+                    ):
+                        with patch(
+                            "app.services.github_finding_closure.resolve_model",
+                            AsyncMock(return_value=ModelRef(provider="anthropic", model_id="claude-test")),
+                        ):
+                            with patch(
+                                "app.services.github_finding_closure.call_judge_with_optional_retry",
+                                AsyncMock(
+                                    side_effect=JudgeParseError(
+                                        "judge_json_invalid",
+                                        response_text='{"broken":',
+                                    )
+                                ),
+                            ):
+                                with patch(
+                                    "app.services.github_finding_closure.logger"
+                                ) as mock_logger:
+                                    result = await verify_still_open_escalation_groups(
+                                        session,
+                                        review_run_id=review_run_id,
+                                    )
+
+    assert result.judged_count == 0
+    mock_logger.error.assert_called_once()
+    assert mock_logger.error.call_args.args[0] == "verification_judge_failed"
+    extra = mock_logger.error.call_args.kwargs["extra"]
+    assert extra["profile"] == "gateway"
+    assert extra["duration_ms"] == 88
+    assert extra["parse_error"] == "judge_json_invalid"
+    assert extra["raw_response_text"] == '{"broken":'
+
+
+@pytest.mark.asyncio
 async def test_verification_judge_slots_remaining_accounts_for_prior_outcomes():
     session = AsyncMock()
     session.scalar = AsyncMock(return_value=VERIFICATION_JUDGE_MAX_PER_RUN)

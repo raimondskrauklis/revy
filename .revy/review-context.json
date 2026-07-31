@@ -1,21 +1,21 @@
 {
-  "active_program": "finding-resolution-post-wave-c",
+  "active_program": "judge-transport-reliability",
   "programs": [
     {
-      "id": "finding-resolution-post-wave-c",
+      "id": "judge-transport-reliability",
       "scope": ["backend/**"],
       "paths": [
         {
-          "path": "docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_POST_WAVE_C_D1_EXECUTION.md",
-          "description": "D1 FR-CS4 staging dogfood execution"
+          "path": "docs/review-pipeline/judge/waves/JUDGE_TRANSPORT_RELIABILITY_EXECUTION.md",
+          "description": "Judge transport reliability LOOP index — T0–T3 execution"
         },
         {
-          "path": "docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_POST_WAVE_C_D1_FINDINGS.md",
-          "description": "D1 findings — probe design, pass criteria, edge cases"
+          "path": "docs/review-pipeline/judge/JUDGE_TRANSPORT_RELIABILITY_FINDINGS.md",
+          "description": "Transport baseline — RTU/direct fallback, worker logging gaps"
         },
         {
-          "path": "docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_POST_WAVE_C_D1_GENERAL_PLAN.md",
-          "description": "D1 general plan — subphases D1.0–D1.3"
+          "path": "docs/review-pipeline/judge/JUDGE_TRANSPORT_RELIABILITY_GENERAL_PLAN.md",
+          "description": "T0–T3 transport hardening program"
         }
       ]
     }

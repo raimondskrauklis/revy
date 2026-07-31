@@ -5,6 +5,10 @@ from __future__ import annotations
 import json
 import re
 
+import httpx
+
+from app.core.exceptions import ServiceUnavailableError
+
 JUDGE_RESPONSE_TEXT_MAX_BYTES = 512 * 1024
 _JSON_FENCE_RE = re.compile(r"^```(?:json)?\s*\n?(.*?)\n?```\s*$", re.DOTALL | re.IGNORECASE)
 
@@ -63,4 +67,13 @@ def judge_failure_trace_fields(
     """Returns (raw_response_text, parse_error, response_chars) for manifest + logs."""
     if isinstance(exc, JudgeParseError):
         return exc.response_text, exc.code, len(exc.response_text)
-    return None, str(exc), None
+    if isinstance(exc, ServiceUnavailableError):
+        preview = exc.details.get("response_body_preview")
+        if isinstance(preview, str) and preview:
+            return preview, exc.message, len(preview)
+        return None, exc.message, None
+    if isinstance(exc, httpx.HTTPError):
+        message = str(exc) or type(exc).__name__
+        return None, message, None
+    message = str(exc) or type(exc).__name__
+    return None, message, None

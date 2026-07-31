@@ -4,14 +4,21 @@ from __future__ import annotations
 
 import json
 import logging
+import time
+from contextvars import ContextVar
 from dataclasses import dataclass
+from typing import Any
 
 import httpx
 
 from app.constants.enums import stored_enum_value
 from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError
-from app.integrations.judge_llm_errors import parse_judge_payload
+from app.integrations.judge_llm_errors import (
+    JudgeParseError,
+    parse_judge_payload,
+    truncate_judge_response_text,
+)
 from app.services.judge_prompt_context import resolve_judge_prompt_file_patch
 
 ANTHROPIC_DIRECT_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
@@ -20,6 +27,43 @@ ANTHROPIC_VERSION = "2023-06-01"
 JUDGE_GATEWAY_STRUCTURED_OUTPUT_SUPPORTED = False
 
 logger = logging.getLogger(__name__)
+
+_judge_transport_context: ContextVar[dict[str, object] | None] = ContextVar(
+    "judge_transport_context",
+    default=None,
+)
+
+
+def get_judge_transport_log_fields() -> dict[str, object]:
+    """Last judge HTTP attempt fields for failure log enrichment (T1)."""
+    ctx = _judge_transport_context.get()
+    if ctx is None:
+        return {}
+    return dict(ctx)
+
+
+def _set_judge_transport_context(fields: dict[str, object]) -> None:
+    _judge_transport_context.set(fields)
+
+
+def _profile_transport_fields(profile: _AnthropicProfile) -> dict[str, object]:
+    return {
+        "profile": profile.label,
+        "messages_url": profile.messages_url,
+        "model_id": profile.model_id,
+    }
+
+
+def _extract_usage_fields(data: dict[str, Any]) -> dict[str, int]:
+    usage = data.get("usage")
+    if not isinstance(usage, dict):
+        return {}
+    fields: dict[str, int] = {}
+    for key in ("input_tokens", "output_tokens"):
+        value = usage.get(key)
+        if isinstance(value, int):
+            fields[key] = value
+    return fields
 
 REVIEW_SYSTEM_PROMPT = (
     "You are a senior code reviewer. Return a single JSON object with shape "
@@ -64,6 +108,7 @@ class _AnthropicProfile:
     auth_headers: dict[str, str]
     model_id: str
     label: str
+    allow_judge_profile_fallback: bool = False
 
 
 def _anthropic_base_headers() -> dict[str, str]:
@@ -96,6 +141,7 @@ def _gateway_profile(fallback_model_id: str) -> _AnthropicProfile | None:
         auth_headers={"Authorization": f"Bearer {token.strip()}"},
         model_id=model_id,
         label="gateway",
+        allow_judge_profile_fallback=True,
     )
 
 
@@ -147,6 +193,109 @@ def _extract_message_text(data: dict) -> str:
             error_code="llm_error",
         )
     return text
+
+
+def _parse_messages_response_json(response: httpx.Response) -> dict[str, Any]:
+    try:
+        data = response.json()
+    except ValueError as exc:
+        body_text = response.text if isinstance(response.text, str) else ""
+        raise ServiceUnavailableError(
+            message="Anthropic response invalid",
+            error_code="llm_error",
+            details={
+                "response_body_preview": truncate_judge_response_text(body_text),
+            },
+        ) from exc
+    if not isinstance(data, dict):
+        body_text = response.text if isinstance(response.text, str) else json.dumps(data)
+        raise ServiceUnavailableError(
+            message="Anthropic response invalid",
+            error_code="llm_error",
+            details={
+                "response_body_preview": truncate_judge_response_text(body_text),
+            },
+        )
+    return data
+
+
+def _record_judge_transport_failure(
+    transport_base: dict[str, object],
+    *,
+    started: float,
+    exc: httpx.HTTPError | ServiceUnavailableError,
+) -> None:
+    duration_ms = int((time.perf_counter() - started) * 1000)
+    if isinstance(exc, ServiceUnavailableError):
+        parse_error = exc.message
+    else:
+        parse_error = str(exc) or type(exc).__name__
+    fields: dict[str, object] = {
+        **transport_base,
+        "duration_ms": duration_ms,
+        "parse_error": parse_error,
+        "error_type": type(exc).__name__,
+    }
+    if isinstance(exc, ServiceUnavailableError):
+        preview = exc.details.get("response_body_preview")
+        if isinstance(preview, str) and preview:
+            fields["response_body_preview"] = preview
+            fields["response_chars"] = len(preview)
+    _set_judge_transport_context(fields)
+
+
+async def _post_judge_anthropic_messages(
+    client: httpx.AsyncClient,
+    profile: _AnthropicProfile,
+    *,
+    system: str,
+    user_prompt: str,
+    max_tokens: int,
+    timeout_seconds: float,
+    output_config: dict | None = None,
+) -> str:
+    transport_base = _profile_transport_fields(profile)
+    logger.info(
+        "judge_llm_request_started",
+        extra=transport_base,
+    )
+    started = time.perf_counter()
+    headers = {**_anthropic_base_headers(), **profile.auth_headers}
+    body: dict[str, object] = {
+        "model": profile.model_id,
+        "max_tokens": max_tokens,
+        "system": system,
+        "messages": [{"role": "user", "content": user_prompt}],
+    }
+    if output_config is not None:
+        body["output_config"] = output_config
+    try:
+        response = await client.post(
+            profile.messages_url,
+            headers=headers,
+            json=body,
+            timeout=timeout_seconds,
+        )
+        response.raise_for_status()
+        data = _parse_messages_response_json(response)
+        usage_fields = _extract_usage_fields(data)
+        text = _extract_message_text(data)
+        duration_ms = int((time.perf_counter() - started) * 1000)
+        transport_fields = {
+            **transport_base,
+            "duration_ms": duration_ms,
+            "response_chars": len(text),
+            **usage_fields,
+        }
+        _set_judge_transport_context(transport_fields)
+        logger.info(
+            "judge_llm_request_completed",
+            extra=transport_fields,
+        )
+        return text
+    except (httpx.HTTPError, ServiceUnavailableError) as exc:
+        _record_judge_transport_failure(transport_base, started=started, exc=exc)
+        raise
 
 
 async def _post_anthropic_messages(
@@ -248,7 +397,7 @@ async def _post_judge_messages_for_profile(
     timeout_seconds: float,
 ) -> str:
     if not _profile_supports_structured_output(profile):
-        return await _post_anthropic_messages(
+        return await _post_judge_anthropic_messages(
             client,
             profile,
             system=system,
@@ -257,7 +406,7 @@ async def _post_judge_messages_for_profile(
             timeout_seconds=timeout_seconds,
         )
     try:
-        return await _post_anthropic_messages(
+        return await _post_judge_anthropic_messages(
             client,
             profile,
             system=system,
@@ -282,7 +431,7 @@ async def _post_judge_messages_for_profile(
                     "anthropic_structured_output_unsupported_fallback_plain",
                     extra={"profile": profile.label, "model_id": profile.model_id},
                 )
-                return await _post_anthropic_messages(
+                return await _post_judge_anthropic_messages(
                     client,
                     profile,
                     system=system,
@@ -293,6 +442,14 @@ async def _post_judge_messages_for_profile(
         raise
 
 
+def _judge_profile_fallback_failure_class(exc: Exception) -> str:
+    if isinstance(exc, JudgeParseError):
+        return "parse"
+    if isinstance(exc, httpx.HTTPError):
+        return "http"
+    return "empty_body"
+
+
 async def _post_judge_with_profile_fallback(
     client: httpx.AsyncClient,
     profiles: list[_AnthropicProfile],
@@ -301,16 +458,15 @@ async def _post_judge_with_profile_fallback(
     user_prompt: str,
     max_tokens: int,
     timeout_seconds: float,
-) -> str:
+) -> dict[str, Any]:
     if not profiles:
         raise ServiceUnavailableError(
             message="Anthropic API is not configured",
             error_code="llm_disabled",
         )
-    last_exc: Exception | None = None
     for index, profile in enumerate(profiles):
         try:
-            return await _post_judge_messages_for_profile(
+            text = await _post_judge_messages_for_profile(
                 client,
                 profile,
                 system=system,
@@ -318,23 +474,19 @@ async def _post_judge_with_profile_fallback(
                 max_tokens=max_tokens,
                 timeout_seconds=timeout_seconds,
             )
-        except (httpx.HTTPError, ServiceUnavailableError) as exc:
-            last_exc = exc
-            if index < len(profiles) - 1:
+            return parse_judge_payload(text)
+        except (httpx.HTTPError, ServiceUnavailableError, JudgeParseError) as exc:
+            if profile.allow_judge_profile_fallback and index < len(profiles) - 1:
                 logger.warning(
-                    "anthropic_profile_failed_trying_fallback",
+                    "judge_llm_profile_fallback",
                     extra={
-                        "profile": profile.label,
-                        "model_id": profile.model_id,
+                        **_profile_transport_fields(profile),
                         "error": str(exc),
+                        "failure_class": _judge_profile_fallback_failure_class(exc),
                     },
                 )
-    if last_exc is not None:
-        raise last_exc
-    raise ServiceUnavailableError(
-        message="Anthropic API is not configured",
-        error_code="llm_disabled",
-    )
+                continue
+            raise
 
 
 async def complete_review(
@@ -383,8 +535,9 @@ async def judge_finding(
     system_prompt: str | None = None,
 ) -> dict:
     _require_judge_anthropic_enabled()
+    _set_judge_transport_context({})
     profiles = _judge_profiles(model_id)
-    text = await _post_judge_with_profile_fallback(
+    return await _post_judge_with_profile_fallback(
         client,
         profiles,
         system=system_prompt or JUDGE_SYSTEM_PROMPT,
@@ -392,7 +545,6 @@ async def judge_finding(
         max_tokens=1024,
         timeout_seconds=timeout_seconds or settings.revy_revision_timeout_standard_seconds,
     )
-    return parse_judge_payload(text)
 
 
 def build_verification_judge_prompt(

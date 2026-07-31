@@ -1,9 +1,11 @@
 # backend/tests/unit/test_github_finding_judge.py
 """GitHub finding judge — R5."""
 import itertools
+import json
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 
 from app.constants.enums import (
@@ -155,13 +157,64 @@ def test_build_judge_prompt_includes_evidence_and_grounding():
 
 
 def test_judge_failure_log_extra_includes_raw_response_text():
+    from app.integrations import anthropic_review
     from app.integrations.judge_llm_errors import JudgeParseError
 
+    anthropic_review._set_judge_transport_context(
+        {
+            "profile": "direct",
+            "messages_url": "https://api.anthropic.com/v1/messages",
+            "model_id": "claude-sonnet-5",
+            "duration_ms": 12,
+        }
+    )
     exc = JudgeParseError("judge_json_invalid", response_text='{"broken":')
     extra = _judge_failure_log_extra(uuid.uuid4(), exc)
     assert extra["raw_response_text"] == '{"broken":'
     assert extra["parse_error"] == "judge_json_invalid"
     assert extra["response_chars"] == len('{"broken":')
+    assert extra["profile"] == "direct"
+    assert extra["duration_ms"] == 12
+
+
+def test_judge_failure_log_extra_http_error_uses_transport_parse_error():
+    from app.integrations import anthropic_review
+
+    anthropic_review._set_judge_transport_context(
+        {
+            "profile": "gateway",
+            "messages_url": "https://llm.ai.rtu.lv/v1/messages",
+            "model_id": "claude-sonnet-5",
+            "duration_ms": 42,
+            "parse_error": "Server error '502 Bad Gateway'",
+            "error_type": "HTTPStatusError",
+        }
+    )
+    exc = httpx.HTTPStatusError(
+        "bad gateway",
+        request=MagicMock(),
+        response=MagicMock(status_code=502),
+    )
+    extra = _judge_failure_log_extra(uuid.uuid4(), exc)
+    assert extra["error"] == "Server error '502 Bad Gateway'"
+    assert extra["parse_error"] == "Server error '502 Bad Gateway'"
+    assert extra["profile"] == "gateway"
+
+
+def test_judge_failure_log_extra_includes_invalid_response_preview():
+    from app.core.exceptions import ServiceUnavailableError
+    from app.integrations import anthropic_review
+
+    anthropic_review._set_judge_transport_context({})
+    exc = ServiceUnavailableError(
+        message="Anthropic response invalid",
+        error_code="llm_error",
+        details={"response_body_preview": "not-json {"},
+    )
+    extra = _judge_failure_log_extra(uuid.uuid4(), exc)
+    assert extra["raw_response_text"] == "not-json {"
+    assert extra["error"] == "Anthropic response invalid"
+    assert extra["parse_error"] == "Anthropic response invalid"
 
 
 def test_build_judge_prompt_includes_engineering_locks():
@@ -1060,6 +1113,61 @@ async def test_call_judge_with_optional_retry_retries_parse_failure():
     assert raw["outcome"] == "dismissed"
     assert retry_count == 1
     assert call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_gateway_parse_fallback_call_judge_with_optional_retry_succeeds():
+    from app.integrations import anthropic_review
+    from app.services.github_finding_judge import call_judge_with_optional_retry
+    from app.services.model_policy import ModelRef
+
+    gateway_response = MagicMock()
+    gateway_response.raise_for_status = MagicMock()
+    gateway_response.json.return_value = {
+        "content": [{"text": "```not valid json```"}]
+    }
+    direct_response = MagicMock()
+    direct_response.raise_for_status = MagicMock()
+    direct_response.json.return_value = {
+        "content": [{"text": json.dumps({"outcome": "dismissed", "notes": "ok"})}]
+    }
+    client = AsyncMock(spec=httpx.AsyncClient)
+    client.post = AsyncMock(side_effect=[gateway_response, direct_response])
+
+    async def _real_judge(client, *, model_ref, user_prompt, timeout_seconds, system_prompt=None):
+        return await anthropic_review.judge_finding(
+            client,
+            user_prompt=user_prompt,
+            timeout_seconds=timeout_seconds,
+            system_prompt=system_prompt,
+        )
+
+    with (
+        patch("app.integrations.anthropic_review.settings") as mock_settings,
+        patch(
+            "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
+            AsyncMock(side_effect=_real_judge),
+        ),
+    ):
+        mock_settings.anthropic_gateway_enabled = True
+        mock_settings.anthropic_gateway_messages_url = "https://llm.ai.rtu.lv/v1/messages"
+        mock_settings.anthropic_auth_token = "rtu-token"
+        mock_settings.effective_anthropic_gateway_judge_model = "azure_ai/claude-opus-5"
+        mock_settings.anthropic_direct_enabled = True
+        mock_settings.anthropic_api_key = "direct-key"
+        mock_settings.revy_anthropic_model = "claude-sonnet-5"
+        mock_settings.revy_judge_structured_output = False
+        mock_settings.revy_revision_timeout_standard_seconds = 30
+        raw, retry_count = await call_judge_with_optional_retry(
+            client,
+            model_ref=ModelRef(provider="anthropic", model_id="claude-sonnet-5"),
+            user_prompt="judge",
+            timeout_seconds=30.0,
+        )
+
+    assert raw["outcome"] == "dismissed"
+    assert retry_count == 0
+    assert client.post.await_count == 2
 
 
 @pytest.mark.asyncio

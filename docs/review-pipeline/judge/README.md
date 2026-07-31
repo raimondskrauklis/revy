@@ -2,11 +2,16 @@
 
 **Status:** P0–P5 **implemented** on `feat/judge-input-quality` — staging human gate pending ([validation memo](./JUDGE_INPUT_QUALITY_STAGING_VALIDATION.md)).
 
+**Transport reliability (T0–T2):** **implemented** on `feat/judge-transport-reliability` — [PR #75](https://github.com/raimondskrauklis/revy/pull/75); staging sign-off **pending** ([validation memo](./JUDGE_TRANSPORT_RELIABILITY_STAGING_VALIDATION.md)).
+
 **Design direction (findings + web research):** Moonshot gets the full diff for discovery; the judge should **verify Moonshot’s specific claims** with scoped code evidence (hunk/patch), not re-review the entire PR. See findings § Industry practice.
 
 | Doc | Purpose |
 |-----|---------|
 | [JUDGE_INPUT_INVESTIGATION_FINDINGS.md](./JUDGE_INPUT_INVESTIGATION_FINDINGS.md) | Staging DB + code-path analysis (2026-07-28) |
+| [JUDGE_TRANSPORT_RELIABILITY_FINDINGS.md](./JUDGE_TRANSPORT_RELIABILITY_FINDINGS.md) | RTU/direct transport, fallback, worker logging (2026-07-31) |
+| [JUDGE_TRANSPORT_RELIABILITY_GENERAL_PLAN.md](./JUDGE_TRANSPORT_RELIABILITY_GENERAL_PLAN.md) | T0–T3 transport hardening program |
+| [waves/JUDGE_TRANSPORT_RELIABILITY_EXECUTION.md](./waves/JUDGE_TRANSPORT_RELIABILITY_EXECUTION.md) | Transport reliability LOOP index (T0–T3) |
 | [JUDGE_INPUT_QUALITY_GENERAL_PLAN.md](./JUDGE_INPUT_QUALITY_GENERAL_PLAN.md) | P0–P5 program phases (general — no execution steps) |
 | [waves/JUDGE_INPUT_QUALITY_EXECUTION.md](./waves/JUDGE_INPUT_QUALITY_EXECUTION.md) | LOOP index + P0–P5 execution files |
 

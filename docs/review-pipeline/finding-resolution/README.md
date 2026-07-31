@@ -51,3 +51,16 @@
 | C2 | Manifest + G9 | [C2](./waves/FINDING_RESOLUTION_CLOSURE_SCOPE_C2_EXECUTION.md) | done (`d4666aa`) |
 | C3 | Staging Track C | [C3](./waves/FINDING_RESOLUTION_CLOSURE_SCOPE_C3_EXECUTION.md) | done (`bdb25a4` / [#69](https://github.com/raimondskrauklis/revy/pull/69)) |
 | C4 | Doc sync | [C4](./waves/FINDING_RESOLUTION_CLOSURE_SCOPE_C4_EXECUTION.md) | done |
+
+## Revy PR review — operator notes (2026-07-31)
+
+Dogfood on [judge transport PR #75](../judge/waves/JUDGE_TRANSPORT_RELIABILITY_EXECUTION.md) surfaced friction **resolving** Revy (revybot) findings — separate from finding-resolution product logic.
+
+| Observation | Notes |
+|-------------|--------|
+| **Signal vs Bugbot** | Revy caught real adapter bugs (gateway non-JSON 200 skipping direct fallback, transport context leak, broad `except Exception`) that local Bugbot passes missed. Prefer Revy as the merge gate for judge/transport and similar failure-mode work. |
+| **Resolution UX** | Irritating in practice: fixed findings often stay **open** on the PR (inline threads + summary rollup). Expect **several push/fix cycles**; the bot summary can still say “fix before merge” with stale error-level items after the code is correct. |
+| **How to close the loop** | After each fix push: (1) re-read **this generation** inline comments on the latest SHA, not only “Still open on PR”; (2) manually **resolve** GitHub review threads when verified fixed; (3) treat summary counts as noisy until threads are cleared. |
+| **False positives** | Occasional — e.g. “missing import” when the import exists. Verify against the file on HEAD before chasing. |
+
+**Takeaway:** Budget extra iteration for Revy-driven PRs; value is in depth, cost is resolution hygiene and operator time to mark findings correctly solved.

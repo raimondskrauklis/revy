@@ -136,15 +136,22 @@ async def call_judge_with_optional_retry(
 
 def _judge_failure_log_extra(group_id: UUID, exc: Exception) -> dict[str, object]:
     raw_response_text, parse_error, response_chars = judge_failure_trace_fields(exc)
+    transport = anthropic_review.get_judge_transport_log_fields()
+    merged_error = transport.get("parse_error") or parse_error
+    if merged_error is None and isinstance(exc, httpx.HTTPError):
+        merged_error = str(exc) or type(exc).__name__
     extra: dict[str, object] = {
         "group_id": str(group_id),
-        "error": parse_error,
+        "error": merged_error,
     }
+    extra.update(transport)
+    extra["error"] = extra.get("parse_error") or extra.get("error") or merged_error
     if response_chars is not None:
         extra["response_chars"] = response_chars
-    if raw_response_text is not None:
-        extra["parse_error"] = parse_error
-        extra["raw_response_text"] = raw_response_text
+    preview = raw_response_text or transport.get("response_body_preview")
+    if isinstance(preview, str) and preview:
+        extra["parse_error"] = extra.get("parse_error") or parse_error or extra.get("error")
+        extra["raw_response_text"] = preview
     return extra
 
 

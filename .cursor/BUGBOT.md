@@ -1,12 +1,12 @@
 # Bugbot — review pipeline contract
 
-**Active program:** finding-resolution-post-wave-c — **D1** FR-CS4 staging dogfood.
+**Active program:** judge-transport-reliability — worker-visible judge transport logging + gateway→direct fallback.
 
-When reviewing **backend** changes that touch publish / formatter / pipeline / generation lifecycle / judge code, treat these as authoritative:
+When reviewing **backend** changes that touch judge LLM transport, profile fallback, or failure logging, treat these as authoritative:
 
-- [FINDING_RESOLUTION_POST_WAVE_C_D1_EXECUTION.md](../docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_POST_WAVE_C_D1_EXECUTION.md) — D1 execution (probe protocol, phase gate)
-- [FINDING_RESOLUTION_POST_WAVE_C_D1_FINDINGS.md](../docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_POST_WAVE_C_D1_FINDINGS.md) — probe design, Pass 3 fingerprint rule, sign-off criteria
-- [FINDING_RESOLUTION_POST_WAVE_C_D1_GENERAL_PLAN.md](../docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_POST_WAVE_C_D1_GENERAL_PLAN.md) — D1.0–D1.3 goals
+- [JUDGE_TRANSPORT_RELIABILITY_EXECUTION.md](../docs/review-pipeline/judge/waves/JUDGE_TRANSPORT_RELIABILITY_EXECUTION.md) — T0–T3 LOOP index
+- [JUDGE_TRANSPORT_RELIABILITY_FINDINGS.md](../docs/review-pipeline/judge/JUDGE_TRANSPORT_RELIABILITY_FINDINGS.md) — JT gaps, locked JT-Q1–Q6
+- [JUDGE_TRANSPORT_RELIABILITY_GENERAL_PLAN.md](../docs/review-pipeline/judge/JUDGE_TRANSPORT_RELIABILITY_GENERAL_PLAN.md) — T0–T3 goals
 
 **Agent workflow:**
 
