@@ -490,7 +490,7 @@ async def test_gateway_parse_fallback_to_direct():
 async def test_gateway_non_json_body_fallback_to_direct():
     gateway_response = MagicMock()
     gateway_response.raise_for_status = MagicMock()
-    gateway_response.json.side_effect = json.JSONDecodeError("bad", "doc", 0)
+    gateway_response.text = "not-json {"
     direct_response = MagicMock()
     direct_response.raise_for_status = MagicMock()
     direct_response.json.return_value = {
@@ -513,6 +513,17 @@ async def test_gateway_non_json_body_fallback_to_direct():
 
     assert result["outcome"] == "dismissed"
     assert client.post.await_count == 2
+
+
+def test_parse_messages_response_json_preserves_body_preview():
+    response = MagicMock()
+    response.json.side_effect = json.JSONDecodeError("bad", "doc", 0)
+    response.text = "<html>gateway error</html>"
+
+    with pytest.raises(ServiceUnavailableError) as exc_info:
+        anthropic_review._parse_messages_response_json(response)
+
+    assert exc_info.value.details["response_body_preview"] == "<html>gateway error</html>"
 
 
 @pytest.mark.asyncio

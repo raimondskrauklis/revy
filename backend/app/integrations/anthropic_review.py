@@ -14,7 +14,11 @@ import httpx
 from app.constants.enums import stored_enum_value
 from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError
-from app.integrations.judge_llm_errors import JudgeParseError, parse_judge_payload
+from app.integrations.judge_llm_errors import (
+    JudgeParseError,
+    parse_judge_payload,
+    truncate_judge_response_text,
+)
 from app.services.judge_prompt_context import resolve_judge_prompt_file_patch
 
 ANTHROPIC_DIRECT_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
@@ -195,14 +199,22 @@ def _parse_messages_response_json(response: httpx.Response) -> dict[str, Any]:
     try:
         data = response.json()
     except ValueError as exc:
+        body_text = response.text if isinstance(response.text, str) else ""
         raise ServiceUnavailableError(
             message="Anthropic response invalid",
             error_code="llm_error",
+            details={
+                "response_body_preview": truncate_judge_response_text(body_text),
+            },
         ) from exc
     if not isinstance(data, dict):
+        body_text = response.text if isinstance(response.text, str) else json.dumps(data)
         raise ServiceUnavailableError(
             message="Anthropic response invalid",
             error_code="llm_error",
+            details={
+                "response_body_preview": truncate_judge_response_text(body_text),
+            },
         )
     return data
 
@@ -214,15 +226,22 @@ def _record_judge_transport_failure(
     exc: httpx.HTTPError | ServiceUnavailableError,
 ) -> None:
     duration_ms = int((time.perf_counter() - started) * 1000)
-    parse_error = exc.message if isinstance(exc, ServiceUnavailableError) else str(exc)
-    _set_judge_transport_context(
-        {
-            **transport_base,
-            "duration_ms": duration_ms,
-            "parse_error": parse_error,
-            "error_type": type(exc).__name__,
-        }
-    )
+    if isinstance(exc, ServiceUnavailableError):
+        parse_error = exc.message
+    else:
+        parse_error = str(exc) or type(exc).__name__
+    fields: dict[str, object] = {
+        **transport_base,
+        "duration_ms": duration_ms,
+        "parse_error": parse_error,
+        "error_type": type(exc).__name__,
+    }
+    if isinstance(exc, ServiceUnavailableError):
+        preview = exc.details.get("response_body_preview")
+        if isinstance(preview, str) and preview:
+            fields["response_body_preview"] = preview
+            fields["response_chars"] = len(preview)
+    _set_judge_transport_context(fields)
 
 
 async def _post_judge_anthropic_messages(

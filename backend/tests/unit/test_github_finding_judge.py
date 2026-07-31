@@ -177,6 +177,46 @@ def test_judge_failure_log_extra_includes_raw_response_text():
     assert extra["duration_ms"] == 12
 
 
+def test_judge_failure_log_extra_http_error_uses_transport_parse_error():
+    from app.integrations import anthropic_review
+
+    anthropic_review._set_judge_transport_context(
+        {
+            "profile": "gateway",
+            "messages_url": "https://llm.ai.rtu.lv/v1/messages",
+            "model_id": "claude-sonnet-5",
+            "duration_ms": 42,
+            "parse_error": "Server error '502 Bad Gateway'",
+            "error_type": "HTTPStatusError",
+        }
+    )
+    exc = httpx.HTTPStatusError(
+        "bad gateway",
+        request=MagicMock(),
+        response=MagicMock(status_code=502),
+    )
+    extra = _judge_failure_log_extra(uuid.uuid4(), exc)
+    assert extra["error"] == "Server error '502 Bad Gateway'"
+    assert extra["parse_error"] == "Server error '502 Bad Gateway'"
+    assert extra["profile"] == "gateway"
+
+
+def test_judge_failure_log_extra_includes_invalid_response_preview():
+    from app.core.exceptions import ServiceUnavailableError
+    from app.integrations import anthropic_review
+
+    anthropic_review._set_judge_transport_context({})
+    exc = ServiceUnavailableError(
+        message="Anthropic response invalid",
+        error_code="llm_error",
+        details={"response_body_preview": "not-json {"},
+    )
+    extra = _judge_failure_log_extra(uuid.uuid4(), exc)
+    assert extra["raw_response_text"] == "not-json {"
+    assert extra["error"] == "Anthropic response invalid"
+    assert extra["parse_error"] == "Anthropic response invalid"
+
+
 def test_build_judge_prompt_includes_engineering_locks():
     group = GitHubFindingGroupORM(
         workspace_id=uuid.uuid4(),
