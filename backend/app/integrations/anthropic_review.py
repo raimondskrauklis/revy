@@ -207,6 +207,24 @@ def _parse_messages_response_json(response: httpx.Response) -> dict[str, Any]:
     return data
 
 
+def _record_judge_transport_failure(
+    transport_base: dict[str, object],
+    *,
+    started: float,
+    exc: httpx.HTTPError | ServiceUnavailableError,
+) -> None:
+    duration_ms = int((time.perf_counter() - started) * 1000)
+    parse_error = exc.message if isinstance(exc, ServiceUnavailableError) else str(exc)
+    _set_judge_transport_context(
+        {
+            **transport_base,
+            "duration_ms": duration_ms,
+            "parse_error": parse_error,
+            "error_type": type(exc).__name__,
+        }
+    )
+
+
 async def _post_judge_anthropic_messages(
     client: httpx.AsyncClient,
     profile: _AnthropicProfile,
@@ -256,17 +274,8 @@ async def _post_judge_anthropic_messages(
             extra=transport_fields,
         )
         return text
-    except Exception as exc:
-        duration_ms = int((time.perf_counter() - started) * 1000)
-        parse_error = str(exc)
-        if isinstance(exc, ServiceUnavailableError):
-            parse_error = exc.message
-        transport_fields = {
-            **transport_base,
-            "duration_ms": duration_ms,
-            "parse_error": parse_error,
-        }
-        _set_judge_transport_context(transport_fields)
+    except (httpx.HTTPError, ServiceUnavailableError) as exc:
+        _record_judge_transport_failure(transport_base, started=started, exc=exc)
         raise
 
 

@@ -541,3 +541,74 @@ async def test_judge_transport_context_resets_between_calls():
 
     assert anthropic_review.get_judge_transport_log_fields().get("profile") == "direct"
     assert "stale" not in anthropic_review.get_judge_transport_log_fields().values()
+
+
+@pytest.mark.asyncio
+async def test_judge_transport_records_http_error_type_on_failure():
+    response = MagicMock()
+    response.raise_for_status = MagicMock(
+        side_effect=httpx.HTTPStatusError(
+            "bad gateway",
+            request=MagicMock(),
+            response=MagicMock(status_code=502),
+        )
+    )
+    client = AsyncMock(spec=httpx.AsyncClient)
+    client.post = AsyncMock(return_value=response)
+    profile = anthropic_review._AnthropicProfile(
+        messages_url="https://llm.ai.rtu.lv/v1/messages",
+        auth_headers={"Authorization": "Bearer token"},
+        model_id="claude-sonnet-5",
+        label="gateway",
+        allow_judge_profile_fallback=True,
+    )
+
+    anthropic_review._set_judge_transport_context({})
+    with pytest.raises(httpx.HTTPStatusError):
+        await anthropic_review._post_judge_anthropic_messages(
+            client,
+            profile,
+            system="sys",
+            user_prompt="judge",
+            max_tokens=1024,
+            timeout_seconds=30.0,
+        )
+
+    transport = anthropic_review.get_judge_transport_log_fields()
+    assert transport["profile"] == "gateway"
+    assert transport["error_type"] == "HTTPStatusError"
+    assert "parse_error" in transport
+
+
+@pytest.mark.asyncio
+async def test_judge_transport_does_not_record_context_on_unexpected_error():
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = {"content": [{"text": "ok"}]}
+    client = AsyncMock(spec=httpx.AsyncClient)
+    client.post = AsyncMock(return_value=response)
+    profile = anthropic_review._AnthropicProfile(
+        messages_url=anthropic_review.ANTHROPIC_DIRECT_MESSAGES_URL,
+        auth_headers={"x-api-key": "key"},
+        model_id="claude-sonnet-5",
+        label="direct",
+    )
+
+    anthropic_review._set_judge_transport_context({})
+    with (
+        patch(
+            "app.integrations.anthropic_review._extract_message_text",
+            side_effect=RuntimeError("programming error"),
+        ),
+        pytest.raises(RuntimeError, match="programming error"),
+    ):
+        await anthropic_review._post_judge_anthropic_messages(
+            client,
+            profile,
+            system="sys",
+            user_prompt="judge",
+            max_tokens=1024,
+            timeout_seconds=30.0,
+        )
+
+    assert anthropic_review.get_judge_transport_log_fields() == {}
