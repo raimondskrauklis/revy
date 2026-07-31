@@ -42,6 +42,8 @@
 
 **Post-PSA dogfood (2026-07-29):** [finding-resolution-dogfood](../finding-resolution-dogfood/README.md) — FR-DG1/FR-DG2 **closed PASS**; wave C shipped ([#68](https://github.com/raimondskrauklis/revy/pull/68) + [#69](https://github.com/raimondskrauklis/revy/pull/69) C3).
 
+**Cross-repo dogfood (2026-07-31):** [revy-review-dogfood](../revy-review-dogfood/README.md) — TenderPro #130; drives **RR-W1** next pass.
+
 ## Wave C execution (LOOP)
 
 | Phase | Focus | File | Status |
@@ -54,13 +56,13 @@
 
 ## Revy PR review — operator notes (2026-07-31)
 
-Dogfood on [judge transport PR #75](../judge/waves/JUDGE_TRANSPORT_RELIABILITY_EXECUTION.md) surfaced friction **resolving** Revy (revybot) findings — separate from finding-resolution product logic.
+Cross-repo dogfood (TenderPro #130) confirmed and extended these observations — full gap catalog: [revy-review-dogfood](../revy-review-dogfood/REVY_REVIEW_DOGFOOD_FINDINGS.md) (**RR-DG7**, **RR-W1** next pass).
 
 | Observation | Notes |
 |-------------|--------|
-| **Signal vs Bugbot** | Revy caught real adapter bugs (gateway non-JSON 200 skipping direct fallback, transport context leak, broad `except Exception`) that local Bugbot passes missed. Prefer Revy as the merge gate for judge/transport and similar failure-mode work. |
-| **Resolution UX** | Irritating in practice: fixed findings often stay **open** on the PR (inline threads + summary rollup). Expect **several push/fix cycles**; the bot summary can still say “fix before merge” with stale error-level items after the code is correct. |
-| **How to close the loop** | After each fix push: (1) re-read **this generation** inline comments on the latest SHA, not only “Still open on PR”; (2) manually **resolve** GitHub review threads when verified fixed; (3) treat summary counts as noisy until threads are cleared. |
-| **False positives** | Occasional — e.g. “missing import” when the import exists. Verify against the file on HEAD before chasing. |
+| **Signal vs Bugbot** | Revy caught real adapter bugs on Revy-repo PRs; on TenderPro, high **false-positive** rate on already-fixed HEAD code — verify file at `head_sha` before chasing. |
+| **Resolution UX** | Fixed findings stay **open** (inline + summary); 0% resolution rate despite fixes; 18× thread resolve skipped on one publish. |
+| **How to close the loop** | Re-read **this generation** inline on latest SHA; manually resolve GitHub threads; treat summary counts as noisy. |
+| **Ingestion** | Rapid pushes can hit `uq_github_pr_revisions_pr_number` — review may not complete (RR-DG3). |
 
-**Takeaway:** Budget extra iteration for Revy-driven PRs; value is in depth, cost is resolution hygiene and operator time to mark findings correctly solved.
+**Takeaway:** Finding-resolution mechanisms shipped; **cross-repo operator gate** needs RR-W1 (ingest + publish hygiene + HEAD truth).
