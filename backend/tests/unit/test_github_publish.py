@@ -28,7 +28,7 @@ from app.constants.enums import (
     ResolutionStatus,
     ReviewProfile,
 )
-from app.core.exceptions import ServiceUnavailableError
+from app.core.exceptions import RateLimitedError, ServiceUnavailableError
 from app.integrations import github_api
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_installation import GitHubInstallationORM
@@ -3645,6 +3645,97 @@ def test_load_inline_422_recovered_fingerprints_reads_summary_json():
         {"inline_publish_422_recovered_fingerprints": ["fp-a", "fp-b"]}
     )
     assert recovered == frozenset({"fp-a", "fp-b"})
+
+
+def _inline_post_spec(
+    *, fingerprint: str = "fp-a", file_path: str = "app/a.py"
+) -> github_publish.InlinePostSpec:
+    return github_publish.InlinePostSpec(
+        finding_id=uuid.uuid4(),
+        group_id=uuid.uuid4(),
+        group_fingerprint=fingerprint,
+        file_path=file_path,
+        start_line=4,
+        title="Inline bug",
+        message="details",
+        severity="error",
+        suggestion=None,
+    )
+
+
+def test_append_missing_inline_422_fallback_blocks_skips_existing_header():
+    spec = _inline_post_spec()
+    block = github_publish._format_inline_422_fallback_block(spec)
+    body = f"Summary\n\n{block}"
+    assert github_publish._append_missing_inline_422_fallback_blocks(body, [block]) is None
+
+
+def test_issue_comment_id_for_publish_flush_uses_existing_when_job_unset():
+    job = MagicMock()
+    job.github_comment_id = None
+    build = MagicMock()
+    build.existing_github_comment_id = 4242
+    assert github_publish._issue_comment_id_for_publish_flush(job, build) == 4242
+
+
+@pytest.mark.asyncio
+async def test_resolve_review_thread_with_retry_does_not_retry_rate_limited():
+    client = AsyncMock()
+    with patch(
+        "app.services.github_publish.github_api.resolve_review_thread",
+        AsyncMock(side_effect=RateLimitedError(message="slow down", error_code="rate_limited")),
+    ) as resolve_mock:
+        with pytest.raises(RateLimitedError):
+            await github_publish._resolve_review_thread_with_retry(
+                client,
+                github_installation_id=12345,
+                thread_id="PRRT_test",
+                auth_headers={"Authorization": "Bearer t"},
+            )
+    assert resolve_mock.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_append_recovered_inline_422_blocks_uses_existing_github_comment_id():
+    spec = _inline_post_spec()
+    job = MagicMock()
+    job.github_comment_id = None
+    build = github_publish.PublishSurfaceBuild(
+        check_summary="check",
+        issue_comment="Summary body",
+        conclusion="neutral",
+        summary_json={},
+        inline_threads={},
+        prior_v2_inline={},
+        inline_posts=[spec],
+        post_inline=True,
+        is_update_from_other=True,
+        existing_github_check_run_id=9001,
+        existing_github_comment_id=8001,
+        existing_inline_comments_posted=False,
+        external_id="ext",
+        owner="acme",
+        repo_name="demo",
+    )
+    client = AsyncMock()
+    update_mock = AsyncMock()
+    with patch("app.services.github_publish.github_api.update_issue_comment", update_mock):
+        updated = await github_publish._append_recovered_inline_422_blocks_to_issue_comment(
+            client,
+            github_installation_id=12345,
+            owner="acme",
+            repo_name="demo",
+            job=job,
+            build=build,
+            issue_comment_body=build.issue_comment,
+            recovered_fingerprints={"fp-a"},
+            auth_headers={"Authorization": "Bearer t"},
+        )
+
+    assert "Inline fallback (app/a.py:4)" in updated
+    assert job.github_comment_id == 8001
+    update_mock.assert_awaited_once()
+    assert update_mock.await_args.kwargs["comment_id"] == 8001
 
 
 def test_inline_comments_posted_true_when_all_recovered_via_422():

@@ -710,6 +710,77 @@ async def _fingerprints_to_resolve_inline_threads(
     return fingerprints_to_resolve
 
 
+def _inline_422_fallback_blocks_for_specs(
+    inline_posts: list[InlinePostSpec],
+    recovered_fingerprints: set[str],
+) -> list[str]:
+    return [
+        _format_inline_422_fallback_block(spec)
+        for spec in inline_posts
+        if spec.group_fingerprint in recovered_fingerprints
+    ]
+
+
+def _append_missing_inline_422_fallback_blocks(
+    issue_comment_body: str,
+    fallback_blocks: list[str],
+) -> str | None:
+    missing = [
+        block
+        for block in fallback_blocks
+        if block and block.splitlines()[0] not in issue_comment_body
+    ]
+    if not missing:
+        return None
+    return f"{issue_comment_body.rstrip()}\n\n" + "\n\n".join(missing)
+
+
+def _issue_comment_id_for_publish_flush(
+    job: GitHubPublishJobORM,
+    build: PublishSurfaceBuild,
+) -> int | None:
+    if job.github_comment_id is not None:
+        return job.github_comment_id
+    return build.existing_github_comment_id
+
+
+async def _append_recovered_inline_422_blocks_to_issue_comment(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+    owner: str,
+    repo_name: str,
+    job: GitHubPublishJobORM,
+    build: PublishSurfaceBuild,
+    issue_comment_body: str,
+    recovered_fingerprints: set[str],
+    auth_headers: dict[str, str],
+) -> str:
+    comment_id = _issue_comment_id_for_publish_flush(job, build)
+    if comment_id is None:
+        return issue_comment_body
+
+    updated_body = _append_missing_inline_422_fallback_blocks(
+        issue_comment_body,
+        _inline_422_fallback_blocks_for_specs(build.inline_posts, recovered_fingerprints),
+    )
+    if updated_body is None:
+        return issue_comment_body
+
+    await github_api.update_issue_comment(
+        client,
+        github_installation_id=github_installation_id,
+        owner=owner,
+        repo=repo_name,
+        comment_id=comment_id,
+        body=updated_body,
+        auth_headers=auth_headers,
+    )
+    if job.github_comment_id is None:
+        job.github_comment_id = comment_id
+    return updated_body
+
+
 async def _resolve_review_thread_with_retry(
     client: httpx.AsyncClient,
     *,
@@ -724,7 +795,7 @@ async def _resolve_review_thread_with_retry(
             thread_id=thread_id,
             auth_headers=auth_headers,
         )
-    except (httpx.HTTPError, RateLimitedError, ServiceUnavailableError):
+    except (httpx.HTTPError, ServiceUnavailableError):
         await github_api.resolve_review_thread(
             client,
             github_installation_id=github_installation_id,
@@ -1538,7 +1609,6 @@ async def _flush_publish_surface(
         inline_422_recovered_fingerprints = set(
             _load_inline_422_recovered_fingerprints(job.summary_json)
         )
-        inline_422_fallback_blocks: list[str] = []
         if build.post_inline:
             for spec in build.inline_posts:
                 if spec.group_fingerprint in retry_posted:
@@ -1589,7 +1659,6 @@ async def _flush_publish_surface(
                     )
                     inline_422_recovered_count += 1
                     inline_422_recovered_fingerprints.add(spec.group_fingerprint)
-                    inline_422_fallback_blocks.append(_format_inline_422_fallback_block(spec))
                     job.summary_json = {
                         **(job.summary_json or {}),
                         _INLINE_422_RECOVERED_FINGERPRINTS_KEY: sorted(
@@ -1613,17 +1682,16 @@ async def _flush_publish_surface(
                     ),
                 }
                 await _commit_publish_job_progress(session)
-            if inline_422_fallback_blocks and job.github_comment_id is not None:
-                issue_comment_body = f"{issue_comment_body.rstrip()}\n\n" + "\n\n".join(
-                    inline_422_fallback_blocks
-                )
-                await github_api.update_issue_comment(
+            if inline_422_recovered_fingerprints and build.inline_posts:
+                issue_comment_body = await _append_recovered_inline_422_blocks_to_issue_comment(
                     client,
                     github_installation_id=installation.github_installation_id,
                     owner=build.owner,
-                    repo=build.repo_name,
-                    comment_id=job.github_comment_id,
-                    body=issue_comment_body,
+                    repo_name=build.repo_name,
+                    job=job,
+                    build=build,
+                    issue_comment_body=issue_comment_body,
+                    recovered_fingerprints=inline_422_recovered_fingerprints,
                     auth_headers=auth_headers,
                 )
             if inline_422_recovered_count:
