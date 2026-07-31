@@ -46,7 +46,9 @@ Phase **R2** of [REVY_REVIEW_DOGFOOD_GENERAL_PLAN.md](../REVY_REVIEW_DOGFOOD_GEN
 
 **What:** Human-readable publish footer line: `Thread resolve skipped: N (thread_id_not_found: X, resolve_mutation_failed: Y, …)` for issue comment / check summary.
 
-**Files:** `backend/app/services/github_publish_formatter.py`
+**Files:** `backend/app/services/github_publish_formatter.py`, `backend/app/services/github_publish.py` (`_flush_publish_surface`)
+
+**Contract (locked):** `thread_resolve_skipped` does **not** flow through `format_summary_comment` / `PublishFormatContext`. `_flush_publish_surface` appends the footer via `append_thread_resolve_skipped_block(issue_comment_body, thread_resolve_skipped)` and the same for `check_summary_body` after `_resolve_stale_inline_threads` returns counters. Unit tests call `format_thread_resolve_skipped_block` / `append_thread_resolve_skipped_block` directly.
 
 **Deliverable:** Formatter test includes skip breakdown when counters non-zero.
 

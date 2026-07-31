@@ -41,7 +41,7 @@ Phase **R0** of [REVY_REVIEW_DOGFOOD_GENERAL_PLAN.md](../REVY_REVIEW_DOGFOOD_GEN
 **Deliverable:** One paragraph **RR-DG4 primary tag** + evidence table (fingerprint, `closure_blocked_reason`, `last_seen_revision_id`, compare outcome). Run against staging DB (connection: [DATABASE_CONNECTION_GUIDE.md](../../../utils/DATABASE_CONNECTION_GUIDE.md)):
 
 ```sql
--- Replace :pr_number and :head_sha (e.g. 130, 'b4ba498...')
+-- Replace :repo_full_name (e.g. 'raimondskrauklis/tender_pro'), :pr_number, :head_sha
 SELECT g.fingerprint,
        g.state,
        g.closure_blocked_reason,
@@ -52,8 +52,10 @@ SELECT g.fingerprint,
        r.head_sha AS last_seen_head_sha
 FROM github_finding_groups g
 JOIN github_pull_requests pr ON pr.id = g.pull_request_id
+JOIN github_repositories repo ON repo.id = pr.repository_id
 JOIN github_pull_request_revisions r ON r.id = g.last_seen_revision_id
-WHERE pr.number = :pr_number
+WHERE repo.full_name = :repo_full_name
+  AND pr.number = :pr_number
   AND g.state = 'active'
 ORDER BY g.severity, g.title;
 
@@ -67,7 +69,9 @@ JOIN github_pipeline_runs pr ON pr.id = s.pipeline_run_id
 JOIN github_review_runs rr ON rr.id = pr.review_run_id
 JOIN github_pull_request_revisions rev ON rev.id = rr.revision_id
 JOIN github_pull_requests gpr ON gpr.id = rev.pull_request_id
-WHERE gpr.number = :pr_number
+JOIN github_repositories repo ON repo.id = gpr.repository_id
+WHERE repo.full_name = :repo_full_name
+  AND gpr.number = :pr_number
   AND rev.head_sha = :head_sha
   AND s.step_type = 'reconcile'
   AND a.kind = 'manifest'

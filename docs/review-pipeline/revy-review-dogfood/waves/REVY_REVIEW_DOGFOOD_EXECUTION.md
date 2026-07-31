@@ -6,7 +6,7 @@
 
 **Goal:** Cross-repo operator trust — idempotent ingest, publish hygiene, resolution stamp, HEAD suppression — validated on TenderPro #130 class PRs.
 
-**Branch:** `feat/revy-review-dogfood-rr-w1` (suggested)
+**Branch:** `docs/revy-review-dogfood-findings` (docs + RR-W1 implementation in one PR — [README](../README.md))
 
 ## Out of scope (program)
 

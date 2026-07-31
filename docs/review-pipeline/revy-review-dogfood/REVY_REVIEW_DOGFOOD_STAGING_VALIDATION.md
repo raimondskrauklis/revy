@@ -87,7 +87,7 @@
 | Push 2 `f1e6325` | Merge `origin/main` | Likely origin of first `compare_failed` stamp |
 | Push 3 rev 13 error | `uq_github_pr_revisions_pr_number` | Pairing gap risk (RR-DG11) |
 
-**R3 subphase map:** R3.1 (always) + R3.3 (RR-DG11); R3.2 if pairing persists after R3.1; skip R3.5 (`api_compare_failed`).
+**R3 subphase map:** R3.1 (always) + R3.2 + R3.3 when R0.2 lists secondary `pairing_gap` / RR-DG11 (current TenderPro memo — implement alongside R3.1 per [R3 execution](./waves/REVY_REVIEW_DOGFOOD_R3_EXECUTION.md) § R3.2); skip R3.5 (`api_compare_failed`).
 
 *Operator:* run SQL in [R0 execution](./waves/REVY_REVIEW_DOGFOOD_R0_EXECUTION.md) § R0.2 against staging DB to replace log inference with row-level evidence when available.
 
