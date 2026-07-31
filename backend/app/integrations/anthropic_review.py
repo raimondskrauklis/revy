@@ -436,7 +436,6 @@ async def _post_judge_with_profile_fallback(
             message="Anthropic API is not configured",
             error_code="llm_disabled",
         )
-    last_exc: Exception | None = None
     for index, profile in enumerate(profiles):
         try:
             text = await _post_judge_messages_for_profile(
@@ -449,7 +448,6 @@ async def _post_judge_with_profile_fallback(
             )
             return parse_judge_payload(text)
         except (httpx.HTTPError, ServiceUnavailableError, JudgeParseError) as exc:
-            last_exc = exc
             if profile.allow_judge_profile_fallback and index < len(profiles) - 1:
                 logger.warning(
                     "judge_llm_profile_fallback",
@@ -461,12 +459,6 @@ async def _post_judge_with_profile_fallback(
                 )
                 continue
             raise
-    if last_exc is not None:
-        raise last_exc
-    raise ServiceUnavailableError(
-        message="Anthropic API is not configured",
-        error_code="llm_disabled",
-    )
 
 
 async def complete_review(
