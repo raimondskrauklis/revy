@@ -230,6 +230,34 @@ def format_resolution_metrics_block(manifest: dict[str, object]) -> str:
     return "\n".join(lines)
 
 
+def format_thread_resolve_skipped_block(skipped: dict[str, int]) -> str | None:
+    """RR-W1 R2 — operator-visible thread resolve skip breakdown."""
+    parts: list[str] = []
+    labels = (
+        ("thread_id_not_found", "thread_id_not_found"),
+        ("resolve_mutation_failed", "resolve_mutation_failed"),
+        ("already_resolved", "already_resolved"),
+        ("thread_not_revy_owned", "thread_not_revy_owned"),
+    )
+    total = 0
+    for key, label in labels:
+        count = skipped.get(key, 0)
+        if isinstance(count, int) and count > 0:
+            parts.append(f"{label}: {count}")
+            total += count
+    if total == 0:
+        return None
+    breakdown = ", ".join(parts)
+    return f"- **Thread resolve skipped:** {total} ({breakdown})"
+
+
+def append_thread_resolve_skipped_block(text: str, skipped: dict[str, int]) -> str:
+    block = format_thread_resolve_skipped_block(skipped)
+    if block is None:
+        return text
+    return f"{text.rstrip()}\n\n{block}"
+
+
 def _severity_rank(severity: FindingSeverity | str) -> int:
     return _SEVERITY_RANK.get(stored_enum_value(severity), 99)
 

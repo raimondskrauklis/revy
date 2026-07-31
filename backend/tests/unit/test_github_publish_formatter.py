@@ -26,6 +26,8 @@ from app.services.github_publish_formatter import (
     count_resolution_status,
     extract_summary_blocks_section,
     format_resolution_metrics_block,
+    format_thread_resolve_skipped_block,
+    append_thread_resolve_skipped_block,
     format_summary_comment,
     normalize_llm_issue_comment,
     resolution_counts_from_manifest,
@@ -273,6 +275,34 @@ def test_format_resolution_metrics_block_path_removed_line():
     )
     assert "Closed as path removed" in block
     assert "outside this push pair" in block
+
+
+def test_format_thread_resolve_skipped_block():
+    block = format_thread_resolve_skipped_block(
+        {
+            "thread_id_not_found": 3,
+            "resolve_mutation_failed": 2,
+            "already_resolved": 0,
+            "thread_not_revy_owned": 0,
+        }
+    )
+    assert block is not None
+    assert "**Thread resolve skipped:** 5" in block
+    assert "thread_id_not_found: 3" in block
+    assert "resolve_mutation_failed: 2" in block
+
+
+def test_append_thread_resolve_skipped_block_noop_when_zero():
+    text = "## Revy review\n\nBody"
+    assert append_thread_resolve_skipped_block(
+        text,
+        {
+            "thread_id_not_found": 0,
+            "resolve_mutation_failed": 0,
+            "already_resolved": 0,
+            "thread_not_revy_owned": 0,
+        },
+    ) == text
 
 
 def test_build_pr_review_comment_fallback_includes_resolution_metrics_block():
