@@ -109,6 +109,6 @@
 
 ---
 
-**Remaining open item:** JT-Q2 exact `raw_response_text` for 06:26 incident — close in **T0** via manifest query.
+**Remaining open item:** ~~JT-Q2~~ locked in T0. Staging sign-off (T3.3) pending post-deploy.
 
-**Next step:** `create-execution-plan` → [waves/JUDGE_TRANSPORT_RELIABILITY_EXECUTION.md](./waves/JUDGE_TRANSPORT_RELIABILITY_EXECUTION.md) — **done** → `execution-peer-review` → `phase-execution`.
+**Next step:** merge PR #75 → staging deploy → complete T3.3 live run + metrics trend.
