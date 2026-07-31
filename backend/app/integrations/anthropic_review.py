@@ -104,6 +104,7 @@ class _AnthropicProfile:
     auth_headers: dict[str, str]
     model_id: str
     label: str
+    allow_judge_profile_fallback: bool = False
 
 
 def _anthropic_base_headers() -> dict[str, str]:
@@ -136,6 +137,7 @@ def _gateway_profile(fallback_model_id: str) -> _AnthropicProfile | None:
         auth_headers={"Authorization": f"Bearer {token.strip()}"},
         model_id=model_id,
         label="gateway",
+        allow_judge_profile_fallback=True,
     )
 
 
@@ -189,6 +191,22 @@ def _extract_message_text(data: dict) -> str:
     return text
 
 
+def _parse_messages_response_json(response: httpx.Response) -> dict[str, Any]:
+    try:
+        data = response.json()
+    except ValueError as exc:
+        raise ServiceUnavailableError(
+            message="Anthropic response invalid",
+            error_code="llm_error",
+        ) from exc
+    if not isinstance(data, dict):
+        raise ServiceUnavailableError(
+            message="Anthropic response invalid",
+            error_code="llm_error",
+        )
+    return data
+
+
 async def _post_judge_anthropic_messages(
     client: httpx.AsyncClient,
     profile: _AnthropicProfile,
@@ -222,12 +240,7 @@ async def _post_judge_anthropic_messages(
             timeout=timeout_seconds,
         )
         response.raise_for_status()
-        data = response.json()
-        if not isinstance(data, dict):
-            raise ServiceUnavailableError(
-                message="Anthropic response invalid",
-                error_code="llm_error",
-            )
+        data = _parse_messages_response_json(response)
         usage_fields = _extract_usage_fields(data)
         text = _extract_message_text(data)
         duration_ms = int((time.perf_counter() - started) * 1000)
@@ -437,7 +450,7 @@ async def _post_judge_with_profile_fallback(
             return parse_judge_payload(text)
         except (httpx.HTTPError, ServiceUnavailableError, JudgeParseError) as exc:
             last_exc = exc
-            if profile.label == "gateway" and index < len(profiles) - 1:
+            if profile.allow_judge_profile_fallback and index < len(profiles) - 1:
                 logger.warning(
                     "judge_llm_profile_fallback",
                     extra={
@@ -502,6 +515,7 @@ async def judge_finding(
     system_prompt: str | None = None,
 ) -> dict:
     _require_judge_anthropic_enabled()
+    _set_judge_transport_context({})
     profiles = _judge_profiles(model_id)
     return await _post_judge_with_profile_fallback(
         client,

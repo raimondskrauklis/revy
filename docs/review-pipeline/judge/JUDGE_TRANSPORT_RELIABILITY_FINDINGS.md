@@ -27,7 +27,7 @@
 | **Verification judge (Pass 3)** | Post-reconcile `still_open` — `verify_still_open_escalation_groups` · `VERIFICATION_JUDGE_SYSTEM_PROMPT` |
 | **Gateway profile** | RTU LiteLLM — `ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN` → `{base}/v1/messages` |
 | **Direct profile** | Native Anthropic — `ANTHROPIC_API_KEY` → `api.anthropic.com/v1/messages` |
-| **Profile fallback** | `_post_judge_with_profile_fallback` — try profiles in order on **HTTP/transport** errors only |
+| **Profile fallback** | `_post_judge_with_profile_fallback` — gateway profile may fall through to direct on HTTP, empty/invalid body, or parse error |
 
 ---
 
@@ -41,7 +41,9 @@
 
 **Unknown (RTU down):** No completed HTTP log line to `llm.ai.rtu.lv` in captured worker tail; cannot confirm gateway attempt vs staging env omitting gateway vars. P0 smoke (2026-07-29) showed RTU plain JSON **pass** at ~3.6s when gateway was up.
 
-**Gap:** Worker **console/Celery logging drops** structured `extra` on `github_finding_judge_failed` / `verification_judge_failed`; gateway attempt failures often **invisible** in tail (httpx INFO only logs completed requests). Failure detail **is** persisted in pipeline judge manifest when reconcile records artifacts — but requires DB query.
+**Verified (T1+T2):** Worker logs emit `judge_llm_request_started/completed` and `judge_llm_profile_fallback`; failure extras include transport fields. Gateway empty-body, parse-error, and non-JSON 200 responses fall through to direct when configured.
+
+**Gap (pre-staging deploy):** Console formatter may still hide structured `extra` without `LOG_FORMAT=json` — optional ops toggle.
 
 ---
 
@@ -59,7 +61,7 @@
 
 [Anthropic transport — two profiles, one adapter]
   _judge_profiles: [gateway?, direct?]
-  _post_judge_with_profile_fallback: HTTP/ServiceUnavailable only
+  _post_judge_with_profile_fallback: HTTP / empty body / parse → direct (gateway only)
 ```
 
 | Layer | File | Role |
@@ -80,16 +82,16 @@
 | Area | State | Evidence |
 |------|-------|----------|
 | Gateway-first profiles | **Shipped** | `anthropic_review.py:102–111`, `:296–336` |
-| Direct fallback on HTTP error | **Shipped** | `anthropic_profile_failed_trying_fallback` warning |
+| Direct fallback on HTTP error | **Shipped** | `judge_llm_profile_fallback` warning |
 | Parse retry (once) | **Shipped** | `call_judge_with_optional_retry` — `JudgeParseError`, `judge_outcome_invalid` only |
 | Failure body in manifest | **Shipped** | `JudgeCandidateArtifact.raw_response_text`, `parse_error` |
 | Structured output on gateway | **Off (locked)** | `JUDGE_GATEWAY_STRUCTURED_OUTPUT_SUPPORTED = False`; P0 RTU 400 on structured |
 | Structured output on direct | **Optional** | `REVY_JUDGE_STRUCTURED_OUTPUT` (default false) |
 | Smoke script | **Shipped** | `scripts/test_anthropic_judge_gateway.py` (`--compare-direct`, `--print-raw`) |
 | Staging metrics | **Shipped** | `scripts/judge_json_contract_staging_metrics.py` |
-| Worker profile/usage logging | **Missing** | No log of `profile.label`, URL, or Anthropic `usage` block |
-| Fallback on gateway parse failure | **Missing** | `JudgeParseError` does not try next profile |
-| Celery-visible error detail | **Weak** | `ConsoleFormatter` / Celery default — message name only |
+| Worker profile/usage logging | **Shipped (T1)** | `judge_llm_request_started/completed`, transport fields on failure |
+| Fallback on gateway parse / empty / non-JSON body | **Shipped (T2)** | Gateway profile → direct via `allow_judge_profile_fallback` |
+| Celery-visible error detail | **Improved (T1)** | Named log events; optional `LOG_FORMAT=json` for full `extra` |
 
 ---
 
@@ -147,8 +149,9 @@
 |------|------------------|------|
 | RTU connection refused | Fallback to direct if key set | OK if direct healthy |
 | RTU only configured, no direct key | Judge fails entirely when RTU down | Staging outage = no judge |
-| RTU returns 200, empty `content[].text` | `ServiceUnavailableError` — **no** profile fallback, **no** parse retry | Silent-ish failure; 1 HTTP line, no billing |
-| RTU returns 200, invalid JSON | `JudgeParseError` — retry **same** profile chain twice | No switch to direct |
+| RTU returns 200, empty `content[].text` | Gateway: fallback to direct (T2); direct-only: `ServiceUnavailableError` | OK when dual credentials |
+| RTU returns 200, invalid JSON | Gateway: fallback to direct (T2); direct-only: parse retry then fail | OK when dual credentials |
+| RTU returns 200, non-JSON body | Gateway: `ServiceUnavailableError` → direct fallback (T2) | OK when dual credentials |
 | Direct key wrong org vs billing UI | 401 typically; operator confusion | Ops |
 | Parse fails twice | `skipped_unavailable` if any candidate missing outcome | Finding withheld |
 | Pass 3 + discovery same run | Shared transport; separate prompts | Fix once in adapter |
@@ -253,4 +256,4 @@ Read `candidates[]` fields: `parse_error`, `raw_response_text`, `retry_count`, `
 | Metrics script | `backend/scripts/judge_json_contract_staging_metrics.py` |
 | Logging format | `backend/app/core/logging.py` (`ConsoleFormatter` vs `JsonFormatter`) |
 
-**Next step:** [waves/JUDGE_TRANSPORT_RELIABILITY_EXECUTION.md](./waves/JUDGE_TRANSPORT_RELIABILITY_EXECUTION.md) → `execution-peer-review` → `phase-execution`.
+**Next step:** merge [PR #75](https://github.com/raimondskrauklis/revy/pull/75) → staging deploy → complete [validation memo](./JUDGE_TRANSPORT_RELIABILITY_STAGING_VALIDATION.md) T3.3 sign-off.

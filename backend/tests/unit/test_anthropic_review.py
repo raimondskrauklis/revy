@@ -484,3 +484,60 @@ async def test_gateway_parse_fallback_to_direct():
 
     assert result["outcome"] == "upheld"
     assert client.post.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_gateway_non_json_body_fallback_to_direct():
+    gateway_response = MagicMock()
+    gateway_response.raise_for_status = MagicMock()
+    gateway_response.json.side_effect = json.JSONDecodeError("bad", "doc", 0)
+    direct_response = MagicMock()
+    direct_response.raise_for_status = MagicMock()
+    direct_response.json.return_value = {
+        "content": [{"text": json.dumps({"outcome": "dismissed", "notes": "ok"})}]
+    }
+    client = AsyncMock(spec=httpx.AsyncClient)
+    client.post = AsyncMock(side_effect=[gateway_response, direct_response])
+
+    with patch("app.integrations.anthropic_review.settings") as mock_settings:
+        mock_settings.anthropic_gateway_enabled = True
+        mock_settings.anthropic_gateway_messages_url = "https://llm.ai.rtu.lv/v1/messages"
+        mock_settings.anthropic_auth_token = "rtu-token"
+        mock_settings.effective_anthropic_gateway_judge_model = "azure_ai/claude-opus-5"
+        mock_settings.anthropic_direct_enabled = True
+        mock_settings.anthropic_api_key = "direct-key"
+        mock_settings.revy_anthropic_model = "claude-sonnet-5"
+        mock_settings.revy_judge_structured_output = False
+        mock_settings.revy_revision_timeout_standard_seconds = 30
+        result = await anthropic_review.judge_finding(client, user_prompt="judge this")
+
+    assert result["outcome"] == "dismissed"
+    assert client.post.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_judge_transport_context_resets_between_calls():
+    first_response = MagicMock()
+    first_response.raise_for_status = MagicMock()
+    first_response.json.return_value = {
+        "content": [{"text": json.dumps({"outcome": "dismissed", "notes": "ok"})}]
+    }
+    client = AsyncMock(spec=httpx.AsyncClient)
+    client.post = AsyncMock(return_value=first_response)
+
+    with patch("app.integrations.anthropic_review.settings") as mock_settings:
+        mock_settings.anthropic_gateway_enabled = False
+        mock_settings.anthropic_gateway_messages_url = None
+        mock_settings.anthropic_auth_token = None
+        mock_settings.anthropic_direct_enabled = True
+        mock_settings.anthropic_api_key = "direct-key"
+        mock_settings.revy_anthropic_model = "claude-sonnet-5"
+        mock_settings.revy_judge_structured_output = False
+        mock_settings.revy_revision_timeout_standard_seconds = 30
+        await anthropic_review.judge_finding(client, user_prompt="first")
+        assert anthropic_review.get_judge_transport_log_fields().get("profile") == "direct"
+        anthropic_review._set_judge_transport_context({"profile": "stale"})
+        await anthropic_review.judge_finding(client, user_prompt="second")
+
+    assert anthropic_review.get_judge_transport_log_fields().get("profile") == "direct"
+    assert "stale" not in anthropic_review.get_judge_transport_log_fields().values()
