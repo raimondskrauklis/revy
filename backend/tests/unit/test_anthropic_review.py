@@ -346,3 +346,81 @@ async def test_judge_finding_raises_judge_parse_error_on_invalid_json():
 
     assert exc_info.value.code == "judge_json_invalid"
     assert "```not valid json```" in exc_info.value.response_text
+
+
+def test_extract_usage_fields_reads_token_counts():
+    fields = anthropic_review._extract_usage_fields(
+        {"usage": {"input_tokens": 42, "output_tokens": 7}}
+    )
+    assert fields == {"input_tokens": 42, "output_tokens": 7}
+
+
+def test_extract_usage_fields_empty_when_missing():
+    assert anthropic_review._extract_usage_fields({}) == {}
+
+
+@pytest.mark.asyncio
+async def test_judge_llm_request_started_and_completed_logged(caplog):
+    payload = {
+        "content": [{"text": json.dumps({"outcome": "dismissed", "notes": "ok"})}],
+        "usage": {"input_tokens": 10, "output_tokens": 5},
+    }
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = payload
+    client = AsyncMock(spec=httpx.AsyncClient)
+    client.post = AsyncMock(return_value=response)
+
+    with patch("app.integrations.anthropic_review.settings") as mock_settings:
+        mock_settings.anthropic_gateway_enabled = False
+        mock_settings.anthropic_gateway_messages_url = None
+        mock_settings.anthropic_auth_token = None
+        mock_settings.anthropic_direct_enabled = True
+        mock_settings.anthropic_api_key = "direct-key"
+        mock_settings.revy_anthropic_model = "claude-sonnet-5"
+        mock_settings.revy_judge_structured_output = False
+        mock_settings.revy_revision_timeout_standard_seconds = 30
+        with caplog.at_level("INFO"):
+            await anthropic_review.judge_finding(client, user_prompt="judge this")
+
+    messages = [record.message for record in caplog.records]
+    assert "judge_llm_request_started" in messages
+    assert "judge_llm_request_completed" in messages
+    transport = anthropic_review.get_judge_transport_log_fields()
+    assert transport["profile"] == "direct"
+    assert transport["input_tokens"] == 10
+    assert transport["output_tokens"] == 5
+    assert transport["response_chars"] > 0
+
+
+@pytest.mark.asyncio
+async def test_judge_llm_profile_fallback_logged(caplog):
+    gateway_response = MagicMock()
+    gateway_response.raise_for_status = MagicMock(
+        side_effect=httpx.HTTPStatusError(
+            "gateway down",
+            request=MagicMock(),
+            response=MagicMock(status_code=503),
+        )
+    )
+    direct_response = MagicMock()
+    direct_response.raise_for_status = MagicMock()
+    direct_response.json.return_value = {
+        "content": [{"text": json.dumps({"outcome": "upheld", "notes": "ok"})}]
+    }
+    client = AsyncMock(spec=httpx.AsyncClient)
+    client.post = AsyncMock(side_effect=[gateway_response, direct_response])
+
+    with patch("app.integrations.anthropic_review.settings") as mock_settings:
+        mock_settings.anthropic_gateway_enabled = True
+        mock_settings.anthropic_gateway_messages_url = "https://llm.ai.rtu.lv/v1/messages"
+        mock_settings.anthropic_auth_token = "rtu-token"
+        mock_settings.effective_anthropic_gateway_judge_model = "azure_ai/claude-opus-5"
+        mock_settings.anthropic_direct_enabled = True
+        mock_settings.anthropic_api_key = "direct-key"
+        mock_settings.revy_anthropic_model = "claude-sonnet-5"
+        mock_settings.revy_revision_timeout_standard_seconds = 30
+        with caplog.at_level("WARNING"):
+            await anthropic_review.judge_finding(client, user_prompt="judge this")
+
+    assert "judge_llm_profile_fallback" in [record.message for record in caplog.records]

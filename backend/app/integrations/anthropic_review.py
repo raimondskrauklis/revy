@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import json
 import logging
+import time
+from contextvars import ContextVar
 from dataclasses import dataclass
+from typing import Any
 
 import httpx
 
@@ -20,6 +23,43 @@ ANTHROPIC_VERSION = "2023-06-01"
 JUDGE_GATEWAY_STRUCTURED_OUTPUT_SUPPORTED = False
 
 logger = logging.getLogger(__name__)
+
+_judge_transport_context: ContextVar[dict[str, object] | None] = ContextVar(
+    "judge_transport_context",
+    default=None,
+)
+
+
+def get_judge_transport_log_fields() -> dict[str, object]:
+    """Last judge HTTP attempt fields for failure log enrichment (T1)."""
+    ctx = _judge_transport_context.get()
+    if ctx is None:
+        return {}
+    return dict(ctx)
+
+
+def _set_judge_transport_context(fields: dict[str, object]) -> None:
+    _judge_transport_context.set(fields)
+
+
+def _profile_transport_fields(profile: _AnthropicProfile) -> dict[str, object]:
+    return {
+        "profile": profile.label,
+        "messages_url": profile.messages_url,
+        "model_id": profile.model_id,
+    }
+
+
+def _extract_usage_fields(data: dict[str, Any]) -> dict[str, int]:
+    usage = data.get("usage")
+    if not isinstance(usage, dict):
+        return {}
+    fields: dict[str, int] = {}
+    for key in ("input_tokens", "output_tokens"):
+        value = usage.get(key)
+        if isinstance(value, int):
+            fields[key] = value
+    return fields
 
 REVIEW_SYSTEM_PROMPT = (
     "You are a senior code reviewer. Return a single JSON object with shape "
@@ -149,6 +189,74 @@ def _extract_message_text(data: dict) -> str:
     return text
 
 
+async def _post_judge_anthropic_messages(
+    client: httpx.AsyncClient,
+    profile: _AnthropicProfile,
+    *,
+    system: str,
+    user_prompt: str,
+    max_tokens: int,
+    timeout_seconds: float,
+    output_config: dict | None = None,
+) -> str:
+    transport_base = _profile_transport_fields(profile)
+    logger.info(
+        "judge_llm_request_started",
+        extra=transport_base,
+    )
+    started = time.perf_counter()
+    headers = {**_anthropic_base_headers(), **profile.auth_headers}
+    body: dict[str, object] = {
+        "model": profile.model_id,
+        "max_tokens": max_tokens,
+        "system": system,
+        "messages": [{"role": "user", "content": user_prompt}],
+    }
+    if output_config is not None:
+        body["output_config"] = output_config
+    try:
+        response = await client.post(
+            profile.messages_url,
+            headers=headers,
+            json=body,
+            timeout=timeout_seconds,
+        )
+        response.raise_for_status()
+        data = response.json()
+        if not isinstance(data, dict):
+            raise ServiceUnavailableError(
+                message="Anthropic response invalid",
+                error_code="llm_error",
+            )
+        usage_fields = _extract_usage_fields(data)
+        text = _extract_message_text(data)
+        duration_ms = int((time.perf_counter() - started) * 1000)
+        transport_fields = {
+            **transport_base,
+            "duration_ms": duration_ms,
+            "response_chars": len(text),
+            **usage_fields,
+        }
+        _set_judge_transport_context(transport_fields)
+        logger.info(
+            "judge_llm_request_completed",
+            extra=transport_fields,
+        )
+        return text
+    except Exception as exc:
+        duration_ms = int((time.perf_counter() - started) * 1000)
+        parse_error = str(exc)
+        if isinstance(exc, ServiceUnavailableError):
+            parse_error = exc.message
+        transport_fields = {
+            **transport_base,
+            "duration_ms": duration_ms,
+            "parse_error": parse_error,
+        }
+        _set_judge_transport_context(transport_fields)
+        raise
+
+
 async def _post_anthropic_messages(
     client: httpx.AsyncClient,
     profile: _AnthropicProfile,
@@ -248,7 +356,7 @@ async def _post_judge_messages_for_profile(
     timeout_seconds: float,
 ) -> str:
     if not _profile_supports_structured_output(profile):
-        return await _post_anthropic_messages(
+        return await _post_judge_anthropic_messages(
             client,
             profile,
             system=system,
@@ -257,7 +365,7 @@ async def _post_judge_messages_for_profile(
             timeout_seconds=timeout_seconds,
         )
     try:
-        return await _post_anthropic_messages(
+        return await _post_judge_anthropic_messages(
             client,
             profile,
             system=system,
@@ -282,7 +390,7 @@ async def _post_judge_messages_for_profile(
                     "anthropic_structured_output_unsupported_fallback_plain",
                     extra={"profile": profile.label, "model_id": profile.model_id},
                 )
-                return await _post_anthropic_messages(
+                return await _post_judge_anthropic_messages(
                     client,
                     profile,
                     system=system,
@@ -322,10 +430,9 @@ async def _post_judge_with_profile_fallback(
             last_exc = exc
             if index < len(profiles) - 1:
                 logger.warning(
-                    "anthropic_profile_failed_trying_fallback",
+                    "judge_llm_profile_fallback",
                     extra={
-                        "profile": profile.label,
-                        "model_id": profile.model_id,
+                        **_profile_transport_fields(profile),
                         "error": str(exc),
                     },
                 )

@@ -140,6 +140,7 @@ def _judge_failure_log_extra(group_id: UUID, exc: Exception) -> dict[str, object
         "group_id": str(group_id),
         "error": parse_error,
     }
+    extra.update(anthropic_review.get_judge_transport_log_fields())
     if response_chars is not None:
         extra["response_chars"] = response_chars
     if raw_response_text is not None:

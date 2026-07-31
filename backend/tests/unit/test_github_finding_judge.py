@@ -155,13 +155,24 @@ def test_build_judge_prompt_includes_evidence_and_grounding():
 
 
 def test_judge_failure_log_extra_includes_raw_response_text():
+    from app.integrations import anthropic_review
     from app.integrations.judge_llm_errors import JudgeParseError
 
+    anthropic_review._set_judge_transport_context(
+        {
+            "profile": "direct",
+            "messages_url": "https://api.anthropic.com/v1/messages",
+            "model_id": "claude-sonnet-5",
+            "duration_ms": 12,
+        }
+    )
     exc = JudgeParseError("judge_json_invalid", response_text='{"broken":')
     extra = _judge_failure_log_extra(uuid.uuid4(), exc)
     assert extra["raw_response_text"] == '{"broken":'
     assert extra["parse_error"] == "judge_json_invalid"
     assert extra["response_chars"] == len('{"broken":')
+    assert extra["profile"] == "direct"
+    assert extra["duration_ms"] == 12
 
 
 def test_build_judge_prompt_includes_engineering_locks():
