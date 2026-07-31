@@ -168,7 +168,7 @@ Single publish job uses `job.head_sha` for check run, issue comment, and inline 
 | **RR-Q1** | Is finding-resolution "done"? | **locked** | **Mechanisms shipped**; cross-repo operator gate **not** done |
 | **RR-Q2** | Next pass scope? | **locked** | **RR-W1** — ingest + publish hygiene + HEAD truth (findings above) |
 | **RR-Q3** | Use external repo for staging probes? | **locked** | TenderPro #130 validated for RR-W1; no dedicated probe repo required |
-| **RR-Q4** | Block merge on 0% resolution rate? | **locked** | **Defer product gate until R5** — metric not trustworthy until R1–R3 green |
+| **RR-Q4** | Block merge on 0% resolution rate? | **locked** | **Defer enable** until **RR-V2 PASS** post-`deda3c9` staging dogfood; then recommend soft warn → hard block |
 | **RR-Q5** | `head_sha` unique DB constraint? | **locked** | **(A) Application dedupe** — `_get_revision_for_head_sha` + `IntegrityError` recovery + optional `FOR UPDATE`; **no** Alembic unique on `(pull_request_id, head_sha)` unless R1.4 proves insufficient |
 
 ---

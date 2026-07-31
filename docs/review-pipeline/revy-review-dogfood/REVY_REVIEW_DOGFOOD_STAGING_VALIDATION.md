@@ -2,7 +2,7 @@
 
 **Program:** [README.md](./README.md) · **Findings:** [REVY_REVIEW_DOGFOOD_FINDINGS.md](./REVY_REVIEW_DOGFOOD_FINDINGS.md)  
 **Case study:** TenderPro [PR #130](https://github.com/raimondskrauklis/tender_pro/pull/130) (super-admin dashboard wave 1)  
-**Status:** R0 baseline locked 2026-07-31 — **Revy product FAIL** / **customer app PASS**
+**Status:** RR-W1 **R1–R4 shipped** on `deda3c9` (2026-07-31) — **R5 staging RR-V pending** (TenderPro #130 merged; post-deploy dogfood PR required)
 
 ---
 
@@ -24,6 +24,7 @@
 | TenderPro rev 12 publish | summary `b4ba498` | RR-DG4 / RR-DG5 baseline |
 | TenderPro feature tip | `d915b4e` (code) · `999ad17` (doc) | RR-V1 double-push repro |
 | RR-W1 R0 lock | 2026-07-31 | RR-Q5=A; RR-DG4 tag below |
+| **RR-W1 R1–R4 ship** | `deda3c9` deployed `2026-07-31T19:13:21Z` | [Actions #30657955604](https://github.com/raimondskrauklis/revy/actions/runs/30657955604) — RR-V `--since` window |
 
 ---
 
@@ -31,7 +32,8 @@
 
 | PR | Repo | Status |
 |----|------|--------|
-| [#130](https://github.com/raimondskrauklis/tender_pro/pull/130) | `tender_pro` | open — app merge-ready; Revy RR-W1 in progress |
+| [#130](https://github.com/raimondskrauklis/tender_pro/pull/130) | `tender_pro` | **merged** `999ad17` 2026-07-31 — pre-RR-W1 evidence only |
+| *(open)* | `tender_pro` or `revy` | **required** for post-`deda3c9` RR-V1–V5 — see § Wave B |
 
 ---
 
@@ -120,6 +122,36 @@
 
 ---
 
+## Wave B — post-RR-W1 deploy (`deda3c9`)
+
+**Deploy evidence:** CI + Droplet deploy [success](https://github.com/raimondskrauklis/revy/actions/runs/30657955604) at `2026-07-31T19:13:21Z`.
+
+**Staging DB snapshot** (`--since 2026-07-31T19:08:32Z`):
+
+| Metric | Value | Implication |
+|--------|-------|-------------|
+| `github_pull_request_revisions` | **0** | No post-deploy dogfood pushes yet |
+| `github_publish_jobs` | **0** | RR-V2/V3/V4/V5 not exercisable |
+| `review_context.retrieve_manifest.runs` | **0** | No completed review pipeline post-deploy |
+
+**Operator next:** open a live PR on `tender_pro` (RR-V5 matrix) or `revy` (RR-V1–V4 ingest/publish hygiene); run repro protocol § RR-V gates; append push rows below.
+
+| Gate | Post-deploy status | Evidence |
+|------|-------------------|----------|
+| RR-V1 | **pending** | 0 revisions since deploy |
+| RR-V2 | **pending** | Requires fix-push on live PR + publish summary |
+| RR-V3 | **pending** | Requires successful publish post-deploy |
+| RR-V4 | **pending** | Requires publish with stale inline threads |
+| RR-V5 | **pending** | Requires `tender_pro` PR with matrix fixtures (not #130 — merged) |
+
+### RR-Q4 recommendation (R5.2)
+
+**Status:** `locked` · **Recommendation:** **defer enable**
+
+R1–R3 closure-loop code shipped on `deda3c9` (unit-tested; CI green). Do **not** enable product merge gate on 0% resolution rate until **RR-V2 PASS** on post-deploy staging dogfood (`resolution_pass.resolution_rate_pct > 0` on a fix-push cohort with line edits). If RR-V2 passes on next wave, recommend **soft enable** (warn in publish summary) before hard-blocking customer merges.
+
+---
+
 ## Sign-off
 
 | Party | Verdict | Date |
@@ -127,4 +159,6 @@
 | TenderPro wave 1 | **PASS** | 2026-07-31 |
 | Revy cross-repo dogfood (pre-RR-W1) | **FAIL** — drives **RR-W1** | 2026-07-31 |
 | RR-W1 R0 baseline | **PASS** (log-based RR-DG4 tag) | 2026-07-31 |
-| RR-W1 R1–R5 | pending | — |
+| RR-W1 R1–R4 (code ship) | **PASS** — `deda3c9` CI + Droplet deploy | 2026-07-31 |
+| RR-W1 R5 RR-V gates | **pending** — post-deploy dogfood PR required | — |
+| RR-Q4 product gate | **defer enable** until RR-V2 PASS | 2026-07-31 |

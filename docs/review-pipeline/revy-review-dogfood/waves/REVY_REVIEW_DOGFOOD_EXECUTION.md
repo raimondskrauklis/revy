@@ -6,7 +6,7 @@
 
 **Goal:** Cross-repo operator trust — idempotent ingest, publish hygiene, resolution stamp, HEAD suppression — validated on TenderPro #130 class PRs.
 
-**Branch:** `docs/revy-review-dogfood-findings` (docs + RR-W1 implementation in one PR — [README](../README.md))
+**Branch:** `main` — RR-W1 merged [#78](https://github.com/raimondskrauklis/revy/pull/78) `deda3c9`
 
 ## Out of scope (program)
 
@@ -14,7 +14,7 @@
 - Judge transport (RR-DG8 — closed #75)
 - Moonshot prompt retrain
 - Frontend / i18n
-- Product merge gate on resolution rate until **R5** (RR-Q4)
+- Product merge gate on resolution rate until **RR-V2 PASS** (RR-Q4)
 
 ## How we work (locked)
 
@@ -29,7 +29,7 @@ R3 may overlap R4 after R1 if suppression is independent — LOOP order still R3
 ## Decisions locked for execution
 
 - **RR-Q1:** Extend `github_pull_requests.py`, `github_publish.py`, `github_resolution_metrics.py`, `github_publish_formatter.py` — no parallel closure system.
-- **RR-Q4:** Defer product FAIL on 0% resolution until R5 recommendation.
+- **RR-Q4:** **Defer enable** product gate until RR-V2 PASS post-`deda3c9` staging dogfood.
 - **RR-Q5:** R0 locks app dedupe vs migration; R1 implements locked choice only.
 - **RR-DG4:** R0 tags root cause (API fail | pairing | line-region | stale); R3 implements per tag.
 - **RG-6:** Unchanged.
@@ -40,11 +40,11 @@ R3 may overlap R4 after R1 if suppression is independent — LOOP order still R3
 | Phase | Focus | Execution | Status |
 |-------|--------|-----------|--------|
 | R0 — Baseline | Evidence + RR-DG4 hypothesis + RR-V fixtures | [REVY_REVIEW_DOGFOOD_R0_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R0_EXECUTION.md) | done |
-| R1 — Ingest | Revision idempotency | [REVY_REVIEW_DOGFOOD_R1_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R1_EXECUTION.md) | done (local) |
-| R2 — Publish hygiene | Thread resolve taxonomy | [REVY_REVIEW_DOGFOOD_R2_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R2_EXECUTION.md) | done (local) |
-| R3 — Resolution | Stamp unblock | [REVY_REVIEW_DOGFOOD_R3_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R3_EXECUTION.md) | done (local) |
-| R4 — Accuracy | HEAD suppression + inline 422 | [REVY_REVIEW_DOGFOOD_R4_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R4_EXECUTION.md) | done (local) |
-| R5 — Sign-off | Staging RR-V + doc sync | [REVY_REVIEW_DOGFOOD_R5_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R5_EXECUTION.md) | pending |
+| R1 — Ingest | Revision idempotency | [REVY_REVIEW_DOGFOOD_R1_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R1_EXECUTION.md) | done |
+| R2 — Publish hygiene | Thread resolve taxonomy | [REVY_REVIEW_DOGFOOD_R2_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R2_EXECUTION.md) | done |
+| R3 — Resolution | Stamp unblock | [REVY_REVIEW_DOGFOOD_R3_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R3_EXECUTION.md) | done |
+| R4 — Accuracy | HEAD suppression + inline 422 | [REVY_REVIEW_DOGFOOD_R4_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R4_EXECUTION.md) | done |
+| R5 — Sign-off | Staging RR-V + doc sync | [REVY_REVIEW_DOGFOOD_R5_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R5_EXECUTION.md) | pending (RR-V) |
 
 **Peer review:** Findings + general plan (2026-07-31); execution files peer-reviewed + tightened same day (RR-V gate order, R1 collision retry, R3 tag map, R4 reconcile hook).
 
@@ -55,4 +55,5 @@ R3 may overlap R4 after R1 if suppression is independent — LOOP order still R3
 | R2 | `2e7c4de` |
 | R3 | `1ab7e4f` |
 | R4 | `9777aee` |
-| R5 | — |
+| R5 (ship) | `deda3c9` |
+| R5 (RR-V sign-off) | — |

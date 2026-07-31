@@ -20,6 +20,7 @@
 |----|---------|--------|--------|
 | *(open)* | Agent workflow pack E2E | `chore/agent-workflow-e2e-validation` | [#73](https://github.com/raimondskrauklis/revy/pull/73) push 1 |
 | *(open)* | Finding resolution dogfood | `chore/finding-resolution-staging-dogfood` | P0 pushed — staging validation in progress |
+| *(required)* | **Revy review dogfood RR-V** | `tender_pro` or `revy` | TenderPro #130 merged — post-`deda3c9` dogfood PR needed · [memo](../revy-review-dogfood/REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md) |
 | [#63](https://github.com/raimondskrauklis/revy/pull/63) | PSA post-#62 deploy | `chore/psa-staging-dogfood` | **sign-off complete** — merged |
 
 ## Next validation PRs
@@ -37,6 +38,7 @@
 | Review engineering context | [REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md](../review-engineering-context/REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md) |
 | Judge JSON contract | [JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](../judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) |
 | Finding resolution | [FINDING_RESOLUTION_STAGING_VALIDATION.md](../finding-resolution/FINDING_RESOLUTION_STAGING_VALIDATION.md) |
+| Revy review cross-repo dogfood | [REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md](../revy-review-dogfood/REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md) |
 | Agent workflow pack E2E | [AGENT_WORKFLOW_PACK_E2E_VALIDATION.md](./AGENT_WORKFLOW_PACK_E2E_VALIDATION.md) |
 
 ## Shared tooling
