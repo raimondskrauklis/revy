@@ -60,8 +60,8 @@ DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.revy_review_dogfood_staging
 | 1 | Introduce `rr_w1_staging_probe` defect (`subprocess` + `shell=True`) | **done** `8f7f5e0` |
 | 2 | Structural fix — `rr_w1_probe_composed()` only; verify `transitions_addressed` ≥ 1 | **done** `ee4668c` — **closure FAIL** (see notes) |
 | 3 | Remove dead defect code + unrelated backend touch (pairing / `last_seen`) | **done** `abdbd5c` — probe `resolved`/`addressed` |
-| 4 | Same-`head_sha` double-push OR rapid second SHA (RR-V1) | pending |
-| 5 | Confirm finding groups `resolved` / `addressed`; judge outcomes on escalation run | pending |
+| 4 | Same-`head_sha` double-push OR rapid second SHA (RR-V1) | **done** `38dd7b4` — rev 4 complete (Revy check skipped) |
+| 5 | Confirm groups stay `resolved`/`addressed`; `--rr-v-gate` | in progress |
 
 **Rules:** wait for Revy check **complete** before next push; record `head_sha`, `review_run_id`, group IDs per push in Results table.
 
@@ -72,7 +72,8 @@ DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.revy_review_dogfood_staging
 | 1 | `8f7f5e0` | 1 | `019fb9a7-ddf0-7dc0-b894-94e8a8d604ce` | 3 groups published (1 critical probe); judge 1/2 outcomes; publish OK |
 | 2 | `ee4668c` | 2 | `019fb9b2-78ee-7646-9f12-d5375f3b880c` | **closure FAIL:** `transitions_addressed=0`; old probe group superseded; new critical on dead `subprocess` body; `resolve_mutation_failed=2` |
 | 3 | `abdbd5c` | 3 | `019fb9b7-ac80-770c-b69f-067e391a891b` | **closure PASS:** group `019fb9b3…` `resolved`/`absent_and_addressed`; `transitions_addressed=1`; rate 100% |
-| 4 | — | — | — | pending — rapid push / RR-V1 |
+| 4 | `38dd7b4` | 4 | — | empty + doc commit; 4 revisions; RR-V1 PASS |
+| 5 | — | — | — | pending — marker bump + gate sign-off |
 
 ---
 

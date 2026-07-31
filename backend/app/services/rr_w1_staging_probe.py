@@ -6,7 +6,7 @@ Push 2: structural fix — stop calling defect (FR-CS4 pattern; re-report risk).
 Push 3+: remove defect body (line-region fix) for addressed closure.
 """
 
-RR_W1_PROBE_MARKER = "rr-w1-push-1"
+RR_W1_PROBE_MARKER = "rr-w1-push-5"
 
 
 def rr_w1_probe_value() -> str:
