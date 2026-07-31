@@ -233,26 +233,31 @@ def _evaluate_rr_v_gates(metrics: dict[str, Any]) -> dict[str, Any]:
             f"(failed={len(failed_runs)})",
         )
 
+    completed_publishes = [
+        r
+        for r in completed_runs
+        if r.get("publish_status") == "completed"
+        and r.get("publish_head_sha")
+        and r.get("publish_head_sha") == r.get("head_sha")
+    ]
+
     if publish_mismatches:
         add(
             "RR-V3_publish_head_sha_parity",
             "FAIL",
             f"{len(publish_mismatches)} publish head_sha mismatches",
         )
-    elif completed_runs and all(
-        r.get("publish_status") == "completed" for r in completed_runs if r.get("publish_status")
-    ):
+    elif completed_publishes:
         add(
             "RR-V3_publish_head_sha_parity",
             "PASS",
-            f"all {len([r for r in completed_runs if r.get('publish_status')])} "
-            "completed publishes match revision head_sha",
+            f"{len(completed_publishes)} completed publishes match revision head_sha",
         )
     else:
         add(
             "RR-V3_publish_head_sha_parity",
             "PENDING",
-            "need completed publish jobs with matching head_sha",
+            "need >=1 completed publish with matching head_sha",
         )
 
     thread_issues = []

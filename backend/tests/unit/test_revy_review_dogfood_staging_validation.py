@@ -7,7 +7,14 @@ def test_rr_v_gate_pending_with_insufficient_runs():
     gate = _evaluate_rr_v_gates(
         {
             "revisions": [{"rows_per_head_sha": 1}],
-            "review_runs": [{"status": "completed", "publish_status": "completed", "head_sha": "a", "publish_head_sha": "a"}],
+            "review_runs": [
+                {
+                    "status": "completed",
+                    "publish_status": "completed",
+                    "head_sha": "a",
+                    "publish_head_sha": "a",
+                }
+            ],
             "resolution_passes": [],
             "publish_jobs": [],
             "finding_groups": [],
@@ -16,6 +23,20 @@ def test_rr_v_gate_pending_with_insufficient_runs():
     assert gate["ready_for_signoff"] is False
     statuses = {c["name"]: c["status"] for c in gate["checks"]}
     assert statuses["RR-V2_resolution_stamp"] == "PENDING"
+
+
+def test_rr_v3_pending_without_completed_publish():
+    gate = _evaluate_rr_v_gates(
+        {
+            "revisions": [],
+            "review_runs": [{"status": "completed", "head_sha": "a"}],
+            "resolution_passes": [],
+            "publish_jobs": [],
+            "finding_groups": [],
+        }
+    )
+    statuses = {c["name"]: c["status"] for c in gate["checks"]}
+    assert statuses["RR-V3_publish_head_sha_parity"] == "PENDING"
 
 
 def test_rr_v_gate_passes_with_five_runs_and_addressed():

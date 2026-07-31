@@ -26,10 +26,6 @@
 | TenderPro rev 12 publish | summary `b4ba498` | RR-DG4 / RR-DG5 baseline |
 | TenderPro feature tip | `d915b4e` (code) · `999ad17` (doc) | RR-V1 double-push repro |
 | RR-W1 R0 lock | 2026-07-31 | RR-Q5=A; RR-DG4 tag below |
-
----
-
-| RR-W1 R0 lock | 2026-07-31 | RR-Q5=A; RR-DG4 tag below |
 | **RR-W1 R1–R4 ship** | `deda3c9` deployed `2026-07-31T19:13:21Z` | [Actions #30657955604](https://github.com/raimondskrauklis/revy/actions/runs/30657955604) |
 
 ---
@@ -39,7 +35,7 @@
 | PR | Branch | Status |
 |----|--------|--------|
 | [#78](https://github.com/raimondskrauklis/revy/pull/78) | `docs/revy-review-dogfood-findings` | merged `deda3c9` — implementation only |
-| *(open)* | `chore/rr-w1-r5-staging-validation` | **active** — RR-V multi-push protocol |
+| *(open)* | [#80](https://github.com/raimondskrauklis/revy/pull/80) `chore/rr-w1-r5-staging-validation` | **active** — push 1 complete |
 
 **Fixture:** `backend/app/services/rr_w1_staging_probe.py` (pattern: FR-CS4 / FR-DG2 probes).
 
@@ -61,8 +57,8 @@ DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.revy_review_dogfood_staging
 
 | Push | Intent | Status |
 |------|--------|--------|
-| 1 | Introduce `rr_w1_staging_probe` defect (`subprocess` + `shell=True`) | pending |
-| 2 | Structural fix — `rr_w1_probe_composed()` only; verify `transitions_addressed` ≥ 1 | pending |
+| 1 | Introduce `rr_w1_staging_probe` defect (`subprocess` + `shell=True`) | **done** `8f7f5e0` |
+| 2 | Structural fix — `rr_w1_probe_composed()` only; verify `transitions_addressed` ≥ 1 | in progress |
 | 3 | Unrelated backend commit (pairing / last_seen drift) | pending |
 | 4 | Same-`head_sha` double-push OR rapid second SHA (RR-V1) | pending |
 | 5 | Confirm finding groups `resolved` / `addressed`; judge outcomes on escalation run | pending |
@@ -73,7 +69,8 @@ DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.revy_review_dogfood_staging
 
 | Push | `head_sha` | Revy rev | `review_run_id` | Notes |
 |------|------------|----------|-----------------|-------|
-| 1 | — | — | — | pending |
+| 1 | `8f7f5e0` | 1 | `019fb9a7-ddf0-7dc0-b894-94e8a8d604ce` | 3 groups published (1 critical probe); judge 1/2 outcomes; publish OK |
+| 2 | — | — | — | pending — structural probe fix |
 
 ---
 

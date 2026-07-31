@@ -20,9 +20,9 @@ def rr_w1_probe_value() -> str:
 
 
 def rr_w1_probe_invoke(user_input: str) -> str:
-    """Push 1 only — invokes defect so diff + review surface the finding."""
-    _rr_w1_review_visible_defect(user_input)
-    return RR_W1_PROBE_MARKER
+    """Push 2+ — retired; structural fix routes to composed path."""
+    _ = user_input
+    return rr_w1_probe_composed()
 
 
 def rr_w1_probe_composed() -> str:

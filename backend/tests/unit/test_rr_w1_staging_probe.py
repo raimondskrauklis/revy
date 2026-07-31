@@ -14,12 +14,12 @@ def test_rr_w1_probe_importable():
     assert rr_w1_probe_value() == RR_W1_PROBE_MARKER
 
 
-def test_rr_w1_probe_invoke_calls_defect():
+def test_rr_w1_probe_invoke_routes_to_composed():
     with patch(
         "app.services.rr_w1_staging_probe._rr_w1_review_visible_defect",
     ) as mock_defect:
         assert rr_w1_probe_invoke("echo") == RR_W1_PROBE_MARKER
-        mock_defect.assert_called_once_with("echo")
+        mock_defect.assert_not_called()
 
 
 def test_rr_w1_probe_composed_returns_marker_without_defect():
