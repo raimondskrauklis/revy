@@ -31,7 +31,7 @@ description: >-
 
 Adapt template — set `integrations.greptile: false` unless user explicitly asks.
 
-**Scope:** detect `backend/` + `frontend/` (KP layout). Default `default_scope: ["backend/**"]`. If user or execution doc requires UI work, set `programs[].scope` to include `frontend/**` — see `patterns/SCOPE.md`.
+**Scope:** detect `backend/` + `frontend/` (standard full-stack layout). Default `default_scope: ["backend/**"]`. If user or execution doc requires UI work, set `programs[].scope` to include `frontend/**` — see `patterns/SCOPE.md`.
 
 Write `.agent/flows/*.json` from pack templates.
 
