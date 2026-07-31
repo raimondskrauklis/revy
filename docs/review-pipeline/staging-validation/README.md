@@ -9,6 +9,8 @@
 | Doc | Purpose |
 |-----|---------|
 | [STAGING_VALIDATION_FINDINGS.md](./STAGING_VALIDATION_FINDINGS.md) | Baseline — gaps, SV-Q registry, deploy-window rules, parallel-track model |
+| [TEMPLATE_STAGING_VALIDATION.md](./TEMPLATE_STAGING_VALIDATION.md) | Stub for new per-program `*_STAGING_VALIDATION.md` memos |
+| [TEMPLATE_VALIDATION_INDEX.md](./TEMPLATE_VALIDATION_INDEX.md) | Optional index stub (this README is the live index on Revy) |
 | *(later)* `STAGING_VALIDATION_GENERAL_PLAN.md` | Phased rollout (script extensions, memo templates, CI hooks) |
 | *(later)* `waves/STAGING_VALIDATION_EXECUTION.md` | LOOP when implementation is needed |
 

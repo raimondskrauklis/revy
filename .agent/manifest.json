@@ -64,6 +64,7 @@
   },
   "validation": {
     "index_doc": "docs/review-pipeline/staging-validation/README.md",
+    "memo_template": "docs/review-pipeline/staging-validation/TEMPLATE_STAGING_VALIDATION.md",
     "memo_pattern": "docs/review-pipeline/{program_folder}/{PROGRAM}_STAGING_VALIDATION.md",
     "e2e_memo": "docs/review-pipeline/staging-validation/AGENT_WORKFLOW_PACK_E2E_VALIDATION.md",
     "metrics_scripts": [

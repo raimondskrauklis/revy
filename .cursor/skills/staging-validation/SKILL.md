@@ -14,9 +14,9 @@ description: >-
 
 **Config:** `.agent/manifest.json` → `validation` (scripts, memo paths, index doc).
 
-**Patterns:** pack `patterns/staging-validation/README.md` + `TEMPLATE_STAGING_VALIDATION.md`.
+**Templates (Revy):** `docs/review-pipeline/staging-validation/TEMPLATE_STAGING_VALIDATION.md` · index: [README.md](docs/review-pipeline/staging-validation/README.md).
 
-**Revy:** `internal-docs/agent-workflow-pack/overlays/revy/staging-validation.md` or `docs/review-pipeline/staging-validation/README.md`.
+**Pack (other repos):** `internal-docs/agent-workflow-pack/patterns/staging-validation/` + `overlays/revy/staging-validation.md` when `integrations.revy: true`.
 
 **Rule:** Connect **real evidence** — never mark PASS without script output, SQL row, `head_sha`, or GitHub URL in Evidence column.
 
