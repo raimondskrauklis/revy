@@ -1,0 +1,199 @@
+{
+  "pack_version": "1",
+  "description": "Master skill inventory for agent-workflow-pack. Bootstrap copies to .agent/skills.catalog.json and audits target repo.",
+  "tiers": {
+    "meta": "Install / upgrade workflow in a repo",
+    "core": "Default LOOP and ship — install on almost every repo",
+    "planning": "Findings → general plan → execution — program work",
+    "optional_greptile": "Post-push Greptile — only when user enables integration",
+    "optional_sentry": "Sentry MCP debugging — manual, user points at one issue",
+    "optional_docs": "Markdown / Word handoff — docs-heavy repos",
+    "optional_validation": "Staging dogfood validation memos — fill from real evidence on user demand"
+  },
+  "skills": [
+    {
+      "id": "bootstrap-workflow",
+      "tier": "meta",
+      "default_install": true,
+      "copy_scripts": false,
+      "when": "Install or upgrade agent-workflow-pack in a target repo",
+      "requires_integrations": [],
+      "requires_paths": [],
+      "conflicts_with": []
+    },
+    {
+      "id": "phase-execution",
+      "tier": "core",
+      "default_install": true,
+      "copy_scripts": false,
+      "when": "Full program LOOP — attach execution file or plan folder",
+      "requires_integrations": [],
+      "requires_paths": ["docs/"],
+      "conflicts_with": []
+    },
+    {
+      "id": "ship-changes",
+      "tier": "core",
+      "default_install": true,
+      "copy_scripts": false,
+      "when": "Ship ad-hoc work: Bugbot → commit → push → PR",
+      "requires_integrations": [],
+      "requires_paths": [],
+      "conflicts_with": []
+    },
+    {
+      "id": "chunk-execution",
+      "tier": "core",
+      "default_install": true,
+      "copy_scripts": false,
+      "when": "One subphase only — user explicitly asks, not full LOOP",
+      "requires_integrations": [],
+      "requires_paths": ["docs/"],
+      "conflicts_with": []
+    },
+    {
+      "id": "create-findings",
+      "tier": "planning",
+      "default_install": false,
+      "install_when": "Repo runs phased programs with findings docs",
+      "copy_scripts": false,
+      "when": "Research topic, scope work before planning",
+      "requires_integrations": [],
+      "requires_paths": ["docs/"],
+      "conflicts_with": []
+    },
+    {
+      "id": "create-general-plan",
+      "tier": "planning",
+      "default_install": false,
+      "install_when": "Repo runs phased programs",
+      "copy_scripts": false,
+      "when": "Turn findings into phased GENERAL plan",
+      "requires_integrations": [],
+      "requires_paths": ["docs/"],
+      "conflicts_with": []
+    },
+    {
+      "id": "create-execution-plan",
+      "tier": "planning",
+      "default_install": false,
+      "install_when": "Repo runs phased programs",
+      "copy_scripts": false,
+      "when": "Write per-phase execution files from general plan",
+      "requires_integrations": [],
+      "requires_paths": ["docs/"],
+      "conflicts_with": []
+    },
+    {
+      "id": "architecture-peer-review",
+      "tier": "planning",
+      "default_install": false,
+      "install_when": "Repo uses findings/general plan peer review",
+      "copy_scripts": false,
+      "when": "Cross-check one findings, general, or design doc vs codebase",
+      "requires_integrations": [],
+      "requires_paths": [],
+      "conflicts_with": []
+    },
+    {
+      "id": "execution-peer-review",
+      "tier": "planning",
+      "default_install": false,
+      "install_when": "Repo uses execution plans before LOOP",
+      "copy_scripts": false,
+      "when": "Read-only review of execution files P0…Pn before phase-execution",
+      "requires_integrations": [],
+      "requires_paths": ["docs/"],
+      "conflicts_with": []
+    },
+    {
+      "id": "devils-advocate",
+      "tier": "planning",
+      "default_install": false,
+      "install_when": "Repo stress-tests plans before build",
+      "copy_scripts": false,
+      "when": "Stress-test a plan or design doc",
+      "requires_integrations": [],
+      "requires_paths": [],
+      "conflicts_with": []
+    },
+    {
+      "id": "post-finish-gap-pass",
+      "tier": "planning",
+      "default_install": false,
+      "install_when": "Repo uses phase-execution on multi-phase programs",
+      "copy_scripts": false,
+      "when": "Last phase — gaps vs shipped code before doc-sync",
+      "requires_integrations": [],
+      "requires_paths": ["docs/"],
+      "conflicts_with": []
+    },
+    {
+      "id": "babysit-pr",
+      "tier": "optional_greptile",
+      "default_install": false,
+      "install_when": "integrations.greptile is true",
+      "copy_scripts": false,
+      "when": "User asks: babysit pr, fix greptile — post-push Greptile threads",
+      "requires_integrations": ["greptile"],
+      "requires_paths": [],
+      "conflicts_with": []
+    },
+    {
+      "id": "sentry-fix-issues",
+      "tier": "optional_sentry",
+      "default_install": false,
+      "install_when": "Sentry MCP configured in .cursor/mcp.json",
+      "copy_scripts": false,
+      "when": "User points at one Sentry issue URL/ID — manual only",
+      "requires_integrations": ["sentry_mcp"],
+      "requires_paths": [".cursor/mcp.json"],
+      "conflicts_with": []
+    },
+    {
+      "id": "md-formatting",
+      "tier": "optional_docs",
+      "default_install": false,
+      "install_when": "Repo exports docs to Word/PDF or handoff MD to stakeholders",
+      "copy_scripts": false,
+      "when": "Fix markdown for GitHub + Pandoc export",
+      "requires_integrations": [],
+      "requires_paths": ["docs/"],
+      "conflicts_with": []
+    },
+    {
+      "id": "md-docx-export",
+      "tier": "optional_docs",
+      "default_install": false,
+      "install_when": "Repo needs MD → Word export (Pandoc)",
+      "copy_scripts": true,
+      "when": "Export markdown to compact Word docx",
+      "requires_integrations": [],
+      "requires_paths": ["docs/"],
+      "conflicts_with": []
+    },
+    {
+      "id": "docx-md-export",
+      "tier": "optional_docs",
+      "default_install": false,
+      "install_when": "Repo ingests Word handoffs into docs/",
+      "copy_scripts": true,
+      "when": "Convert Word docx to GitHub-flavored markdown",
+      "requires_integrations": [],
+      "requires_paths": ["docs/"],
+      "conflicts_with": []
+    },
+    {
+      "id": "staging-validation",
+      "tier": "optional_validation",
+      "default_install": false,
+      "install_when": "integrations.revy OR repo has *_STAGING_VALIDATION.md OR staging dogfood / tuning in progress",
+      "copy_scripts": false,
+      "when": "Create or update staging validation memo tables from scripts, DB, GitHub evidence",
+      "requires_integrations": [],
+      "requires_paths": ["docs/"],
+      "requires_glob_any": ["**/*_STAGING_VALIDATION.md", "**/staging-validation/**"],
+      "conflicts_with": []
+    }
+  ]
+}

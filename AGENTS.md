@@ -43,6 +43,17 @@ Entry point for AI agents working in this repo.
 
 Root [`.cursorrules`](.cursorrules) is a short pointer.
 
+## Agent workflow
+
+| Topic | File |
+|-------|------|
+| **Flow manifest** | [.agent/manifest.json](.agent/manifest.json) |
+| **Skill catalog** | [.agent/skills.catalog.json](.agent/skills.catalog.json) |
+| **Review context SSOT** | [.revy/review-context.json](.revy/review-context.json) — Moonshot/Greptile; mirrored to [.agent/review-context.json](.agent/review-context.json) for agent workflow |
+| **Orchestration** | [docs/review-pipeline/agents/README.md](docs/review-pipeline/agents/README.md) |
+| **Staging validation E2E** | [AGENT_WORKFLOW_PACK_E2E_VALIDATION.md](docs/review-pipeline/staging-validation/AGENT_WORKFLOW_PACK_E2E_VALIDATION.md) |
+| **Bugbot (pre-push)** | [.cursor/BUGBOT.md](.cursor/BUGBOT.md) |
+
 ## Skills (Revy)
 
 | Skill | When |
@@ -51,7 +62,9 @@ Root [`.cursorrules`](.cursorrules) is a short pointer.
 | `sentry-fix-issues` | User points at one Sentry issue URL/ID |
 | `phase-execution` | Full program LOOP — scaffold (`docs/starter-pack/`) or review-quality (`docs/review-pipeline/waves/REVIEW_QUALITY_EXECUTION.md`); see [agents/](docs/review-pipeline/agents/README.md) |
 | `chunk-execution` | One scaffold subphase only |
-| `babysit-pr` | Triage/fix Greptile review comments on an open PR |
+| `babysit-pr` | Triage/fix Greptile review comments on an open PR (optional — Greptile off by default) |
+| `bootstrap-workflow` | Install/upgrade agent-workflow-pack; audit skills per repo |
+| `staging-validation` | Create/update `*_STAGING_VALIDATION.md` from scripts, staging DB, GitHub — on user demand |
 
 Scaffold planning skills (`create-findings`, `create-general-plan`, `create-execution-plan`, peer-review, `devils-advocate`, `post-finish-gap-pass`) apply to `docs/starter-pack/` program work only.
 
