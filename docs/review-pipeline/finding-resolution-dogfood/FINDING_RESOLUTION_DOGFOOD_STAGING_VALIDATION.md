@@ -153,22 +153,29 @@ WHERE rev.head_sha = '3754315dadf9b10939f4813b53e38e74916ad4f5'
 
 ### Push 2 — structural fix outside line region (D1.2)
 
-**In progress** — push 2 removes `_fr_cs4_structural_root` + defect call; anchored lines 12–16 unchanged.
+**Done** — `203239d` / rev 8 (`203239dd4dd82f8d99966f2bd4b3b386090a36ca`).
 
 | Field | Value |
 |-------|-------|
-| `head_sha` | pending (after Revy rev 8) |
+| `head_sha` | `203239dd4dd82f8d99966f2bd4b3b386090a36ca` |
 | cohort `group_id` | `019fb461-00d4-75f5-b27e-d9a0a1b77536` |
-| push-2 `gen` for probe fingerprint | pending (must be **0**) |
-| line-region overlap | pending (must not touch lines 16–16) |
+| cohort fingerprint `gen` on rev 8 | **0** (fingerprint `27c16742…` absent from rev 8 run) |
+| line-region overlap | **PASS** — diff did not edit lines 16–16 |
+| new rev-8 probe group | `019fb6c9-fa81-73e6-a671-6da94c3c5628` (`de13b1e5…`) — Moonshot re-flagged dead `subprocess` body |
 
 ### Sign-off (D1.3)
 
-**Blocked** until push 2 publish complete.
+**FAIL** — rev 8 publish (`review_run_id` `019fb6c9-3008-760f-869f-8cbbafffd9ab`).
 
 | Check | Status | Evidence |
 |-------|--------|----------|
-| `state=resolved` | pending | — |
-| `resolution_method=verification_dismissed` | pending | — |
-| `judge_purpose=verification` outcome row | pending | — |
-| **FR-CS4 staging PASS** | pending | — |
+| Cohort fingerprint `gen=0` on push 2 | **PASS** | No rev-8 finding row for `27c16742…` |
+| Cohort `state=resolved` | **FAIL** | `019fb461` → `superseded` (replaced by `019fb6c9`) |
+| `resolution_method=verification_dismissed` | **FAIL** | `verification_dismissed: 0` in publish resolution |
+| `judge_purpose=verification` outcome | **FAIL** | Only `discovery` outcomes on rev 7–8 |
+| `still_open` after push 2 | **FAIL** | `still_open_count: 1`; cohort `resolution_status=still_open` |
+| **FR-CS4 staging PASS** | **FAIL** | — |
+
+**Root cause:** Push 2 left anchored `subprocess.call(..., shell=True)` in file (uncalled). Moonshot published a **new** finding (new fingerprint) on rev 8 → superseded cohort `019fb461` before Pass 3 could verify-dismiss. Pass 3 excludes `fingerprints_in_run` for the new group; superseded cohort is ineligible (`state != active`).
+
+**Next (D1-O13):** Probe design must avoid re-reportable dead code on push 2 while keeping anchored hunk unchanged — or accept product gap and document FR-CS4 blocker for D3.
