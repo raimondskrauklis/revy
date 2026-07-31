@@ -222,9 +222,13 @@ async def _revisions_with_completed_publish(
     if not revision_ids:
         return frozenset()
     rows = await session.scalars(
-        select(GitHubPublishJobORM.revision_id)
+        select(GitHubReviewRunORM.revision_id)
+        .join(
+            GitHubPublishJobORM,
+            GitHubPublishJobORM.review_run_id == GitHubReviewRunORM.id,
+        )
         .where(
-            GitHubPublishJobORM.revision_id.in_(revision_ids),
+            GitHubReviewRunORM.revision_id.in_(revision_ids),
             GitHubPublishJobORM.status == GitHubPublishJobStatus.completed,
         )
         .distinct()
@@ -253,6 +257,7 @@ async def _published_revisions_for_pull_request(
                 GitHubPublishJobORM.status == GitHubPublishJobStatus.completed,
             )
             .order_by(GitHubPullRequestRevisionORM.revision_number.asc())
+            .distinct()
         )
     )
 
@@ -358,13 +363,17 @@ async def get_fingerprint_published_revision_ids(
     rows = await session.execute(
         select(
             GitHubPublishJobORM.summary_json,
-            GitHubPublishJobORM.revision_id,
+            GitHubReviewRunORM.revision_id,
             GitHubPublishJobORM.review_run_id,
             GitHubPullRequestRevisionORM.revision_number,
         )
         .join(
+            GitHubReviewRunORM,
+            GitHubReviewRunORM.id == GitHubPublishJobORM.review_run_id,
+        )
+        .join(
             GitHubPullRequestRevisionORM,
-            GitHubPullRequestRevisionORM.id == GitHubPublishJobORM.revision_id,
+            GitHubPullRequestRevisionORM.id == GitHubReviewRunORM.revision_id,
         )
         .where(
             GitHubPullRequestRevisionORM.pull_request_id == pull_request_id,

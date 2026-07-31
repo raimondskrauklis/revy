@@ -3570,7 +3570,7 @@ async def test_create_inline_review_comment_with_422_retry_succeeds_on_nearest_l
         "app.services.github_publish.github_api.create_pull_request_review_comment",
         create_mock,
     ):
-        comment_id = await github_publish._create_inline_review_comment_with_422_retry(
+        result = await github_publish._create_inline_review_comment_with_422_retry(
             client,
             github_installation_id=12345,
             owner="acme",
@@ -3581,7 +3581,8 @@ async def test_create_inline_review_comment_with_422_retry_succeeds_on_nearest_l
             auth_headers={"Authorization": "Bearer t"},
         )
 
-    assert comment_id == 9001
+    assert result.comment_id == 9001
+    assert result.recovered_to_issue_comment is False
     assert create_mock.await_count == 2
     assert create_mock.await_args_list[1].kwargs["line"] == 11
 
@@ -3609,7 +3610,7 @@ async def test_create_inline_review_comment_with_422_retry_returns_none_after_do
         "app.services.github_publish.github_api.create_pull_request_review_comment",
         AsyncMock(side_effect=[error_422, error_422]),
     ):
-        comment_id = await github_publish._create_inline_review_comment_with_422_retry(
+        result = await github_publish._create_inline_review_comment_with_422_retry(
             client,
             github_installation_id=12345,
             owner="acme",
@@ -3620,7 +3621,9 @@ async def test_create_inline_review_comment_with_422_retry_returns_none_after_do
             auth_headers={"Authorization": "Bearer t"},
         )
 
-    assert comment_id is None
+    assert result.comment_id is None
+    assert result.recovered_to_issue_comment is True
+    assert result.recovery_http_status == 422
 
 
 def test_format_inline_422_fallback_block_includes_title():

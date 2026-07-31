@@ -641,7 +641,7 @@ async def test_append_revision_recovers_same_head_sha_after_unique_violation():
     assert revision.id == raced_revision.id
     assert pull_request.head_sha == "newsha"
     assert session.flush.await_count == 2
-    session.refresh.assert_awaited_once()
+    assert session.refresh.await_count == 2
 
 
 @pytest.mark.asyncio
@@ -681,6 +681,7 @@ async def test_append_revision_expunges_failed_revision_before_retry():
     )
 
     session.expunge.assert_called_once()
+    session.refresh.assert_awaited()
 
 
 @pytest.mark.asyncio

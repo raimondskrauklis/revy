@@ -263,6 +263,7 @@ async def _append_revision(
             if not _is_unique_violation(exc):
                 raise
             session.expunge(revision)
+            await session.refresh(pull_request)
             last_error = exc
             logger.info(
                 "github_revision_append_deduped",

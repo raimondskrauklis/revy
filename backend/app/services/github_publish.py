@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass
 from uuid import UUID
@@ -30,7 +31,7 @@ from app.core.logging import get_logger
 from app.core.worker_retries import (
     WorkerRetryableError,
     classify_transient_error,
-    is_retryable_http_status,
+    is_retryable_immediate_mutation_error,
 )
 from app.integrations import github_api
 from app.models.github_finding import GitHubFindingORM
@@ -128,6 +129,11 @@ _SKIP_PUBLISH_NEUTRAL_SUMMARY = "Superseded by newer commit"
 _INLINE_422_RECOVERED_COUNT_KEY = "inline_publish_422_recovered_count"
 _INLINE_422_RECOVERED_FINGERPRINTS_KEY = "inline_publish_422_recovered_fingerprints"
 _INLINE_422_FALLBACK_MARKER_PREFIX = "<!-- revy:inline-422:"
+_INLINE_422_FALLBACK_MARKER_RE = re.compile(
+    rf"^{re.escape(_INLINE_422_FALLBACK_MARKER_PREFIX)}([^\s>]+)\s+-->$",
+    re.MULTILINE,
+)
+INLINE_COMMENT_RECOVERABLE_STATUS_CODES = frozenset({404, 422})
 
 _TERMINAL_PUBLISH_JOB_STATUSES = frozenset(
     {
@@ -719,15 +725,8 @@ def inline_422_fallback_marker(fingerprint: str) -> str:
     return f"{_INLINE_422_FALLBACK_MARKER_PREFIX}{fingerprint} -->"
 
 
-def _is_transient_thread_resolve_error(exc: BaseException) -> bool:
-    if isinstance(exc, ServiceUnavailableError):
-        return True
-    if isinstance(exc, RateLimitedError):
-        return False
-    if isinstance(exc, httpx.HTTPStatusError):
-        status_code = exc.response.status_code
-        return is_retryable_http_status(status_code) and status_code != 429
-    return isinstance(exc, httpx.TransportError)
+def recovered_inline_422_fingerprints_in_comment(issue_comment_body: str) -> frozenset[str]:
+    return frozenset(_INLINE_422_FALLBACK_MARKER_RE.findall(issue_comment_body))
 
 
 def _inline_422_fallback_blocks_for_specs(
@@ -745,17 +744,14 @@ def _append_missing_inline_422_fallback_blocks(
     issue_comment_body: str,
     fallback_blocks: list[str],
 ) -> str | None:
+    already_present = recovered_inline_422_fingerprints_in_comment(issue_comment_body)
     missing = [
         block
         for block in fallback_blocks
         if block
         and all(
-            marker not in issue_comment_body
-            for marker in (
-                line
-                for line in block.splitlines()
-                if line.startswith(_INLINE_422_FALLBACK_MARKER_PREFIX)
-            )
+            fingerprint not in already_present
+            for fingerprint in _INLINE_422_FALLBACK_MARKER_RE.findall(block)
         )
     ]
     if not missing:
@@ -824,7 +820,7 @@ async def _resolve_review_thread_with_retry(
             auth_headers=auth_headers,
         )
     except Exception as exc:
-        if not _is_transient_thread_resolve_error(exc):
+        if not is_retryable_immediate_mutation_error(exc):
             raise
         await github_api.resolve_review_thread(
             client,
@@ -1110,6 +1106,13 @@ def _format_inline_422_fallback_block(spec: InlinePostSpec) -> str:
     return f"{marker}\n### Inline fallback ({spec.file_path}:{spec.start_line})\n\n{body}"
 
 
+@dataclass(frozen=True)
+class InlineReviewCommentPostResult:
+    comment_id: int | None
+    recovered_to_issue_comment: bool = False
+    recovery_http_status: int | None = None
+
+
 async def _create_inline_review_comment_with_422_retry(
     client: httpx.AsyncClient,
     *,
@@ -1120,11 +1123,12 @@ async def _create_inline_review_comment_with_422_retry(
     commit_id: str,
     spec: InlinePostSpec,
     auth_headers: dict[str, str],
-) -> int | None:
+) -> InlineReviewCommentPostResult:
     lines_to_try = (spec.start_line, _nearest_inline_retry_line(spec.start_line))
+    last_recoverable_status: int | None = None
     for line in lines_to_try:
         try:
-            return await github_api.create_pull_request_review_comment(
+            comment_id = await github_api.create_pull_request_review_comment(
                 client,
                 github_installation_id=github_installation_id,
                 owner=owner,
@@ -1141,11 +1145,18 @@ async def _create_inline_review_comment_with_422_retry(
                 ),
                 auth_headers=auth_headers,
             )
+            return InlineReviewCommentPostResult(comment_id=comment_id)
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code in (404, 422):
+            status_code = exc.response.status_code
+            if status_code in INLINE_COMMENT_RECOVERABLE_STATUS_CODES:
+                last_recoverable_status = status_code
                 continue
             raise
-    return None
+    return InlineReviewCommentPostResult(
+        comment_id=None,
+        recovered_to_issue_comment=True,
+        recovery_http_status=last_recoverable_status,
+    )
 
 
 @dataclass(frozen=True)
@@ -1667,7 +1678,7 @@ async def _flush_publish_surface(
                         inline_comment_ids=inline_written_this_flush,
                     )
                     return skipped_during_inline
-                comment_id = await _create_inline_review_comment_with_422_retry(
+                post_result = await _create_inline_review_comment_with_422_retry(
                     client,
                     github_installation_id=installation.github_installation_id,
                     owner=build.owner,
@@ -1677,14 +1688,14 @@ async def _flush_publish_surface(
                     spec=spec,
                     auth_headers=auth_headers,
                 )
-                if comment_id is None:
+                if post_result.recovered_to_issue_comment:
                     logger.warning(
                         "github_publish_inline_comment_skipped",
                         extra={
                             "publish_job_id": str(publish_job_id),
                             "file_path": spec.file_path,
                             "line": spec.start_line,
-                            "status_code": 422,
+                            "status_code": post_result.recovery_http_status,
                             "recovered": True,
                         },
                     )
@@ -1696,6 +1707,9 @@ async def _flush_publish_surface(
                             inline_422_recovered_fingerprints
                         ),
                     }
+                    continue
+                comment_id = post_result.comment_id
+                if comment_id is None:
                     continue
                 inline_threads[spec.group_fingerprint] = comment_id
                 inline_written_this_flush.append(comment_id)

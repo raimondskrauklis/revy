@@ -1,5 +1,6 @@
 # backend/tests/unit/test_worker_retries.py
 """Worker retry policy — transient vs permanent failures."""
+
 import httpx
 
 from app.core.worker_retries import (
@@ -7,6 +8,7 @@ from app.core.worker_retries import (
     celery_retry_countdown,
     classify_transient_error,
     is_retryable_http_status,
+    is_retryable_immediate_mutation_error,
 )
 
 
@@ -43,3 +45,24 @@ def test_celery_retry_countdown_exponential():
     assert celery_retry_countdown(0) == 60
     assert celery_retry_countdown(1) == 120
     assert celery_retry_countdown(2) == 240
+
+
+def test_is_retryable_immediate_mutation_error_rejects_client_and_rate_limit():
+    bad_request = httpx.HTTPStatusError(
+        "bad request",
+        request=httpx.Request("POST", "https://api.github.com/graphql"),
+        response=httpx.Response(400),
+    )
+    rate_limited = httpx.HTTPStatusError(
+        "rate limited",
+        request=httpx.Request("POST", "https://api.github.com/graphql"),
+        response=httpx.Response(429),
+    )
+    unavailable = httpx.HTTPStatusError(
+        "unavailable",
+        request=httpx.Request("POST", "https://api.github.com/graphql"),
+        response=httpx.Response(503),
+    )
+    assert not is_retryable_immediate_mutation_error(bad_request)
+    assert not is_retryable_immediate_mutation_error(rate_limited)
+    assert is_retryable_immediate_mutation_error(unavailable)

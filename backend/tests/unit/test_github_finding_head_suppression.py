@@ -113,8 +113,14 @@ def test_matches_head_contradiction_matrix_row_prop_migration():
         message="Prop migration incomplete on dashboard callers",
         file_path="frontend/src/features/dashboard/DashboardPage.tsx",
     )
-    head = "<SystemStatusBar connectionId? compact? />\n"
-    assert matches_head_contradiction(group, head) == "prop_migration"
+    assert matches_head_contradiction(
+        group,
+        "type Props = { connectionId?: string; compact?: boolean }\n",
+    ) == "prop_migration"
+    assert matches_head_contradiction(
+        group,
+        "<SystemStatusBar connectionId? compact? />\n",
+    ) == "prop_migration"
 
 
 def test_matches_head_contradiction_returns_none_when_claim_still_valid():
