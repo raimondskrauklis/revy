@@ -129,10 +129,13 @@ _INSECURE_SSL_WARNED = False
 
 
 def _staging_database_url() -> str:
-    url = os.environ.get("PRODUCTION_DATABASE_URL", "").strip()
+    url = (
+        os.environ.get("STAGING_DATABASE_URL", "").strip()
+        or os.environ.get("PRODUCTION_DATABASE_URL", "").strip()
+    )
     if not url:
         raise SystemExit(
-            "PRODUCTION_DATABASE_URL not set — add revy-staging URL to backend/.env"
+            "STAGING_DATABASE_URL or PRODUCTION_DATABASE_URL required in backend/.env"
         )
     normalized = url.replace("postgresql+asyncpg://", "postgresql://")
     parsed = urlparse(normalized)
@@ -144,11 +147,21 @@ def _staging_database_url() -> str:
 
 def _ssl_context() -> ssl.SSLContext | bool:
     global _INSECURE_SSL_WARNED
-    if os.environ.get("DATABASE_SSL_INSECURE", "").strip().lower() in ("1", "true", "yes"):
+    insecure = os.environ.get("DATABASE_SSL_INSECURE", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    if insecure:
+        db_name = urlparse(_staging_database_url()).path.lstrip("/")
+        if "staging" not in db_name.lower():
+            raise SystemExit(
+                f"DATABASE_SSL_INSECURE=1 refused for database {db_name!r} — staging only"
+            )
         if not _INSECURE_SSL_WARNED:
             sys.stderr.write(
                 "WARNING: DATABASE_SSL_INSECURE=1 — TLS verification disabled "
-                "(staging operator script only).\n"
+                f"for staging database {db_name!r}.\n"
             )
             _INSECURE_SSL_WARNED = True
         ctx = ssl.create_default_context()
@@ -161,7 +174,8 @@ def _ssl_context() -> ssl.SSLContext | bool:
 def _parse_since(value: str | None) -> datetime | None:
     if not value:
         return None
-    parsed = datetime.fromisoformat(value)
+    normalized = value[:-1] + "+00:00" if value.endswith("Z") else value
+    parsed = datetime.fromisoformat(normalized)
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=UTC)
     return parsed.astimezone(UTC)
@@ -354,6 +368,12 @@ def _evaluate_rr_v_gates(metrics: dict[str, Any]) -> dict[str, Any]:
             "PENDING",
             "no resolved/addressed finding groups on PR yet",
         )
+
+    add(
+        "RR-V5_head_suppression_matrix",
+        "PENDING",
+        "manual: pytest head-suppression matrix per R5 execution (not automated here)",
+    )
 
     passed = all(c["status"] == "PASS" for c in checks)
     pending = any(c["status"] == "PENDING" for c in checks)

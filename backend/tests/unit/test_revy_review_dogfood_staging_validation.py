@@ -6,6 +6,12 @@ from scripts.revy_review_dogfood_staging_validation import (
 )
 
 
+def test_staging_database_url_prefers_staging_env(monkeypatch):
+    monkeypatch.setenv("STAGING_DATABASE_URL", "postgresql://u:p@host:5432/revy-staging")
+    monkeypatch.setenv("PRODUCTION_DATABASE_URL", "postgresql://u:p@host:5432/revy-prod")
+    assert _staging_database_url().endswith("/revy-staging")
+
+
 def test_staging_database_url_preserves_non_ssl_query_params(monkeypatch):
     monkeypatch.setenv(
         "PRODUCTION_DATABASE_URL",
@@ -74,7 +80,10 @@ def test_rr_v_gate_passes_with_five_runs_and_addressed():
             "finding_groups": [{"state": "resolved", "resolution_status": "addressed"}],
         }
     )
-    assert gate["ready_for_signoff"] is True
+    assert gate["ready_for_signoff"] is False
+    statuses = {c["name"]: c["status"] for c in gate["checks"]}
+    assert statuses["RR-V2_resolution_stamp"] == "PASS"
+    assert statuses["RR-V5_head_suppression_matrix"] == "PENDING"
 
 
 def test_rr_v4_passes_when_latest_publish_clean_despite_historical_skips():
