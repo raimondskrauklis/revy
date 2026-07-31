@@ -55,14 +55,24 @@ _HEAD_JSX_OPTIONAL_PROPS_RE = re.compile(
     re.IGNORECASE,
 )
 
-_CLAIM_KPI_SKELETON_RE = re.compile(r"\b(?:kpi|skeleton)\b", re.IGNORECASE)
+_CLAIM_KPI_SKELETON_RE = re.compile(r"\bkpi\b", re.IGNORECASE)
+_CLAIM_KPI_SKELETON_COUNT_RE = re.compile(r"\bskeleton", re.IGNORECASE)
 _HEAD_OVERVIEW_KPI_COUNT_FOUR_RE = re.compile(r"\bOVERVIEW_KPI_COUNT\s*=\s*4\b")
 
-_CLAIM_EXPORT_LABEL_RE = re.compile(r"\bexport\b", re.IGNORECASE)
+_CLAIM_EXPORT_RE = re.compile(r"\bexport\b", re.IGNORECASE)
+_CLAIM_EXPORT_LABEL_CONTEXT_RE = re.compile(
+    r"\b(?:label|misleading|always\s+wrong)\b",
+    re.IGNORECASE,
+)
 _HEAD_EXPORT_LIST_RE = re.compile(r"""['"]Export List['"]""")
 _HEAD_EXPORT_SELECTED_RE = re.compile(r"""['"]Export Selected['"]""")
 
-_CLAIM_PROP_MIGRATION_RE = re.compile(r"\b(?:prop|caller)s?\b", re.IGNORECASE)
+_CLAIM_PROP_MIGRATION_RE = re.compile(r"\bprop\s+migration\b", re.IGNORECASE)
+_CLAIM_CALLER_PROPS_RE = re.compile(r"\bcallers?\b", re.IGNORECASE)
+_CLAIM_CALLER_PROP_GAP_RE = re.compile(
+    r"\b(?:missing|required|incomplete)\b",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -111,6 +121,33 @@ def _claim_system_status_bar_required(group: GitHubFindingGroupORM) -> bool:
     )
 
 
+def _claim_kpi_skeleton_count(group: GitHubFindingGroupORM) -> bool:
+    claim = _claim_text(group)
+    return (
+        _CLAIM_KPI_SKELETON_RE.search(claim) is not None
+        and _CLAIM_KPI_SKELETON_COUNT_RE.search(claim) is not None
+    )
+
+
+def _claim_export_label(group: GitHubFindingGroupORM) -> bool:
+    claim = _claim_text(group)
+    return (
+        _CLAIM_EXPORT_RE.search(claim) is not None
+        and _CLAIM_EXPORT_LABEL_CONTEXT_RE.search(claim) is not None
+    )
+
+
+def _claim_prop_migration(group: GitHubFindingGroupORM) -> bool:
+    claim = _claim_text(group)
+    if _CLAIM_PROP_MIGRATION_RE.search(claim) is not None:
+        return True
+    return (
+        _CLAIM_CALLER_PROPS_RE.search(claim) is not None
+        and _CLAIM_CALLER_PROP_GAP_RE.search(claim) is not None
+        and re.search(r"\bprops?\b", claim, re.IGNORECASE) is not None
+    )
+
+
 HEAD_CONTRADICTION_RULES: tuple[HeadContradictionRule, ...] = (
     HeadContradictionRule(
         rule_id="missing_or_import",
@@ -127,19 +164,19 @@ HEAD_CONTRADICTION_RULES: tuple[HeadContradictionRule, ...] = (
     HeadContradictionRule(
         rule_id="kpi_skeleton_count",
         matrix_ref="RR-V5 row 3",
-        claim_predicate=lambda group: _claim_matches(_CLAIM_KPI_SKELETON_RE, group),
+        claim_predicate=_claim_kpi_skeleton_count,
         head_predicate=_head_has_overview_kpi_count_four,
     ),
     HeadContradictionRule(
         rule_id="export_label",
         matrix_ref="RR-V5 row 15",
-        claim_predicate=lambda group: _claim_matches(_CLAIM_EXPORT_LABEL_RE, group),
+        claim_predicate=_claim_export_label,
         head_predicate=_head_has_conditional_export_labels,
     ),
     HeadContradictionRule(
         rule_id="prop_migration",
         matrix_ref="RR-V5 row 17",
-        claim_predicate=lambda group: _claim_matches(_CLAIM_PROP_MIGRATION_RE, group),
+        claim_predicate=_claim_prop_migration,
         head_predicate=_head_system_status_bar_optional_props,
     ),
 )

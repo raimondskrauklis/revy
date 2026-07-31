@@ -133,6 +133,35 @@ def test_matches_head_contradiction_returns_none_when_claim_still_valid():
     assert matches_head_contradiction(group, head) is None
 
 
+@pytest.mark.parametrize(
+    ("title", "message", "head"),
+    [
+        (
+            "Wrong prop type",
+            "Props interface mismatch on shared types",
+            "type Props = { connectionId?: string; compact?: boolean }\n",
+        ),
+        (
+            "Export feature incomplete",
+            "Export pipeline missing retry handling",
+            'label={selected.length ? "Export Selected" : "Export List"}\n',
+        ),
+        (
+            "KPI query slow",
+            "Dashboard KPI endpoint needs indexing",
+            "const OVERVIEW_KPI_COUNT = 4\n",
+        ),
+    ],
+)
+def test_matches_head_contradiction_does_not_suppress_unrelated_claims(
+    title: str,
+    message: str,
+    head: str,
+):
+    group = _group(title=title, message=message)
+    assert matches_head_contradiction(group, head) is None
+
+
 def test_head_contradiction_rules_cover_rr_v5_rows():
     assert {rule.rule_id for rule in HEAD_CONTRADICTION_RULES} == {
         "missing_or_import",
