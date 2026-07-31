@@ -89,24 +89,23 @@
 | **3** | `7f2b357` | 3 | **FAIL** (probe) | 2 publishable — **doc path drift only** (`D1_FINDINGS.md`, `D1_GENERAL_PLAN.md`); **0 findings on `app/dogfood/fr_cs4_probe.py`** |
 | **4** | `ce2b547` | 4 | **FAIL** (probe) | 0 new publishable; 1 prior doc finding closed; **1 doc finding still open**; probe silent |
 | **5** | `71feceb` | 5 | **FAIL** (probe) | Revy skipped/0 probe findings (DB: no rows for `71feceb` sha — superseded by rev 6) |
-| **6** | `3754315` | 6 | **PARTIAL** | Probe group published — see captured fields below; **not Pass 3 eligible** (`warning`/`maintainability`) |
+| **6** | `3754315` | 6 | **PARTIAL** | `warning`/`maintainability` — not Pass 3 eligible |
+| **7** | `ff89066` | 7 | **PASS** | Judge-eligible probe group — see cohort row below |
 
-**Captured fields (rev 6 — probe group):**
+**FR-CS4 cohort (rev 7 — use for push 2 / D1.3):**
 
 | Field | Value |
 |-------|-------|
-| `head_sha` | `3754315dadf9b10939f4813b53e38e74916ad4f5` |
-| `group_id` | `019fb43d-59eb-7554-96f0-ef889aa06277` |
-| `last_seen_revision_id` | `019fb438-5a20-7365-833e-ea11982783b1` |
-| `review_run_id` | `019fb43b-3960-75ba-a553-21b61c626b5f` |
-| `start_line` / `end_line` | `14` / `14` |
-| `fingerprint` | `d616fd67b517e6ec236bb82e4bd1da3d04e2a618a345607dcf565e4c25afc32d` |
-| `severity` / `category` | `warning` / `maintainability` |
-| `pr_active` (publish) | `4` |
+| `head_sha` | `ff89066c2a657817ff13af6e51dce291672d859e` |
+| `group_id` | `019fb461-00d4-75f5-b27e-d9a0a1b77536` |
+| `last_seen_revision_id` | `019fb45c-c4a7-7ac8-b118-2abf049c82ea` |
+| `review_run_id` | `019fb45c-e935-7f71-a3ba-4d246633af18` |
+| `start_line` / `end_line` | `16` / `16` |
+| `fingerprint` | `27c16742932165d08ca72896bbdf7d37bc09ae93d0d1bd08e0aa752362f29b48` |
+| `severity` / `category` | `critical` / `security` |
+| `judge_status` | `completed` (`judge_escalation_candidate_count=2`) |
 
-**D1-O7 DB result (revs 1–6):** Revs 1–2 had **zero** finding rows. Rev 3+ doc-only groups. Rev 6 first probe-file group. **Zero** `github_finding_judge_outcomes` rows on any rev (maintainability publishes without judge gate).
-
-**Blocker:** `is_judge_candidate` is **false** for `warning`/`maintainability` → Pass 3 will **not** run → `verification_dismissed` unreachable. **Do not push 2** with this cohort; need **error/critical** or **security** defect on probe file (attempt 6).
+**Rev 6 partial (wrong cohort):** `019fb43d-59eb-7554-96f0-ef889aa06277` — `warning`/`maintainability`; superseded on rev 7.
 
 #### Root cause (attempt 1)
 
@@ -154,15 +153,14 @@ WHERE rev.head_sha = '3754315dadf9b10939f4813b53e38e74916ad4f5'
 
 ### Push 2 — structural fix outside line region (D1.2)
 
-**Blocked** until push 1 yields judge-eligible probe group (`error`/`critical` or `security` — see rev 6 partial).
-
-Remove `_fr_cs4_structural_root` and change `fr_cs4_probe_composed` to return `fr_cs4_probe_value()` only (no defect call); **do not** edit `_fr_cs4_review_visible_defect` body. Module: `backend/app/services/fr_cs4_staging_probe.py`.
+**In progress** — push 2 removes `_fr_cs4_structural_root` + defect call; anchored lines 12–16 unchanged.
 
 | Field | Value |
 |-------|-------|
-| `head_sha` | pending |
+| `head_sha` | pending (after Revy rev 8) |
+| cohort `group_id` | `019fb461-00d4-75f5-b27e-d9a0a1b77536` |
 | push-2 `gen` for probe fingerprint | pending (must be **0**) |
-| line-region overlap | pending |
+| line-region overlap | pending (must not touch lines 16–16) |
 
 ### Sign-off (D1.3)
 
