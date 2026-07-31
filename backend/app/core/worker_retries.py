@@ -1,5 +1,8 @@
 # backend/app/core/worker_retries.py
-"""Celery worker retry policy — transient vs permanent pipeline failures."""
+"""Celery worker retry policy — transient vs permanent pipeline failures.
+
+RR-W1 dogfood push 3: unrelated file touch for pairing / last_seen drift cohort.
+"""
 
 from __future__ import annotations
 

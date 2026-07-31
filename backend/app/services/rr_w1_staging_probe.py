@@ -2,17 +2,11 @@
 """RR-W1 staging probe — closure-loop dogfood on revy repo PRs.
 
 Push 1: introduce judge-eligible defect on anchored lines.
-Push 2+: structural fix — do not call ``_rr_w1_review_visible_defect`` (Pass 1 line-region).
+Push 2: structural fix — stop calling defect (FR-CS4 pattern; re-report risk).
+Push 3+: remove defect body (line-region fix) for addressed closure.
 """
 
 RR_W1_PROBE_MARKER = "rr-w1-push-1"
-
-
-def _rr_w1_review_visible_defect(user_input: str) -> None:
-    """Anchored defect — leave body unchanged on fix pushes."""
-    import subprocess
-
-    subprocess.call(user_input, shell=True)  # intentional dogfood command injection
 
 
 def rr_w1_probe_value() -> str:
@@ -20,11 +14,11 @@ def rr_w1_probe_value() -> str:
 
 
 def rr_w1_probe_invoke(user_input: str) -> str:
-    """Push 2+ — retired; structural fix routes to composed path."""
+    """Push 2+ — invoke path routes to composed (defect removed push 3+)."""
     _ = user_input
     return rr_w1_probe_composed()
 
 
 def rr_w1_probe_composed() -> str:
-    """Push 2+ — structural fix without calling anchored defect."""
+    """Push 2+ — structural fix without command-injection defect."""
     return RR_W1_PROBE_MARKER
