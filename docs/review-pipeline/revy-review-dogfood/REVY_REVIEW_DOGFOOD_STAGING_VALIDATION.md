@@ -61,7 +61,7 @@ DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.revy_review_dogfood_staging
 | 2 | Structural fix — `rr_w1_probe_composed()` only; verify `transitions_addressed` ≥ 1 | **done** `ee4668c` — **closure FAIL** (see notes) |
 | 3 | Remove dead defect code + unrelated backend touch (pairing / `last_seen`) | **done** `abdbd5c` — probe `resolved`/`addressed` |
 | 4 | Same-`head_sha` double-push OR rapid second SHA (RR-V1) | **done** `38dd7b4` — rev 4 complete (Revy check skipped) |
-| 5 | Confirm groups stay `resolved`/`addressed`; `--rr-v-gate` | in progress |
+| 5 | Confirm groups stay `resolved`/`addressed`; `--rr-v-gate` | **done** `8aec926` — 5 runs; judge `completed` on rev 5 |
 
 **Rules:** wait for Revy check **complete** before next push; record `head_sha`, `review_run_id`, group IDs per push in Results table.
 
@@ -73,21 +73,23 @@ DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.revy_review_dogfood_staging
 | 2 | `ee4668c` | 2 | `019fb9b2-78ee-7646-9f12-d5375f3b880c` | **closure FAIL:** `transitions_addressed=0`; old probe group superseded; new critical on dead `subprocess` body; `resolve_mutation_failed=2` |
 | 3 | `abdbd5c` | 3 | `019fb9b7-ac80-770c-b69f-067e391a891b` | **closure PASS:** group `019fb9b3…` `resolved`/`absent_and_addressed`; `transitions_addressed=1`; rate 100% |
 | 4 | `38dd7b4` | 4 | — | empty + doc commit; 4 revisions; RR-V1 PASS |
-| 5 | — | — | — | pending — marker bump + gate sign-off |
+| 5 | `8aec926` | 5 | `019fb9c2-490b-7f45-8387-a5d0d3cd8239` | judge `completed` (2 outcomes); `resolve_mutation_failed=4` on publish |
 
 ---
 
-## RR-V gates (DB-backed — all pending until `--rr-v-gate` PASS)
+## RR-V gates (DB-backed — `--rr-v-gate` on PR #80 @ 2026-07-31)
 
 | Gate | Pass criteria | Status | Evidence |
 |------|---------------|--------|----------|
-| **RR-V1** | One revision row per `head_sha`; no IntegrityError | **pending** | script `RR-V1_revision_idempotency` |
-| **RR-V2** | ≥5 completed runs; `resolution_rate_pct > 0` + `transitions_addressed ≥ 1` | **pending** | reconcile `resolution_pass` |
-| **RR-V3** | `publish_head_sha` == revision `head_sha` on all completed publishes | **pending** | script `RR-V3_publish_head_sha_parity` |
-| **RR-V4** | `thread_resolve_skipped` zero or manifest breakdown only | **pending** | publish `summary_json` |
-| **RR-V5** | HEAD suppression unit matrix + `head_contradiction_suppressed_count` when applicable | **pending** | pytest + reconcile manifest |
-| **Judge** | Escalation run with persisted `github_finding_judge_outcomes` | **pending** | script `judge_transport` |
-| **Closure** | Finding groups `resolved` or `resolution_status=addressed` after fix push | **pending** | script `finding_groups_closure` |
+| **RR-V1** | One revision row per `head_sha`; no IntegrityError | **PASS** | 5 revisions; `rows_per_head_sha=1` each |
+| **RR-V2** | ≥5 completed runs; `resolution_rate_pct > 0` + `transitions_addressed ≥ 1` | **PASS** | rev 3 manifest: `transitions_addressed=1`, rate 100% |
+| **RR-V3** | `publish_head_sha` == revision `head_sha` on all completed publishes | **PASS** | 5/5 parity |
+| **RR-V4** | `thread_resolve_skipped` zero or manifest breakdown only | **PENDING** | `resolve_mutation_failed=2` (rev 2–4), `=4` (rev 5) — GitHub thread resolve API failures |
+| **RR-V5** | HEAD suppression unit matrix + `head_contradiction_suppressed_count` when applicable | **pending** | pytest matrix not re-run this session |
+| **Judge** | Escalation run with persisted `github_finding_judge_outcomes` | **PASS** | 3/3 escalation runs with outcomes; rev 5 `judge_status=completed` |
+| **Closure** | Finding groups `resolved` or `resolution_status=addressed` after fix push | **PASS** | probe group `019fb9b3…` `resolved`/`absent_and_addressed` on push 3 |
+
+**Sign-off:** `--rr-v-gate` exits **1** — blocked on **RR-V4** (+ RR-V5 pytest not recorded). Do **not** merge #80 as RR-V PASS until RR-V4 resolved or documented partial with owner.
 
 ---
 
@@ -167,5 +169,5 @@ DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.revy_review_dogfood_staging
 | Revy pre-RR-W1 symptoms (TenderPro evidence) | **FAIL** — motivated RR-W1 | 2026-07-31 |
 | RR-W1 R0 baseline | **PASS** | 2026-07-31 |
 | RR-W1 R1–R4 code ship | **PASS** — `deda3c9` | 2026-07-31 |
-| RR-W1 R5 RR-V gates | **pending** — `--rr-v-gate` on revy dogfood PR | — |
+| RR-W1 R5 RR-V gates | **partial** — RR-V1/2/3/judge/closure PASS; **RR-V4 blocked** (`resolve_mutation_failed`) | 2026-07-31 |
 | RR-Q4 product gate | **pending** — after RR-V2 PASS | — |
