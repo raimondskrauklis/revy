@@ -154,8 +154,8 @@ Revy flags `or_` missing when import exists on `999ad17`; SystemStatusBar "missi
 |----|----------|--------|------------|
 | **RR-Q1** | Is finding-resolution "done"? | **locked** | **Mechanisms shipped**; cross-repo operator gate **not** done |
 | **RR-Q2** | Next pass scope? | **locked** | **RR-W1** — ingest + publish hygiene + HEAD truth (findings above) |
-| **RR-Q3** | Use external repo for staging probes? | **open** | TenderPro #130 validated; may reuse pattern vs dedicated probe repo |
-| **RR-Q4** | Block merge on 0% resolution rate? | **open** | Product decision — today operator ignores summary |
+| **RR-Q3** | Use external repo for staging probes? | **locked** | TenderPro #130 validated for RR-W1; no dedicated probe repo required |
+| **RR-Q4** | Block merge on 0% resolution rate? | **open** | Defer until R5 — see general plan |
 
 ---
 

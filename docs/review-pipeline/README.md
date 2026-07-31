@@ -55,6 +55,7 @@ docs/review-pipeline/
   revy-review-dogfood/                   ← cross-repo staging dogfood (TenderPro #130 → RR-W1)
     README.md
     REVY_REVIEW_DOGFOOD_FINDINGS.md
+    REVY_REVIEW_DOGFOOD_GENERAL_PLAN.md
     REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md
   judge-json-contract/                   ← judge outcome JSON, observability, structured output
     README.md
