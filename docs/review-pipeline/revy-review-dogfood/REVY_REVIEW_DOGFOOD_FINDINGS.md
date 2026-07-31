@@ -71,7 +71,7 @@
 | **RR-DG1** | Inline thread resolve skipped at publish | **high** | open | 18× warning in `tenderprolog.txt` L20–56; `github_publish.py:721-730` logs and continues |
 | **RR-DG2** | Inline comment post 422 skipped | medium | open | `tenderprolog.txt` L64–65; `github_publish.py:1443-1454` |
 | **RR-DG3** | Duplicate PR revision on concurrent synchronize | **high** | open | `tenderprolog.txt` L114–116 — `uq_github_pr_revisions_pr_number` rev 13; `_append_revision` (`github_pull_requests.py:196-213`) has no upsert/idempotency |
-| **RR-DG4** | Resolution cohort stuck — 0% rate / compare-blocked summary | **high** | open — **hypothesis split** | Summary "Compare blocked: 6"; worker log shows **successful** compare for relevant SHAs — may be stale `closure_blocked_reason`, pairing gap (`last_seen_revision_id` ∉ pairing), or `patch_touches_line_region` miss — **not proven API compare_failed** |
+| **RR-DG4** | Resolution cohort stuck — 0% rate / compare-blocked summary | **high** | open — **R0 tag locked** | Primary tag **`stale_closure_blocked`** (validation memo § R0.2); worker log compare 200 at `b4ba498`/`d915b4e`/`999ad17`; secondary `pairing_gap` + RR-DG11 |
 | **RR-DG5** | Summary `head_sha` lags inline generation | medium | open — **likely symptom** | Rev 12 summary `b4ba498` vs inline on `999ad17`; intra-job publish uses single `job.head_sha` — aligns with **no successful publish** for newer SHA after rev-13 IntegrityError (RR-DG3), not intra-job drift |
 | **RR-DG6** | False positives on HEAD file content | **high** | open — **reframed** | Contents API already used at `head_sha` (log + engineering context); false positives are **reviewer/judge reasoning on diff hunks**, not missing HEAD fetch — needs post-reconcile **suppression** |
 | **RR-DG7** | Resolution UX — fixed code, open threads | medium | open | Operator notes; multi-push iteration cost |
@@ -169,7 +169,7 @@ Single publish job uses `job.head_sha` for check run, issue comment, and inline 
 | **RR-Q2** | Next pass scope? | **locked** | **RR-W1** — ingest + publish hygiene + HEAD truth (findings above) |
 | **RR-Q3** | Use external repo for staging probes? | **locked** | TenderPro #130 validated for RR-W1; no dedicated probe repo required |
 | **RR-Q4** | Block merge on 0% resolution rate? | **locked** | **Defer product gate until R5** — metric not trustworthy until R1–R3 green |
-| **RR-Q5** | `head_sha` unique DB constraint? | **open** | R0 decides: application-level dedupe + IntegrityError recovery vs Alembic unique on `(pull_request_id, head_sha)` |
+| **RR-Q5** | `head_sha` unique DB constraint? | **locked** | **(A) Application dedupe** — `_get_revision_for_head_sha` + `IntegrityError` recovery + optional `FOR UPDATE`; **no** Alembic unique on `(pull_request_id, head_sha)` unless R1.4 proves insufficient |
 
 ---
 

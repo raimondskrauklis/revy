@@ -18,7 +18,7 @@
 | RR-Q2 | RR-W1 scope: ingest → publish hygiene → resolution stamp → HEAD suppression |
 | RR-Q3 | TenderPro #130 is valid staging evidence; no dedicated probe repo required |
 | RR-Q4 | **Defer** product merge gate on resolution rate until **R5** |
-| RR-Q5 | `head_sha` DB unique index — **R0 decides** (app dedupe may suffice) |
+| RR-Q5 | **(A) Application dedupe** locked — no `head_sha` DB unique unless R1.4 forces migration |
 | FR-CS4 Pass 3 supersede | **Out of scope** |
 | RR-DG8 | Judge transport — **closed** (#75) |
 
