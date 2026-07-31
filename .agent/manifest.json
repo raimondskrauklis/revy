@@ -6,6 +6,12 @@
   "backend_dir": "backend",
   "frontend_dir": "frontend",
   "default_scope": ["backend/**"],
+  "scopes": {
+    "layout": "KP full-stack — backend/ + frontend/ at repo root",
+    "default": ["backend/**"],
+    "available": ["backend/**", "frontend/**"],
+    "note": "Default backend only. Add frontend/** in review-context programs[].scope for full-stack programs."
+  },
   "test_commands": {
     "backend_lint": "cd backend && pipenv run ruff check .",
     "backend_lint_fix": "cd backend && pipenv run ruff check --fix .",

@@ -32,7 +32,7 @@
 | Step | Pass | Evidence |
 |------|------|----------|
 | Skill audit — 16 skills in repo + 2 new (`bootstrap-workflow`, `staging-validation`) | **PASS** | `.agent/manifest.json` → `skills.installed` |
-| Materialize `.agent/manifest.json` | **PASS** | `integrations.revy: true`, `greptile: false` |
+| Materialize `.agent/manifest.json` | **PASS** | `integrations.revy: true`, `greptile: false`, `scopes` backend/frontend |
 | Mirror SSOT `.agent/review-context.json` ↔ `.revy/review-context.json` | **PASS** | Revy: `.revy` canonical per `manifest.review_context.ssot`; `.agent` mirror |
 | Flow flags `phase-loop` + `ship` on; `greptile-parallel` off | **PASS** | `.agent/flows/*.json` |
 | Copy `skills.catalog.json` | **PASS** | `.agent/skills.catalog.json` |

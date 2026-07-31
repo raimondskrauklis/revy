@@ -47,7 +47,7 @@ Root [`.cursorrules`](.cursorrules) is a short pointer.
 
 | Topic | File |
 |-------|------|
-| **Flow manifest** | [.agent/manifest.json](.agent/manifest.json) |
+| **Flow manifest** | [.agent/manifest.json](.agent/manifest.json) — scope: default `backend/**`, add `frontend/**` per program |
 | **Skill catalog** | [.agent/skills.catalog.json](.agent/skills.catalog.json) |
 | **Review context SSOT** | [.revy/review-context.json](.revy/review-context.json) — Moonshot/Greptile; mirrored to [.agent/review-context.json](.agent/review-context.json) for agent workflow |
 | **Orchestration** | [docs/review-pipeline/agents/README.md](docs/review-pipeline/agents/README.md) |

@@ -31,6 +31,8 @@ description: >-
 
 Adapt template — set `integrations.greptile: false` unless user explicitly asks.
 
+**Scope:** detect `backend/` + `frontend/` (KP layout). Default `default_scope: ["backend/**"]`. If user or execution doc requires UI work, set `programs[].scope` to include `frontend/**` — see `patterns/SCOPE.md`.
+
 Write `.agent/flows/*.json` from pack templates.
 
 ---
@@ -64,6 +66,8 @@ Follow `patterns/skills-audit.md`.
 ## 4. Review context SSOT
 
 Create `.agent/review-context.json`. Mirror to `.revy/` when `integrations.revy: true`.
+
+Set `programs[].scope` from execution doc or manifest `default_scope`. Full-stack: `["backend/**", "frontend/**"]`. Frontend-only: `["frontend/**"]`.
 
 ---
 
