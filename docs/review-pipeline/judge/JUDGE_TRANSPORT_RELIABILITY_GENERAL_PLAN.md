@@ -3,6 +3,7 @@
 # Judge LLM transport reliability — general plan
 
 **Baseline:** [JUDGE_TRANSPORT_RELIABILITY_FINDINGS.md](./JUDGE_TRANSPORT_RELIABILITY_FINDINGS.md) (2026-07-31)  
+**Status:** **Closed partial PASS** — [#75](https://github.com/raimondskrauklis/revy/pull/75) merged; T3.3 direct path verified ([#76](https://github.com/raimondskrauklis/revy/pull/76) evidence-only); gateway fallback ops follow-up (JT-Q6).  
 **Prerequisite:** Judge JSON contract + gateway profile shipped (`anthropic_review.py`, manifest failure fields).
 
 **Thesis:** One judge workflow; RTU gateway and direct Anthropic are **transport profiles** in the same adapter. Staging failures are often **invisible in worker tails** and **under-fallbacked** (HTTP-only). Harden transport + logging without forking discovery vs Pass 3 logic.
