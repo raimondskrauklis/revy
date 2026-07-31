@@ -179,3 +179,5 @@ WHERE rev.head_sha = '3754315dadf9b10939f4813b53e38e74916ad4f5'
 **Root cause:** Push 2 left anchored `subprocess.call(..., shell=True)` in file (uncalled). Moonshot published a **new** finding (new fingerprint) on rev 8 → superseded cohort `019fb461` before Pass 3 could verify-dismiss. Pass 3 excludes `fingerprints_in_run` for the new group; superseded cohort is ineligible (`state != active`).
 
 **Next (D1-O13):** Probe design must avoid re-reportable dead code on push 2 while keeping anchored hunk unchanged — or accept product gap and document FR-CS4 blocker for D3.
+
+**Implementer handoff:** [FR_CS4_D1_PASS3_HANDOFF.md](./FR_CS4_D1_PASS3_HANDOFF.md) — supersede-before-Pass-3 product gap, code map, success criteria.
