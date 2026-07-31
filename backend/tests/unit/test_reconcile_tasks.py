@@ -40,13 +40,17 @@ def test_reconcile_review_run_task_runs_worker_order():
                         AsyncMock(return_value=VerificationJudgeResult(judged_count=1, artifacts=[])),
                     ) as verification_mock:
                         with patch(
-                            "app.workers.reconcile_tasks.get_pipeline_run_for_review_run",
-                            AsyncMock(return_value=None),
+                            "app.workers.reconcile_tasks.finalize_review_run_judge_status",
+                            AsyncMock(),
                         ):
                             with patch(
-                                "app.workers.reconcile_tasks.enqueue_publish_for_review_run",
-                            ) as publish_mock:
-                                reconcile_tasks.reconcile_review_run_task.run(str(review_run_id))
+                                "app.workers.reconcile_tasks.get_pipeline_run_for_review_run",
+                                AsyncMock(return_value=None),
+                            ):
+                                with patch(
+                                    "app.workers.reconcile_tasks.enqueue_publish_for_review_run",
+                                ) as publish_mock:
+                                    reconcile_tasks.reconcile_review_run_task.run(str(review_run_id))
 
     reconcile_mock.assert_awaited_once()
     pass2_mock.assert_awaited_once()
@@ -119,25 +123,31 @@ def test_reconcile_task_records_resolution_pass_on_pipeline():
                         AsyncMock(return_value=VerificationJudgeResult(judged_count=0, artifacts=[])),
                     ):
                         with patch(
-                            "app.workers.reconcile_tasks.compute_resolution_transitions",
-                            AsyncMock(return_value=resolution_pass),
+                            "app.workers.reconcile_tasks.finalize_review_run_judge_status",
+                            AsyncMock(),
                         ):
                             with patch(
-                                "app.workers.reconcile_tasks.get_pipeline_run_for_review_run",
-                                AsyncMock(return_value=pipeline_run),
+                                "app.workers.reconcile_tasks.compute_resolution_transitions",
+                                AsyncMock(return_value=resolution_pass),
                             ):
                                 with patch(
-                                    "app.workers.reconcile_tasks.record_reconcile_pipeline_step",
-                                    AsyncMock(),
-                                ) as reconcile_step_mock:
+                                    "app.workers.reconcile_tasks.get_pipeline_run_for_review_run",
+                                    AsyncMock(return_value=pipeline_run),
+                                ):
                                     with patch(
-                                        "app.workers.reconcile_tasks.record_judge_pipeline_step",
+                                        "app.workers.reconcile_tasks.record_reconcile_pipeline_step",
                                         AsyncMock(),
-                                    ) as judge_step_mock:
+                                    ) as reconcile_step_mock:
                                         with patch(
-                                            "app.workers.reconcile_tasks.enqueue_publish_for_review_run",
-                                        ):
-                                            reconcile_tasks.reconcile_review_run_task.run(str(review_run_id))
+                                            "app.workers.reconcile_tasks.record_judge_pipeline_step",
+                                            AsyncMock(),
+                                        ) as judge_step_mock:
+                                            with patch(
+                                                "app.workers.reconcile_tasks.enqueue_publish_for_review_run",
+                                            ):
+                                                reconcile_tasks.reconcile_review_run_task.run(
+                                                    str(review_run_id)
+                                                )
 
     reconcile_step_mock.assert_awaited_once()
     assert reconcile_step_mock.await_args.kwargs["resolution_pass"] == resolution_pass

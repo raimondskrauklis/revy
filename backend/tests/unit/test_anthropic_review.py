@@ -359,6 +359,28 @@ def test_extract_usage_fields_empty_when_missing():
     assert anthropic_review._extract_usage_fields({}) == {}
 
 
+def test_extract_message_text_empty_content_includes_preview():
+    with pytest.raises(ServiceUnavailableError) as exc_info:
+        anthropic_review._extract_message_text({"content": [], "id": "msg_empty"})
+    assert exc_info.value.message == "Anthropic response invalid"
+    preview = exc_info.value.details.get("response_body_preview")
+    assert isinstance(preview, str)
+    assert "msg_empty" in preview
+
+
+def test_judge_raw_response_with_usage_attaches_transport_tokens():
+    anthropic_review._set_judge_transport_context(
+        {"input_tokens": 99, "output_tokens": 7}
+    )
+    raw = anthropic_review.judge_raw_response_with_usage(
+        {"outcome": "dismissed", "notes": "ok"}
+    )
+    assert raw["usage"] == {"input_tokens": 99, "output_tokens": 7}
+    in_tok, out_tok = anthropic_review.judge_token_usage_from_transport()
+    assert in_tok == 99
+    assert out_tok == 7
+
+
 @pytest.mark.asyncio
 async def test_judge_llm_request_started_and_completed_logged(caplog):
     payload = {

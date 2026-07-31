@@ -304,3 +304,49 @@ async def test_fetch_repository_file_at_sha_404_raises_not_found():
                 ref="abc123",
             )
     assert exc.value.error_code == "github_contents_not_found"
+
+
+@pytest.mark.asyncio
+async def test_resolve_review_thread_raises_client_error_for_permission_denied():
+    client = AsyncMock()
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = {
+        "errors": [{"message": "Resource not accessible by integration", "type": "FORBIDDEN"}],
+    }
+    client.post = AsyncMock(return_value=response)
+
+    with patch(
+        "app.integrations.github_api._resolve_auth_headers",
+        AsyncMock(return_value={"Authorization": "token"}),
+    ):
+        with pytest.raises(httpx.HTTPStatusError) as exc:
+            await github_api.resolve_review_thread(
+                client,
+                github_installation_id=1,
+                thread_id="PRRT_test",
+            )
+    assert "Resource not accessible by integration" in str(exc.value)
+
+
+@pytest.mark.asyncio
+async def test_resolve_review_thread_raises_service_unavailable_for_transient_graphql():
+    client = AsyncMock()
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = {
+        "errors": [{"message": "Something went wrong while executing your query."}],
+    }
+    client.post = AsyncMock(return_value=response)
+
+    with patch(
+        "app.integrations.github_api._resolve_auth_headers",
+        AsyncMock(return_value={"Authorization": "token"}),
+    ):
+        with pytest.raises(ServiceUnavailableError) as exc:
+            await github_api.resolve_review_thread(
+                client,
+                github_installation_id=1,
+                thread_id="PRRT_test",
+            )
+    assert "Something went wrong" in exc.value.message

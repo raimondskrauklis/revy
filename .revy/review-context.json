@@ -7,7 +7,7 @@
       "paths": [
         {
           "path": "docs/review-pipeline/revy-review-dogfood/waves/REVY_REVIEW_DOGFOOD_EXECUTION.md",
-          "description": "RR-W1 LOOP index — R0–R5 cross-repo dogfood execution"
+          "description": "RR-W1 LOOP index — R0–R5 complete (validation PR #80 b8a589e)"
         },
         {
           "path": "docs/review-pipeline/revy-review-dogfood/REVY_REVIEW_DOGFOOD_FINDINGS.md",

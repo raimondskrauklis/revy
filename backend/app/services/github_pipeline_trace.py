@@ -169,6 +169,8 @@ async def _create_completed_step(
     error: str | None = None,
     model_provider: str | None = None,
     model_id: str | None = None,
+    input_tokens: int | None = None,
+    output_tokens: int | None = None,
 ) -> GitHubPipelineStepORM:
     step = GitHubPipelineStepORM(
         pipeline_run_id=pipeline_run_id,
@@ -178,6 +180,8 @@ async def _create_completed_step(
         error=error,
         model_provider=model_provider,
         model_id=model_id,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
     )
     session.add(step)
     await session.flush()
@@ -548,14 +552,20 @@ async def record_judge_pipeline_step(
     verification_judged_count: int = 0,
     verification_candidates: list | None = None,
 ) -> None:
+    all_artifacts = list(candidates or []) + list(verification_candidates or [])
+    input_tokens = sum(item.input_tokens or 0 for item in all_artifacts)
+    output_tokens = sum(item.output_tokens or 0 for item in all_artifacts)
     step = await _create_completed_step(
         session,
         pipeline_run_id=pipeline_run_id,
         step_type=PipelineStepType.judge,
         duration_ms=duration_ms,
+        input_tokens=input_tokens or None,
+        output_tokens=output_tokens or None,
     )
-    candidate_payload = [
-        {
+
+    def _candidate_payload(item: object) -> dict[str, object]:
+        return {
             "group_id": str(item.group_id),
             "evidence_snippet": item.evidence_snippet,
             "user_prompt": item.user_prompt,
@@ -566,24 +576,12 @@ async def record_judge_pipeline_step(
             "retry_count": item.retry_count,
             "outcome": item.outcome,
             "lock_ids_cited": item.lock_ids_cited,
+            "input_tokens": item.input_tokens,
+            "output_tokens": item.output_tokens,
         }
-        for item in (candidates or [])
-    ]
-    verification_payload = [
-        {
-            "group_id": str(item.group_id),
-            "evidence_snippet": item.evidence_snippet,
-            "user_prompt": item.user_prompt,
-            "file_patch_chars": item.file_patch_chars,
-            "raw_response": item.raw_response,
-            "raw_response_text": item.raw_response_text,
-            "parse_error": item.parse_error,
-            "retry_count": item.retry_count,
-            "outcome": item.outcome,
-            "lock_ids_cited": item.lock_ids_cited,
-        }
-        for item in (verification_candidates or [])
-    ]
+
+    candidate_payload = [_candidate_payload(item) for item in (candidates or [])]
+    verification_payload = [_candidate_payload(item) for item in (verification_candidates or [])]
     await add_step_artifact(
         session,
         step_id=step.id,
@@ -594,6 +592,8 @@ async def record_judge_pipeline_step(
             "verification_judged_count": verification_judged_count,
             "verification_candidates": verification_payload,
             "verification_group_ids": [item["group_id"] for item in verification_payload],
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
         },
     )
 

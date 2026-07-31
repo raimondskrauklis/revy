@@ -42,7 +42,7 @@
 
 **Post-PSA dogfood (2026-07-29):** [finding-resolution-dogfood](../finding-resolution-dogfood/README.md) — FR-DG1/FR-DG2 **closed PASS**; wave C shipped ([#68](https://github.com/raimondskrauklis/revy/pull/68) + [#69](https://github.com/raimondskrauklis/revy/pull/69) C3).
 
-**Cross-repo dogfood (2026-07-31):** [revy-review-dogfood](../revy-review-dogfood/README.md) — TenderPro #130; drives **RR-W1** next pass.
+**Cross-repo dogfood (2026-07-31):** [revy-review-dogfood](../revy-review-dogfood/README.md) — **RR-W1 complete** · TenderPro #130 symptoms · validation [Revy #80](https://github.com/raimondskrauklis/revy/pull/80) · shipped `deda3c9`.
 
 ## Wave C execution (LOOP)
 
@@ -56,13 +56,13 @@
 
 ## Revy PR review — operator notes (2026-07-31)
 
-Cross-repo dogfood (TenderPro #130) confirmed and extended these observations — full gap catalog: [revy-review-dogfood](../revy-review-dogfood/REVY_REVIEW_DOGFOOD_FINDINGS.md) (**RR-DG7**, **RR-W1** next pass).
+Cross-repo dogfood (TenderPro #130 symptoms; validation on [Revy #80](https://github.com/raimondskrauklis/revy/pull/80)) — full gap catalog: [revy-review-dogfood](../revy-review-dogfood/REVY_REVIEW_DOGFOOD_FINDINGS.md) (**RR-W1** complete).
 
 | Observation | Notes |
 |-------------|--------|
-| **Signal vs Bugbot** | Revy caught real adapter bugs on Revy-repo PRs; on TenderPro, high **false-positive** rate on already-fixed HEAD code — verify file at `head_sha` before chasing. |
-| **Resolution UX** | Fixed findings stay **open** (inline + summary); 0% resolution rate despite fixes; 18× thread resolve skipped on one publish. |
-| **How to close the loop** | Re-read **this generation** inline on latest SHA; manually resolve GitHub threads; treat summary counts as noisy. |
-| **Ingestion** | Rapid pushes can hit `uq_github_pr_revisions_pr_number` — review may not complete (RR-DG3). |
+| **Signal vs Bugbot** | Revy caught real adapter bugs on Revy-repo PRs; on TenderPro, high **false-positive** rate on already-fixed HEAD code — R4 HEAD suppression shipped on `deda3c9`. |
+| **Resolution UX** | **Fixed on revy venue** — DB closure SSOT; GitHub threads collapse after App **Contents: Write** (RR-DG12). |
+| **How to close the loop** | Trust DB `resolution_status` + `--rr-v-gate`; manually resolve only when permission drift suspected. |
+| **Ingestion** | R1 idempotency shipped — RR-V1 PASS on #80 (1 row per `head_sha`). |
 
-**Takeaway:** Finding-resolution mechanisms shipped; **cross-repo operator gate** needs RR-W1 (ingest + publish hygiene + HEAD truth).
+**Takeaway:** Finding-resolution mechanisms shipped; **RR-W1 cross-repo operator gate** complete — ingest, publish hygiene, HEAD truth, staging validation script.

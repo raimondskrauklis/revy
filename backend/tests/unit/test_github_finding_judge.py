@@ -1341,3 +1341,35 @@ async def test_record_judge_status_keeps_completed_when_no_candidates_but_outcom
     assert count == 0
     assert run.judge_escalation_candidate_count == 0
     assert run.judge_status == GitHubReviewJudgeStatus.completed
+
+
+@pytest.mark.asyncio
+async def test_finalize_review_run_judge_status_upgrades_when_outcomes_complete():
+    from app.services.github_finding_judge import finalize_review_run_judge_status
+
+    review_run_id = uuid.uuid4()
+    run = GitHubReviewRunORM(
+        revision_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+        judge_status=GitHubReviewJudgeStatus.skipped_unavailable,
+    )
+    run.id = review_run_id
+
+    session = AsyncMock()
+    session.get = AsyncMock(return_value=run)
+    session.flush = AsyncMock()
+
+    with patch(
+        "app.services.github_finding_judge._load_judge_candidates",
+        AsyncMock(return_value=(run, [])),
+    ):
+        with patch(
+            "app.services.github_finding_judge._judge_candidates_missing_outcome",
+            AsyncMock(return_value=False),
+        ):
+            await finalize_review_run_judge_status(session, review_run_id=review_run_id)
+
+    assert run.judge_status == GitHubReviewJudgeStatus.completed

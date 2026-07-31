@@ -491,7 +491,22 @@ Check nginx routes public API at `https://<host>/api/v1` (`deploy/nginx/revy.cre
 | Phase | Permission | Subscribe to events (form label) | `X-GitHub-Event` |
 |-------|------------|----------------------------------|------------------|
 | **R2** | **Pull requests: Read** | **Pull request** ✓ | `pull_request` |
-| **R6** | **Pull requests: Write**, **Checks: Write** | (same + check run events if needed) | `check_run`, etc. |
+| **R6** | **Contents: Write**, **Pull requests: Write**, **Checks: Write** | (same + check run events if needed) | `check_run`, etc. |
 | **OAuth install UI** | — | Callback URL + **Request user authorization during installation** ✓ | — |
+
+### Contents Write — inline thread resolve (required for publish)
+
+GraphQL `resolveReviewThread` (used when findings are addressed) is gated on **Contents: Read and write**, not Pull requests write alone. Greptile/Bugbot-class bots have this permission.
+
+**If `resolve_mutation_failed` appears in publish manifest:**
+
+1. GitHub → **Settings → Developer settings → GitHub Apps** → your Revy app (`revy-staging` / `revy`).
+2. **Repository permissions → Contents** → **Read and write** → **Save changes**.
+3. **Install App** (sidebar) → **Configure** on the installation → **Review requested permissions** → accept.
+4. Re-trigger publish (push to PR or wait for next Revy run).
+
+Verify: publish `summary_json.thread_resolve_skipped.resolve_mutation_failed` → `0`; GitHub PR **Files changed** threads collapse on fix pushes.
+
+Authority: [REVY_REVIEW_DOGFOOD_RR_V4_FINDINGS.md](../review-pipeline/revy-review-dogfood/REVY_REVIEW_DOGFOOD_RR_V4_FINDINGS.md).
 
 Track program status: [docs/review-pipeline/README.md](../review-pipeline/README.md).

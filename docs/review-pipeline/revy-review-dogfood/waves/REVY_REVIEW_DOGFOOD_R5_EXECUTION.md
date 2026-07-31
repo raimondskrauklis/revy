@@ -6,10 +6,12 @@ Phase **R5** of [REVY_REVIEW_DOGFOOD_GENERAL_PLAN.md](../REVY_REVIEW_DOGFOOD_GEN
 
 **Goal:** RR-V1–V5 PASS on staging (or documented partial with owner); RR-Q4 recommendation; program README status closed.
 
+**Status:** **done** `b8a589e` on [#80](https://github.com/raimondskrauklis/revy/pull/80) — 10 review runs; RR-V1–V4/judge/closure PASS; RR-V5 manual pytest matrix documented. See [staging validation memo](../REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md).
+
 ## Decisions locked for R5
 
-- Staging target: TenderPro #130 class PR or new dogfood PR on `tender_pro` with same surface area.
-- RR-Q4: emit **recommendation** only — enable product merge gate on resolution rate if RR-V2 PASS.
+- Staging target: **`raimondskrauklis/revy` [PR #80](https://github.com/raimondskrauklis/revy/pull/80)** — multi-push probe protocol (defect → structural fix → delete defect → empty pushes).
+- RR-Q4: emit **recommendation** only — **defer** product merge gate on resolution rate; use DB metrics (`--rr-v-gate`) as operator health signal.
 - Judge transport (RR-DG8): no re-verify unless regression suspected.
 - RR-DG5 / RR-DG10: verify on successful publish cohort — summary/inline/check `head_sha` parity (RR-V3); document any `publish_skipped_not_head` when operator pushes ahead of in-flight publish.
 
@@ -33,7 +35,7 @@ Phase **R5** of [REVY_REVIEW_DOGFOOD_GENERAL_PLAN.md](../REVY_REVIEW_DOGFOOD_GEN
 
 **Files:** `REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md`
 
-**Deliverable:** Signed § Sign-off table with date + deploy SHA.
+**Deliverable:** Signed § Sign-off table with date + deploy SHA — **done** 2026-07-31 (`b8a589e`, rev 10).
 
 ---
 
@@ -43,7 +45,7 @@ Phase **R5** of [REVY_REVIEW_DOGFOOD_GENERAL_PLAN.md](../REVY_REVIEW_DOGFOOD_GEN
 
 **Files:** `REVY_REVIEW_DOGFOOD_FINDINGS.md`, `REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md`
 
-**Deliverable:** RR-Q4 status `locked` with `enable` \| `defer` recommendation.
+**Deliverable:** RR-Q4 status `locked` with **`defer`** recommendation — recorded in findings + validation memo.
 
 ---
 
@@ -53,14 +55,7 @@ Phase **R5** of [REVY_REVIEW_DOGFOOD_GENERAL_PLAN.md](../REVY_REVIEW_DOGFOOD_GEN
 
 **Files:** `docs/review-pipeline/revy-review-dogfood/README.md`, `waves/REVY_REVIEW_DOGFOOD_EXECUTION.md`, `docs/review-pipeline/README.md`, `.revy/review-context.json` (if superseded)
 
-**Deliverable:**
-
-```bash
-# No pending phases in index (operator sets done after each merge)
-! rg 'pending' docs/review-pipeline/revy-review-dogfood/waves/REVY_REVIEW_DOGFOOD_EXECUTION.md | grep -v 'Peer review'
-# Each phase row has merge SHA column filled
-rg 'done' docs/review-pipeline/revy-review-dogfood/README.md
-```
+**Deliverable:** **done** — README + execution index updated; finding-resolution cross-link updated.
 
 ---
 
@@ -80,4 +75,4 @@ rg 'done' docs/review-pipeline/revy-review-dogfood/README.md
 - **RR-V2** and **RR-V5** PASS or documented partial with follow-up issue
 - RR-Q4 recommendation recorded
 
-**Program complete** when R5.3 merged to `main`.
+**Program complete** when R5.3 merged to `main`. **Validation complete** on [#80](https://github.com/raimondskrauklis/revy/pull/80) `b8a589e` — merge PR pending operator.

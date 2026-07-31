@@ -28,6 +28,29 @@ _INDEXABLE_COMPARE_STATUSES = frozenset({"added", "modified", "copied", "renamed
 _REMOVED_COMPARE_STATUSES = frozenset({"removed"})
 
 
+def _graphql_errors_message(errors: list[Any]) -> str:
+    parts: list[str] = []
+    for err in errors:
+        if isinstance(err, dict):
+            parts.append(str(err.get("message") or err))
+        else:
+            parts.append(str(err))
+    return "; ".join(parts)[:500]
+
+
+def _is_graphql_client_error(errors: list[Any]) -> bool:
+    for err in errors:
+        if not isinstance(err, dict):
+            continue
+        message = (err.get("message") or "").lower()
+        error_type = (err.get("type") or "").upper()
+        if error_type in {"FORBIDDEN", "NOT_FOUND", "VALIDATION_FAILED"}:
+            return True
+        if "not accessible by integration" in message:
+            return True
+    return False
+
+
 @dataclass(frozen=True)
 class CompareFileChange:
     filename: str
@@ -863,8 +886,21 @@ async def resolve_review_thread(
     response.raise_for_status()
     errors = response.json().get("errors")
     if errors:
+        detail = _graphql_errors_message(errors)
+        if _is_graphql_client_error(errors):
+            request = httpx.Request("POST", f"{GITHUB_API_BASE}/graphql")
+            response_payload = httpx.Response(
+                403,
+                request=request,
+                json={"errors": errors},
+            )
+            raise httpx.HTTPStatusError(
+                f"GitHub resolveReviewThread failed: {detail}",
+                request=request,
+                response=response_payload,
+            )
         raise ServiceUnavailableError(
-            message="GitHub resolveReviewThread failed",
+            message=f"GitHub resolveReviewThread failed: {detail}",
             error_code="github_api_error",
         )
 

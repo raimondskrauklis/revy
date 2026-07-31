@@ -1,6 +1,6 @@
 # Revy review — cross-repo staging dogfood
 
-**Status:** **LOOP in progress** (2026-07-31) — case study [TenderPro PR #130](https://github.com/raimondskrauklis/tender_pro/pull/130); **R0 done** · R1 pending.
+**Status:** **RR-W1 complete** (2026-07-31) — case study [TenderPro PR #130](https://github.com/raimondskrauklis/tender_pro/pull/130); validation on [Revy PR #80](https://github.com/raimondskrauklis/revy/pull/80). **R0–R5 done** · shipped `deda3c9` · R5 sign-off `b8a589e`.
 
 **Thesis:** Finding-resolution (FR-DG*, wave C, wave D) proved closure **mechanisms** on Revy's own repo. Cross-repo dogfood exposes **operator UX**, **publish hygiene**, and **ingestion reliability** gaps that block trusting resolution metrics on real customer PRs.
 
@@ -9,7 +9,7 @@
 | [REVY_REVIEW_DOGFOOD_FINDINGS.md](./REVY_REVIEW_DOGFOOD_FINDINGS.md) | Gap catalog **RR-DG*** |
 | [REVY_REVIEW_DOGFOOD_GENERAL_PLAN.md](./REVY_REVIEW_DOGFOOD_GENERAL_PLAN.md) | **RR-W1** phases R0–R5 (general — no execution steps) |
 | [waves/REVY_REVIEW_DOGFOOD_EXECUTION.md](./waves/REVY_REVIEW_DOGFOOD_EXECUTION.md) | LOOP index + phase execution files |
-| [REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md](./REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md) | TenderPro #130 evidence + RR-V gates |
+| [REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md](./REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md) | Revy #80 RR-V gates + sign-off |
 
 ## Relationship to prior iteration
 
@@ -26,12 +26,12 @@
 | Phase | Focus | Gaps | Execution | Status |
 |-------|--------|------|-----------|--------|
 | R0 | Baseline + RR-V gates | — | [R0](./waves/REVY_REVIEW_DOGFOOD_R0_EXECUTION.md) | done |
-| R1 | Revision ingest idempotency | RR-DG3, RR-DG11 | [R1](./waves/REVY_REVIEW_DOGFOOD_R1_EXECUTION.md) | done (local) |
-| R2 | Thread resolve hygiene | RR-DG1, RR-DG7, RR-DG9 | [R2](./waves/REVY_REVIEW_DOGFOOD_R2_EXECUTION.md) | pending |
-| R3 | Resolution stamp unblock | RR-DG4, RR-DG11 | [R3](./waves/REVY_REVIEW_DOGFOOD_R3_EXECUTION.md) | pending |
-| R4 | HEAD suppression + inline 422 | RR-DG6, RR-DG2 | [R4](./waves/REVY_REVIEW_DOGFOOD_R4_EXECUTION.md) | pending |
-| R5 | Cross-repo sign-off | RR-DG5, RR-DG10, RR-V1–V5 | [R5](./waves/REVY_REVIEW_DOGFOOD_R5_EXECUTION.md) | pending |
+| R1 | Revision ingest idempotency | RR-DG3, RR-DG11 | [R1](./waves/REVY_REVIEW_DOGFOOD_R1_EXECUTION.md) | done `deda3c9` |
+| R2 | Thread resolve hygiene | RR-DG1, RR-DG7, RR-DG9 | [R2](./waves/REVY_REVIEW_DOGFOOD_R2_EXECUTION.md) | done `deda3c9` |
+| R3 | Resolution stamp unblock | RR-DG4, RR-DG11 | [R3](./waves/REVY_REVIEW_DOGFOOD_R3_EXECUTION.md) | done `deda3c9` |
+| R4 | HEAD suppression + inline 422 | RR-DG6, RR-DG2 | [R4](./waves/REVY_REVIEW_DOGFOOD_R4_EXECUTION.md) | done `deda3c9` |
+| R5 | Cross-repo sign-off | RR-DG5, RR-DG10, RR-V1–V5 | [R5](./waves/REVY_REVIEW_DOGFOOD_R5_EXECUTION.md) | done `b8a589e` |
 
-**RR-V gate order (authority: findings § Experiment):** V1 ingest · V2 resolution rate · V3 publish SHA parity · V4 thread taxonomy · V5 matrix suppression.
+**RR-V gate order (authority: findings § Experiment):** V1 ingest · V2 resolution rate · V3 publish SHA parity · V4 thread taxonomy · V5 matrix suppression. **Sign-off:** [staging validation memo](./REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md).
 
-**Branch:** `docs/revy-review-dogfood-findings` (docs + RR-W1 implementation in one PR) · **Next:** [R1](./waves/REVY_REVIEW_DOGFOOD_R1_EXECUTION.md).
+**Ship:** [#78](https://github.com/raimondskrauklis/revy/pull/78) merged `deda3c9` (R1–R4) · [#80](https://github.com/raimondskrauklis/revy/pull/80) R5 validation `b8a589e`.

@@ -61,8 +61,8 @@ Set once at app creation. All other repository permissions stay **No access**.
 | Permission | Access | Phase | Purpose |
 |------------|--------|-------|---------|
 | **Metadata** | Read | R1 | Repo list, installation metadata |
-| **Contents** | Read | R1, R3 | Repo sync, clone, index |
-| **Pull requests** | Read and write | R2, R6 | Ingest PRs (read); post review comments (write) |
+| **Contents** | **Read and write** | R1, R3, R6 | Repo sync, clone, index (read); **`resolveReviewThread`** on addressed inline findings (write) |
+| **Pull requests** | Read and write | R2, R6 | Ingest PRs (read); post review comments + resolve threads (write) |
 | **Checks** | Write | R6 | Create/update check runs on PRs |
 | **Commit statuses** | Read | R6 (optional) | Read CI status for review context |
 
@@ -223,7 +223,7 @@ pipenv run celery -A app.workers.celery_app worker \
 | **R3** | (no new GitHub settings) | `VOYAGE_API_KEY`, `REVY_EMBEDDING_*`, `REVY_HF_CACHE_PATH` (local track), `indexing` queue |
 | **R4** | (no new GitHub settings) | `MOONSHOT_API_KEY`, Kimi model tiers, `review` queue |
 | **R5** | (no new GitHub settings) | `ANTHROPIC_API_KEY` (judge), `reconciliation`, `judge` queues |
-| **R6** | + Pull requests Write, Checks Write; optional **Check run** / **Check suite** | `github_publish` queue |
+| **R6** | + Pull requests Write, **Contents Write**, Checks Write; optional **Check run** / **Check suite** | `github_publish` queue; inline thread resolve |
 | **R7** | (no new GitHub settings) | Reviewer UI only |
 
 **Recommendation:** Configure permissions and events from this doc at app creation. Phases R3–R5 need no GitHub console changes.
@@ -251,7 +251,7 @@ pipenv run celery -A app.workers.celery_app worker \
 ```text
 [ ] App name + description + homepage
 [ ] Webhook URL + secret → GITHUB_WEBHOOK_SECRET
-[ ] Metadata Read, Contents Read
+[ ] Metadata Read, Contents Read and write
 [ ] Pull requests Read and write, Checks Write
 [ ] Push, Pull request, Pull request review subscribed
 [ ] installation + installation_repositories (automatic — nothing to click)

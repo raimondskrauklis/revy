@@ -52,7 +52,7 @@ docs/review-pipeline/
       FINDING_RESOLUTION_P0_EXECUTION.md … P5
   finding-resolution-dogfood/            ← post-PSA FR-DG* validation (Revy repo)
     README.md
-  revy-review-dogfood/                   ← cross-repo staging dogfood (TenderPro #130 → RR-W1)
+  revy-review-dogfood/                   ← cross-repo staging dogfood — RR-W1 complete (Revy #80)
     README.md
     REVY_REVIEW_DOGFOOD_FINDINGS.md
     REVY_REVIEW_DOGFOOD_GENERAL_PLAN.md

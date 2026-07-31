@@ -70,6 +70,8 @@ class JudgeCandidateArtifact:
     raw_response_text: str | None = None
     parse_error: str | None = None
     retry_count: int = 0
+    input_tokens: int | None = None
+    output_tokens: int | None = None
 
 
 _JUDGE_RETRY_SCHEMA_REMINDER = (
@@ -393,16 +395,19 @@ async def _run_judge_llm_loop(
                 group.severity = FindingSeverity.warning
 
             if artifacts_out is not None:
+                input_tokens, output_tokens = anthropic_review.judge_token_usage_from_transport()
                 artifacts_out.append(
                     JudgeCandidateArtifact(
                         group_id=group.id,
                         evidence_snippet=evidence_snippet,
                         user_prompt=user_prompt,
-                        raw_response=raw,
+                        raw_response=anthropic_review.judge_raw_response_with_usage(raw),
                         outcome=outcome_str,
                         file_patch_chars=patch_chars,
                         lock_ids_cited=lock_ids_cited,
                         retry_count=retry_count,
+                        input_tokens=input_tokens,
+                        output_tokens=output_tokens,
                     )
                 )
             judged += 1
@@ -536,6 +541,31 @@ async def record_review_run_judge_status(
         run.judge_status = GitHubReviewJudgeStatus.completed
     await session.flush()
     return judged
+
+
+async def finalize_review_run_judge_status(
+    session: AsyncSession,
+    *,
+    review_run_id: UUID,
+) -> None:
+    """Re-evaluate judge_status after verification judge (JT-SP5).
+
+    Verification may persist outcomes for escalation groups that discovery judge
+    failed to reach; publish gating uses any-purpose outcomes per group.
+    """
+    run = await session.get(GitHubReviewRunORM, review_run_id)
+    if run is None or run.judge_status != GitHubReviewJudgeStatus.skipped_unavailable:
+        return
+    _run, candidates = await _load_judge_candidates(session, review_run_id=review_run_id)
+    if _run is None:
+        return
+    if not await _judge_candidates_missing_outcome(
+        session,
+        review_run_id=review_run_id,
+        candidates=candidates,
+    ):
+        run.judge_status = GitHubReviewJudgeStatus.completed
+        await session.flush()
 
 
 async def run_judge_for_review_run(session: AsyncSession, *, review_run_id: UUID) -> int:
