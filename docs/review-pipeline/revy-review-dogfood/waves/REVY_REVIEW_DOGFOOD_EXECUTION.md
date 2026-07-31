@@ -52,7 +52,7 @@ R3 may overlap R4 after R1 if suppression is independent — LOOP order still R3
 |-------|-----------|
 | R0 | `f799dbe` |
 | R1 | `cb6a1d1` |
-| R2 | — |
-| R3 | — |
-| R4 | — |
+| R2 | `2e7c4de` |
+| R3 | `1ab7e4f` |
+| R4 | `9777aee` |
 | R5 | — |
