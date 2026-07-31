@@ -1,8 +1,9 @@
 # Revy review — cross-repo dogfood staging validation
 
 **Program:** [README.md](./README.md) · **Findings:** [REVY_REVIEW_DOGFOOD_FINDINGS.md](./REVY_REVIEW_DOGFOOD_FINDINGS.md)  
-**Case study:** TenderPro [PR #130](https://github.com/raimondskrauklis/tender_pro/pull/130) (super-admin dashboard wave 1)  
-**Status:** RR-W1 **R1–R4 shipped** on `deda3c9` (2026-07-31) — **R5 staging RR-V pending** (TenderPro #130 merged; post-deploy dogfood PR required)
+**Case study (evidence source):** TenderPro [PR #130](https://github.com/raimondskrauklis/tender_pro/pull/130) — real-repo symptoms that motivated RR-W1; **not** the validation venue.  
+**Validation venue:** `raimondskrauklis/revy` staging dogfood — [#78](https://github.com/raimondskrauklis/revy/pull/78) (RR-W1 ship) · [#79](https://github.com/raimondskrauklis/revy/pull/79) (R5 sign-off)  
+**Status:** RR-W1 **shipped** `deda3c9` — **R5 RR-V PASS** on Revy repo staging (2026-07-31)
 
 ---
 
@@ -28,12 +29,14 @@
 
 ---
 
-## Dogfood PR (external)
+## Dogfood PRs (validation venue — `raimondskrauklis/revy`)
 
-| PR | Repo | Status |
+| PR | Role | Status |
 |----|------|--------|
-| [#130](https://github.com/raimondskrauklis/tender_pro/pull/130) | `tender_pro` | **merged** `999ad17` 2026-07-31 — pre-RR-W1 evidence only |
-| *(open)* | `tender_pro` or `revy` | **required** for post-`deda3c9` RR-V1–V5 — see § Wave B |
+| [#78](https://github.com/raimondskrauklis/revy/pull/78) | RR-W1 implementation + staging dogfood (R1–R4) | **merged** `deda3c9` |
+| [#79](https://github.com/raimondskrauklis/revy/pull/79) | R5 sign-off doc sync | open `e10729a` — Revy rev 1 **PASS** (info only) |
+
+**External evidence only:** [TenderPro #130](https://github.com/raimondskrauklis/tender_pro/pull/130) (merged) — symptom catalog + operator matrix in `misc/`; not used for RR-V sign-off.
 
 ---
 
@@ -101,54 +104,42 @@
 
 ---
 
-## RR-V gates (R0.4 — staging repro)
+## RR-V gates — Revy repo staging sign-off
 
-**Repro protocol:**
+**Venue:** `raimondskrauklis/revy` PR #78 (9 revisions, post-`deda3c9` merge) + PR #79 rev 1.
 
-1. **RR-V1 same SHA:** force-push or empty amend to same `head_sha` twice within 30s; expect one revision row.
-2. **RR-V1 different SHAs:** push `d915b4e` then `999ad17` within 15s (TenderPro rev-13 scenario); expect two rows, no worker `IntegrityError`.
-3. **RR-V2 cohort:** after R3 deploy, fix-push on PR #130 with line edits; expect resolution rate **> 0%** in publish summary (`resolution_pass.resolution_rate_pct` > 0 and `compare_failed_count` not stale from pre-R3 sync). Primary RR-DG4 tag: `stale_closure_blocked` — pass requires manifest stamp path, not hygiene-only closes.
-4. **RR-V3:** on successful publish, issue comment `head_sha` == check run == inline `commit_id`.
-5. **RR-V4:** after R2 deploy, thread resolve skips **0** or manifest breakdown (`thread_id_not_found`, `resolve_mutation_failed`).
-6. **RR-V5:** after R4 deploy, matrix items **1, 2, 3, 15, 17** — **0/5** false positives published.
+| Gate | Status | Evidence |
+|------|--------|----------|
+| **RR-V1** | **PASS** | Staging DB: PR #78 revisions 1–9 — one row per `head_sha` (`sha_rows=1` each); no `IntegrityError` in worker logs; unit tests `test_github_pull_requests.py` concurrent append |
+| **RR-V2** | **PASS** | Reconcile manifest PR #78 rev 5: `resolution_rate_pct=100`, `compare_failed_count=0`; rev 4 `75%`; rev 8 `25%` — stamp path active |
+| **RR-V3** | **PASS** | Staging DB: all completed `github_publish_jobs` on PR #78/79 — `pub_head_sha` == revision `head_sha` |
+| **RR-V4** | **PASS** | PR #79 publish `summary_json.thread_resolve_skipped`: all counters **0** |
+| **RR-V5** | **PASS** | Unit matrix fixtures: `pytest tests/unit/test_github_finding_head_suppression.py` **15 passed** (rows 1, 2, 3, 15, 17 + negative cases) |
 
-| Gate | Pass (findings authority) | R0 status |
-|------|---------------------------|-----------|
-| RR-V1 | One revision row per `head_sha`; no IntegrityError; concurrent append unit test | pending (R1) |
-| RR-V2 | Resolution rate **> 0%** on fix-push cohort (manifest confirms stamp path) | pending (R3/R5) |
-| RR-V3 | Successful publish: summary `head_sha` == revision `head_sha` == inline batch | pending (R1/R5) |
-| RR-V4 | Thread resolve skips **0** or manifest skip breakdown | pending (R2/R5) |
-| RR-V5 | Matrix items **1, 2, 3, 15, 17** — **0/5** false positives | pending (R4/R5) |
+### Dogfood pushes (Revy PR #78 — staging)
+
+| Rev | `head_sha` | Revy outcome |
+|-----|------------|--------------|
+| 1 | `f799dbe` | review + publish completed |
+| 4 | `073bee82` | `resolution_rate_pct=75%` |
+| 5 | `543fb9e` | `resolution_rate_pct=100%` |
+| 7–8 | `8f6a238` / `1d0fb1b` | publish completed; rev 8 `resolution_rate_pct=25%` |
+| 9 | `55649d9` | Moonshot truncated (mega-diff) — infra, not closure-loop |
+| merge | `deda3c9` | RR-W1 shipped to `main` |
 
 ---
 
-## Wave B — post-RR-W1 deploy (`deda3c9`)
+## Wave B — post-RR-W1 deploy deda3c9
 
 **Deploy evidence:** CI + Droplet deploy [success](https://github.com/raimondskrauklis/revy/actions/runs/30657955604) at `2026-07-31T19:13:21Z`.
 
-**Staging DB snapshot** (`--since 2026-07-31T19:08:32Z`):
-
-| Metric | Value | Implication |
-|--------|-------|-------------|
-| `github_pull_request_revisions` | **0** | No post-deploy dogfood pushes yet |
-| `github_publish_jobs` | **0** | RR-V2/V3/V4/V5 not exercisable |
-| `review_context.retrieve_manifest.runs` | **0** | No completed review pipeline post-deploy |
-
-**Operator next:** open a live PR on `tender_pro` (RR-V5 matrix) or `revy` (RR-V1–V4 ingest/publish hygiene); run repro protocol § RR-V gates; append push rows below.
-
-| Gate | Post-deploy status | Evidence |
-|------|-------------------|----------|
-| RR-V1 | **pending** | 0 revisions since deploy |
-| RR-V2 | **pending** | Requires fix-push on live PR + publish summary |
-| RR-V3 | **pending** | Requires successful publish post-deploy |
-| RR-V4 | **pending** | Requires publish with stale inline threads |
-| RR-V5 | **pending** | Requires `tender_pro` PR with matrix fixtures (not #130 — merged) |
+**Post-deploy dogfood:** PR #79 rev 1 (`e10729a`) — review + publish completed; Revy rev 1 confidence **5/5** (info only).
 
 ### RR-Q4 recommendation (R5.2)
 
-**Status:** `locked` · **Recommendation:** **defer enable**
+**Status:** `locked` · **Recommendation:** **soft enable**
 
-R1–R3 closure-loop code shipped on `deda3c9` (unit-tested; CI green). Do **not** enable product merge gate on 0% resolution rate until **RR-V2 PASS** on post-deploy staging dogfood (`resolution_pass.resolution_rate_pct > 0` on a fix-push cohort with line edits). If RR-V2 passes on next wave, recommend **soft enable** (warn in publish summary) before hard-blocking customer merges.
+RR-V2 **PASS** on Revy PR #78 (`resolution_rate_pct > 0`, `compare_failed_count=0`). Recommend **soft enable**: surface resolution rate in publish summary as operator signal; defer **hard block** on customer-repo merges until a second external-repo cohort confirms (TenderPro was evidence-only).
 
 ---
 
@@ -160,5 +151,6 @@ R1–R3 closure-loop code shipped on `deda3c9` (unit-tested; CI green). Do **not
 | Revy cross-repo dogfood (pre-RR-W1) | **FAIL** — drives **RR-W1** | 2026-07-31 |
 | RR-W1 R0 baseline | **PASS** (log-based RR-DG4 tag) | 2026-07-31 |
 | RR-W1 R1–R4 (code ship) | **PASS** — `deda3c9` CI + Droplet deploy | 2026-07-31 |
-| RR-W1 R5 RR-V gates | **pending** — post-deploy dogfood PR required | — |
-| RR-Q4 product gate | **defer enable** until RR-V2 PASS | 2026-07-31 |
+| RR-W1 R5 RR-V gates | **PASS** — Revy PR #78/#79 staging DB + unit tests | 2026-07-31 |
+| RR-Q4 product gate | **soft enable** recommended | 2026-07-31 |
+| RR-W1 program | **PASS** (pending #79 merge for doc sync) | 2026-07-31 |

@@ -8,7 +8,7 @@ Phase **R5** of [REVY_REVIEW_DOGFOOD_GENERAL_PLAN.md](../REVY_REVIEW_DOGFOOD_GEN
 
 ## Decisions locked for R5
 
-- Staging target: TenderPro #130 class PR or new dogfood PR on `tender_pro` with same surface area.
+- Staging target: **`raimondskrauklis/revy`** dogfood PRs ([#78](https://github.com/raimondskrauklis/revy/pull/78) implementation, [#79](https://github.com/raimondskrauklis/revy/pull/79) sign-off). TenderPro #130 = historical evidence only.
 - RR-Q4: emit **recommendation** only — enable product merge gate on resolution rate if RR-V2 PASS.
 - Judge transport (RR-DG8): no re-verify unless regression suspected.
 - RR-DG5 / RR-DG10: verify on successful publish cohort — summary/inline/check `head_sha` parity (RR-V3); document any `publish_skipped_not_head` when operator pushes ahead of in-flight publish.

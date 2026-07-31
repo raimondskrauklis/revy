@@ -20,7 +20,7 @@
 |----|---------|--------|--------|
 | *(open)* | Agent workflow pack E2E | `chore/agent-workflow-e2e-validation` | [#73](https://github.com/raimondskrauklis/revy/pull/73) push 1 |
 | *(open)* | Finding resolution dogfood | `chore/finding-resolution-staging-dogfood` | P0 pushed — staging validation in progress |
-| *(required)* | **Revy review dogfood RR-V** | `tender_pro` or `revy` | TenderPro #130 merged — post-`deda3c9` dogfood PR needed · [memo](../revy-review-dogfood/REVY_REVIEW_DOGFOOD_STAGING_VALIDATION.md) |
+| *(open)* | **Revy review dogfood RR-W1** | `chore/rr-w1-r5-staging-signoff` | [#79](https://github.com/raimondskrauklis/revy/pull/79) — RR-V PASS; Revy rev 1 info only |
 | [#63](https://github.com/raimondskrauklis/revy/pull/63) | PSA post-#62 deploy | `chore/psa-staging-dogfood` | **sign-off complete** — merged |
 
 ## Next validation PRs

@@ -4,7 +4,7 @@
 
 **Authority:** [finding-resolution FINDINGS](../../finding-resolution/FINDING_RESOLUTION_FINDINGS.md) · [BACKEND_SCRIPTS_RUNBOOK.md](../../../utils/BACKEND_SCRIPTS_RUNBOOK.md)
 
-**Goal:** Cross-repo operator trust — idempotent ingest, publish hygiene, resolution stamp, HEAD suppression — validated on TenderPro #130 class PRs.
+**Goal:** Operator trust — idempotent ingest, publish hygiene, resolution stamp, HEAD suppression — validated on **`raimondskrauklis/revy`** staging dogfood PRs.
 
 **Branch:** `main` — RR-W1 merged [#78](https://github.com/raimondskrauklis/revy/pull/78) `deda3c9`
 
@@ -44,7 +44,7 @@ R3 may overlap R4 after R1 if suppression is independent — LOOP order still R3
 | R2 — Publish hygiene | Thread resolve taxonomy | [REVY_REVIEW_DOGFOOD_R2_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R2_EXECUTION.md) | done |
 | R3 — Resolution | Stamp unblock | [REVY_REVIEW_DOGFOOD_R3_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R3_EXECUTION.md) | done |
 | R4 — Accuracy | HEAD suppression + inline 422 | [REVY_REVIEW_DOGFOOD_R4_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R4_EXECUTION.md) | done |
-| R5 — Sign-off | Staging RR-V + doc sync | [REVY_REVIEW_DOGFOOD_R5_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R5_EXECUTION.md) | pending (RR-V) |
+| R5 — Sign-off | Staging RR-V + doc sync | [REVY_REVIEW_DOGFOOD_R5_EXECUTION.md](./REVY_REVIEW_DOGFOOD_R5_EXECUTION.md) | done |
 
 **Peer review:** Findings + general plan (2026-07-31); execution files peer-reviewed + tightened same day (RR-V gate order, R1 collision retry, R3 tag map, R4 reconcile hook).
 
@@ -56,4 +56,4 @@ R3 may overlap R4 after R1 if suppression is independent — LOOP order still R3
 | R3 | `1ab7e4f` |
 | R4 | `9777aee` |
 | R5 (ship) | `deda3c9` |
-| R5 (RR-V sign-off) | — |
+| R5 (sign-off) | `e10729a` ([#79](https://github.com/raimondskrauklis/revy/pull/79)) |
