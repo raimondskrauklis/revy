@@ -1,12 +1,12 @@
 # Bugbot — review pipeline contract
 
-**Active program:** judge-transport-reliability — worker-visible judge transport logging + gateway→direct fallback.
+**Active program:** revy-review-dogfood — cross-repo operator trust (TenderPro #130): revision ingest idempotency, thread resolve taxonomy, resolution stamp, HEAD suppression.
 
-When reviewing **backend** changes that touch judge LLM transport, profile fallback, or failure logging, treat these as authoritative:
+When reviewing **backend** changes for RR-W1, treat these as authoritative:
 
-- [JUDGE_TRANSPORT_RELIABILITY_EXECUTION.md](../docs/review-pipeline/judge/waves/JUDGE_TRANSPORT_RELIABILITY_EXECUTION.md) — T0–T3 LOOP index
-- [JUDGE_TRANSPORT_RELIABILITY_FINDINGS.md](../docs/review-pipeline/judge/JUDGE_TRANSPORT_RELIABILITY_FINDINGS.md) — JT gaps, locked JT-Q1–Q6
-- [JUDGE_TRANSPORT_RELIABILITY_GENERAL_PLAN.md](../docs/review-pipeline/judge/JUDGE_TRANSPORT_RELIABILITY_GENERAL_PLAN.md) — T0–T3 goals
+- [REVY_REVIEW_DOGFOOD_EXECUTION.md](../docs/review-pipeline/revy-review-dogfood/waves/REVY_REVIEW_DOGFOOD_EXECUTION.md) — R0–R5 LOOP index
+- [REVY_REVIEW_DOGFOOD_FINDINGS.md](../docs/review-pipeline/revy-review-dogfood/REVY_REVIEW_DOGFOOD_FINDINGS.md) — RR-DG* gaps; RR-Q5 app dedupe; RR-DG4 `stale_closure_blocked`
+- [REVY_REVIEW_DOGFOOD_GENERAL_PLAN.md](../docs/review-pipeline/revy-review-dogfood/REVY_REVIEW_DOGFOOD_GENERAL_PLAN.md) — R0–R5 goals
 
 **Agent workflow:**
 

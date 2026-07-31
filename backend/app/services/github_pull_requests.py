@@ -200,17 +200,76 @@ async def _append_revision(
     head_sha: str,
     base_sha: str | None,
 ) -> GitHubPullRequestRevisionORM:
-    pull_request.revision_count += 1
-    pull_request.head_sha = head_sha
-    revision = GitHubPullRequestRevisionORM(
+    existing_revision = await _get_revision_for_head_sha(
+        session,
         pull_request_id=pull_request.id,
-        revision_number=pull_request.revision_count,
         head_sha=head_sha,
-        base_sha=base_sha,
     )
-    session.add(revision)
-    await session.flush()
-    return revision
+    if existing_revision is not None:
+        logger.info(
+            "github_revision_append_deduped",
+            extra={
+                "pull_request_id": str(pull_request.id),
+                "head_sha": head_sha,
+                "reason": "same_head_sha",
+                "revision_id": str(existing_revision.id),
+            },
+        )
+        pull_request.head_sha = head_sha
+        return existing_revision
+
+    last_error: IntegrityError | None = None
+    for attempt in range(2):
+        if attempt == 1:
+            await session.refresh(pull_request)
+            raced_revision = await _get_revision_for_head_sha(
+                session,
+                pull_request_id=pull_request.id,
+                head_sha=head_sha,
+            )
+            if raced_revision is not None:
+                logger.info(
+                    "github_revision_append_deduped",
+                    extra={
+                        "pull_request_id": str(pull_request.id),
+                        "head_sha": head_sha,
+                        "reason": "same_head_sha",
+                        "revision_id": str(raced_revision.id),
+                    },
+                )
+                pull_request.head_sha = head_sha
+                return raced_revision
+
+        next_revision_number = pull_request.revision_count + 1
+        revision = GitHubPullRequestRevisionORM(
+            pull_request_id=pull_request.id,
+            revision_number=next_revision_number,
+            head_sha=head_sha,
+            base_sha=base_sha,
+        )
+        try:
+            async with session.begin_nested():
+                session.add(revision)
+                pull_request.revision_count = next_revision_number
+                pull_request.head_sha = head_sha
+                await session.flush()
+            return revision
+        except IntegrityError as exc:
+            if not _is_unique_violation(exc):
+                raise
+            last_error = exc
+            logger.info(
+                "github_revision_append_deduped",
+                extra={
+                    "pull_request_id": str(pull_request.id),
+                    "head_sha": head_sha,
+                    "reason": "revision_number_retry",
+                    "attempt": attempt + 1,
+                },
+            )
+
+    assert last_error is not None
+    raise last_error
 
 
 async def _create_pull_request(
@@ -278,6 +337,15 @@ async def _upsert_pull_request(
     existing.body = fields.get("body")
 
     if create_revision and fields["head_sha"] != existing.head_sha:
+        existing_revision = await _get_revision_for_head_sha(
+            session,
+            pull_request_id=existing.id,
+            head_sha=fields["head_sha"],
+        )
+        if existing_revision is not None:
+            existing.head_sha = fields["head_sha"]
+            await session.flush()
+            return existing, existing_revision
         revision = await _append_revision(
             session,
             pull_request=existing,

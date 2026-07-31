@@ -26,7 +26,7 @@
 | Phase | Focus | Gaps | Execution | Status |
 |-------|--------|------|-----------|--------|
 | R0 | Baseline + RR-V gates | — | [R0](./waves/REVY_REVIEW_DOGFOOD_R0_EXECUTION.md) | done |
-| R1 | Revision ingest idempotency | RR-DG3, RR-DG11 | [R1](./waves/REVY_REVIEW_DOGFOOD_R1_EXECUTION.md) | pending |
+| R1 | Revision ingest idempotency | RR-DG3, RR-DG11 | [R1](./waves/REVY_REVIEW_DOGFOOD_R1_EXECUTION.md) | done (local) |
 | R2 | Thread resolve hygiene | RR-DG1, RR-DG7, RR-DG9 | [R2](./waves/REVY_REVIEW_DOGFOOD_R2_EXECUTION.md) | pending |
 | R3 | Resolution stamp unblock | RR-DG4, RR-DG11 | [R3](./waves/REVY_REVIEW_DOGFOOD_R3_EXECUTION.md) | pending |
 | R4 | HEAD suppression + inline 422 | RR-DG6, RR-DG2 | [R4](./waves/REVY_REVIEW_DOGFOOD_R4_EXECUTION.md) | pending |
