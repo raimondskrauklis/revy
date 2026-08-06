@@ -377,7 +377,7 @@ def test_filter_pr_active_groups_for_summary_excludes_collapsed_inline():
     filtered = filter_pr_active_groups_for_summary(
         [stale, current],
         publishable_fingerprints={"new-fp"},
-        fingerprints_to_resolve={"stale-fp"},
+        collapsed_fingerprints={"stale-fp"},
     )
     assert [g.fingerprint for g in filtered] == ["new-fp"]
 
@@ -391,7 +391,7 @@ def test_filter_pr_active_groups_for_summary_keeps_addressed_pending_pass2_out()
     filtered = filter_pr_active_groups_for_summary(
         [addressed],
         publishable_fingerprints=set(),
-        fingerprints_to_resolve=set(),
+        collapsed_fingerprints=set(),
     )
     assert filtered == []
 

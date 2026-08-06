@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import re
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from uuid import UUID
 
 import httpx
@@ -45,7 +45,10 @@ from app.models.github_pull_request import (
 )
 from app.models.github_repository import GitHubRepositoryORM
 from app.models.github_review_run import GitHubReviewRunORM
-from app.services.github_finding_closure_rules import closure_fields_for_absent_and_addressed
+from app.services.github_finding_closure_rules import (
+    closure_fields_for_absent_and_addressed,
+    should_close_absent_and_addressed,
+)
 from app.services.github_finding_judge import is_judge_candidate
 from app.services.github_generation_lifecycle import is_review_run_superseded
 from app.services.github_indexing import ensure_revision_access, get_latest_completed_index_job
@@ -62,12 +65,17 @@ from app.services.github_pipeline_trace import (
 from app.services.github_publish_formatter import (
     PublishFormatContext,
     append_thread_resolve_skipped_block,
+    apply_publish_summary_thread_collapse,
     build_publish_format_result_async,
     filter_pr_active_groups_for_summary,
 )
 from app.services.github_suggestion import is_publishable_suggestion
 
 logger = get_logger(__name__)
+
+_PUBLISHED_CHECK_SUMMARY_KEY = "_published_check_summary"
+_PUBLISHED_ISSUE_COMMENT_KEY = "_published_issue_comment"
+_COLLAPSED_INLINE_FINGERPRINTS_KEY = "collapsed_inline_fingerprints"
 
 THREAD_RESOLVE_SKIP_ALREADY_RESOLVED = "already_resolved"
 THREAD_RESOLVE_SKIP_THREAD_ID_NOT_FOUND = "thread_id_not_found"
@@ -859,12 +867,12 @@ async def _resolve_stale_inline_threads(
     thread_index: dict[int, str] | None = None,
     outdated_comment_ids: frozenset[int] | None = None,
     resolved_comment_ids: frozenset[int] | None = None,
-) -> dict[str, int]:
+) -> tuple[dict[str, int], set[str]]:
     skipped = empty_thread_resolve_skipped()
     if not inline_threads:
-        return skipped
+        return skipped, set()
 
-    fingerprints_to_resolve, publishable_fingerprints = await _fingerprints_to_resolve_inline_threads(
+    fingerprints_to_resolve, _publishable_fingerprints = await _fingerprints_to_resolve_inline_threads(
         session,
         review_run_id=review_run_id,
         pull_request_id=pull_request_id,
@@ -922,16 +930,7 @@ async def _resolve_stale_inline_threads(
             )
             increment_thread_resolve_skip(skipped, THREAD_RESOLVE_SKIP_RESOLVE_MUTATION_FAILED)
 
-    if closed_fingerprints:
-        await _close_active_groups_for_fingerprints(
-            session,
-            pull_request_id=pull_request_id,
-            revision_id=revision_id,
-            fingerprints=closed_fingerprints,
-            publishable_fingerprints=publishable_fingerprints,
-        )
-
-    return skipped
+    return skipped, closed_fingerprints
 
 
 async def find_publish_job_for_head_sha(
@@ -1202,6 +1201,9 @@ class PublishSurfaceBuild:
     external_id: str
     owner: str
     repo_name: str
+    format_ctx: PublishFormatContext | None = None
+    publishable_fingerprints: frozenset[str] = frozenset()
+    prior_collapsed_fingerprints: frozenset[str] = frozenset()
 
 
 def _sort_publishable_groups(groups: list[GitHubFindingGroupORM]) -> list[GitHubFindingGroupORM]:
@@ -1291,16 +1293,37 @@ async def _load_pr_active_groups(
     )
 
 
+def _collapsed_inline_fingerprints_from_summary(summary_json: dict | None) -> set[str]:
+    raw = (summary_json or {}).get(_COLLAPSED_INLINE_FINGERPRINTS_KEY)
+    if isinstance(raw, list):
+        return {str(fingerprint) for fingerprint in raw if fingerprint}
+    return set()
+
+
+def _load_prior_collapsed_inline_fingerprints(
+    jobs: list[GitHubPublishJobORM],
+    *,
+    current_job_summary: dict | None = None,
+) -> set[str]:
+    collapsed = _collapsed_inline_fingerprints_from_summary(current_job_summary)
+    for prior_job in jobs:
+        collapsed.update(_collapsed_inline_fingerprints_from_summary(prior_job.summary_json))
+    return collapsed
+
+
 async def _close_active_groups_for_fingerprints(
     session: AsyncSession,
     *,
     pull_request_id: UUID,
     revision_id: UUID,
+    review_run_id: UUID,
     fingerprints: set[str],
-    publishable_fingerprints: set[str] | None = None,
 ) -> int:
     if not fingerprints:
         return 0
+    from app.services.github_finding_closure import _fingerprints_in_review_run
+
+    fingerprints_in_run = await _fingerprints_in_review_run(session, review_run_id=review_run_id)
     groups = list(
         await session.scalars(
             select(GitHubFindingGroupORM).where(
@@ -1312,7 +1335,12 @@ async def _close_active_groups_for_fingerprints(
     )
     closed = 0
     for group in groups:
-        if publishable_fingerprints and group.fingerprint in publishable_fingerprints:
+        if not should_close_absent_and_addressed(
+            state=group.state,
+            fingerprint_in_current_run=group.fingerprint in fingerprints_in_run,
+            resolution_status=group.resolution_status,
+            closure_blocked_reason=group.closure_blocked_reason,
+        ):
             continue
         fields = closure_fields_for_absent_and_addressed(resolved_at_revision_id=revision_id)
         for key, value in fields.items():
@@ -1347,16 +1375,21 @@ async def _build_publish_surface(
         session,
         pull_request_id=pull_request.id,
     )
-    fingerprints_to_resolve, publishable_fingerprints = await _fingerprints_to_resolve_inline_threads(
+    publishable_fingerprints = await _publishable_fingerprints_for_run(
         session,
         review_run_id=job.review_run_id,
         pull_request_id=pull_request.id,
-        inline_threads=inline_threads,
     )
-    pr_active_groups = filter_pr_active_groups_for_summary(
+    prior_collapsed = _load_prior_collapsed_inline_fingerprints(
+        prior_jobs,
+        current_job_summary=job.summary_json,
+    )
+    generation_fingerprints = {group.fingerprint for group in groups}
+    filtered_pr_active = filter_pr_active_groups_for_summary(
         pr_active_groups,
         publishable_fingerprints=publishable_fingerprints,
-        fingerprints_to_resolve=fingerprints_to_resolve,
+        collapsed_fingerprints=prior_collapsed,
+        generation_fingerprints=generation_fingerprints,
     )
     conclusion = compute_check_conclusion(groups)
     index_job = await get_latest_completed_index_job(
@@ -1368,18 +1401,19 @@ async def _build_publish_surface(
         session,
         review_run_id=job.review_run_id,
     )
+    format_ctx = PublishFormatContext(
+        pull_request_id=pull_request.id,
+        pull_request_number=pull_request.number,
+        head_sha=job.head_sha,
+        revision_number=revision.revision_number,
+        groups=groups,
+        index_mode=index_job.index_mode if index_job is not None else None,
+        fallback_reason=index_job.fallback_reason if index_job is not None else None,
+        resolution_metrics_manifest=resolution_metrics_manifest,
+        pr_active_groups=pr_active_groups,
+    )
     formatted = await build_publish_format_result_async(
-        PublishFormatContext(
-            pull_request_id=pull_request.id,
-            pull_request_number=pull_request.number,
-            head_sha=job.head_sha,
-            revision_number=revision.revision_number,
-            groups=groups,
-            index_mode=index_job.index_mode if index_job is not None else None,
-            fallback_reason=index_job.fallback_reason if index_job is not None else None,
-            resolution_metrics_manifest=resolution_metrics_manifest,
-            pr_active_groups=pr_active_groups,
-        )
+        replace(format_ctx, pr_active_groups=filtered_pr_active)
     )
     summary_json = {
         **formatted.summary_json,
@@ -1487,6 +1521,9 @@ async def _build_publish_surface(
         external_id=external_id,
         owner=owner,
         repo_name=repo_name,
+        format_ctx=format_ctx,
+        publishable_fingerprints=frozenset(publishable_fingerprints),
+        prior_collapsed_fingerprints=frozenset(prior_collapsed),
     )
 
 
@@ -1546,7 +1583,7 @@ async def _flush_publish_surface(
         if skipped_before_resolve is not None:
             return skipped_before_resolve
 
-        thread_resolve_skipped = await _resolve_stale_inline_threads(
+        thread_resolve_skipped, collapsed_fingerprints = await _resolve_stale_inline_threads(
             client,
             session=session,
             review_run_id=job.review_run_id,
@@ -1565,6 +1602,19 @@ async def _flush_publish_surface(
 
         issue_comment_body = build.issue_comment
         check_summary_body = build.check_summary
+        effective_collapsed = build.prior_collapsed_fingerprints | collapsed_fingerprints
+        collapsed_summary_json: dict[str, object] | None = None
+        if build.format_ctx is not None and collapsed_fingerprints:
+            collapsed = apply_publish_summary_thread_collapse(
+                check_summary_body,
+                issue_comment_body,
+                build.format_ctx,
+                publishable_fingerprints=set(build.publishable_fingerprints),
+                collapsed_fingerprints=effective_collapsed,
+            )
+            issue_comment_body = collapsed.issue_comment
+            check_summary_body = collapsed.check_summary
+            collapsed_summary_json = collapsed.summary_json
         if any(thread_resolve_skipped.values()):
             issue_comment_body = append_thread_resolve_skipped_block(
                 issue_comment_body,
@@ -1578,6 +1628,7 @@ async def _flush_publish_surface(
         indexed_thread_ids = _fingerprint_thread_ids_from_index(inline_threads, thread_index)
         job.summary_json = {
             **(job.summary_json or {}),
+            **(collapsed_summary_json or {}),
             "github_inline_threads": serialize_inline_thread_map(
                 inline_threads,
                 prior_v2=build.prior_v2_inline,
@@ -1835,6 +1886,23 @@ async def _flush_publish_surface(
                     ),
                 }
 
+        if collapsed_fingerprints:
+            await _close_active_groups_for_fingerprints(
+                session,
+                pull_request_id=pull_request.id,
+                revision_id=job.revision_id,
+                review_run_id=job.review_run_id,
+                fingerprints=collapsed_fingerprints,
+            )
+
+        persisted_collapsed = sorted(build.prior_collapsed_fingerprints | collapsed_fingerprints)
+        job.summary_json = {
+            **(job.summary_json or {}),
+            _COLLAPSED_INLINE_FINGERPRINTS_KEY: persisted_collapsed,
+            _PUBLISHED_CHECK_SUMMARY_KEY: check_summary_body,
+            _PUBLISHED_ISSUE_COMMENT_KEY: issue_comment_body,
+        }
+
         await _checkpoint_publish_surface(session, persist=persist_github_surface)
     return None
 
@@ -1923,7 +1991,12 @@ async def run_publish_job(
             repository=repository,
             installation=installation,
         )
-        job.summary_json = build.summary_json
+        job.summary_json = {
+            **build.summary_json,
+            _COLLAPSED_INLINE_FINGERPRINTS_KEY: sorted(
+                _collapsed_inline_fingerprints_from_summary(job.summary_json)
+            ),
+        }
 
         skipped = await _recheck_publish_authority_before_flush(
             session,
@@ -1954,12 +2027,15 @@ async def run_publish_job(
             session, review_run_id=job.review_run_id
         )
         if pipeline_run is not None:
+            published = job.summary_json or {}
             await record_publish_pipeline_step(
                 session,
                 pipeline_run_id=pipeline_run.id,
                 job=job,
-                summary_markdown=build.check_summary,
-                issue_comment_markdown=build.issue_comment,
+                summary_markdown=published.get(_PUBLISHED_CHECK_SUMMARY_KEY, build.check_summary),
+                issue_comment_markdown=published.get(
+                    _PUBLISHED_ISSUE_COMMENT_KEY, build.issue_comment
+                ),
                 duration_ms=int((time.monotonic() - started) * 1000),
             )
         return job

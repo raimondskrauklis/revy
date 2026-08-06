@@ -71,7 +71,7 @@ def _publish_formatter_defaults(request):
     resolve_ctx = (
         patch(
             "app.services.github_publish._resolve_stale_inline_threads",
-            AsyncMock(return_value=github_publish.empty_thread_resolve_skipped()),
+            AsyncMock(return_value=(github_publish.empty_thread_resolve_skipped(), set())),
         )
         if "resolve_unmocked" not in request.keywords
         else patch(
@@ -461,7 +461,7 @@ async def test_resolve_stale_inline_threads_option_a():
         start_line=3,
     )
     session = AsyncMock()
-    session.scalars = AsyncMock(side_effect=[[], [active_finding], [], [], []])
+    session.scalars = AsyncMock(side_effect=[[], [active_finding], [], []])
     session.get = AsyncMock(return_value=active_group)
     client = AsyncMock()
     with patch(
@@ -671,7 +671,7 @@ async def test_resolve_stale_inline_threads_counts_already_resolved():
     session.scalars = AsyncMock(side_effect=[[], [], [], []])
     client = AsyncMock()
 
-    skipped = await github_publish._resolve_stale_inline_threads(
+    skipped, _collapsed = await github_publish._resolve_stale_inline_threads(
         client,
         session=session,
         review_run_id=review_run_id,
@@ -715,7 +715,7 @@ async def test_resolve_stale_inline_threads_counts_thread_id_not_found():
         "app.services.github_publish.github_api.find_review_thread_id_for_comment",
         AsyncMock(return_value=None),
     ):
-        skipped = await github_publish._resolve_stale_inline_threads(
+        skipped, _collapsed = await github_publish._resolve_stale_inline_threads(
             client,
             session=session,
             review_run_id=review_run_id,
@@ -761,7 +761,7 @@ async def test_resolve_stale_inline_threads_retries_mutation_then_succeeds():
         "app.services.github_publish.github_api.resolve_review_thread",
         resolve_mock,
     ):
-        skipped = await github_publish._resolve_stale_inline_threads(
+        skipped, _collapsed = await github_publish._resolve_stale_inline_threads(
             client,
             session=session,
             review_run_id=review_run_id,
@@ -808,7 +808,7 @@ async def test_resolve_stale_inline_threads_counts_resolve_mutation_failed():
             side_effect=ServiceUnavailableError(message="fail", error_code="github_api_error")
         ),
     ):
-        skipped = await github_publish._resolve_stale_inline_threads(
+        skipped, _collapsed = await github_publish._resolve_stale_inline_threads(
             client,
             session=session,
             review_run_id=review_run_id,
@@ -1360,7 +1360,7 @@ async def test_run_publish_job_posts_inline_for_warning_finding():
     ):
         with patch(
             "app.services.github_publish._resolve_stale_inline_threads",
-            AsyncMock(return_value=github_publish.empty_thread_resolve_skipped()),
+            AsyncMock(return_value=(github_publish.empty_thread_resolve_skipped(), set())),
         ):
             with patch(
                 "app.services.github_publish.get_pipeline_run_for_review_run",
@@ -2135,7 +2135,7 @@ async def test_run_publish_job_resolves_superseded_threads_when_inline_already_p
     session.scalar = AsyncMock(return_value=None)
     session.flush = AsyncMock()
 
-    resolve_mock = AsyncMock(return_value=github_publish.empty_thread_resolve_skipped())
+    resolve_mock = AsyncMock(return_value=(github_publish.empty_thread_resolve_skipped(), set()))
     inline_mock = AsyncMock()
     with patch(
         "app.services.github_publish._resolve_stale_inline_threads",
@@ -2881,7 +2881,7 @@ async def test_run_publish_job_surface_flush_call_order():
             ):
                 with patch(
                     "app.services.github_publish._resolve_stale_inline_threads",
-                    _track("resolve", github_publish.empty_thread_resolve_skipped()),
+                    _track("resolve", (github_publish.empty_thread_resolve_skipped(), set())),
                 ):
                     with patch(
                         "app.services.github_publish.github_api.installation_auth_headers",

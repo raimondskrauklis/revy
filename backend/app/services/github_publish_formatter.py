@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from uuid import UUID
 
 import httpx
@@ -391,25 +391,85 @@ def filter_pr_active_groups_for_summary(
     groups: list[GitHubFindingGroupORM],
     *,
     publishable_fingerprints: set[str],
-    fingerprints_to_resolve: set[str],
+    collapsed_fingerprints: set[str],
+    generation_fingerprints: set[str] | None = None,
 ) -> list[GitHubFindingGroupORM]:
     """PR-wide still-open rows aligned with GH-1v2 inline thread collapse.
 
-    Active groups whose fingerprint is absent from this generation's publishable set
-    and scheduled for inline thread resolve should not appear as still open — the
-    inline thread is collapsed even when Pass 2 has not yet stamped ``resolved``.
+    Active groups whose fingerprint was successfully collapsed on GitHub and is
+    absent from this generation's publishable set should not appear as still open.
+    Generation-scoped groups stay visible even when judge-gated off inline publish.
     """
     filtered: list[GitHubFindingGroupORM] = []
     for group in groups:
         if group.resolution_status == ResolutionStatus.addressed:
             continue
         if (
-            group.fingerprint in fingerprints_to_resolve
+            group.fingerprint in collapsed_fingerprints
             and group.fingerprint not in publishable_fingerprints
+            and (
+                generation_fingerprints is None
+                or group.fingerprint not in generation_fingerprints
+            )
         ):
             continue
         filtered.append(group)
     return filtered
+
+
+def apply_publish_summary_thread_collapse(
+    check_summary: str,
+    issue_comment: str,
+    ctx: PublishFormatContext,
+    *,
+    publishable_fingerprints: set[str],
+    collapsed_fingerprints: set[str],
+) -> PublishFormatResult:
+    """Refresh publish surfaces after new inline thread collapses this flush."""
+    if not collapsed_fingerprints:
+        return PublishFormatResult(
+            check_summary=check_summary,
+            issue_comment=issue_comment,
+            confidence=compute_publish_confidence(ctx),
+            summary_json=_build_summary_json(ctx),
+        )
+    pr_active = ctx.pr_active_groups or []
+    generation_fingerprints = {group.fingerprint for group in ctx.groups}
+    filtered = filter_pr_active_groups_for_summary(
+        pr_active,
+        publishable_fingerprints=publishable_fingerprints,
+        collapsed_fingerprints=collapsed_fingerprints,
+        generation_fingerprints=generation_fingerprints,
+    )
+    filtered_ctx = replace(ctx, pr_active_groups=filtered)
+    confidence = compute_publish_confidence(filtered_ctx)
+    new_check = build_check_run_summary(filtered_ctx)
+    new_issue = splice_deterministic_findings_tables(issue_comment, filtered_ctx)
+    if new_issue == issue_comment:
+        new_issue = build_pr_review_comment_fallback(filtered_ctx)
+    else:
+        verdict = verdict_groups(filtered_ctx)
+        merge_line = f"**Merge recommendation:** {_merge_recommendation(verdict)}"
+        if "**Merge recommendation:**" in new_issue:
+            new_issue = re.sub(
+                r"\*\*Merge recommendation:\*\* [^\n]+",
+                merge_line,
+                new_issue,
+                count=1,
+            )
+        if "**Confidence score:**" in new_issue:
+            new_issue = re.sub(
+                r"\*\*Confidence score:\*\* \d+/5",
+                f"**Confidence score:** {confidence}/5",
+                new_issue,
+                count=1,
+            )
+    return PublishFormatResult(
+        check_summary=new_check,
+        issue_comment=new_issue,
+        confidence=confidence,
+        summary_json=_build_summary_json(filtered_ctx),
+    )
 
 
 def _severity_table_rows(
