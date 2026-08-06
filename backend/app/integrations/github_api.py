@@ -141,7 +141,9 @@ def create_app_jwt() -> str:
             error_code="github_api_disabled",
         )
     now = int(time.time())
-    payload = {"iat": now - 60, "exp": now + 600, "iss": app_id}
+    # iat 60s in the past for clock drift; exp at most 600s after iat (GitHub max JWT lifetime).
+    iat = now - 60
+    payload = {"iat": iat, "exp": iat + 600, "iss": app_id}
     return jwt.encode(payload, _load_private_key(), algorithm="RS256")
 
 
