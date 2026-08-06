@@ -130,7 +130,7 @@ publish → load github_inline_threads from prior jobs
 | **B** — `resolution_status == addressed` | Diff-based signal already exists (`github_resolution_metrics.py:139–194`) but does not change `group.state`; adopting it is a second trigger — consider post-v1 alignment only | **Shipped (GH-Q9)** — see §4c |
 | **C** — reconcile marks absent groups resolved | Fixes check/summary too but is reconcile scope change — out of this program | Still reconcile-only (finding-resolution P1–P2) |
 
-**v1 scope for check/summary (GH-Q7):** GH-1 **collapses GitHub threads only**. Active groups absent from the new run may still appear in check/summary until reconcile changes (separate program). Do not block GH-1 on reconcile.
+**v1 scope for check/summary (GH-Q7):** ~~GH-1 **collapses GitHub threads only**. Active groups absent from the new run may still appear in check/summary until reconcile changes~~ **Superseded (2026-08):** publish build filters `pr_active_groups` via `filter_pr_active_groups_for_summary`; successful thread resolve also closes groups (`_close_active_groups_for_fingerprints`). Reconcile Pass 2 remains authoritative for absent+addressed without inline map.
 
 ### GH-1v2 — collapse triggers (shipped post P4)
 
@@ -142,6 +142,8 @@ publish → load github_inline_threads from prior jobs
 |-------|----------|
 | Resolve criteria | `_fingerprints_to_resolve_inline_threads()` → `github_publish.py` |
 | GraphQL resolve + map pop | `_resolve_stale_inline_threads()` → same module |
+| **DB close after resolve** | `_close_active_groups_for_fingerprints()` — `resolved` + `absent_and_addressed` on collapsed fingerprints |
+| **Summary still-open filter** | `filter_pr_active_groups_for_summary()` → `github_publish_formatter.py`; wired in `_build_publish_surface` |
 | Thread index (`isOutdated`, `isResolved`) | `build_review_thread_index()` → `github_api.py` |
 | When it runs | Publish flush only — `run_publish_job` → `_flush_publish_surface` (Celery `publish_review_run`). **Not** a GitHub Action or `synchronize` webhook. |
 
@@ -154,8 +156,10 @@ publish → load github_inline_threads from prior jobs
 | **Option A** | Not in current publishable set | Fingerprint ∈ `inline_threads` and ∉ `_publishable_fingerprints_for_run(review_run_id)` |
 | **Option B** | Pass 1 addressed | Fingerprint ∈ `inline_threads` and group `resolution_status=addressed` (may still be `active` + re-reported — intentional) |
 | **Outdated** | GitHub anchor moved | REST `comment_id` for fingerprint maps to thread with `isOutdated=true` |
-| **Synced** | Already resolved on GitHub | `comment_id` on thread with `isResolved=true` — pop map entry only, no `resolveReviewThread` call |
+| **Synced** | Already resolved on GitHub | `comment_id` on thread with `isResolved=true` — pop map entry; **close DB group** via `_close_active_groups_for_fingerprints` |
 | **Closed** | DB lifecycle | Group `state` ∈ `resolved` \| `superseded` (P1 behavior) |
+
+**After any successful collapse (or synced resolve):** `_close_active_groups_for_fingerprints` sets `state=resolved`, `resolution_method=absent_and_addressed`, `resolved_at_revision_id=current revision` so `### Still open on PR` and metrics stay aligned with GitHub threads.
 
 **Explicit non-triggers:**
 
@@ -190,8 +194,9 @@ GH-Q2 locked **no** new diff-based resolve logic. M2 `resolution_status` may inf
 |------|----------|
 | `apply_resolution_status_for_synchronize` stamps diff-based `addressed` on push | `github_resolution_metrics.py:139–194` |
 | Does **not** change `group.state` by itself | same |
-| `count_resolution_status` excludes `addressed` while group still `active` | `github_publish_formatter.py:97–100` — L2 prose under-counts fixes |
+| `count_resolution_status` excludes `addressed` while group still `active` | `github_publish_formatter.py` — `filter_pr_active_groups_for_summary` also omits addressed + GH-1v2 collapse candidates from `### Still open on PR` |
 | Thread resolve **v2:** Option B collapses when `resolution_status=addressed` | `_fingerprints_to_resolve_inline_threads` — see §4c (GH-Q9) |
+| Publish flush closes group on collapse | `_close_active_groups_for_fingerprints` in `_resolve_stale_inline_threads` |
 
 Option B does not flip `group.state`; it only collapses the GitHub thread so the PR surface matches “dev fixed this hunk” even when Moonshot re-reports the same fingerprint.
 
@@ -242,7 +247,7 @@ Row: [GITHUB_SURFACE_DOGFOOD.md](../post-review-quality/GITHUB_SURFACE_DOGFOOD.m
 | **GH-Q4** | Track B in this program? | **locked** | **No** |
 | **GH-Q5** | Program name / folder | **locked** | `github-surface-hardening` |
 | **GH-Q6** | GH-1 resolve trigger v1? | **locked** | **Option A** + existing superseded/resolved pass |
-| **GH-Q7** | Stale active groups — threads vs check/summary? | **locked** | **Threads only** in v1; reconcile unchanged |
+| **GH-Q7** | Stale active groups — threads vs check/summary? | **locked** | **Threads + summary aligned** — `filter_pr_active_groups_for_summary` + DB close on resolve (2026-08); reconcile Pass 2 unchanged |
 | **GH-Q8** | Gap ID vs program phase naming? | **locked** | **GH-*** = gap id; **P0–P4** = program phase in general/execution plan |
 | **GH-Q9** | GH-1v2 collapse beyond Option A? | **locked** | **Option B** (`addressed`) + **outdated** + **already-resolved sync** — see §4c; GH-Q2 unchanged for v1 history |
 

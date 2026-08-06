@@ -2,7 +2,7 @@
 
 How to create and configure a **GitHub App** for Revy — webhooks (R0), repository metadata sync (R1), and workspace installations (P4).
 
-**Verified against:** [GitHub Apps docs](https://docs.github.com/en/apps/creating-github-apps), Revy R0/R1 (`docs/review-pipeline/`), `backend/app/core/config.py`.
+**Verified against:** [GitHub Apps docs](https://docs.github.com/en/apps/creating-github-apps), Revy R0/R1 (`docs/review-pipeline/`), `backend/app/integrations/github_api.py` (App JWT `iat`/`exp`), `backend/app/core/config.py`.
 
 **Related:** `backend/.env.example`, `deploy/env-examples/backend.env.production.example`, [GITHUB_APP_DESCRIPTION.md](./GITHUB_APP_DESCRIPTION.md) (form copy-paste), [GITHUB_APP_TARGET_CONFIG.md](./GITHUB_APP_TARGET_CONFIG.md) (full R0–R7 target values), [REVIEW_PIPELINE_FINDINGS.md](../review-pipeline/REVIEW_PIPELINE_FINDINGS.md), [GITHUB_WEBHOOK_DEV.md](../review-pipeline/GITHUB_WEBHOOK_DEV.md) (local forwarding), [REVY_PRODUCT_SLICE.md](../starter-pack/REVY_PRODUCT_SLICE.md), [OPS.md](../saas-base/OPS.md).
 
@@ -58,7 +58,7 @@ Install app on GitHub account/org → Installation ID → Revy UI register form
 **Verify on droplet** (uses real PEM + env; replace `INSTALLATION_ID`):
 
 ```bash
-docker exec revy-api python <<'PY'
+docker exec -i revy-api python <<'PY'
 import asyncio, httpx
 from app.core.config import settings
 from app.integrations.github_api import create_app_jwt
@@ -242,7 +242,7 @@ Source: [GitHub webhook events](https://docs.github.com/en/webhooks/webhook-even
 | **About → App ID** | Copy → `GITHUB_APP_ID` |
 | **About → Client ID** | Note for future OAuth install — not used by backend today |
 | **Private keys** | **Generate** → save `.pem` → `GITHUB_APP_PRIVATE_KEY_PATH` |
-| **Client secrets** | Not needed until OAuth user/install flow ships |
+| **Client secrets** | **Not used by Revy backend** — OAuth user/install flow only; generating one does not fix API 401s |
 | **Install App** (sidebar) | Install on org/account → get installation ID for Revy register form |
 
 ---
@@ -455,6 +455,22 @@ Set GitHub App webhook URL to the smee channel (or forward target). Keep `GITHUB
 
 ---
 
+## App JWT (GitHub API auth)
+
+Revy authenticates as the GitHub App with a short-lived **JWT** (`create_app_jwt()` in `backend/app/integrations/github_api.py`), then exchanges it for an **installation access token** per API call. Installation tokens are **not cached** — there is nothing to refresh in `.env`.
+
+| Claim | Revy value | GitHub rule |
+|-------|------------|-------------|
+| `iat` | `now - 60` | Up to 60s in the past (clock drift) |
+| `exp` | `iat + 600` | At most **600 seconds after `iat`** (10-minute max JWT lifetime) |
+| `iss` | `GITHUB_APP_ID` | App ID from **About** (not installation URL id; not Client ID unless you standardize on that) |
+
+**Do not** set `exp = now + 600` while `iat = now - 60` — that is an 11-minute window and GitHub returns `401` with `'Expiration time' claim ('exp') is too far in the future` on `GET /app` and `POST …/access_tokens`.
+
+**Client secrets** (GitHub App settings) are for OAuth only — Revy does not read them for indexing, sync, checks, or publish.
+
+---
+
 ## Installation access tokens (GitHub rollout)
 
 GitHub is rolling out a new **stateless** installation token format (`ghs_…`, ~520 chars, JWT-shaped). Classic tokens were short opaque strings.
@@ -474,12 +490,17 @@ If you later **cache** installation tokens, store as `TEXT` (≥520 chars) and t
 | `503 github_webhooks_disabled` | Empty or missing `GITHUB_WEBHOOK_SECRET` |
 | `422` invalid signature | Secret mismatch between GitHub App and backend env |
 | Webhook `200` but installation unchanged | Installation not registered in Revy (`github_installations` row missing) |
+| Webhooks OK, indexing/checks `401` on `access_tokens` | App JWT rejected — see rows below (webhooks do not use App JWT) |
 | `503 github_api_disabled` | Missing `GITHUB_APP_ID` or `GITHUB_APP_PRIVATE_KEY_PATH` |
 | `PermissionError` on PEM in container | PEM mode `600` owned by `deploy` — fix permissions (see **Droplet PEM permissions**) |
-| `GET /app` 401 or token mint fails | Wrong `GITHUB_APP_ID` (often installation ID pasted into `.env`) or PEM mismatch |
+| `GET /app` 401 — `exp` too far in the future | JWT lifetime > 600s from `iat` — upgrade Revy past PR #82 or patch `create_app_jwt()` (`exp = iat + 600`) |
+| `GET /app` 401 — JWT could not be decoded | Wrong `GITHUB_APP_ID` (often installation ID in `.env`), PEM mismatch, or clock skew |
+| `token mint` 401 (other message) | Same as `GET /app` 401 — fix App JWT first |
+| `token mint` 404 | Installation id wrong for this app, or app not installed on that account |
 | `plan_upgrade_required` on register | Workspace `plan` not `pro` — Stripe checkout or ops `UPDATE workspaces SET plan='pro'` |
 | Repos not listed | App not installed, wrong installation ID in Revy, or no `installation_repositories` webhook — run **Sync repositories** |
-| Task not running | Celery worker not consuming `github_events` / `repo_sync` |
+| Task not running | Celery worker not consuming `github_events` / `repo_sync` / `indexing` |
+| `docker exec … python <<'PY'` prints nothing | Missing `-i` on `docker exec` — use `docker exec -i revy-worker python <<'PY'` |
 | Webhook 404 | Wrong path — must be `/api/v1/webhooks/github` (nginx must route `/api/v1`) |
 
 Check nginx routes public API at `https://<host>/api/v1` (`deploy/nginx/revy.createit.digital.conf`).

@@ -2,9 +2,9 @@
 
 **Status:** **staging push 1 PASS** on dogfood PR [#63](https://github.com/raimondskrauklis/revy/pull/63) — [validation memo](./PUBLISH_SUMMARY_ALIGNMENT_STAGING_VALIDATION.md) (push 2–3 pending).
 
-**Gap:** **RG-14** / **FR-Q16** — issue comment and check run diverge; confidence/merge can disagree with open inline threads.
+**Gap:** **RG-14** / **FR-Q16** — ~~issue comment and check run diverge~~ **addressed** on `main`; ongoing: keep `### Still open on PR` aligned with GH-1v2 (`filter_pr_active_groups_for_summary`, `_close_active_groups_for_fingerprints`).
 
-**Thesis:** Complete **FR-Q7** on **both** GitHub summary channels — two-block model (this generation + still open on PR), PR-wide verdict fields, aligned with GH-1v2 thread collapse.
+**Thesis:** **FR-Q7** on **both** GitHub summary channels — two-block model (this generation + still open on PR), PR-wide verdict fields, **aligned with GH-1v2 thread collapse** (threads + summary + DB).
 
 **Prerequisites on `main`:** finding-resolution P0–P5 (#57) · generation lifecycle (#54) · github-surface-hardening GH-1v2 · RCX P6+P7 (#61 merged).
 

@@ -39,7 +39,7 @@ Revy code does not replace GitHub App registration. Use these before expecting w
 | [GITHUB_WEBHOOK_DEV.md](./GITHUB_WEBHOOK_DEV.md) | Local smee.io / tunnel, secret alignment, verify delivery |
 | [GITHUB_APP_DESCRIPTION.md](../utils/GITHUB_APP_DESCRIPTION.md) | Form copy-paste for App description |
 
-**Env (backend):** `GITHUB_WEBHOOK_SECRET` (R0+); `GITHUB_APP_ID` (**App ID** from app About — not installation URL) + `GITHUB_APP_PRIVATE_KEY_PATH` at `/mnt/revy_volume/secrets/github-app.pem` (droplet; `chown 1000:deploy`, `chmod 640`); see `backend/.env.example` and [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) § App ID vs installation ID.
+**Env (backend):** `GITHUB_WEBHOOK_SECRET` (R0+); `GITHUB_APP_ID` (**App ID** from app About — not installation URL) + `GITHUB_APP_PRIVATE_KEY_PATH` at `/mnt/revy_volume/secrets/github-app.pem` (droplet; `chown 1000:deploy`, `chmod 640`); see `backend/.env.example` and [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) § App ID vs installation ID and § App JWT.
 
 **Install order:** **Install App** on GitHub → register **installation ID** in Revy (`/installations`, pro plan) → webhooks + API.
 

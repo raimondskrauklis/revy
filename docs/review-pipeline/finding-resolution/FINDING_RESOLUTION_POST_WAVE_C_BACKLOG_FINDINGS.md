@@ -36,7 +36,7 @@
 | FR-DG2 sign-off | **PASS** | #69 rev 6 — `absent_and_addressed`, `hygiene_path_removed_count=1` |
 | Pass 3 verification | **Shipped (D0 #71)** | `pass3_verification_escalation_select` — PR-wide `still_open` + SQL predicates (`github_finding_closure.py:94–140`) |
 | Moonshot reviewer prompt | **No formatter API** | `moonshot_review.py` — `REVIEW_SYSTEM_PROMPT` only; no `format_summary_comment` / `generation_groups` |
-| Formatter signature | **Stable** | `format_summary_comment(*, generation_groups, pr_active_groups)` — `github_publish_formatter.py:379–383` |
+| Formatter signature | **Stable** | `format_summary_comment(*, generation_groups, pr_active_groups)`; `filter_pr_active_groups_for_summary` for GH-1v2-aligned PR block — `github_publish_formatter.py` |
 | MR-DG1 execution | **Written, not run** | [P4 execution](../finding-resolution-dogfood/waves/FINDING_RESOLUTION_DOGFOOD_P4_EXECUTION.md) |
 
 ---

@@ -8,7 +8,7 @@ Phase **P2** of [FINDING_RESOLUTION_DOGFOOD_GENERAL_PLAN.md](../FINDING_RESOLUTI
 
 - **Pass 2 home:** `apply_pass2_closure_for_review_run` in `github_finding_closure.py` (invoked from `reconcile_tasks.py` ~line 52) — not fingerprint matching in `github_finding_reconcile.py`.
 - **Absent + addressed:** fingerprint not in run N + Pass 1 `resolution_status=addressed` → `state=resolved`, `resolution_method=absent_and_addressed` (FR-Q3); uses P1 shared prior-revision helper.
-- **Stale active groups:** FR-DG2 gap is groups **staying active** when fingerprint absent — `_load_pr_active_groups` already filters `state == active` (`github_publish.py` ~1005–1008); P2.1 closes them, P2.2 adds regression tests only if needed.
+- **Stale active groups:** FR-DG2 gap was groups **staying active** when fingerprint absent — mitigated by GH-1v2 publish flush (`_close_active_groups_for_fingerprints`) and summary filter (`filter_pr_active_groups_for_summary`); reconcile Pass 2 (`absent_and_addressed`) remains for groups without inline map.
 - **Thread collapse:** `_fingerprints_to_resolve_inline_threads` + `_resolve_stale_inline_threads` for closed groups and `line: null` orphans.
 - **Dogfood push 3 (P2.4):** **after P2 merge + deploy** — delete or gut probe file; validates FR-DG2 only (push 2 already validated FR-DG1).
 

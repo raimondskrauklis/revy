@@ -27,6 +27,7 @@ from app.services.github_publish_formatter import (
     compute_confidence,
     count_resolution_status,
     extract_summary_blocks_section,
+    filter_pr_active_groups_for_summary,
     format_resolution_metrics_block,
     format_summary_comment,
     format_thread_resolve_skipped_block,
@@ -364,6 +365,35 @@ def test_format_summary_comment_two_block():
     )
     assert "### This generation" in markdown
     assert "### Still open on PR" in markdown
+
+
+def test_filter_pr_active_groups_for_summary_excludes_collapsed_inline():
+    stale = _group(
+        severity=FindingSeverity.warning,
+        fingerprint="stale-fp",
+        file_path="app/legacy.py",
+    )
+    current = _group(severity=FindingSeverity.info, fingerprint="new-fp")
+    filtered = filter_pr_active_groups_for_summary(
+        [stale, current],
+        publishable_fingerprints={"new-fp"},
+        fingerprints_to_resolve={"stale-fp"},
+    )
+    assert [g.fingerprint for g in filtered] == ["new-fp"]
+
+
+def test_filter_pr_active_groups_for_summary_keeps_addressed_pending_pass2_out():
+    addressed = _group(
+        severity=FindingSeverity.warning,
+        fingerprint="fixed-fp",
+        resolution_status=ResolutionStatus.addressed,
+    )
+    filtered = filter_pr_active_groups_for_summary(
+        [addressed],
+        publishable_fingerprints=set(),
+        fingerprints_to_resolve=set(),
+    )
+    assert filtered == []
 
 
 def test_splice_deterministic_findings_tables_replaces_llm_mismatch():

@@ -100,7 +100,7 @@ Inline thread on `test_psa_staging_validation_behavior.py` had `line: null` (orp
 |--------|----------|
 | **Group not closed** | Fingerprint persisted on `github_finding_groups` with `state=active` though source lines gone |
 | **Moonshot re-report gap** | Absent fingerprint in new run did not trigger Pass 2 `absent_and_addressed` closure |
-| **PR-wide block 2** | `verdict_groups` / `pr_active_groups` still include stale active group |
+| **PR-wide block 2** | `verdict_groups` / filtered `pr_active_groups` — excludes GH-1v2 collapse candidates and `resolution_status=addressed` |
 
 ### Code touchpoints
 
@@ -108,7 +108,8 @@ Inline thread on `test_psa_staging_validation_behavior.py` had `line: null` (orp
 |------|------|
 | Pass 2 reconcile closure | `github_finding_reconcile.py`, resolution pass in reconcile task |
 | PR-wide publish set | `verdict_groups`, `publishable_groups_for_review_run` |
-| Thread collapse GH-1v2 | `github_publish.py` — `_resolve_stale_inline_threads`, `_fingerprints_to_resolve_inline_threads` |
+| Thread collapse GH-1v2 | `github_publish.py` — `_resolve_stale_inline_threads`, `_fingerprints_to_resolve_inline_threads`, `_close_active_groups_for_fingerprints` |
+| Summary still-open filter | `filter_pr_active_groups_for_summary` — `github_publish_formatter.py` |
 | Option A / B | [GH-1v2 §4c](../github-surface-hardening/GITHUB_SURFACE_HARDENING_FINDINGS.md#gh-1v2--collapse-triggers-shipped-post-p4) |
 
 ### Pass criteria (dogfood)

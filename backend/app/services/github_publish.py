@@ -45,6 +45,7 @@ from app.models.github_pull_request import (
 )
 from app.models.github_repository import GitHubRepositoryORM
 from app.models.github_review_run import GitHubReviewRunORM
+from app.services.github_finding_closure_rules import closure_fields_for_absent_and_addressed
 from app.services.github_finding_judge import is_judge_candidate
 from app.services.github_generation_lifecycle import is_review_run_superseded
 from app.services.github_indexing import ensure_revision_access, get_latest_completed_index_job
@@ -62,6 +63,7 @@ from app.services.github_publish_formatter import (
     PublishFormatContext,
     append_thread_resolve_skipped_block,
     build_publish_format_result_async,
+    filter_pr_active_groups_for_summary,
 )
 from app.services.github_suggestion import is_publishable_suggestion
 
@@ -678,7 +680,7 @@ async def _fingerprints_to_resolve_inline_threads(
     pull_request_id: UUID,
     inline_threads: dict[str, int],
     outdated_comment_ids: frozenset[int] | None = None,
-) -> set[str]:
+) -> tuple[set[str], set[str]]:
     publishable = await _publishable_fingerprints_for_run(
         session,
         review_run_id=review_run_id,
@@ -718,7 +720,7 @@ async def _fingerprints_to_resolve_inline_threads(
         for group in groups:
             if group.fingerprint in inline_threads:
                 fingerprints_to_resolve.add(group.fingerprint)
-    return fingerprints_to_resolve
+    return fingerprints_to_resolve, publishable
 
 
 def inline_422_fallback_marker(fingerprint: str) -> str:
@@ -846,6 +848,7 @@ async def _resolve_stale_inline_threads(
     *,
     session: AsyncSession,
     review_run_id: UUID,
+    revision_id: UUID,
     github_installation_id: int,
     owner: str,
     repo_name: str,
@@ -861,13 +864,14 @@ async def _resolve_stale_inline_threads(
     if not inline_threads:
         return skipped
 
-    fingerprints_to_resolve = await _fingerprints_to_resolve_inline_threads(
+    fingerprints_to_resolve, publishable_fingerprints = await _fingerprints_to_resolve_inline_threads(
         session,
         review_run_id=review_run_id,
         pull_request_id=pull_request_id,
         inline_threads=inline_threads,
         outdated_comment_ids=outdated_comment_ids,
     )
+    closed_fingerprints: set[str] = set()
 
     for fingerprint in fingerprints_to_resolve:
         comment_id = inline_threads.get(fingerprint)
@@ -876,6 +880,7 @@ async def _resolve_stale_inline_threads(
         if resolved_comment_ids and comment_id in resolved_comment_ids:
             increment_thread_resolve_skip(skipped, THREAD_RESOLVE_SKIP_ALREADY_RESOLVED)
             inline_threads.pop(fingerprint, None)
+            closed_fingerprints.add(fingerprint)
             continue
         try:
             thread_id = thread_index.get(comment_id) if thread_index else None
@@ -906,6 +911,7 @@ async def _resolve_stale_inline_threads(
                 auth_headers=auth_headers,
             )
             inline_threads.pop(fingerprint, None)
+            closed_fingerprints.add(fingerprint)
         except (httpx.HTTPError, RateLimitedError, ServiceUnavailableError) as exc:
             _log_thread_resolve_skipped(
                 pull_request_id=pull_request_id,
@@ -915,6 +921,15 @@ async def _resolve_stale_inline_threads(
                 error=str(exc),
             )
             increment_thread_resolve_skip(skipped, THREAD_RESOLVE_SKIP_RESOLVE_MUTATION_FAILED)
+
+    if closed_fingerprints:
+        await _close_active_groups_for_fingerprints(
+            session,
+            pull_request_id=pull_request_id,
+            revision_id=revision_id,
+            fingerprints=closed_fingerprints,
+            publishable_fingerprints=publishable_fingerprints,
+        )
 
     return skipped
 
@@ -1276,6 +1291,38 @@ async def _load_pr_active_groups(
     )
 
 
+async def _close_active_groups_for_fingerprints(
+    session: AsyncSession,
+    *,
+    pull_request_id: UUID,
+    revision_id: UUID,
+    fingerprints: set[str],
+    publishable_fingerprints: set[str] | None = None,
+) -> int:
+    if not fingerprints:
+        return 0
+    groups = list(
+        await session.scalars(
+            select(GitHubFindingGroupORM).where(
+                GitHubFindingGroupORM.pull_request_id == pull_request_id,
+                GitHubFindingGroupORM.fingerprint.in_(fingerprints),
+                GitHubFindingGroupORM.state == GitHubFindingGroupState.active,
+            )
+        )
+    )
+    closed = 0
+    for group in groups:
+        if publishable_fingerprints and group.fingerprint in publishable_fingerprints:
+            continue
+        fields = closure_fields_for_absent_and_addressed(resolved_at_revision_id=revision_id)
+        for key, value in fields.items():
+            setattr(group, key, value)
+        closed += 1
+    if closed:
+        await session.flush()
+    return closed
+
+
 async def _build_publish_surface(
     session: AsyncSession,
     *,
@@ -1290,9 +1337,26 @@ async def _build_publish_surface(
         review_run_id=job.review_run_id,
         pull_request_id=pull_request.id,
     )
+    prior_jobs = await _fetch_prior_completed_publish_jobs(
+        session,
+        pull_request_id=pull_request.id,
+    )
+    inline_threads = _load_inline_thread_map(prior_jobs)
+    prior_v2_inline = _load_v2_inline_thread_map(prior_jobs)
     pr_active_groups = await _load_pr_active_groups(
         session,
         pull_request_id=pull_request.id,
+    )
+    fingerprints_to_resolve, publishable_fingerprints = await _fingerprints_to_resolve_inline_threads(
+        session,
+        review_run_id=job.review_run_id,
+        pull_request_id=pull_request.id,
+        inline_threads=inline_threads,
+    )
+    pr_active_groups = filter_pr_active_groups_for_summary(
+        pr_active_groups,
+        publishable_fingerprints=publishable_fingerprints,
+        fingerprints_to_resolve=fingerprints_to_resolve,
     )
     conclusion = compute_check_conclusion(groups)
     index_job = await get_latest_completed_index_job(
@@ -1317,12 +1381,6 @@ async def _build_publish_surface(
             pr_active_groups=pr_active_groups,
         )
     )
-    prior_jobs = await _fetch_prior_completed_publish_jobs(
-        session,
-        pull_request_id=pull_request.id,
-    )
-    inline_threads = _load_inline_thread_map(prior_jobs)
-    prior_v2_inline = _load_v2_inline_thread_map(prior_jobs)
     summary_json = {
         **formatted.summary_json,
         "github_inline_threads": serialize_inline_thread_map(
@@ -1492,6 +1550,7 @@ async def _flush_publish_surface(
             client,
             session=session,
             review_run_id=job.review_run_id,
+            revision_id=job.revision_id,
             github_installation_id=installation.github_installation_id,
             owner=build.owner,
             repo_name=build.repo_name,

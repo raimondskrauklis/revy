@@ -133,7 +133,7 @@ publish:
 | Channel | Scope today | Location |
 |---------|-------------|----------|
 | **Issue comment** (narrative, findings table, confidence) | **This generation** — `publishable_groups_for_review_run` for `job.review_run_id` | `_build_publish_surface` → `build_pr_review_comment` (`github_publish.py`, `github_publish_formatter.py`) |
-| **Check run summary** | **Two blocks:** this generation + **Still open on PR** (`pr_active_groups`) | `format_summary_comment` in `build_check_run_summary` |
+| **Check run summary** | **Two blocks:** this generation + **Still open on PR** (filtered `pr_active_groups`) | `format_summary_comment` + `filter_pr_active_groups_for_summary` in `build_check_run_summary` / `_build_publish_surface` |
 | **Inline + thread resolve** | Current **review_run** publishable fingerprints | `inline_publish_findings_statement`, `_publishable_fingerprints_for_run` |
 
 **Per-push refresh (not append):** one issue comment per PR, body **replaced** on each successful publish at HEAD (`update_issue_comment`). Stale/superseded generations skip publish (HEAD gate).

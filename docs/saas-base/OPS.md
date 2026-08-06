@@ -54,6 +54,7 @@ One-time per environment — see [DEV_BOOTSTRAP.md](../starter-pack/DEV_BOOTSTRA
 
 | Var | Purpose |
 |-----|---------|
+| `GITHUB_APP_ID` + `GITHUB_APP_PRIVATE_KEY_PATH` | GitHub App API (indexing, sync, checks, publish) — see [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) § App JWT |
 | `VOYAGE_API_KEY` | R3 embeddings — `REVY_EMBEDDING_MODEL=voyage-code-3`, `REVY_EMBEDDING_DIMENSIONS=1024` |
 | `MOONSHOT_API_KEY` | R4 primary reviewer (`kimi-k2.7-code` / `kimi-k3` by profile) |
 | `ANTHROPIC_API_KEY` | R5 judge (optional); `REVY_ANTHROPIC_MODEL=claude-sonnet-5` |

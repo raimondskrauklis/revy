@@ -100,6 +100,8 @@ flowchart TD
 | Option A thread resolve | Fingerprint ∉ publishable OR group closed | `_fingerprints_to_resolve_inline_threads` → `_resolve_stale_inline_threads` |
 | Option B thread resolve | `resolution_status=addressed` (even if re-reported) | same (GH-Q9) |
 | Outdated thread resolve | GitHub `isOutdated` on mapped comment | same (GH-Q9) |
+| **Summary still-open filter** | PR block omits groups whose inline thread collapses (Option A/B/outdated/sync) | `filter_pr_active_groups_for_summary` before `PublishFormatContext` |
+| **DB close on thread resolve** | Successful resolve (or already-resolved sync) → `resolved` + `absent_and_addressed` | `_close_active_groups_for_fingerprints` in `_resolve_stale_inline_threads` |
 | Judge gate on publish | Candidates need outcome row or `resolved` | `publishable_groups_for_review_run` |
 | HEAD / supersede guards | Skip publish when not HEAD | generation lifecycle P1 |
 
@@ -107,12 +109,12 @@ flowchart TD
 
 | Gap | Why it matters |
 |-----|----------------|
-| **No “fixed” group state** | Dev fixes bug → `resolution_status=addressed` but `group.state` stays `active` until thread resolve or finding absent from next publish set |
-| **No reconcile “absent → resolved”** | Finding not re-reported on revision N+1 does **not** auto-close group ([generation lifecycle](../review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_FINDINGS.md) out of scope note) |
+| **Pass 1 vs display lag** | `resolution_status=addressed` may precede `state=resolved`; **mitigated** — `### Still open on PR` excludes `addressed` and GH-1v2 collapse candidates; publish flush closes groups when threads resolve |
+| **No reconcile “absent → resolved”** | Finding not re-reported on revision N+1 does **not** auto-close group until Pass 2 — **mitigated** when inline thread collapses (Option A) on publish |
 | **Coarse `addressed` heuristic** | Touching line region ≠ proof fix; no semantic/judge re-check on next push |
 | **No human dismiss** | R7.6 deferred — no API/UI to mark false positive without judge |
 | **Judge failure honesty** | LLM error → no outcome row; `judge_status` may still `completed` (RG-6) |
-| **Summary vs inline scope (RG-14)** | Check run: two-block (this generation + PR still open). Issue comment: **generation-only** today — **PSA program** completes FR-Q7 on issue comment + PR-wide verdict. Inline per current `review_run`. |
+| **Summary vs inline scope (RG-14)** | Check + issue comment: two-block (this generation + PR still open); PR block filtered via `filter_pr_active_groups_for_summary` (PSA + GH-1v2 sync). Inline per current `review_run`. |
 | **No post-merge resolution loop** | Bugbot-style batch deferred (FR-Q10) |
 | **Doc drift R5-Q1** | Findings registry cites `normalize(message)`; code uses **title** (D10) |
 | **`count_resolution_status` bug** | Any `state==resolved` counts as `judge_dismissed` today — `resolved+addressed` misclassified (`github_publish_formatter.py:115–117`) |
@@ -203,8 +205,8 @@ flowchart TD
 | FR-Q4 | Judge on next push for `still_open` escalation groups? | **locked** | Pass 3 verification judge, max 5/run |
 | FR-Q5 | Human dismiss scope (API only vs UI)? | **addressed** | P4 admin API + reviewer dismiss action (R7.6 full UX defer) |
 | FR-Q6 | Use judge vs diff-only for `addressed`? | **locked** | Layered: Pass 1 diff, Pass 3 judge for escalation still-open |
-| FR-Q7 | Summary vs inline scope? | **addressed** | Two-block check summary + generation-only issue comment |
-| FR-Q16 | Issue comment vs check PR-wide block? | **addressed** | [publish-summary-alignment](../publish-summary-alignment/README.md) — PSA P0–P1 |
+| FR-Q7 | Summary vs inline scope? | **addressed** | Two-block check + issue comment; `### Still open on PR` uses `filter_pr_active_groups_for_summary` (GH-1v2 aligned) |
+| FR-Q16 | Issue comment vs check PR-wide block? | **addressed** | [publish-summary-alignment](../publish-summary-alignment/README.md) — PSA P0–P1; still-open filter + DB close on thread resolve (2026-08) |
 | FR-Q8 | RG-6 judge_status honesty? | **addressed** | `skipped_unavailable` on partial failure — `test_run_judge_partial_llm_failure_skipped_unavailable` |
 | FR-Q9 | Resolution rate KPI | **locked** | Superseded by FR-Q12 (transitions-only) |
 | FR-Q10 | Post-merge re-verify (Bugbot-class)? | **defer** | v1.1 |

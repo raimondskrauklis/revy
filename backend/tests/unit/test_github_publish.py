@@ -355,7 +355,7 @@ async def test_resolve_stale_inline_threads_uses_thread_index():
     pull_request_id = uuid.uuid4()
     inline_threads = {"stale-fp": 1001}
     session = AsyncMock()
-    session.scalars = AsyncMock(side_effect=[[], [], []])
+    session.scalars = AsyncMock(side_effect=[[], [], [], []])
     client = AsyncMock()
     list_mock = AsyncMock()
     with patch(
@@ -374,6 +374,7 @@ async def test_resolve_stale_inline_threads_uses_thread_index():
                     client,
                     session=session,
                     review_run_id=review_run_id,
+                    revision_id=uuid.uuid4(),
                     github_installation_id=12345,
                     owner="acme",
                     repo_name="demo",
@@ -396,7 +397,7 @@ async def test_resolve_stale_inline_threads_falls_back_when_index_misses_comment
     pull_request_id = uuid.uuid4()
     inline_threads = {"stale-fp": 1001}
     session = AsyncMock()
-    session.scalars = AsyncMock(side_effect=[[], [], []])
+    session.scalars = AsyncMock(side_effect=[[], [], [], []])
     client = AsyncMock()
     with patch(
         "app.services.github_publish.github_api.find_review_thread_id_for_comment",
@@ -410,6 +411,7 @@ async def test_resolve_stale_inline_threads_falls_back_when_index_misses_comment
                 client,
                 session=session,
                 review_run_id=review_run_id,
+                revision_id=uuid.uuid4(),
                 github_installation_id=12345,
                 owner="acme",
                 repo_name="demo",
@@ -459,7 +461,7 @@ async def test_resolve_stale_inline_threads_option_a():
         start_line=3,
     )
     session = AsyncMock()
-    session.scalars = AsyncMock(side_effect=[[], [active_finding], [], []])
+    session.scalars = AsyncMock(side_effect=[[], [active_finding], [], [], []])
     session.get = AsyncMock(return_value=active_group)
     client = AsyncMock()
     with patch(
@@ -474,6 +476,7 @@ async def test_resolve_stale_inline_threads_option_a():
                 client,
                 session=session,
                 review_run_id=review_run_id,
+                revision_id=uuid.uuid4(),
                 github_installation_id=12345,
                 owner="acme",
                 repo_name="demo",
@@ -548,6 +551,7 @@ async def test_resolve_stale_inline_threads_outdated_comment():
                 client,
                 session=session,
                 review_run_id=review_run_id,
+                revision_id=uuid.uuid4(),
                 github_installation_id=12345,
                 owner="acme",
                 repo_name="demo",
@@ -598,7 +602,7 @@ async def test_resolve_stale_inline_threads_addressed_while_still_publishable():
         start_line=3,
     )
     session = AsyncMock()
-    session.scalars = AsyncMock(side_effect=[[], [active_finding], [addressed_group]])
+    session.scalars = AsyncMock(side_effect=[[], [active_finding], [addressed_group], []])
     session.get = AsyncMock(return_value=addressed_group)
     client = AsyncMock()
     with patch(
@@ -613,6 +617,7 @@ async def test_resolve_stale_inline_threads_addressed_while_still_publishable():
                 client,
                 session=session,
                 review_run_id=review_run_id,
+                revision_id=uuid.uuid4(),
                 github_installation_id=12345,
                 owner="acme",
                 repo_name="demo",
@@ -632,7 +637,7 @@ async def test_resolve_stale_inline_threads_pops_already_resolved_without_graphq
     pull_request_id = uuid.uuid4()
     inline_threads = {"done-fp": 1001}
     session = AsyncMock()
-    session.scalars = AsyncMock(side_effect=[[], [], []])
+    session.scalars = AsyncMock(side_effect=[[], [], [], []])
     client = AsyncMock()
     with patch(
         "app.services.github_publish.github_api.resolve_review_thread",
@@ -642,6 +647,7 @@ async def test_resolve_stale_inline_threads_pops_already_resolved_without_graphq
             client,
             session=session,
             review_run_id=review_run_id,
+            revision_id=uuid.uuid4(),
             github_installation_id=12345,
             owner="acme",
             repo_name="demo",
@@ -662,13 +668,14 @@ async def test_resolve_stale_inline_threads_counts_already_resolved():
     pull_request_id = uuid.uuid4()
     inline_threads = {"done-fp": 1001}
     session = AsyncMock()
-    session.scalars = AsyncMock(side_effect=[[], [], []])
+    session.scalars = AsyncMock(side_effect=[[], [], [], []])
     client = AsyncMock()
 
     skipped = await github_publish._resolve_stale_inline_threads(
         client,
         session=session,
         review_run_id=review_run_id,
+        revision_id=uuid.uuid4(),
         github_installation_id=12345,
         owner="acme",
         repo_name="demo",
@@ -702,7 +709,7 @@ async def test_resolve_stale_inline_threads_counts_thread_id_not_found():
         file_path="a.py",
         last_seen_revision_id=uuid.uuid4(),
     )
-    session.scalars = AsyncMock(side_effect=[[stale_group], [], []])
+    session.scalars = AsyncMock(side_effect=[[stale_group], [], [], []])
     client = AsyncMock()
     with patch(
         "app.services.github_publish.github_api.find_review_thread_id_for_comment",
@@ -712,6 +719,7 @@ async def test_resolve_stale_inline_threads_counts_thread_id_not_found():
             client,
             session=session,
             review_run_id=review_run_id,
+            revision_id=uuid.uuid4(),
             github_installation_id=12345,
             owner="acme",
             repo_name="demo",
@@ -744,7 +752,7 @@ async def test_resolve_stale_inline_threads_retries_mutation_then_succeeds():
         file_path="a.py",
         last_seen_revision_id=uuid.uuid4(),
     )
-    session.scalars = AsyncMock(side_effect=[[stale_group], [], []])
+    session.scalars = AsyncMock(side_effect=[[stale_group], [], [], []])
     client = AsyncMock()
     resolve_mock = AsyncMock(
         side_effect=[ServiceUnavailableError(message="fail", error_code="github_api_error"), None],
@@ -757,6 +765,7 @@ async def test_resolve_stale_inline_threads_retries_mutation_then_succeeds():
             client,
             session=session,
             review_run_id=review_run_id,
+            revision_id=uuid.uuid4(),
             github_installation_id=12345,
             owner="acme",
             repo_name="demo",
@@ -791,7 +800,7 @@ async def test_resolve_stale_inline_threads_counts_resolve_mutation_failed():
         file_path="a.py",
         last_seen_revision_id=uuid.uuid4(),
     )
-    session.scalars = AsyncMock(side_effect=[[stale_group], [], []])
+    session.scalars = AsyncMock(side_effect=[[stale_group], [], [], []])
     client = AsyncMock()
     with patch(
         "app.services.github_publish.github_api.resolve_review_thread",
@@ -803,6 +812,7 @@ async def test_resolve_stale_inline_threads_counts_resolve_mutation_failed():
             client,
             session=session,
             review_run_id=review_run_id,
+            revision_id=uuid.uuid4(),
             github_installation_id=12345,
             owner="acme",
             repo_name="demo",

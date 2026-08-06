@@ -4,6 +4,8 @@
 Surface contract (PSA-D1–D4, PSA-D12):
 - Check + issue comment share ``format_summary_comment`` (this generation + still open on PR).
 - Verdict fields (confidence, merge, rationale, files, security rollups) use PR-wide active groups.
+- ``filter_pr_active_groups_for_summary`` drops groups whose inline thread is collapsed (GH-1v2) so
+  ``### Still open on PR`` matches resolved GitHub threads.
 - Verdict confidence applies generation resolution boost from ``ctx.groups`` (PSA-D3).
 - G9 / resolution metrics stay generation-scoped.
 - Inline publish remains generation-only; ``compute_check_conclusion`` unchanged (generation-scoped).
@@ -383,6 +385,31 @@ def _g9_resolution_prose_for_ctx(ctx: PublishFormatContext) -> str:
 
 def _active_groups(groups: list[GitHubFindingGroupORM]) -> list[GitHubFindingGroupORM]:
     return [g for g in groups if g.state == GitHubFindingGroupState.active]
+
+
+def filter_pr_active_groups_for_summary(
+    groups: list[GitHubFindingGroupORM],
+    *,
+    publishable_fingerprints: set[str],
+    fingerprints_to_resolve: set[str],
+) -> list[GitHubFindingGroupORM]:
+    """PR-wide still-open rows aligned with GH-1v2 inline thread collapse.
+
+    Active groups whose fingerprint is absent from this generation's publishable set
+    and scheduled for inline thread resolve should not appear as still open — the
+    inline thread is collapsed even when Pass 2 has not yet stamped ``resolved``.
+    """
+    filtered: list[GitHubFindingGroupORM] = []
+    for group in groups:
+        if group.resolution_status == ResolutionStatus.addressed:
+            continue
+        if (
+            group.fingerprint in fingerprints_to_resolve
+            and group.fingerprint not in publishable_fingerprints
+        ):
+            continue
+        filtered.append(group)
+    return filtered
 
 
 def _severity_table_rows(
