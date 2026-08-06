@@ -25,6 +25,7 @@ from app.constants.enums import (
     GitHubPullRequestState,
     GitHubRepositoryStatus,
     GitHubReviewRunStatus,
+    ResolutionMethod,
     ResolutionStatus,
     ReviewProfile,
 )
@@ -825,6 +826,81 @@ async def test_resolve_stale_inline_threads_counts_resolve_mutation_failed():
 
     assert skipped["resolve_mutation_failed"] == 1
     assert inline_threads == {"stale-fp": 1001}
+
+
+@pytest.mark.asyncio
+async def test_close_active_groups_for_fingerprints_closes_addressed_absent():
+    pull_request_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    review_run_id = uuid.uuid4()
+    group = GitHubFindingGroupORM(
+        id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint="fixed-fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Fixed",
+        message="msg",
+        file_path="app/a.py",
+        last_seen_revision_id=uuid.uuid4(),
+        resolution_status=ResolutionStatus.addressed,
+    )
+    session = AsyncMock()
+    session.scalars = AsyncMock(return_value=[group])
+    session.flush = AsyncMock()
+    with patch(
+        "app.services.github_finding_closure._fingerprints_in_review_run",
+        AsyncMock(return_value=set()),
+    ):
+        closed = await github_publish._close_active_groups_for_fingerprints(
+            session,
+            pull_request_id=pull_request_id,
+            revision_id=revision_id,
+            review_run_id=review_run_id,
+            fingerprints={"fixed-fp"},
+        )
+    assert closed == 1
+    assert group.state == GitHubFindingGroupState.resolved
+    assert group.resolution_method == ResolutionMethod.absent_and_addressed
+
+
+@pytest.mark.asyncio
+async def test_close_active_groups_for_fingerprints_skips_still_open_option_a():
+    pull_request_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    review_run_id = uuid.uuid4()
+    group = GitHubFindingGroupORM(
+        id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint="stale-fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Stale",
+        message="msg",
+        file_path="app/legacy.py",
+        last_seen_revision_id=uuid.uuid4(),
+        resolution_status=ResolutionStatus.still_open,
+    )
+    session = AsyncMock()
+    session.scalars = AsyncMock(return_value=[group])
+    session.flush = AsyncMock()
+    with patch(
+        "app.services.github_finding_closure._fingerprints_in_review_run",
+        AsyncMock(return_value=set()),
+    ):
+        closed = await github_publish._close_active_groups_for_fingerprints(
+            session,
+            pull_request_id=pull_request_id,
+            revision_id=revision_id,
+            review_run_id=review_run_id,
+            fingerprints={"stale-fp"},
+        )
+    assert closed == 0
+    assert group.state == GitHubFindingGroupState.active
 
 
 @pytest.mark.resolve_unmocked

@@ -688,12 +688,15 @@ async def _fingerprints_to_resolve_inline_threads(
     pull_request_id: UUID,
     inline_threads: dict[str, int],
     outdated_comment_ids: frozenset[int] | None = None,
+    publishable_fingerprints: set[str] | None = None,
 ) -> tuple[set[str], set[str]]:
-    publishable = await _publishable_fingerprints_for_run(
-        session,
-        review_run_id=review_run_id,
-        pull_request_id=pull_request_id,
-    )
+    publishable = publishable_fingerprints
+    if publishable is None:
+        publishable = await _publishable_fingerprints_for_run(
+            session,
+            review_run_id=review_run_id,
+            pull_request_id=pull_request_id,
+        )
     fingerprints_to_resolve: set[str] = {
         fingerprint for fingerprint in inline_threads if fingerprint not in publishable
     }
@@ -867,6 +870,7 @@ async def _resolve_stale_inline_threads(
     thread_index: dict[int, str] | None = None,
     outdated_comment_ids: frozenset[int] | None = None,
     resolved_comment_ids: frozenset[int] | None = None,
+    publishable_fingerprints: set[str] | None = None,
 ) -> tuple[dict[str, int], set[str]]:
     skipped = empty_thread_resolve_skipped()
     if not inline_threads:
@@ -878,6 +882,7 @@ async def _resolve_stale_inline_threads(
         pull_request_id=pull_request_id,
         inline_threads=inline_threads,
         outdated_comment_ids=outdated_comment_ids,
+        publishable_fingerprints=publishable_fingerprints,
     )
     closed_fingerprints: set[str] = set()
 
@@ -1319,8 +1324,14 @@ async def _close_active_groups_for_fingerprints(
     review_run_id: UUID,
     fingerprints: set[str],
 ) -> int:
+    """Close groups eligible for Pass-2 absent-and-addressed after GH-1v2 collapse.
+
+    Option-A / still_open collapse candidates stay ``active`` in the DB; summary
+    alignment uses ``collapsed_inline_fingerprints`` on the publish job instead.
+    """
     if not fingerprints:
         return 0
+    # Circular import: github_finding_closure → github_resolution_metrics → github_publish.
     from app.services.github_finding_closure import _fingerprints_in_review_run
 
     fingerprints_in_run = await _fingerprints_in_review_run(session, review_run_id=review_run_id)
@@ -1598,6 +1609,7 @@ async def _flush_publish_surface(
             thread_index=thread_index,
             outdated_comment_ids=outdated_comment_ids,
             resolved_comment_ids=resolved_comment_ids,
+            publishable_fingerprints=set(build.publishable_fingerprints),
         )
 
         issue_comment_body = build.issue_comment

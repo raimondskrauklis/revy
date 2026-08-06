@@ -417,6 +417,90 @@ def filter_pr_active_groups_for_summary(
     return filtered
 
 
+_SECTION_END_MARKERS = ("\n### ", "\n<details>", "\n---\n")
+
+
+def _replace_markdown_section(
+    markdown: str,
+    start_marker: str,
+    new_block: str,
+) -> str:
+    start = markdown.find(start_marker)
+    if start < 0:
+        return markdown
+    end = start + len(start_marker)
+    tail = markdown[end:]
+    end_offset = len(tail)
+    for marker in _SECTION_END_MARKERS:
+        idx = tail.find(marker)
+        if idx >= 0:
+            end_offset = min(end_offset, idx)
+    replacement = new_block.rstrip()
+    if replacement:
+        replacement = f"{replacement}\n"
+    return markdown[:start] + replacement + tail[end_offset:].lstrip("\n")
+
+
+def _replace_details_section(
+    markdown: str,
+    summary_label: str,
+    new_lines: list[str],
+) -> str:
+    marker = f"<summary>{summary_label}</summary>"
+    idx = markdown.find(marker)
+    if idx < 0:
+        return markdown
+    details_start = markdown.rfind("<details>", 0, idx)
+    if details_start < 0:
+        return markdown
+    details_end = markdown.find("</details>", idx)
+    if details_end < 0:
+        return markdown
+    details_end += len("</details>")
+    return markdown[:details_start] + "\n".join(new_lines) + markdown[details_end:]
+
+
+def _refresh_issue_pr_verdict_sections(issue_comment: str, ctx: PublishFormatContext) -> str:
+    """Patch PR-wide verdict blocks after collapse without re-running Moonshot."""
+    verdict = verdict_groups(ctx)
+    confidence = compute_publish_confidence(ctx)
+    updated = issue_comment
+    merge_line = f"**Merge recommendation:** {_merge_recommendation(verdict)}"
+    if "**Merge recommendation:**" in updated:
+        updated = re.sub(
+            r"\*\*Merge recommendation:\*\* [^\n]+",
+            lambda _: merge_line,
+            updated,
+            count=1,
+        )
+    confidence_line = f"**Confidence score:** {confidence}/5"
+    if "**Confidence score:**" in updated:
+        updated = re.sub(
+            r"\*\*Confidence score:\*\* \d+/5",
+            lambda _: confidence_line,
+            updated,
+            count=1,
+        )
+    attention = _files_needing_attention(verdict)
+    if attention:
+        files_block = "### Files needing attention\n\n" + "\n".join(
+            f"- `{path}`" for path in attention
+        )
+    elif not _active_groups(verdict):
+        files_block = "No files require special attention on this revision."
+    else:
+        files_block = ""
+    if files_block and "### Files needing attention" in updated:
+        updated = _replace_markdown_section(updated, "### Files needing attention", files_block)
+    security_lines = _security_details_lines(verdict)
+    if security_lines:
+        updated = _replace_details_section(updated, "Security review", security_lines)
+    important_lines = _important_files_details_lines(verdict)
+    if important_lines:
+        updated = _replace_details_section(updated, "Important files changed", important_lines)
+    return updated
+
+
 def apply_publish_summary_thread_collapse(
     check_summary: str,
     issue_comment: str,
@@ -448,22 +532,7 @@ def apply_publish_summary_thread_collapse(
     if new_issue == issue_comment:
         new_issue = build_pr_review_comment_fallback(filtered_ctx)
     else:
-        verdict = verdict_groups(filtered_ctx)
-        merge_line = f"**Merge recommendation:** {_merge_recommendation(verdict)}"
-        if "**Merge recommendation:**" in new_issue:
-            new_issue = re.sub(
-                r"\*\*Merge recommendation:\*\* [^\n]+",
-                merge_line,
-                new_issue,
-                count=1,
-            )
-        if "**Confidence score:**" in new_issue:
-            new_issue = re.sub(
-                r"\*\*Confidence score:\*\* \d+/5",
-                f"**Confidence score:** {confidence}/5",
-                new_issue,
-                count=1,
-            )
+        new_issue = _refresh_issue_pr_verdict_sections(new_issue, filtered_ctx)
     return PublishFormatResult(
         check_summary=new_check,
         issue_comment=new_issue,

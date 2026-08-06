@@ -19,6 +19,7 @@ from app.models.github_finding_group import GitHubFindingGroupORM
 from app.services.github_publish_formatter import (
     PublishFormatContext,
     append_thread_resolve_skipped_block,
+    apply_publish_summary_thread_collapse,
     build_check_run_summary,
     build_g9_resolution_prose,
     build_g9_resolution_prose_from_manifest,
@@ -394,6 +395,45 @@ def test_filter_pr_active_groups_for_summary_keeps_addressed_pending_pass2_out()
         collapsed_fingerprints=set(),
     )
     assert filtered == []
+
+
+def test_apply_publish_summary_thread_collapse_literal_merge_replacement():
+    stale = _group(
+        severity=FindingSeverity.warning,
+        fingerprint="stale-fp",
+        file_path="app/legacy.py",
+    )
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=42,
+        head_sha="abc123",
+        revision_number=2,
+        groups=[],
+        pr_active_groups=[stale],
+    )
+    issue = (
+        "## Revy code review\n\n"
+        "Narrative.\n\n"
+        "**Merge recommendation:** hold (1 finding)\n\n"
+        "**Confidence score:** 3/5\n\n"
+        "Rationale.\n\n"
+        "### This generation\n\n"
+        "No publishable findings this generation.\n\n"
+        "### Still open on PR\n\n"
+        "| Severity | Category | Title | File |\n"
+        "| --- | --- | --- | --- |\n"
+        "| warning | bug | Stale | app/legacy.py |\n"
+    )
+    check = build_check_run_summary(ctx)
+    result = apply_publish_summary_thread_collapse(
+        check,
+        issue,
+        ctx,
+        publishable_fingerprints=set(),
+        collapsed_fingerprints={"stale-fp"},
+    )
+    assert "app/legacy.py" not in result.issue_comment
+    assert "**Merge recommendation:**" in result.issue_comment
 
 
 def test_splice_deterministic_findings_tables_replaces_llm_mismatch():
