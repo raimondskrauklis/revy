@@ -460,6 +460,21 @@ def _replace_details_section(
     return markdown[:details_start] + "\n".join(new_lines) + markdown[details_end:]
 
 
+def _remove_details_section(markdown: str, summary_label: str) -> str:
+    marker = f"<summary>{summary_label}</summary>"
+    idx = markdown.find(marker)
+    if idx < 0:
+        return markdown
+    details_start = markdown.rfind("<details>", 0, idx)
+    if details_start < 0:
+        return markdown
+    details_end = markdown.find("</details>", idx)
+    if details_end < 0:
+        return markdown
+    details_end += len("</details>")
+    return (markdown[:details_start] + markdown[details_end:]).strip()
+
+
 def _refresh_issue_pr_verdict_sections(issue_comment: str, ctx: PublishFormatContext) -> str:
     """Patch PR-wide verdict blocks after collapse without re-running Moonshot."""
     verdict = verdict_groups(ctx)
@@ -490,14 +505,20 @@ def _refresh_issue_pr_verdict_sections(issue_comment: str, ctx: PublishFormatCon
         files_block = "No files require special attention on this revision."
     else:
         files_block = ""
-    if files_block and "### Files needing attention" in updated:
+    if "### Files needing attention" in updated:
         updated = _replace_markdown_section(updated, "### Files needing attention", files_block)
     security_lines = _security_details_lines(verdict)
-    if security_lines:
-        updated = _replace_details_section(updated, "Security review", security_lines)
+    if "<summary>Security review</summary>" in updated:
+        if security_lines:
+            updated = _replace_details_section(updated, "Security review", security_lines)
+        else:
+            updated = _remove_details_section(updated, "Security review")
     important_lines = _important_files_details_lines(verdict)
-    if important_lines:
-        updated = _replace_details_section(updated, "Important files changed", important_lines)
+    if "<summary>Important files changed</summary>" in updated:
+        if important_lines:
+            updated = _replace_details_section(updated, "Important files changed", important_lines)
+        else:
+            updated = _remove_details_section(updated, "Important files changed")
     return updated
 
 

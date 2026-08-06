@@ -687,8 +687,9 @@ async def test_resolve_stale_inline_threads_counts_already_resolved():
         resolved_comment_ids=frozenset({1001}),
     )
 
-    assert skipped["already_resolved"] == 1
+    assert skipped["already_resolved"] == 0
     assert inline_threads == {}
+    assert _collapsed == {"done-fp"}
 
 
 @pytest.mark.resolve_unmocked

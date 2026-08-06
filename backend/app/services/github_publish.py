@@ -891,7 +891,6 @@ async def _resolve_stale_inline_threads(
         if comment_id is None:
             continue
         if resolved_comment_ids and comment_id in resolved_comment_ids:
-            increment_thread_resolve_skip(skipped, THREAD_RESOLVE_SKIP_ALREADY_RESOLVED)
             inline_threads.pop(fingerprint, None)
             closed_fingerprints.add(fingerprint)
             continue

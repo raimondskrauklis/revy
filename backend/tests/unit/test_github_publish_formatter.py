@@ -436,6 +436,35 @@ def test_apply_publish_summary_thread_collapse_literal_merge_replacement():
     assert "**Merge recommendation:**" in result.issue_comment
 
 
+def test_refresh_issue_pr_verdict_sections_removes_empty_security_block():
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=42,
+        head_sha="abc123",
+        revision_number=2,
+        groups=[],
+        pr_active_groups=[],
+    )
+    issue = (
+        "## Revy code review\n\n"
+        "**Merge recommendation:** hold\n\n"
+        "**Confidence score:** 3/5\n\n"
+        "<details>\n"
+        "<summary>Security review</summary>\n\n"
+        "- Old security finding (`app/auth.py`)\n\n"
+        "</details>\n\n"
+        "### This generation\n\n"
+        "No publishable findings this generation.\n\n"
+        "### Still open on PR\n\n"
+        "No open findings on this pull request.\n"
+    )
+    from app.services.github_publish_formatter import _refresh_issue_pr_verdict_sections
+
+    refreshed = _refresh_issue_pr_verdict_sections(issue, ctx)
+    assert "Security review" not in refreshed
+    assert "app/auth.py" not in refreshed
+
+
 def test_splice_deterministic_findings_tables_replaces_llm_mismatch():
     generation = [_group(severity=FindingSeverity.error, fingerprint="gen")]
     prior_only = _group(
