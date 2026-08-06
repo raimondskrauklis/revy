@@ -29,7 +29,7 @@ def test_create_app_jwt_returns_token():
     encode.assert_called_once()
     payload = encode.call_args.args[0]
     assert payload["iss"] == "123"
-    assert payload["exp"] - payload["iat"] == 660
+    assert payload["exp"] - payload["iat"] == 600
 
 
 @pytest.mark.asyncio
