@@ -8,7 +8,9 @@ Surface contract (PSA-D1–D4, PSA-D12):
   summary-only orphans (never inlined, not in this generation) so ``### Still open on PR`` matches
   visible GitHub threads.
 - Verdict confidence applies generation resolution boost from ``ctx.groups`` (PSA-D3).
-- G9 / resolution metrics stay generation-scoped.
+- G9 / resolution metrics: this-push deltas stay generation-scoped in the manifest; displayed
+  ``still_open`` count uses ``display_still_open_prior_count`` so metrics match filtered
+  ``### Still open on PR`` rows (SOS-5).
 - Inline publish remains generation-only; ``compute_check_conclusion`` unchanged (generation-scoped).
 """
 
