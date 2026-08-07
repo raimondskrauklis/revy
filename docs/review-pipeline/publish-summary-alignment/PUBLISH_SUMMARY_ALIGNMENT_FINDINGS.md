@@ -41,11 +41,11 @@
 |------------|----------|-------|
 | Two-block **check** summary | `build_check_run_summary` `github_publish_formatter.py:317–331` | Uses `ctx.groups` + `ctx.pr_active_groups` |
 | Deterministic issue-comment tables | `splice_deterministic_findings_tables` `github_publish_formatter.py` | Replaces Moonshot `### This generation` / `### Still open on PR` sections with `format_summary_comment` (FR-Q7 parity; shipped wave C #68) |
-| `pr_active_groups` loaded at publish | `_load_pr_active_groups` `github_publish.py:998–1010` | Passed into `PublishFormatContext` |
+| `pr_active_groups` at publish | `_load_pr_active_groups` → `filter_pr_active_groups_for_summary` → `PublishFormatContext` (`_build_publish_surface`) | Excludes `resolution_status=addressed` and GH-1v2 collapse candidates |
 | Issue comment **in-place** update | `update_issue_comment` `github_publish.py:1304–1314` | Same `github_comment_id` per PR |
 | Full PR diff per review | `compare_commits(base_sha, head_sha)` `github_review.py:779–786` | Not push-delta |
 | Push-delta resolution stamp | `apply_resolution_status_for_synchronize` `github_resolution_metrics.py:115+` | G9 prose only |
-| GH-1v2 thread collapse | `_fingerprints_to_resolve_inline_threads` `github_publish.py:614–662` | Option A + B + outdated |
+| GH-1v2 thread collapse | `_fingerprints_to_resolve_inline_threads` + `_resolve_stale_inline_threads` | Option A + B + outdated; DB close via `_close_active_groups_for_fingerprints` |
 | Test: check has two blocks | `test_build_check_run_summary_two_block` `test_github_publish_formatter.py:195–208` | |
 | Test: issue comment **lacks** PR block | `test_build_pr_review_comment_fallback_generation_only_not_pr_block` `test_github_publish_formatter.py:222–239` | Documents gap — flip in P0 |
 
@@ -171,7 +171,7 @@
 1. **Longer comments** — mitigated by row caps already in `format_summary_comment`.
 2. **Duplicate rows across blocks** — acceptable per FR-Q7; generation = “new/changed this pass”.
 3. **Moonshot ignores block 2** — product bar rejects thin output; fallback is canonical.
-4. **False confidence after fix** — if group still `active` but addressed, GH-1v2 + G9 handle; display should still show block 2 until closed.
+4. **False confidence after fix** — if group still `active` but thread collapsed, `filter_pr_active_groups_for_summary` + publish-time DB close keep block 2 and verdict fields aligned with GitHub.
 5. **Check conclusion vs merge** — PSA-D12; advisory check may `success` while merge warns — intentional.
 
 ---

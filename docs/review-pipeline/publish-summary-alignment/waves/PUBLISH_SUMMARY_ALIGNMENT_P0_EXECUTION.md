@@ -58,7 +58,7 @@ python -m json.tool ../.revy/review-context.json > /dev/null
 
 ## P0.1 — `verdict_groups` helper + module contract
 
-**What:** Add helper and module-level docstring describing two-channel surface contract (PSA-D1–D4, PSA-D12).
+**What:** Add helper and module-level docstring describing two-channel surface contract (PSA-D1–D4, PSA-D12). **`filter_pr_active_groups_for_summary`** — PR still-open rows exclude GH-1v2 collapse candidates and `resolution_status=addressed`.
 
 **Files:** `backend/app/services/github_publish_formatter.py`
 

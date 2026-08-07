@@ -4,6 +4,8 @@
 Surface contract (PSA-D1–D4, PSA-D12):
 - Check + issue comment share ``format_summary_comment`` (this generation + still open on PR).
 - Verdict fields (confidence, merge, rationale, files, security rollups) use PR-wide active groups.
+- ``filter_pr_active_groups_for_summary`` drops groups whose inline thread is collapsed (GH-1v2) so
+  ``### Still open on PR`` matches resolved GitHub threads.
 - Verdict confidence applies generation resolution boost from ``ctx.groups`` (PSA-D3).
 - G9 / resolution metrics stay generation-scoped.
 - Inline publish remains generation-only; ``compute_check_conclusion`` unchanged (generation-scoped).
@@ -13,7 +15,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from uuid import UUID
 
 import httpx
@@ -383,6 +385,201 @@ def _g9_resolution_prose_for_ctx(ctx: PublishFormatContext) -> str:
 
 def _active_groups(groups: list[GitHubFindingGroupORM]) -> list[GitHubFindingGroupORM]:
     return [g for g in groups if g.state == GitHubFindingGroupState.active]
+
+
+def filter_pr_active_groups_for_summary(
+    groups: list[GitHubFindingGroupORM],
+    *,
+    publishable_fingerprints: set[str],
+    collapsed_fingerprints: set[str],
+    generation_fingerprints: set[str] | None = None,
+) -> list[GitHubFindingGroupORM]:
+    """PR-wide still-open rows aligned with GH-1v2 inline thread collapse.
+
+    Active groups whose fingerprint was successfully collapsed on GitHub and is
+    absent from this generation's publishable set should not appear as still open.
+    Generation-scoped groups stay visible even when judge-gated off inline publish.
+    """
+    filtered: list[GitHubFindingGroupORM] = []
+    for group in groups:
+        if group.resolution_status == ResolutionStatus.addressed:
+            continue
+        if (
+            group.fingerprint in collapsed_fingerprints
+            and group.fingerprint not in publishable_fingerprints
+            and (
+                generation_fingerprints is None
+                or group.fingerprint not in generation_fingerprints
+            )
+        ):
+            continue
+        filtered.append(group)
+    return filtered
+
+
+_SECTION_END_MARKERS = ("\n### ", "\n<details>", "\n---\n")
+
+
+def _replace_markdown_section(
+    markdown: str,
+    start_marker: str,
+    new_block: str,
+) -> str:
+    start = markdown.find(start_marker)
+    if start < 0:
+        return markdown
+    end = start + len(start_marker)
+    tail = markdown[end:]
+    end_offset = len(tail)
+    for marker in _SECTION_END_MARKERS:
+        idx = tail.find(marker)
+        if idx >= 0:
+            end_offset = min(end_offset, idx)
+    replacement = new_block.rstrip()
+    if replacement:
+        replacement = f"{replacement}\n"
+    return markdown[:start] + replacement + tail[end_offset:].lstrip("\n")
+
+
+def _replace_details_section(
+    markdown: str,
+    summary_label: str,
+    new_lines: list[str],
+) -> str:
+    marker = f"<summary>{summary_label}</summary>"
+    idx = markdown.find(marker)
+    if idx < 0:
+        return markdown
+    details_start = markdown.rfind("<details>", 0, idx)
+    if details_start < 0:
+        return markdown
+    details_end = markdown.find("</details>", idx)
+    if details_end < 0:
+        return markdown
+    details_end += len("</details>")
+    return markdown[:details_start] + "\n".join(new_lines) + markdown[details_end:]
+
+
+def _remove_details_section(markdown: str, summary_label: str) -> str:
+    marker = f"<summary>{summary_label}</summary>"
+    idx = markdown.find(marker)
+    if idx < 0:
+        return markdown
+    details_start = markdown.rfind("<details>", 0, idx)
+    if details_start < 0:
+        return markdown
+    details_end = markdown.find("</details>", idx)
+    if details_end < 0:
+        return markdown
+    details_end += len("</details>")
+    return (markdown[:details_start] + markdown[details_end:]).strip()
+
+
+def _patch_issue_narrative_paragraph(issue_comment: str, ctx: PublishFormatContext) -> str:
+    if not issue_comment.startswith("## Revy code review"):
+        return issue_comment
+    narrative = _review_narrative_paragraph(ctx)
+    rest = issue_comment[len("## Revy code review") :].lstrip("\n")
+    end_offset = len(rest)
+    for marker in (
+        "\n\n**Merge recommendation:**",
+        "\n\n**Confidence score:**",
+        "\n\n### ",
+        "\n\n<details>",
+        "\n\n---",
+    ):
+        idx = rest.find(marker)
+        if idx >= 0:
+            end_offset = min(end_offset, idx)
+    tail = rest[end_offset:].lstrip("\n")
+    return f"## Revy code review\n\n{narrative}\n\n{tail}" if tail else f"## Revy code review\n\n{narrative}"
+
+
+def _refresh_issue_pr_verdict_sections(issue_comment: str, ctx: PublishFormatContext) -> str:
+    """Patch PR-wide verdict blocks after collapse without re-running Moonshot."""
+    verdict = verdict_groups(ctx)
+    confidence = compute_publish_confidence(ctx)
+    updated = issue_comment
+    merge_line = f"**Merge recommendation:** {_merge_recommendation(verdict)}"
+    if "**Merge recommendation:**" in updated:
+        updated = re.sub(
+            r"\*\*Merge recommendation:\*\* [^\n]+",
+            lambda _: merge_line,
+            updated,
+            count=1,
+        )
+    confidence_line = f"**Confidence score:** {confidence}/5"
+    if "**Confidence score:**" in updated:
+        updated = re.sub(
+            r"\*\*Confidence score:\*\* \d+/5",
+            lambda _: confidence_line,
+            updated,
+            count=1,
+        )
+    attention = _files_needing_attention(verdict)
+    if attention:
+        files_block = "### Files needing attention\n\n" + "\n".join(
+            f"- `{path}`" for path in attention
+        )
+    elif not _active_groups(verdict):
+        files_block = "No files require special attention on this revision."
+    else:
+        files_block = ""
+    if "### Files needing attention" in updated:
+        updated = _replace_markdown_section(updated, "### Files needing attention", files_block)
+    security_lines = _security_details_lines(verdict)
+    if "<summary>Security review</summary>" in updated:
+        if security_lines:
+            updated = _replace_details_section(updated, "Security review", security_lines)
+        else:
+            updated = _remove_details_section(updated, "Security review")
+    important_lines = _important_files_details_lines(verdict)
+    if "<summary>Important files changed</summary>" in updated:
+        if important_lines:
+            updated = _replace_details_section(updated, "Important files changed", important_lines)
+        else:
+            updated = _remove_details_section(updated, "Important files changed")
+    return _patch_issue_narrative_paragraph(updated, ctx)
+
+
+def apply_publish_summary_thread_collapse(
+    check_summary: str,
+    issue_comment: str,
+    ctx: PublishFormatContext,
+    *,
+    publishable_fingerprints: set[str],
+    collapsed_fingerprints: set[str],
+) -> PublishFormatResult:
+    """Refresh publish surfaces after new inline thread collapses this flush."""
+    if not collapsed_fingerprints:
+        return PublishFormatResult(
+            check_summary=check_summary,
+            issue_comment=issue_comment,
+            confidence=compute_publish_confidence(ctx),
+            summary_json=_build_summary_json(ctx),
+        )
+    pr_active = ctx.pr_active_groups or []
+    generation_fingerprints = {group.fingerprint for group in ctx.groups}
+    filtered = filter_pr_active_groups_for_summary(
+        pr_active,
+        publishable_fingerprints=publishable_fingerprints,
+        collapsed_fingerprints=collapsed_fingerprints,
+        generation_fingerprints=generation_fingerprints,
+    )
+    filtered_ctx = replace(ctx, pr_active_groups=filtered)
+    confidence = compute_publish_confidence(filtered_ctx)
+    new_check = build_check_run_summary(filtered_ctx)
+    new_issue = splice_deterministic_findings_tables(issue_comment, filtered_ctx)
+    if new_issue == issue_comment:
+        new_issue = build_pr_review_comment_fallback(filtered_ctx)
+    else:
+        new_issue = _refresh_issue_pr_verdict_sections(new_issue, filtered_ctx)
+    return PublishFormatResult(
+        check_summary=new_check,
+        issue_comment=new_issue,
+        confidence=confidence,
+        summary_json=_build_summary_json(filtered_ctx),
+    )
 
 
 def _severity_table_rows(

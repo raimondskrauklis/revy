@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import re
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from uuid import UUID
 
 import httpx
@@ -45,6 +45,10 @@ from app.models.github_pull_request import (
 )
 from app.models.github_repository import GitHubRepositoryORM
 from app.models.github_review_run import GitHubReviewRunORM
+from app.services.github_finding_closure_rules import (
+    closure_fields_for_absent_and_addressed,
+    should_close_absent_and_addressed,
+)
 from app.services.github_finding_judge import is_judge_candidate
 from app.services.github_generation_lifecycle import is_review_run_superseded
 from app.services.github_indexing import ensure_revision_access, get_latest_completed_index_job
@@ -61,11 +65,15 @@ from app.services.github_pipeline_trace import (
 from app.services.github_publish_formatter import (
     PublishFormatContext,
     append_thread_resolve_skipped_block,
+    apply_publish_summary_thread_collapse,
     build_publish_format_result_async,
+    filter_pr_active_groups_for_summary,
 )
 from app.services.github_suggestion import is_publishable_suggestion
 
 logger = get_logger(__name__)
+
+_COLLAPSED_INLINE_FINGERPRINTS_KEY = "collapsed_inline_fingerprints"
 
 THREAD_RESOLVE_SKIP_ALREADY_RESOLVED = "already_resolved"
 THREAD_RESOLVE_SKIP_THREAD_ID_NOT_FOUND = "thread_id_not_found"
@@ -678,12 +686,15 @@ async def _fingerprints_to_resolve_inline_threads(
     pull_request_id: UUID,
     inline_threads: dict[str, int],
     outdated_comment_ids: frozenset[int] | None = None,
-) -> set[str]:
-    publishable = await _publishable_fingerprints_for_run(
-        session,
-        review_run_id=review_run_id,
-        pull_request_id=pull_request_id,
-    )
+    publishable_fingerprints: set[str] | None = None,
+) -> tuple[set[str], set[str]]:
+    publishable = publishable_fingerprints
+    if publishable is None:
+        publishable = await _publishable_fingerprints_for_run(
+            session,
+            review_run_id=review_run_id,
+            pull_request_id=pull_request_id,
+        )
     fingerprints_to_resolve: set[str] = {
         fingerprint for fingerprint in inline_threads if fingerprint not in publishable
     }
@@ -718,7 +729,7 @@ async def _fingerprints_to_resolve_inline_threads(
         for group in groups:
             if group.fingerprint in inline_threads:
                 fingerprints_to_resolve.add(group.fingerprint)
-    return fingerprints_to_resolve
+    return fingerprints_to_resolve, publishable
 
 
 def inline_422_fallback_marker(fingerprint: str) -> str:
@@ -846,6 +857,7 @@ async def _resolve_stale_inline_threads(
     *,
     session: AsyncSession,
     review_run_id: UUID,
+    revision_id: UUID,
     github_installation_id: int,
     owner: str,
     repo_name: str,
@@ -856,26 +868,29 @@ async def _resolve_stale_inline_threads(
     thread_index: dict[int, str] | None = None,
     outdated_comment_ids: frozenset[int] | None = None,
     resolved_comment_ids: frozenset[int] | None = None,
-) -> dict[str, int]:
+    publishable_fingerprints: set[str] | None = None,
+) -> tuple[dict[str, int], set[str]]:
     skipped = empty_thread_resolve_skipped()
     if not inline_threads:
-        return skipped
+        return skipped, set()
 
-    fingerprints_to_resolve = await _fingerprints_to_resolve_inline_threads(
+    fingerprints_to_resolve, _publishable_fingerprints = await _fingerprints_to_resolve_inline_threads(
         session,
         review_run_id=review_run_id,
         pull_request_id=pull_request_id,
         inline_threads=inline_threads,
         outdated_comment_ids=outdated_comment_ids,
+        publishable_fingerprints=publishable_fingerprints,
     )
+    closed_fingerprints: set[str] = set()
 
     for fingerprint in fingerprints_to_resolve:
         comment_id = inline_threads.get(fingerprint)
         if comment_id is None:
             continue
         if resolved_comment_ids and comment_id in resolved_comment_ids:
-            increment_thread_resolve_skip(skipped, THREAD_RESOLVE_SKIP_ALREADY_RESOLVED)
             inline_threads.pop(fingerprint, None)
+            closed_fingerprints.add(fingerprint)
             continue
         try:
             thread_id = thread_index.get(comment_id) if thread_index else None
@@ -906,6 +921,7 @@ async def _resolve_stale_inline_threads(
                 auth_headers=auth_headers,
             )
             inline_threads.pop(fingerprint, None)
+            closed_fingerprints.add(fingerprint)
         except (httpx.HTTPError, RateLimitedError, ServiceUnavailableError) as exc:
             _log_thread_resolve_skipped(
                 pull_request_id=pull_request_id,
@@ -916,7 +932,7 @@ async def _resolve_stale_inline_threads(
             )
             increment_thread_resolve_skip(skipped, THREAD_RESOLVE_SKIP_RESOLVE_MUTATION_FAILED)
 
-    return skipped
+    return skipped, closed_fingerprints
 
 
 async def find_publish_job_for_head_sha(
@@ -1187,6 +1203,16 @@ class PublishSurfaceBuild:
     external_id: str
     owner: str
     repo_name: str
+    format_ctx: PublishFormatContext | None = None
+    publishable_fingerprints: frozenset[str] = frozenset()
+    prior_collapsed_fingerprints: frozenset[str] = frozenset()
+
+
+@dataclass(frozen=True)
+class PublishFlushResult:
+    skipped_job: GitHubPublishJobORM | None = None
+    published_check_summary: str | None = None
+    published_issue_comment: str | None = None
 
 
 def _sort_publishable_groups(groups: list[GitHubFindingGroupORM]) -> list[GitHubFindingGroupORM]:
@@ -1276,6 +1302,70 @@ async def _load_pr_active_groups(
     )
 
 
+def _collapsed_inline_fingerprints_from_summary(summary_json: dict | None) -> set[str]:
+    raw = (summary_json or {}).get(_COLLAPSED_INLINE_FINGERPRINTS_KEY)
+    if isinstance(raw, list):
+        return {str(fingerprint) for fingerprint in raw if fingerprint}
+    return set()
+
+
+def _load_prior_collapsed_inline_fingerprints(
+    jobs: list[GitHubPublishJobORM],
+    *,
+    current_job_summary: dict | None = None,
+) -> set[str]:
+    collapsed = _collapsed_inline_fingerprints_from_summary(current_job_summary)
+    for prior_job in jobs:
+        collapsed.update(_collapsed_inline_fingerprints_from_summary(prior_job.summary_json))
+    return collapsed
+
+
+async def _close_active_groups_for_fingerprints(
+    session: AsyncSession,
+    *,
+    pull_request_id: UUID,
+    revision_id: UUID,
+    review_run_id: UUID,
+    fingerprints: set[str],
+) -> int:
+    """Close groups eligible for Pass-2 absent-and-addressed after GH-1v2 collapse.
+
+    Option-A / still_open collapse candidates stay ``active`` in the DB; summary
+    alignment uses ``collapsed_inline_fingerprints`` on the publish job instead.
+    """
+    if not fingerprints:
+        return 0
+    # Circular import: github_finding_closure → github_resolution_metrics → github_publish.
+    from app.services.github_finding_closure import _fingerprints_in_review_run
+
+    fingerprints_in_run = await _fingerprints_in_review_run(session, review_run_id=review_run_id)
+    groups = list(
+        await session.scalars(
+            select(GitHubFindingGroupORM).where(
+                GitHubFindingGroupORM.pull_request_id == pull_request_id,
+                GitHubFindingGroupORM.fingerprint.in_(fingerprints),
+                GitHubFindingGroupORM.state == GitHubFindingGroupState.active,
+            )
+        )
+    )
+    closed = 0
+    for group in groups:
+        if not should_close_absent_and_addressed(
+            state=group.state,
+            fingerprint_in_current_run=group.fingerprint in fingerprints_in_run,
+            resolution_status=group.resolution_status,
+            closure_blocked_reason=group.closure_blocked_reason,
+        ):
+            continue
+        fields = closure_fields_for_absent_and_addressed(resolved_at_revision_id=revision_id)
+        for key, value in fields.items():
+            setattr(group, key, value)
+        closed += 1
+    if closed:
+        await session.flush()
+    return closed
+
+
 async def _build_publish_surface(
     session: AsyncSession,
     *,
@@ -1290,9 +1380,31 @@ async def _build_publish_surface(
         review_run_id=job.review_run_id,
         pull_request_id=pull_request.id,
     )
+    prior_jobs = await _fetch_prior_completed_publish_jobs(
+        session,
+        pull_request_id=pull_request.id,
+    )
+    inline_threads = _load_inline_thread_map(prior_jobs)
+    prior_v2_inline = _load_v2_inline_thread_map(prior_jobs)
     pr_active_groups = await _load_pr_active_groups(
         session,
         pull_request_id=pull_request.id,
+    )
+    publishable_fingerprints = await _publishable_fingerprints_for_run(
+        session,
+        review_run_id=job.review_run_id,
+        pull_request_id=pull_request.id,
+    )
+    prior_collapsed = _load_prior_collapsed_inline_fingerprints(
+        prior_jobs,
+        current_job_summary=job.summary_json,
+    )
+    generation_fingerprints = {group.fingerprint for group in groups}
+    filtered_pr_active = filter_pr_active_groups_for_summary(
+        pr_active_groups,
+        publishable_fingerprints=publishable_fingerprints,
+        collapsed_fingerprints=prior_collapsed,
+        generation_fingerprints=generation_fingerprints,
     )
     conclusion = compute_check_conclusion(groups)
     index_job = await get_latest_completed_index_job(
@@ -1304,25 +1416,20 @@ async def _build_publish_surface(
         session,
         review_run_id=job.review_run_id,
     )
-    formatted = await build_publish_format_result_async(
-        PublishFormatContext(
-            pull_request_id=pull_request.id,
-            pull_request_number=pull_request.number,
-            head_sha=job.head_sha,
-            revision_number=revision.revision_number,
-            groups=groups,
-            index_mode=index_job.index_mode if index_job is not None else None,
-            fallback_reason=index_job.fallback_reason if index_job is not None else None,
-            resolution_metrics_manifest=resolution_metrics_manifest,
-            pr_active_groups=pr_active_groups,
-        )
-    )
-    prior_jobs = await _fetch_prior_completed_publish_jobs(
-        session,
+    format_ctx = PublishFormatContext(
         pull_request_id=pull_request.id,
+        pull_request_number=pull_request.number,
+        head_sha=job.head_sha,
+        revision_number=revision.revision_number,
+        groups=groups,
+        index_mode=index_job.index_mode if index_job is not None else None,
+        fallback_reason=index_job.fallback_reason if index_job is not None else None,
+        resolution_metrics_manifest=resolution_metrics_manifest,
+        pr_active_groups=pr_active_groups,
     )
-    inline_threads = _load_inline_thread_map(prior_jobs)
-    prior_v2_inline = _load_v2_inline_thread_map(prior_jobs)
+    formatted = await build_publish_format_result_async(
+        replace(format_ctx, pr_active_groups=filtered_pr_active)
+    )
     summary_json = {
         **formatted.summary_json,
         "github_inline_threads": serialize_inline_thread_map(
@@ -1429,6 +1536,9 @@ async def _build_publish_surface(
         external_id=external_id,
         owner=owner,
         repo_name=repo_name,
+        format_ctx=format_ctx,
+        publishable_fingerprints=frozenset(publishable_fingerprints),
+        prior_collapsed_fingerprints=frozenset(prior_collapsed),
     )
 
 
@@ -1443,7 +1553,7 @@ async def _flush_publish_surface(
     persist_github_surface: bool,
     retry_posted_inline: dict[str, int] | None = None,
     run: GitHubReviewRunORM,
-) -> GitHubPublishJobORM | None:
+) -> PublishFlushResult:
     inline_threads = dict(build.inline_threads)
     retry_posted = retry_posted_inline or {}
     inline_threads.update(retry_posted)
@@ -1455,7 +1565,7 @@ async def _flush_publish_surface(
         pull_request,
     )
     if skipped_at_flush_start is not None:
-        return skipped_at_flush_start
+        return PublishFlushResult(skipped_job=skipped_at_flush_start)
 
     async with httpx.AsyncClient(timeout=120.0) as client:
         auth_headers = await github_api.installation_auth_headers(
@@ -1486,12 +1596,13 @@ async def _flush_publish_surface(
             pull_request,
         )
         if skipped_before_resolve is not None:
-            return skipped_before_resolve
+            return PublishFlushResult(skipped_job=skipped_before_resolve)
 
-        thread_resolve_skipped = await _resolve_stale_inline_threads(
+        thread_resolve_skipped, collapsed_fingerprints = await _resolve_stale_inline_threads(
             client,
             session=session,
             review_run_id=job.review_run_id,
+            revision_id=job.revision_id,
             github_installation_id=installation.github_installation_id,
             owner=build.owner,
             repo_name=build.repo_name,
@@ -1502,10 +1613,24 @@ async def _flush_publish_surface(
             thread_index=thread_index,
             outdated_comment_ids=outdated_comment_ids,
             resolved_comment_ids=resolved_comment_ids,
+            publishable_fingerprints=set(build.publishable_fingerprints),
         )
 
         issue_comment_body = build.issue_comment
         check_summary_body = build.check_summary
+        effective_collapsed = build.prior_collapsed_fingerprints | collapsed_fingerprints
+        collapsed_summary_json: dict[str, object] | None = None
+        if build.format_ctx is not None and collapsed_fingerprints:
+            collapsed = apply_publish_summary_thread_collapse(
+                check_summary_body,
+                issue_comment_body,
+                build.format_ctx,
+                publishable_fingerprints=set(build.publishable_fingerprints),
+                collapsed_fingerprints=effective_collapsed,
+            )
+            issue_comment_body = collapsed.issue_comment
+            check_summary_body = collapsed.check_summary
+            collapsed_summary_json = collapsed.summary_json
         if any(thread_resolve_skipped.values()):
             issue_comment_body = append_thread_resolve_skipped_block(
                 issue_comment_body,
@@ -1519,6 +1644,7 @@ async def _flush_publish_surface(
         indexed_thread_ids = _fingerprint_thread_ids_from_index(inline_threads, thread_index)
         job.summary_json = {
             **(job.summary_json or {}),
+            **(collapsed_summary_json or {}),
             "github_inline_threads": serialize_inline_thread_map(
                 inline_threads,
                 prior_v2=build.prior_v2_inline,
@@ -1534,7 +1660,7 @@ async def _flush_publish_surface(
             pull_request,
         )
         if skipped_after_resolve is not None:
-            return skipped_after_resolve
+            return PublishFlushResult(skipped_job=skipped_after_resolve)
 
         github_check_written = False
         github_comment_written = False
@@ -1632,7 +1758,7 @@ async def _flush_publish_surface(
                 github_comment_written=github_comment_written,
                 publish_job_id=publish_job_id,
             )
-            return skipped_before_commit
+            return PublishFlushResult(skipped_job=skipped_before_commit)
 
         await _commit_publish_job_progress(session)
 
@@ -1654,7 +1780,7 @@ async def _flush_publish_surface(
                 github_comment_written=github_comment_written,
                 publish_job_id=publish_job_id,
             )
-            return skipped_before_inline
+            return PublishFlushResult(skipped_job=skipped_before_inline)
 
         inline_thread_ids: dict[str, str] = {}
         inline_written_this_flush: list[int] = []
@@ -1688,7 +1814,7 @@ async def _flush_publish_surface(
                         publish_job_id=publish_job_id,
                         inline_comment_ids=inline_written_this_flush,
                     )
-                    return skipped_during_inline
+                    return PublishFlushResult(skipped_job=skipped_during_inline)
                 post_result = await _create_inline_review_comment_with_422_retry(
                     client,
                     github_installation_id=installation.github_installation_id,
@@ -1776,8 +1902,26 @@ async def _flush_publish_surface(
                     ),
                 }
 
+        if collapsed_fingerprints:
+            await _close_active_groups_for_fingerprints(
+                session,
+                pull_request_id=pull_request.id,
+                revision_id=job.revision_id,
+                review_run_id=job.review_run_id,
+                fingerprints=collapsed_fingerprints,
+            )
+
+        persisted_collapsed = sorted(build.prior_collapsed_fingerprints | collapsed_fingerprints)
+        job.summary_json = {
+            **(job.summary_json or {}),
+            _COLLAPSED_INLINE_FINGERPRINTS_KEY: persisted_collapsed,
+        }
+
         await _checkpoint_publish_surface(session, persist=persist_github_surface)
-    return None
+    return PublishFlushResult(
+        published_check_summary=check_summary_body,
+        published_issue_comment=issue_comment_body,
+    )
 
 
 async def _commit_publish_job_progress(session: AsyncSession) -> None:
@@ -1864,7 +2008,12 @@ async def run_publish_job(
             repository=repository,
             installation=installation,
         )
-        job.summary_json = build.summary_json
+        job.summary_json = {
+            **build.summary_json,
+            _COLLAPSED_INLINE_FINGERPRINTS_KEY: sorted(
+                _collapsed_inline_fingerprints_from_summary(job.summary_json)
+            ),
+        }
 
         skipped = await _recheck_publish_authority_before_flush(
             session,
@@ -1875,7 +2024,7 @@ async def run_publish_job(
         if skipped is not None:
             return skipped
 
-        skipped_mid_flush = await _flush_publish_surface(
+        flush_result = await _flush_publish_surface(
             session,
             job=job,
             publish_job_id=publish_job_id,
@@ -1886,8 +2035,8 @@ async def run_publish_job(
             retry_posted_inline=retry_posted_inline,
             run=run,
         )
-        if skipped_mid_flush is not None:
-            return skipped_mid_flush
+        if flush_result.skipped_job is not None:
+            return flush_result.skipped_job
 
         job.status = GitHubPublishJobStatus.completed
         await session.flush()
@@ -1899,8 +2048,8 @@ async def run_publish_job(
                 session,
                 pipeline_run_id=pipeline_run.id,
                 job=job,
-                summary_markdown=build.check_summary,
-                issue_comment_markdown=build.issue_comment,
+                summary_markdown=flush_result.published_check_summary or build.check_summary,
+                issue_comment_markdown=flush_result.published_issue_comment or build.issue_comment,
                 duration_ms=int((time.monotonic() - started) * 1000),
             )
         return job

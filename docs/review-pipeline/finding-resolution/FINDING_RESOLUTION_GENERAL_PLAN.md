@@ -20,7 +20,7 @@
 | **FR-Q3** | **Yes** — fingerprint **absent** on revision N + `resolution_status=addressed` on N−1 → close with method `absent_and_addressed`. |
 | **FR-Q4** | **Yes** — Pass 3 verification judge on **FR-Q11 escalation set** (max 5/run, separate from discovery `JUDGE_MAX_PER_RUN=10`). |
 | **FR-Q6** | **Layered** — Pass 1 push-delta diff; Pass 3 judge for escalation still-open; no full-PR re-review. |
-| **FR-Q7** | **Two summary blocks** — (1) **This generation** publishable (matches inline). (2) **Still open on PR** — all `active` groups. Inline = generation only. |
+| **FR-Q7** | **Two summary blocks** — (1) **This generation** publishable (matches inline). (2) **Still open on PR** — PR-wide groups still open for the author: `state=active`, not `resolution_status=addressed`, and not scheduled for GH-1v2 inline thread collapse (`filter_pr_active_groups_for_summary` in `github_publish_formatter.py`). Inline = generation only. |
 | **FR-Q8** | **Yes** — document RG-6: any missing discovery-judge outcome → `skipped_unavailable` (already); add tests for partial LLM failure. |
 | **FR-Q9** | **Superseded by FR-Q12** — transitions-only rate on manifest. |
 | **FR-Q5** | Human dismiss — **P4** workspace `Permission.admin_users` API; full R7.6 UI defer. |
@@ -42,7 +42,7 @@
 | **1 — Fast** | `synchronize` (before index) | Compare diff → `resolution_status` | Push landed | — |
 | **2 — Identity** | After Moonshot + reconcile | Absent fingerprint + addressed → `resolved`; judge dismiss (existing) | Thread gone from HEAD set | Comment not in new review |
 | **3 — Verify** | Reconcile, before publish | Judge re-check prior escalation still-open; outcomes `upheld` / `dismissed` (reuse discovery enum); push-delta patches | Re-check prior flags | LLM-as-judge “addressed” |
-| Pass 4 — Surface | Publish | G9 prose + metrics block + **GH-1v2** thread resolve (Option A + B + outdated) | Resolution rate UX | Addressed % in summary |
+| Pass 4 — Surface | Publish | G9 prose + metrics block + **GH-1v2** thread resolve (Option A + B + outdated) + **summary/DB sync** (`filter_pr_active_groups_for_summary`, `_close_active_groups_for_fingerprints`) | Resolution rate UX | Addressed % in summary |
 
 **Better than vendors for Revy:** structured `group_id` + fingerprint (not comment text matching); evidence-backed Pass 3 (not prose-only); Pass 1 free (compare API); judge only on escalation subset (cost control).
 

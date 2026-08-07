@@ -133,7 +133,7 @@ List API: `GET /api/v1/workspaces/{workspace_id}/repositories/{repository_id}/pu
 
 ## Indexing (R3)
 
-Requires `VOYAGE_API_KEY` (`REVY_EMBEDDING_MODEL=voyage-code-3`, `REVY_EMBEDDING_DIMENSIONS=1024`), `GITHUB_APP_ID`, private key, and worker on `indexing` queue. Local/HF embedding track: `architecture.md` §11.3.1 (`REVY_HF_CACHE_PATH` when implemented).
+Requires `VOYAGE_API_KEY` (`REVY_EMBEDDING_MODEL=voyage-code-3`, `REVY_EMBEDDING_DIMENSIONS=1024`), `GITHUB_APP_ID`, private key, and worker on `indexing` queue. If worker logs `401` on `POST …/access_tokens` while webhooks succeed, see [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) § App JWT and § Troubleshooting (not a PEM rotation / client-secret issue by default). Local/HF embedding track: `architecture.md` §11.3.1 (`REVY_HF_CACHE_PATH` when implemented).
 
 1. `POST …/pull-requests/{pr_id}/revisions/{revision_id}/index` (workspace admin)
 2. Poll `GET …/revisions/{revision_id}/index-job` until `status=completed`

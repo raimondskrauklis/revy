@@ -25,6 +25,7 @@ from app.constants.enums import (
     GitHubPullRequestState,
     GitHubRepositoryStatus,
     GitHubReviewRunStatus,
+    ResolutionMethod,
     ResolutionStatus,
     ReviewProfile,
 )
@@ -71,7 +72,7 @@ def _publish_formatter_defaults(request):
     resolve_ctx = (
         patch(
             "app.services.github_publish._resolve_stale_inline_threads",
-            AsyncMock(return_value=github_publish.empty_thread_resolve_skipped()),
+            AsyncMock(return_value=(github_publish.empty_thread_resolve_skipped(), set())),
         )
         if "resolve_unmocked" not in request.keywords
         else patch(
@@ -355,7 +356,7 @@ async def test_resolve_stale_inline_threads_uses_thread_index():
     pull_request_id = uuid.uuid4()
     inline_threads = {"stale-fp": 1001}
     session = AsyncMock()
-    session.scalars = AsyncMock(side_effect=[[], [], []])
+    session.scalars = AsyncMock(side_effect=[[], [], [], []])
     client = AsyncMock()
     list_mock = AsyncMock()
     with patch(
@@ -374,6 +375,7 @@ async def test_resolve_stale_inline_threads_uses_thread_index():
                     client,
                     session=session,
                     review_run_id=review_run_id,
+                    revision_id=uuid.uuid4(),
                     github_installation_id=12345,
                     owner="acme",
                     repo_name="demo",
@@ -396,7 +398,7 @@ async def test_resolve_stale_inline_threads_falls_back_when_index_misses_comment
     pull_request_id = uuid.uuid4()
     inline_threads = {"stale-fp": 1001}
     session = AsyncMock()
-    session.scalars = AsyncMock(side_effect=[[], [], []])
+    session.scalars = AsyncMock(side_effect=[[], [], [], []])
     client = AsyncMock()
     with patch(
         "app.services.github_publish.github_api.find_review_thread_id_for_comment",
@@ -410,6 +412,7 @@ async def test_resolve_stale_inline_threads_falls_back_when_index_misses_comment
                 client,
                 session=session,
                 review_run_id=review_run_id,
+                revision_id=uuid.uuid4(),
                 github_installation_id=12345,
                 owner="acme",
                 repo_name="demo",
@@ -474,6 +477,7 @@ async def test_resolve_stale_inline_threads_option_a():
                 client,
                 session=session,
                 review_run_id=review_run_id,
+                revision_id=uuid.uuid4(),
                 github_installation_id=12345,
                 owner="acme",
                 repo_name="demo",
@@ -548,6 +552,7 @@ async def test_resolve_stale_inline_threads_outdated_comment():
                 client,
                 session=session,
                 review_run_id=review_run_id,
+                revision_id=uuid.uuid4(),
                 github_installation_id=12345,
                 owner="acme",
                 repo_name="demo",
@@ -598,7 +603,7 @@ async def test_resolve_stale_inline_threads_addressed_while_still_publishable():
         start_line=3,
     )
     session = AsyncMock()
-    session.scalars = AsyncMock(side_effect=[[], [active_finding], [addressed_group]])
+    session.scalars = AsyncMock(side_effect=[[], [active_finding], [addressed_group], []])
     session.get = AsyncMock(return_value=addressed_group)
     client = AsyncMock()
     with patch(
@@ -613,6 +618,7 @@ async def test_resolve_stale_inline_threads_addressed_while_still_publishable():
                 client,
                 session=session,
                 review_run_id=review_run_id,
+                revision_id=uuid.uuid4(),
                 github_installation_id=12345,
                 owner="acme",
                 repo_name="demo",
@@ -632,7 +638,7 @@ async def test_resolve_stale_inline_threads_pops_already_resolved_without_graphq
     pull_request_id = uuid.uuid4()
     inline_threads = {"done-fp": 1001}
     session = AsyncMock()
-    session.scalars = AsyncMock(side_effect=[[], [], []])
+    session.scalars = AsyncMock(side_effect=[[], [], [], []])
     client = AsyncMock()
     with patch(
         "app.services.github_publish.github_api.resolve_review_thread",
@@ -642,6 +648,7 @@ async def test_resolve_stale_inline_threads_pops_already_resolved_without_graphq
             client,
             session=session,
             review_run_id=review_run_id,
+            revision_id=uuid.uuid4(),
             github_installation_id=12345,
             owner="acme",
             repo_name="demo",
@@ -657,18 +664,19 @@ async def test_resolve_stale_inline_threads_pops_already_resolved_without_graphq
 
 @pytest.mark.resolve_unmocked
 @pytest.mark.asyncio
-async def test_resolve_stale_inline_threads_counts_already_resolved():
+async def test_resolve_stale_inline_threads_syncs_already_resolved_without_skip():
     review_run_id = uuid.uuid4()
     pull_request_id = uuid.uuid4()
     inline_threads = {"done-fp": 1001}
     session = AsyncMock()
-    session.scalars = AsyncMock(side_effect=[[], [], []])
+    session.scalars = AsyncMock(side_effect=[[], [], [], []])
     client = AsyncMock()
 
-    skipped = await github_publish._resolve_stale_inline_threads(
+    skipped, _collapsed = await github_publish._resolve_stale_inline_threads(
         client,
         session=session,
         review_run_id=review_run_id,
+        revision_id=uuid.uuid4(),
         github_installation_id=12345,
         owner="acme",
         repo_name="demo",
@@ -679,8 +687,9 @@ async def test_resolve_stale_inline_threads_counts_already_resolved():
         resolved_comment_ids=frozenset({1001}),
     )
 
-    assert skipped["already_resolved"] == 1
+    assert skipped["already_resolved"] == 0
     assert inline_threads == {}
+    assert _collapsed == {"done-fp"}
 
 
 @pytest.mark.resolve_unmocked
@@ -702,16 +711,17 @@ async def test_resolve_stale_inline_threads_counts_thread_id_not_found():
         file_path="a.py",
         last_seen_revision_id=uuid.uuid4(),
     )
-    session.scalars = AsyncMock(side_effect=[[stale_group], [], []])
+    session.scalars = AsyncMock(side_effect=[[stale_group], [], [], []])
     client = AsyncMock()
     with patch(
         "app.services.github_publish.github_api.find_review_thread_id_for_comment",
         AsyncMock(return_value=None),
     ):
-        skipped = await github_publish._resolve_stale_inline_threads(
+        skipped, _collapsed = await github_publish._resolve_stale_inline_threads(
             client,
             session=session,
             review_run_id=review_run_id,
+            revision_id=uuid.uuid4(),
             github_installation_id=12345,
             owner="acme",
             repo_name="demo",
@@ -744,7 +754,7 @@ async def test_resolve_stale_inline_threads_retries_mutation_then_succeeds():
         file_path="a.py",
         last_seen_revision_id=uuid.uuid4(),
     )
-    session.scalars = AsyncMock(side_effect=[[stale_group], [], []])
+    session.scalars = AsyncMock(side_effect=[[stale_group], [], [], []])
     client = AsyncMock()
     resolve_mock = AsyncMock(
         side_effect=[ServiceUnavailableError(message="fail", error_code="github_api_error"), None],
@@ -753,10 +763,11 @@ async def test_resolve_stale_inline_threads_retries_mutation_then_succeeds():
         "app.services.github_publish.github_api.resolve_review_thread",
         resolve_mock,
     ):
-        skipped = await github_publish._resolve_stale_inline_threads(
+        skipped, _collapsed = await github_publish._resolve_stale_inline_threads(
             client,
             session=session,
             review_run_id=review_run_id,
+            revision_id=uuid.uuid4(),
             github_installation_id=12345,
             owner="acme",
             repo_name="demo",
@@ -791,7 +802,7 @@ async def test_resolve_stale_inline_threads_counts_resolve_mutation_failed():
         file_path="a.py",
         last_seen_revision_id=uuid.uuid4(),
     )
-    session.scalars = AsyncMock(side_effect=[[stale_group], [], []])
+    session.scalars = AsyncMock(side_effect=[[stale_group], [], [], []])
     client = AsyncMock()
     with patch(
         "app.services.github_publish.github_api.resolve_review_thread",
@@ -799,10 +810,11 @@ async def test_resolve_stale_inline_threads_counts_resolve_mutation_failed():
             side_effect=ServiceUnavailableError(message="fail", error_code="github_api_error")
         ),
     ):
-        skipped = await github_publish._resolve_stale_inline_threads(
+        skipped, _collapsed = await github_publish._resolve_stale_inline_threads(
             client,
             session=session,
             review_run_id=review_run_id,
+            revision_id=uuid.uuid4(),
             github_installation_id=12345,
             owner="acme",
             repo_name="demo",
@@ -815,6 +827,118 @@ async def test_resolve_stale_inline_threads_counts_resolve_mutation_failed():
 
     assert skipped["resolve_mutation_failed"] == 1
     assert inline_threads == {"stale-fp": 1001}
+
+
+@pytest.mark.asyncio
+async def test_close_active_groups_for_fingerprints_closes_addressed_absent():
+    pull_request_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    review_run_id = uuid.uuid4()
+    group = GitHubFindingGroupORM(
+        id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint="fixed-fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Fixed",
+        message="msg",
+        file_path="app/a.py",
+        last_seen_revision_id=uuid.uuid4(),
+        resolution_status=ResolutionStatus.addressed,
+    )
+    session = AsyncMock()
+    session.scalars = AsyncMock(return_value=[group])
+    session.flush = AsyncMock()
+    with patch(
+        "app.services.github_finding_closure._fingerprints_in_review_run",
+        AsyncMock(return_value=set()),
+    ):
+        closed = await github_publish._close_active_groups_for_fingerprints(
+            session,
+            pull_request_id=pull_request_id,
+            revision_id=revision_id,
+            review_run_id=review_run_id,
+            fingerprints={"fixed-fp"},
+        )
+    assert closed == 1
+    assert group.state == GitHubFindingGroupState.resolved
+    assert group.resolution_method == ResolutionMethod.absent_and_addressed
+
+
+@pytest.mark.asyncio
+async def test_close_active_groups_for_fingerprints_skips_still_open_option_a():
+    pull_request_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    review_run_id = uuid.uuid4()
+    group = GitHubFindingGroupORM(
+        id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint="stale-fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Stale",
+        message="msg",
+        file_path="app/legacy.py",
+        last_seen_revision_id=uuid.uuid4(),
+        resolution_status=ResolutionStatus.still_open,
+    )
+    session = AsyncMock()
+    session.scalars = AsyncMock(return_value=[group])
+    session.flush = AsyncMock()
+    with patch(
+        "app.services.github_finding_closure._fingerprints_in_review_run",
+        AsyncMock(return_value=set()),
+    ):
+        closed = await github_publish._close_active_groups_for_fingerprints(
+            session,
+            pull_request_id=pull_request_id,
+            revision_id=revision_id,
+            review_run_id=review_run_id,
+            fingerprints={"stale-fp"},
+        )
+    assert closed == 0
+    assert group.state == GitHubFindingGroupState.active
+
+
+@pytest.mark.asyncio
+async def test_close_active_groups_for_fingerprints_skips_when_fingerprint_still_in_run():
+    pull_request_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    review_run_id = uuid.uuid4()
+    group = GitHubFindingGroupORM(
+        id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint="addressed-fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Addressed",
+        message="msg",
+        file_path="app/main.py",
+        last_seen_revision_id=uuid.uuid4(),
+        resolution_status=ResolutionStatus.addressed,
+    )
+    session = AsyncMock()
+    session.scalars = AsyncMock(return_value=[group])
+    session.flush = AsyncMock()
+    with patch(
+        "app.services.github_finding_closure._fingerprints_in_review_run",
+        AsyncMock(return_value={"addressed-fp"}),
+    ):
+        closed = await github_publish._close_active_groups_for_fingerprints(
+            session,
+            pull_request_id=pull_request_id,
+            revision_id=revision_id,
+            review_run_id=review_run_id,
+            fingerprints={"addressed-fp"},
+        )
+    assert closed == 0
+    assert group.state == GitHubFindingGroupState.active
 
 
 @pytest.mark.resolve_unmocked
@@ -1350,7 +1474,7 @@ async def test_run_publish_job_posts_inline_for_warning_finding():
     ):
         with patch(
             "app.services.github_publish._resolve_stale_inline_threads",
-            AsyncMock(return_value=github_publish.empty_thread_resolve_skipped()),
+            AsyncMock(return_value=(github_publish.empty_thread_resolve_skipped(), set())),
         ):
             with patch(
                 "app.services.github_publish.get_pipeline_run_for_review_run",
@@ -2125,7 +2249,7 @@ async def test_run_publish_job_resolves_superseded_threads_when_inline_already_p
     session.scalar = AsyncMock(return_value=None)
     session.flush = AsyncMock()
 
-    resolve_mock = AsyncMock(return_value=github_publish.empty_thread_resolve_skipped())
+    resolve_mock = AsyncMock(return_value=(github_publish.empty_thread_resolve_skipped(), set()))
     inline_mock = AsyncMock()
     with patch(
         "app.services.github_publish._resolve_stale_inline_threads",
@@ -2871,7 +2995,7 @@ async def test_run_publish_job_surface_flush_call_order():
             ):
                 with patch(
                     "app.services.github_publish._resolve_stale_inline_threads",
-                    _track("resolve", github_publish.empty_thread_resolve_skipped()),
+                    _track("resolve", (github_publish.empty_thread_resolve_skipped(), set())),
                 ):
                     with patch(
                         "app.services.github_publish.github_api.installation_auth_headers",

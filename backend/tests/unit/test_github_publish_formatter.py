@@ -19,6 +19,7 @@ from app.models.github_finding_group import GitHubFindingGroupORM
 from app.services.github_publish_formatter import (
     PublishFormatContext,
     append_thread_resolve_skipped_block,
+    apply_publish_summary_thread_collapse,
     build_check_run_summary,
     build_g9_resolution_prose,
     build_g9_resolution_prose_from_manifest,
@@ -27,6 +28,7 @@ from app.services.github_publish_formatter import (
     compute_confidence,
     count_resolution_status,
     extract_summary_blocks_section,
+    filter_pr_active_groups_for_summary,
     format_resolution_metrics_block,
     format_summary_comment,
     format_thread_resolve_skipped_block,
@@ -364,6 +366,131 @@ def test_format_summary_comment_two_block():
     )
     assert "### This generation" in markdown
     assert "### Still open on PR" in markdown
+
+
+def test_filter_pr_active_groups_for_summary_excludes_collapsed_inline():
+    stale = _group(
+        severity=FindingSeverity.warning,
+        fingerprint="stale-fp",
+        file_path="app/legacy.py",
+    )
+    current = _group(severity=FindingSeverity.info, fingerprint="new-fp")
+    filtered = filter_pr_active_groups_for_summary(
+        [stale, current],
+        publishable_fingerprints={"new-fp"},
+        collapsed_fingerprints={"stale-fp"},
+    )
+    assert [g.fingerprint for g in filtered] == ["new-fp"]
+
+
+def test_filter_pr_active_groups_for_summary_keeps_addressed_pending_pass2_out():
+    addressed = _group(
+        severity=FindingSeverity.warning,
+        fingerprint="fixed-fp",
+        resolution_status=ResolutionStatus.addressed,
+    )
+    filtered = filter_pr_active_groups_for_summary(
+        [addressed],
+        publishable_fingerprints=set(),
+        collapsed_fingerprints=set(),
+    )
+    assert filtered == []
+
+
+def test_apply_publish_summary_thread_collapse_literal_merge_replacement():
+    stale = _group(
+        severity=FindingSeverity.warning,
+        fingerprint="stale-fp",
+        file_path="app/legacy.py",
+    )
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=42,
+        head_sha="abc123",
+        revision_number=2,
+        groups=[],
+        pr_active_groups=[stale],
+    )
+    issue = (
+        "## Revy code review\n\n"
+        "Narrative.\n\n"
+        "**Merge recommendation:** hold (1 finding)\n\n"
+        "**Confidence score:** 3/5\n\n"
+        "Rationale.\n\n"
+        "### This generation\n\n"
+        "No publishable findings this generation.\n\n"
+        "### Still open on PR\n\n"
+        "| Severity | Category | Title | File |\n"
+        "| --- | --- | --- | --- |\n"
+        "| warning | bug | Stale | app/legacy.py |\n"
+    )
+    check = build_check_run_summary(ctx)
+    result = apply_publish_summary_thread_collapse(
+        check,
+        issue,
+        ctx,
+        publishable_fingerprints=set(),
+        collapsed_fingerprints={"stale-fp"},
+    )
+    assert "app/legacy.py" not in result.issue_comment
+    assert "**Merge recommendation:**" in result.issue_comment
+
+
+def test_refresh_issue_pr_verdict_sections_removes_empty_security_block():
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=42,
+        head_sha="abc123",
+        revision_number=2,
+        groups=[],
+        pr_active_groups=[],
+    )
+    issue = (
+        "## Revy code review\n\n"
+        "**Merge recommendation:** hold\n\n"
+        "**Confidence score:** 3/5\n\n"
+        "<details>\n"
+        "<summary>Security review</summary>\n\n"
+        "- Old security finding (`app/auth.py`)\n\n"
+        "</details>\n\n"
+        "### This generation\n\n"
+        "No publishable findings this generation.\n\n"
+        "### Still open on PR\n\n"
+        "No open findings on this pull request.\n"
+    )
+    from app.services.github_publish_formatter import _refresh_issue_pr_verdict_sections
+
+    refreshed = _refresh_issue_pr_verdict_sections(issue, ctx)
+    assert "Security review" not in refreshed
+    assert "app/auth.py" not in refreshed
+
+
+def test_patch_issue_narrative_paragraph_updates_open_finding_count():
+    stale = _group(
+        severity=FindingSeverity.warning,
+        fingerprint="stale-fp",
+        file_path="app/legacy.py",
+    )
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=42,
+        head_sha="abc123",
+        revision_number=2,
+        groups=[],
+        pr_active_groups=[stale],
+    )
+    issue = (
+        "## Revy code review\n\n"
+        "This revision added no new publishable findings, but **2** findings remain open on PR #42.\n\n"
+        "**Merge recommendation:** hold\n\n"
+        "### This generation\n\n"
+        "No publishable findings this generation.\n"
+    )
+    from app.services.github_publish_formatter import _patch_issue_narrative_paragraph
+
+    refreshed = _patch_issue_narrative_paragraph(issue, ctx)
+    assert "**1** finding remain open on PR #42" in refreshed
+    assert "**2**" not in refreshed
 
 
 def test_splice_deterministic_findings_tables_replaces_llm_mismatch():

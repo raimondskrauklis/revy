@@ -37,7 +37,7 @@
 
 - [ ] `alembic upgrade head` on staging/prod (through **`0026`** on `main`)
 - [ ] GitHub App: **Install App** on target account → register **installation ID** in Revy (pro plan) — see [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) § App ID vs installation ID
-- [ ] PEM: `/mnt/revy_volume/secrets/github-app.pem` readable by container (`chown 1000:deploy`, `chmod 640`); `token mint: 201` verify script in setup doc
+- [ ] PEM: `/mnt/revy_volume/secrets/github-app.pem` readable by container (`chown 1000:deploy`, `chmod 640`); verify with `docker exec -i revy-api python …` in [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) § Verify on droplet (`GET /app: 200`, `token mint: 201`)
 - [ ] Env: `MOONSHOT_API_KEY`, `VOYAGE_API_KEY` (`REVY_EMBEDDING_MODEL=voyage-code-3`, `REVY_EMBEDDING_DIMENSIONS=1024`), `REVY_BOT_LOGIN=<slug>[bot]`; optional `ANTHROPIC_API_KEY` + `REVY_ANTHROPIC_MODEL=claude-sonnet-5`
 - [ ] Redeploy or restart worker **and Celery beat** so droplet runs latest `deploy.yml` `-Q` list:
   `github_events,repo_sync,indexing,review,reconciliation,judge,github_publish,maintenance,default,notifications,heavy`
