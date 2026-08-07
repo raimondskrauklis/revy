@@ -583,18 +583,10 @@ def _load_ever_inlined_fingerprints(
 ) -> frozenset[str]:
     """Fingerprints that ever received a tracked inline comment on this PR."""
     fingerprints = set(_load_inline_thread_map(jobs).keys())
-    fingerprints.update(_load_v2_inline_thread_map(jobs).keys())
     if isinstance(current_job_summary, dict):
         inline = current_job_summary.get("github_inline_threads")
         if isinstance(inline, dict):
             fingerprints.update(deserialize_inline_thread_map(inline).keys())
-            for fingerprint, value in inline.items():
-                if not isinstance(fingerprint, str):
-                    continue
-                if isinstance(value, int) or (
-                    isinstance(value, dict) and isinstance(value.get("comment_id"), int)
-                ):
-                    fingerprints.add(fingerprint)
     return frozenset(fingerprints)
 
 
