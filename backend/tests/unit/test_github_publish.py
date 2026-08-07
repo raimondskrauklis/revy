@@ -306,6 +306,14 @@ def test_load_ever_inlined_fingerprints_includes_failed_prior_job():
     assert github_publish._load_ever_inlined_fingerprints([failed]) == frozenset({"fp-failed"})
 
 
+def test_load_ever_inlined_fingerprints_includes_v2_inline_map():
+    prior = MagicMock()
+    prior.summary_json = {
+        "github_inline_threads": {"fp-v2": {"comment_id": 500, "thread_id": "PRRT_x"}},
+    }
+    assert github_publish._load_ever_inlined_fingerprints([prior]) == frozenset({"fp-v2"})
+
+
 def test_deserialize_inline_thread_map_legacy_int():
     assert github_publish.deserialize_inline_thread_map({"fp": 100}) == {"fp": 100}
 
