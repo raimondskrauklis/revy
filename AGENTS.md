@@ -66,6 +66,7 @@ Full installed set: [.agent/manifest.json](.agent/manifest.json) → `skills.ins
 | **Sentry** | `sentry-fix-issues` |
 | **Docs export** | `md-formatting`, `md-docx-export`, `docx-md-export` |
 | **Staging validation** | `staging-validation` |
+| **Revy PR loop** | `babysit-revy-pr` (when `integrations.revy: true`) |
 
 `babysit-pr` is in the catalog but **not installed** — Greptile off (`integrations.greptile: false`). Enable Greptile in manifest first, then install via `bootstrap-workflow` audit.
 

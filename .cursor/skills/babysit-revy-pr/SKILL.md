@@ -37,7 +37,7 @@ Repeat until **no unresolved actionable Revy findings** remain **and** Revy chec
 8. Go to step 2 (Revy re-runs after push)
 ```
 
-**Solved:** no open `revybot` inline threads/comments requiring code changes, Revy idle, local Bugbot clean.
+**Solved:** no new actionable Revy inline findings after the latest idle pass (code fixed for all open threads). GitHub threads may stay `unresolved` until Revy re-reviews or you resolve manually — use thread `body` + `path:line`, not only `isResolved`.
 
 **Stop early (report):** Revy suspended (no check row), user says stop, or only non-actionable INFO with explicit skip rationale.
 
