@@ -435,6 +435,23 @@ def test_filter_pr_active_groups_for_summary_keeps_never_inlined_in_generation()
     assert [g.fingerprint for g in filtered] == ["orphan-fp"]
 
 
+def test_filter_pr_active_groups_for_summary_keeps_orphan_when_generation_scope_unknown():
+    orphan = _group(
+        severity=FindingSeverity.warning,
+        fingerprint="orphan-fp",
+        file_path="docs/plan.md",
+        resolution_status=ResolutionStatus.still_open,
+    )
+    filtered = filter_pr_active_groups_for_summary(
+        [orphan],
+        publishable_fingerprints=set(),
+        collapsed_fingerprints=set(),
+        generation_fingerprints=None,
+        ever_inlined_fingerprints=set(),
+    )
+    assert [g.fingerprint for g in filtered] == ["orphan-fp"]
+
+
 def test_format_resolution_metrics_block_display_still_open_override():
     block = format_resolution_metrics_block(
         {
@@ -449,6 +466,7 @@ def test_format_resolution_metrics_block_display_still_open_override():
         display_still_open_prior=0,
     )
     assert "Still open from prior review" not in block
+    assert "100.0% (1/1 prior active)" in block
 
 
 def test_build_g9_resolution_prose_from_manifest_display_still_open_override():

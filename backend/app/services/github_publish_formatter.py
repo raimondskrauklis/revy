@@ -198,15 +198,31 @@ def format_resolution_metrics_block(
     display_still_open_prior: int | None = None,
 ) -> str:
     """FR-Q12 transitions block from reconcile manifest resolution_pass."""
-    rate = manifest.get("resolution_rate_pct", 0.0)
-    addressed = manifest.get("transitions_addressed", 0)
+    addressed = int(manifest.get("transitions_addressed") or 0)
     dismissed = manifest.get("transitions_dismissed", {})
+    manifest_still_open = int(manifest.get("still_open_count") or 0)
     still_open = (
         display_still_open_prior
         if display_still_open_prior is not None
-        else manifest.get("still_open_count")
+        else manifest_still_open
     )
-    denominator = manifest.get("denominator_active_prior", 0)
+    denominator = int(manifest.get("denominator_active_prior") or 0)
+    transition_count = int(manifest.get("transition_count") or 0)
+    rate = manifest.get("resolution_rate_pct", 0.0)
+    if (
+        display_still_open_prior is not None
+        and display_still_open_prior != manifest_still_open
+    ):
+        dismissed_total = 0
+        if isinstance(dismissed, dict):
+            dismissed_total = sum(
+                int(count)
+                for count in dismissed.values()
+                if isinstance(count, int)
+            )
+        denominator = addressed + dismissed_total + display_still_open_prior
+        transition_count = addressed + dismissed_total
+        rate = round((transition_count / denominator) * 100, 1) if denominator else 0.0
     compare_failed = manifest.get("compare_failed_count", 0)
 
     dismissed_parts: list[str] = []
@@ -223,7 +239,7 @@ def format_resolution_metrics_block(
     lines = [
         "### Resolution metrics (this push)",
         "",
-        f"- **Resolution rate:** {rate}% ({manifest.get('transition_count', 0)}/{denominator} prior active)",
+        f"- **Resolution rate:** {rate}% ({transition_count}/{denominator} prior active)",
         f"- **Closed as fixed:** {addressed}",
     ]
     if dismissed_parts:
@@ -440,11 +456,9 @@ def filter_pr_active_groups_for_summary(
             continue
         if (
             ever_inlined_fingerprints is not None
+            and generation_fingerprints is not None
             and group.fingerprint not in ever_inlined_fingerprints
-            and (
-                generation_fingerprints is None
-                or group.fingerprint not in generation_fingerprints
-            )
+            and group.fingerprint not in generation_fingerprints
         ):
             continue
         filtered.append(group)

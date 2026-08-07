@@ -6,6 +6,7 @@
     "core": "Default LOOP and ship — install on almost every repo",
     "planning": "Findings → general plan → execution — program work",
     "optional_greptile": "Post-push Greptile — only when user enables integration",
+    "optional_revy": "Post-push Revy — poll check, fix revybot comments, loop",
     "optional_sentry": "Sentry MCP debugging — manual, user points at one issue",
     "optional_docs": "Markdown / Word handoff — docs-heavy repos",
     "optional_validation": "Staging dogfood validation memos — fill from real evidence on user demand"
@@ -136,6 +137,17 @@
       "copy_scripts": false,
       "when": "User asks: babysit pr, fix greptile — post-push Greptile threads",
       "requires_integrations": ["greptile"],
+      "requires_paths": [],
+      "conflicts_with": []
+    },
+    {
+      "id": "babysit-revy-pr",
+      "tier": "optional_revy",
+      "default_install": false,
+      "install_when": "integrations.revy is true",
+      "copy_scripts": false,
+      "when": "User asks: babysit revy, fix revy on pr — poll Revy idle, fix revybot comments, loop",
+      "requires_integrations": ["revy"],
       "requires_paths": [],
       "conflicts_with": []
     },

@@ -22,6 +22,7 @@ Master **blocks run** until gate green. Skipping Bugbot to save time is when cor
 | Before **each phase** commit (LOOP) | Same | **No** |
 | Before **push** when Revy check active on PR | Revy idle — `gh pr checks`; no push while `pending`/`in_progress` | **No** |
 | After fixing Greptile (`babysit-pr`) | VALIDATE → CLOSE (re-CLOSE until clean) | **No** |
+| After fixing Revy (`babysit-revy-pr`) | Poll 120s until idle → fix → Bugbot → push → loop | **No** |
 | After `ruff`/test fixes only | Re-run Bugbot if Python changed | **No** |
 
 **Revy on PR (when app enabled):** post-push check on our own PRs — **wait for idle before the next push** so we do not stack runs or push over an in-flight review. If Revy is suspended (no check row), gate is a no-op.

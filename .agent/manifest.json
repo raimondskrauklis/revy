@@ -33,7 +33,8 @@
   "flows": {
     "phase-loop": { "enabled": true, "skill": "phase-execution" },
     "ship": { "enabled": true, "skill": "ship-changes" },
-    "greptile-parallel": { "enabled": false, "skill": "babysit-pr" }
+    "greptile-parallel": { "enabled": false, "skill": "babysit-pr" },
+    "revy-parallel": { "enabled": true, "skill": "babysit-revy-pr" }
   },
   "greptile": {
     "generator_module": "scripts.generate_greptile_files_from_review_context",
@@ -59,7 +60,8 @@
       "md-formatting",
       "md-docx-export",
       "docx-md-export",
-      "staging-validation"
+      "staging-validation",
+      "babysit-revy-pr"
     ]
   },
   "validation": {

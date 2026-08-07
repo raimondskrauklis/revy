@@ -78,6 +78,8 @@ gh pr view <PR> --comments
 
 Fix actionable items; re-run local Bugbot; commit; **wait for Revy idle** before pushing fixes.
 
+**Revy babysit loop:** `babysit-revy-pr` skill — poll 120s until Revy idle, fetch `revybot` comments, fix, Bugbot until clean, push, repeat until solved.
+
 **Note:** If Revy GitHub App is suspended on this repo (no check row), gate is a no-op — still run local Bugbot.
 
 ---
