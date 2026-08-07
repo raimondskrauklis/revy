@@ -4,8 +4,9 @@
 Surface contract (PSA-D1–D4, PSA-D12):
 - Check + issue comment share ``format_summary_comment`` (this generation + still open on PR).
 - Verdict fields (confidence, merge, rationale, files, security rollups) use PR-wide active groups.
-- ``filter_pr_active_groups_for_summary`` drops groups whose inline thread is collapsed (GH-1v2) so
-  ``### Still open on PR`` matches resolved GitHub threads.
+- ``filter_pr_active_groups_for_summary`` drops groups whose inline thread is collapsed (GH-1v2) and
+  summary-only orphans (never inlined, not in this generation) so ``### Still open on PR`` matches
+  visible GitHub threads.
 - Verdict confidence applies generation resolution boost from ``ctx.groups`` (PSA-D3).
 - G9 / resolution metrics stay generation-scoped.
 - Inline publish remains generation-only; ``compute_check_conclusion`` unchanged (generation-scoped).
@@ -127,6 +128,7 @@ class PublishFormatContext:
     fallback_reason: str | None = None
     resolution_metrics_manifest: dict[str, object] | None = None
     pr_active_groups: list[GitHubFindingGroupORM] | None = None
+    ever_inlined_fingerprints: frozenset[str] | None = None
 
 
 @dataclass(frozen=True)
@@ -190,12 +192,20 @@ def count_resolution_status(groups: list[GitHubFindingGroupORM]) -> dict[str, in
     return counts
 
 
-def format_resolution_metrics_block(manifest: dict[str, object]) -> str:
+def format_resolution_metrics_block(
+    manifest: dict[str, object],
+    *,
+    display_still_open_prior: int | None = None,
+) -> str:
     """FR-Q12 transitions block from reconcile manifest resolution_pass."""
     rate = manifest.get("resolution_rate_pct", 0.0)
     addressed = manifest.get("transitions_addressed", 0)
     dismissed = manifest.get("transitions_dismissed", {})
-    still_open = manifest.get("still_open_count")
+    still_open = (
+        display_still_open_prior
+        if display_still_open_prior is not None
+        else manifest.get("still_open_count")
+    )
     denominator = manifest.get("denominator_active_prior", 0)
     compare_failed = manifest.get("compare_failed_count", 0)
 
@@ -340,7 +350,11 @@ def build_g9_resolution_prose(groups: list[GitHubFindingGroupORM]) -> str:
     return "; ".join(parts)
 
 
-def build_g9_resolution_prose_from_manifest(manifest: dict[str, object]) -> str:
+def build_g9_resolution_prose_from_manifest(
+    manifest: dict[str, object],
+    *,
+    display_still_open_prior: int | None = None,
+) -> str:
     """G9 prose from reconcile resolution_pass manifest (FR-DG1)."""
     parts: list[str] = []
     addressed = int(manifest.get("transitions_addressed") or 0)
@@ -356,7 +370,11 @@ def build_g9_resolution_prose_from_manifest(manifest: dict[str, object]) -> str:
             count = int(dismissed.get(key) or 0)
             if count:
                 parts.append(f"{count} dismissed by {label}")
-    still_open = int(manifest.get("still_open_count") or 0)
+    still_open = (
+        display_still_open_prior
+        if display_still_open_prior is not None
+        else int(manifest.get("still_open_count") or 0)
+    )
     if still_open:
         parts.append(f"{still_open} still open from prior review")
     return "; ".join(parts)
@@ -378,8 +396,12 @@ def resolution_counts_from_manifest(manifest: dict[str, object]) -> dict[str, in
 
 
 def _g9_resolution_prose_for_ctx(ctx: PublishFormatContext) -> str:
+    display_still_open = display_still_open_prior_count(ctx)
     if ctx.resolution_metrics_manifest is not None:
-        return build_g9_resolution_prose_from_manifest(ctx.resolution_metrics_manifest)
+        return build_g9_resolution_prose_from_manifest(
+            ctx.resolution_metrics_manifest,
+            display_still_open_prior=display_still_open,
+        )
     return build_g9_resolution_prose(ctx.groups)
 
 
@@ -393,12 +415,15 @@ def filter_pr_active_groups_for_summary(
     publishable_fingerprints: set[str],
     collapsed_fingerprints: set[str],
     generation_fingerprints: set[str] | None = None,
+    ever_inlined_fingerprints: set[str] | None = None,
 ) -> list[GitHubFindingGroupORM]:
     """PR-wide still-open rows aligned with GH-1v2 inline thread collapse.
 
     Active groups whose fingerprint was successfully collapsed on GitHub and is
     absent from this generation's publishable set should not appear as still open.
     Generation-scoped groups stay visible even when judge-gated off inline publish.
+    Summary-only orphans (never received an inline comment, not in this generation)
+    are omitted so block 2 matches visible GitHub threads (SOS-5).
     """
     filtered: list[GitHubFindingGroupORM] = []
     for group in groups:
@@ -413,8 +438,27 @@ def filter_pr_active_groups_for_summary(
             )
         ):
             continue
+        if (
+            ever_inlined_fingerprints is not None
+            and group.fingerprint not in ever_inlined_fingerprints
+            and (
+                generation_fingerprints is None
+                or group.fingerprint not in generation_fingerprints
+            )
+        ):
+            continue
         filtered.append(group)
     return filtered
+
+
+def display_still_open_prior_count(ctx: PublishFormatContext) -> int:
+    """Prior-revision actives visible on the publish surface (post summary filters)."""
+    generation_fingerprints = {group.fingerprint for group in ctx.groups}
+    return sum(
+        1
+        for group in _active_groups(verdict_groups(ctx))
+        if group.fingerprint not in generation_fingerprints
+    )
 
 
 _SECTION_END_MARKERS = ("\n### ", "\n<details>", "\n---\n")
@@ -565,6 +609,11 @@ def apply_publish_summary_thread_collapse(
         publishable_fingerprints=publishable_fingerprints,
         collapsed_fingerprints=collapsed_fingerprints,
         generation_fingerprints=generation_fingerprints,
+        ever_inlined_fingerprints=(
+            set(ctx.ever_inlined_fingerprints)
+            if ctx.ever_inlined_fingerprints is not None
+            else None
+        ),
     )
     filtered_ctx = replace(ctx, pr_active_groups=filtered)
     confidence = compute_publish_confidence(filtered_ctx)
@@ -701,7 +750,10 @@ def _index_footer(ctx: PublishFormatContext) -> str:
 def _resolution_metrics_block(ctx: PublishFormatContext) -> str | None:
     if ctx.resolution_metrics_manifest is None:
         return None
-    return format_resolution_metrics_block(ctx.resolution_metrics_manifest)
+    return format_resolution_metrics_block(
+        ctx.resolution_metrics_manifest,
+        display_still_open_prior=display_still_open_prior_count(ctx),
+    )
 
 
 def _has_resolution_progress(groups: list[GitHubFindingGroupORM]) -> bool:
@@ -1134,6 +1186,7 @@ def _build_summary_json(ctx: PublishFormatContext) -> dict:
     confidence = compute_publish_confidence(ctx)
     if ctx.resolution_metrics_manifest is not None:
         resolution = resolution_counts_from_manifest(ctx.resolution_metrics_manifest)
+        resolution[ResolutionStatus.still_open.value] = display_still_open_prior_count(ctx)
     else:
         resolution = count_resolution_status(ctx.groups)
     return {

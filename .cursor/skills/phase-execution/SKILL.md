@@ -12,6 +12,8 @@ description: >-
 
 **Entry:** user attaches a **plan folder** or **start execution file** and invokes this skill. **Do not ask** for phase ids or “LOOP” — discover from path + sibling docs.
 
+**Config:** read `.agent/manifest.json` first — `flows`, `integrations`, `test_commands`, `review_context`, `default_scope` / `scopes`.
+
 **Folder attachment:** if the user points at a directory (e.g. `…/cpv2_markets/`), use that as **plan folder** and **start file** = first execution file in `README.md` execution table (or lowest phase id from glob).
 
 **Default:** run **all phases** from start through last, one LOOP iteration per phase — no chat pause between subphases **except stop rules below**.
@@ -120,11 +122,13 @@ FOR each phase in scope (discovered order):
        implement → run tests from **Deliverable** / doc → mark todo done
        if migration subphase (new handwritten Alembic revision): STOP — migration pause (see stop rules)
        (last phase: **`post-finish-gap-pass`** once before doc-sync subphases)
-  6. **Ruff** (backend) — safe fixes only; must pass before phase gate
+  6. **Lint** — per manifest `test_commands` for each scope glob with changes this iteration (`backend/**` → ruff fix + check + unit tests; `frontend/**` → lint + test)
   7. Run **phase gate** from execution doc — must be green
-  8. **`ship-changes`** — Bugbot, commit, push, PR (one commit per phase)
-  9. Log: phase id, commit sha, PR URL if any, next phase id
-  10. Continue LOOP
+  8. **LOCAL BUGBOT** — FIND → fix → CLOSE until clean (hard gate)
+  9. **Revy idle?** — when `integrations.revy: true`: `gh pr checks`; **no push while Revy `pending`/`in_progress`**
+  10. **`ship-changes`** — commit, Revy gate, push, PR (one commit per phase; title per ship-changes § PR title pattern)
+  11. Log: phase id, commit sha, PR URL if any, next phase id
+  12. Continue LOOP
 ```
 
 **Context hygiene:** only the **current** phase execution file is active scope; respect **Out of scope** / **Depends on** in that file; do not re-implement prior phases.
@@ -186,13 +190,26 @@ Greptile and Revy run **after** push — they never replace this step.
 
 ---
 
+## Revy gate (when `integrations.revy: true`)
+
+Before **every** push in the LOOP:
+
+1. `gh pr checks <PR>` — Revy must **not** be `pending` / `in_progress` / `queued`.
+2. Push only when Revy is `pass`, `fail`, `skipping`, `neutral`, or absent (app suspended).
+3. After push, Revy may restart — **wait again** before the next push.
+4. Fetch Revy comments; fix actionable items; Bugbot; commit; repeat from step 1.
+
+Details: `ship-changes` skill § Revy gate. **PR title:** `gh pr edit` when scope grows — outcome-first (`feat(<program>): …`), not bare phase id. See `ship-changes` § PR title pattern.
+
+---
+
 ## Ship (each LOOP iteration)
 
 Per **`ship-changes`**. LOOP extras:
 
 - Branch must already exist (see **Branch** above) — do not create a new branch per phase.
-- Commit message: `feat(scope): <PhaseId> <short goal>`
-- After Bugbot fixes: re-run **ruff** + **phase gate** before commit.
+- Commit message: `feat(<program-slug>): <PhaseId> <short goal>` — phase id in commit, not PR title alone.
+- After Bugbot fixes: re-run **lint** + **phase gate** before commit.
 - Opt out of PR: user said **no pr** in the invoke message.
 
 ---

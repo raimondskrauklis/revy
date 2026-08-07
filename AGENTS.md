@@ -69,6 +69,10 @@ Full installed set: [.agent/manifest.json](.agent/manifest.json) → `skills.ins
 
 `babysit-pr` is in the catalog but **not installed** — Greptile off (`integrations.greptile: false`). Enable Greptile in manifest first, then install via `bootstrap-workflow` audit.
 
+**Default gate:** local Bugbot before every push. **Revy:** never push while `gh pr checks` shows Revy `pending` / `in_progress` — wait for `pass`/`fail`/`skipping`/`neutral`, then push; wait again after push before the next one. Greptile is optional — enable in `.agent/manifest.json` when user asks.
+
+**PR titles:** `feat(<program-slug>): <what shipped>` — phase labels (`R0`–`R8`) belong on LOOP commits, not as the PR title alone. Update with `gh pr edit` when batched scope grows. Details: `.cursor/skills/ship-changes/SKILL.md`.
+
 Planning skills apply to phased program work under `docs/starter-pack/` or `docs/review-pipeline/`.
 
 ## Backend quick ref
