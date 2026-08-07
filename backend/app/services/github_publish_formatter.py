@@ -208,22 +208,15 @@ def format_resolution_metrics_block(
     )
     denominator = int(manifest.get("denominator_active_prior") or 0)
     transition_count = int(manifest.get("transition_count") or 0)
+    compare_failed = int(manifest.get("compare_failed_count") or 0)
     rate = manifest.get("resolution_rate_pct", 0.0)
     if (
         display_still_open_prior is not None
         and display_still_open_prior != manifest_still_open
     ):
-        dismissed_total = 0
-        if isinstance(dismissed, dict):
-            dismissed_total = sum(
-                int(count)
-                for count in dismissed.values()
-                if isinstance(count, int)
-            )
-        denominator = addressed + dismissed_total + display_still_open_prior
-        transition_count = addressed + dismissed_total
+        hidden_still_open = manifest_still_open - display_still_open_prior
+        denominator = max(denominator - hidden_still_open, 0)
         rate = round((transition_count / denominator) * 100, 1) if denominator else 0.0
-    compare_failed = manifest.get("compare_failed_count", 0)
 
     dismissed_parts: list[str] = []
     if isinstance(dismissed, dict):
