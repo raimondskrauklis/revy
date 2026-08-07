@@ -214,7 +214,7 @@ def format_resolution_metrics_block(
         display_still_open_prior is not None
         and display_still_open_prior != manifest_still_open
     ):
-        hidden_still_open = manifest_still_open - display_still_open_prior
+        hidden_still_open = max(manifest_still_open - display_still_open_prior, 0)
         denominator = max(denominator - hidden_still_open, 0)
         rate = round((transition_count / denominator) * 100, 1) if denominator else 0.0
 

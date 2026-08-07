@@ -486,6 +486,22 @@ def test_format_resolution_metrics_block_display_override_includes_compare_faile
     assert "Compare blocked" in block
 
 
+def test_format_resolution_metrics_block_display_override_caps_hidden_still_open():
+    block = format_resolution_metrics_block(
+        {
+            "resolution_rate_pct": 50.0,
+            "transition_count": 1,
+            "denominator_active_prior": 2,
+            "transitions_addressed": 1,
+            "transitions_dismissed": {},
+            "still_open_count": 0,
+            "compare_failed_count": 0,
+        },
+        display_still_open_prior=1,
+    )
+    assert "50.0% (1/2 prior active)" in block
+
+
 def test_build_g9_resolution_prose_from_manifest_display_still_open_override():
     prose = build_g9_resolution_prose_from_manifest(
         {

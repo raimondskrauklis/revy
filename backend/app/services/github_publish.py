@@ -640,6 +640,7 @@ async def _fetch_prior_completed_publish_jobs(
     *,
     pull_request_id: UUID,
 ) -> list[GitHubPublishJobORM]:
+    """Prior publish jobs whose inline thread maps may be reused (completed + failed)."""
     revision_ids = list(
         await session.scalars(
             select(GitHubPullRequestRevisionORM.id).where(
