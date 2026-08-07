@@ -22,7 +22,7 @@ Phase **P1** of [STILL_OPEN_SUMMARY_DOGFOOD_GENERAL_PLAN.md](../STILL_OPEN_SUMMA
 
 ## P1.1 — `ever_inlined_fingerprints` loader
 
-**What:** `_load_ever_inlined_fingerprints(prior_jobs)` — union of fingerprints from completed publish `github_inline_threads` maps.
+**What:** `_load_ever_inlined_fingerprints(prior_jobs, current_job_summary=…)` — union of fingerprints from publish `github_inline_threads` maps on prior jobs (completed **and failed** for inline-thread reuse) plus the **current** job summary when a retry checkpoints partial inlines. Collapsed-inline memory uses **completed** jobs only (see `_load_prior_collapsed_inline_fingerprints`).
 
 **Files:** `backend/app/services/github_publish.py`
 

@@ -581,7 +581,12 @@ def _load_ever_inlined_fingerprints(
     *,
     current_job_summary: dict | None = None,
 ) -> frozenset[str]:
-    """Fingerprints that ever received a tracked inline comment on this PR."""
+    """Fingerprints that ever received a tracked inline comment on this PR.
+
+    Sources: prior publish jobs in ``jobs`` (completed + failed for inline-thread
+    reuse) via ``deserialize_inline_thread_map``, plus the current job's
+    ``summary_json.github_inline_threads`` when retrying a partial flush.
+    """
     fingerprints = set(_load_inline_thread_map(jobs).keys())
     if isinstance(current_job_summary, dict):
         inline = current_job_summary.get("github_inline_threads")
