@@ -475,6 +475,26 @@ def _remove_details_section(markdown: str, summary_label: str) -> str:
     return (markdown[:details_start] + markdown[details_end:]).strip()
 
 
+def _patch_issue_narrative_paragraph(issue_comment: str, ctx: PublishFormatContext) -> str:
+    if not issue_comment.startswith("## Revy code review"):
+        return issue_comment
+    narrative = _review_narrative_paragraph(ctx)
+    rest = issue_comment[len("## Revy code review") :].lstrip("\n")
+    end_offset = len(rest)
+    for marker in (
+        "\n\n**Merge recommendation:**",
+        "\n\n**Confidence score:**",
+        "\n\n### ",
+        "\n\n<details>",
+        "\n\n---",
+    ):
+        idx = rest.find(marker)
+        if idx >= 0:
+            end_offset = min(end_offset, idx)
+    tail = rest[end_offset:].lstrip("\n")
+    return f"## Revy code review\n\n{narrative}\n\n{tail}" if tail else f"## Revy code review\n\n{narrative}"
+
+
 def _refresh_issue_pr_verdict_sections(issue_comment: str, ctx: PublishFormatContext) -> str:
     """Patch PR-wide verdict blocks after collapse without re-running Moonshot."""
     verdict = verdict_groups(ctx)
@@ -519,7 +539,7 @@ def _refresh_issue_pr_verdict_sections(issue_comment: str, ctx: PublishFormatCon
             updated = _replace_details_section(updated, "Important files changed", important_lines)
         else:
             updated = _remove_details_section(updated, "Important files changed")
-    return updated
+    return _patch_issue_narrative_paragraph(updated, ctx)
 
 
 def apply_publish_summary_thread_collapse(

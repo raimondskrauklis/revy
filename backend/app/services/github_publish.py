@@ -73,8 +73,6 @@ from app.services.github_suggestion import is_publishable_suggestion
 
 logger = get_logger(__name__)
 
-_PUBLISHED_CHECK_SUMMARY_KEY = "_published_check_summary"
-_PUBLISHED_ISSUE_COMMENT_KEY = "_published_issue_comment"
 _COLLAPSED_INLINE_FINGERPRINTS_KEY = "collapsed_inline_fingerprints"
 
 THREAD_RESOLVE_SKIP_ALREADY_RESOLVED = "already_resolved"
@@ -1210,6 +1208,13 @@ class PublishSurfaceBuild:
     prior_collapsed_fingerprints: frozenset[str] = frozenset()
 
 
+@dataclass(frozen=True)
+class PublishFlushResult:
+    skipped_job: GitHubPublishJobORM | None = None
+    published_check_summary: str | None = None
+    published_issue_comment: str | None = None
+
+
 def _sort_publishable_groups(groups: list[GitHubFindingGroupORM]) -> list[GitHubFindingGroupORM]:
     severity_rank = {
         FindingSeverity.critical: 0,
@@ -1548,7 +1553,7 @@ async def _flush_publish_surface(
     persist_github_surface: bool,
     retry_posted_inline: dict[str, int] | None = None,
     run: GitHubReviewRunORM,
-) -> GitHubPublishJobORM | None:
+) -> PublishFlushResult:
     inline_threads = dict(build.inline_threads)
     retry_posted = retry_posted_inline or {}
     inline_threads.update(retry_posted)
@@ -1560,7 +1565,7 @@ async def _flush_publish_surface(
         pull_request,
     )
     if skipped_at_flush_start is not None:
-        return skipped_at_flush_start
+        return PublishFlushResult(skipped_job=skipped_at_flush_start)
 
     async with httpx.AsyncClient(timeout=120.0) as client:
         auth_headers = await github_api.installation_auth_headers(
@@ -1591,7 +1596,7 @@ async def _flush_publish_surface(
             pull_request,
         )
         if skipped_before_resolve is not None:
-            return skipped_before_resolve
+            return PublishFlushResult(skipped_job=skipped_before_resolve)
 
         thread_resolve_skipped, collapsed_fingerprints = await _resolve_stale_inline_threads(
             client,
@@ -1655,7 +1660,7 @@ async def _flush_publish_surface(
             pull_request,
         )
         if skipped_after_resolve is not None:
-            return skipped_after_resolve
+            return PublishFlushResult(skipped_job=skipped_after_resolve)
 
         github_check_written = False
         github_comment_written = False
@@ -1753,7 +1758,7 @@ async def _flush_publish_surface(
                 github_comment_written=github_comment_written,
                 publish_job_id=publish_job_id,
             )
-            return skipped_before_commit
+            return PublishFlushResult(skipped_job=skipped_before_commit)
 
         await _commit_publish_job_progress(session)
 
@@ -1775,7 +1780,7 @@ async def _flush_publish_surface(
                 github_comment_written=github_comment_written,
                 publish_job_id=publish_job_id,
             )
-            return skipped_before_inline
+            return PublishFlushResult(skipped_job=skipped_before_inline)
 
         inline_thread_ids: dict[str, str] = {}
         inline_written_this_flush: list[int] = []
@@ -1809,7 +1814,7 @@ async def _flush_publish_surface(
                         publish_job_id=publish_job_id,
                         inline_comment_ids=inline_written_this_flush,
                     )
-                    return skipped_during_inline
+                    return PublishFlushResult(skipped_job=skipped_during_inline)
                 post_result = await _create_inline_review_comment_with_422_retry(
                     client,
                     github_installation_id=installation.github_installation_id,
@@ -1910,12 +1915,13 @@ async def _flush_publish_surface(
         job.summary_json = {
             **(job.summary_json or {}),
             _COLLAPSED_INLINE_FINGERPRINTS_KEY: persisted_collapsed,
-            _PUBLISHED_CHECK_SUMMARY_KEY: check_summary_body,
-            _PUBLISHED_ISSUE_COMMENT_KEY: issue_comment_body,
         }
 
         await _checkpoint_publish_surface(session, persist=persist_github_surface)
-    return None
+    return PublishFlushResult(
+        published_check_summary=check_summary_body,
+        published_issue_comment=issue_comment_body,
+    )
 
 
 async def _commit_publish_job_progress(session: AsyncSession) -> None:
@@ -2018,7 +2024,7 @@ async def run_publish_job(
         if skipped is not None:
             return skipped
 
-        skipped_mid_flush = await _flush_publish_surface(
+        flush_result = await _flush_publish_surface(
             session,
             job=job,
             publish_job_id=publish_job_id,
@@ -2029,8 +2035,8 @@ async def run_publish_job(
             retry_posted_inline=retry_posted_inline,
             run=run,
         )
-        if skipped_mid_flush is not None:
-            return skipped_mid_flush
+        if flush_result.skipped_job is not None:
+            return flush_result.skipped_job
 
         job.status = GitHubPublishJobStatus.completed
         await session.flush()
@@ -2038,15 +2044,12 @@ async def run_publish_job(
             session, review_run_id=job.review_run_id
         )
         if pipeline_run is not None:
-            published = job.summary_json or {}
             await record_publish_pipeline_step(
                 session,
                 pipeline_run_id=pipeline_run.id,
                 job=job,
-                summary_markdown=published.get(_PUBLISHED_CHECK_SUMMARY_KEY, build.check_summary),
-                issue_comment_markdown=published.get(
-                    _PUBLISHED_ISSUE_COMMENT_KEY, build.issue_comment
-                ),
+                summary_markdown=flush_result.published_check_summary or build.check_summary,
+                issue_comment_markdown=flush_result.published_issue_comment or build.issue_comment,
                 duration_ms=int((time.monotonic() - started) * 1000),
             )
         return job

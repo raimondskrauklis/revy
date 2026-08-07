@@ -465,6 +465,34 @@ def test_refresh_issue_pr_verdict_sections_removes_empty_security_block():
     assert "app/auth.py" not in refreshed
 
 
+def test_patch_issue_narrative_paragraph_updates_open_finding_count():
+    stale = _group(
+        severity=FindingSeverity.warning,
+        fingerprint="stale-fp",
+        file_path="app/legacy.py",
+    )
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=42,
+        head_sha="abc123",
+        revision_number=2,
+        groups=[],
+        pr_active_groups=[stale],
+    )
+    issue = (
+        "## Revy code review\n\n"
+        "This revision added no new publishable findings, but **2** findings remain open on PR #42.\n\n"
+        "**Merge recommendation:** hold\n\n"
+        "### This generation\n\n"
+        "No publishable findings this generation.\n"
+    )
+    from app.services.github_publish_formatter import _patch_issue_narrative_paragraph
+
+    refreshed = _patch_issue_narrative_paragraph(issue, ctx)
+    assert "**1** finding remain open on PR #42" in refreshed
+    assert "**2**" not in refreshed
+
+
 def test_splice_deterministic_findings_tables_replaces_llm_mismatch():
     generation = [_group(severity=FindingSeverity.error, fingerprint="gen")]
     prior_only = _group(

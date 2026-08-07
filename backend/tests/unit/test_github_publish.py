@@ -664,7 +664,7 @@ async def test_resolve_stale_inline_threads_pops_already_resolved_without_graphq
 
 @pytest.mark.resolve_unmocked
 @pytest.mark.asyncio
-async def test_resolve_stale_inline_threads_counts_already_resolved():
+async def test_resolve_stale_inline_threads_syncs_already_resolved_without_skip():
     review_run_id = uuid.uuid4()
     pull_request_id = uuid.uuid4()
     inline_threads = {"done-fp": 1001}
@@ -899,6 +899,43 @@ async def test_close_active_groups_for_fingerprints_skips_still_open_option_a():
             revision_id=revision_id,
             review_run_id=review_run_id,
             fingerprints={"stale-fp"},
+        )
+    assert closed == 0
+    assert group.state == GitHubFindingGroupState.active
+
+
+@pytest.mark.asyncio
+async def test_close_active_groups_for_fingerprints_skips_when_fingerprint_still_in_run():
+    pull_request_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    review_run_id = uuid.uuid4()
+    group = GitHubFindingGroupORM(
+        id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint="addressed-fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Addressed",
+        message="msg",
+        file_path="app/main.py",
+        last_seen_revision_id=uuid.uuid4(),
+        resolution_status=ResolutionStatus.addressed,
+    )
+    session = AsyncMock()
+    session.scalars = AsyncMock(return_value=[group])
+    session.flush = AsyncMock()
+    with patch(
+        "app.services.github_finding_closure._fingerprints_in_review_run",
+        AsyncMock(return_value={"addressed-fp"}),
+    ):
+        closed = await github_publish._close_active_groups_for_fingerprints(
+            session,
+            pull_request_id=pull_request_id,
+            revision_id=revision_id,
+            review_run_id=review_run_id,
+            fingerprints={"addressed-fp"},
         )
     assert closed == 0
     assert group.state == GitHubFindingGroupState.active
