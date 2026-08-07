@@ -122,7 +122,7 @@ def _publish_formatter_defaults(request):
                     AsyncMock(return_value=None),
                 ):
                     with patch(
-                        "app.services.github_publish._fetch_prior_completed_publish_jobs",
+                        "app.services.github_publish._fetch_prior_reusable_publish_jobs",
                         AsyncMock(return_value=[]),
                     ):
                         with patch(
@@ -304,6 +304,17 @@ def test_load_ever_inlined_fingerprints_includes_failed_prior_job():
     failed = MagicMock()
     failed.summary_json = {"github_inline_threads": {"fp-failed": 400}}
     assert github_publish._load_ever_inlined_fingerprints([failed]) == frozenset({"fp-failed"})
+
+
+def test_load_ever_inlined_fingerprints_handles_empty_current_summary():
+    assert github_publish._load_ever_inlined_fingerprints([], current_job_summary={}) == frozenset()
+    assert (
+        github_publish._load_ever_inlined_fingerprints(
+            [],
+            current_job_summary={"confidence": 5},
+        )
+        == frozenset()
+    )
 
 
 def test_load_ever_inlined_fingerprints_includes_v2_inline_map():
@@ -1089,7 +1100,7 @@ async def test_run_publish_job_persists_thread_map_after_resolve_when_inline_ski
     session.flush = AsyncMock()
 
     with patch(
-        "app.services.github_publish._fetch_prior_completed_publish_jobs",
+        "app.services.github_publish._fetch_prior_reusable_publish_jobs",
         AsyncMock(return_value=[prior_job]),
     ):
         with patch(
@@ -2438,7 +2449,7 @@ async def test_run_publish_job_same_sha_re_publish_persists_thread_map():
 
     resolve_mock = AsyncMock()
     with patch(
-        "app.services.github_publish._fetch_prior_completed_publish_jobs",
+        "app.services.github_publish._fetch_prior_reusable_publish_jobs",
         AsyncMock(return_value=[prior_job]),
     ):
         with patch(
@@ -2705,7 +2716,7 @@ async def test_run_publish_job_reactivates_inline_same_publish():
 
     inline_mock = AsyncMock(return_value=8002)
     with patch(
-        "app.services.github_publish._fetch_prior_completed_publish_jobs",
+        "app.services.github_publish._fetch_prior_reusable_publish_jobs",
         AsyncMock(return_value=[prior_job]),
     ):
         with patch(
@@ -3043,7 +3054,7 @@ async def test_run_publish_job_surface_flush_call_order():
     prior_job.summary_json = {"github_inline_threads": {"stale-fp": 9001}}
 
     with patch(
-        "app.services.github_publish._fetch_prior_completed_publish_jobs",
+        "app.services.github_publish._fetch_prior_reusable_publish_jobs",
         AsyncMock(return_value=[prior_job]),
     ):
         with patch(

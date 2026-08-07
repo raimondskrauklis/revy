@@ -586,8 +586,8 @@ def _load_ever_inlined_fingerprints(
     fingerprints.update(_load_v2_inline_thread_map(jobs).keys())
     if isinstance(current_job_summary, dict):
         inline = current_job_summary.get("github_inline_threads")
-        fingerprints.update(deserialize_inline_thread_map(inline).keys())
         if isinstance(inline, dict):
+            fingerprints.update(deserialize_inline_thread_map(inline).keys())
             for fingerprint, value in inline.items():
                 if not isinstance(fingerprint, str):
                     continue
@@ -635,7 +635,7 @@ def _fingerprint_thread_ids_from_index(
     return thread_ids
 
 
-async def _fetch_prior_completed_publish_jobs(
+async def _fetch_prior_reusable_publish_jobs(
     session: AsyncSession,
     *,
     pull_request_id: UUID,
@@ -667,7 +667,7 @@ async def _load_prior_inline_thread_map(
     *,
     pull_request_id: UUID,
 ) -> dict[str, int]:
-    jobs = await _fetch_prior_completed_publish_jobs(session, pull_request_id=pull_request_id)
+    jobs = await _fetch_prior_reusable_publish_jobs(session, pull_request_id=pull_request_id)
     return _load_inline_thread_map(jobs)
 
 
@@ -1406,7 +1406,7 @@ async def _build_publish_surface(
         review_run_id=job.review_run_id,
         pull_request_id=pull_request.id,
     )
-    prior_jobs = await _fetch_prior_completed_publish_jobs(
+    prior_jobs = await _fetch_prior_reusable_publish_jobs(
         session,
         pull_request_id=pull_request.id,
     )
