@@ -306,6 +306,18 @@ def test_load_ever_inlined_fingerprints_includes_failed_prior_job():
     assert github_publish._load_ever_inlined_fingerprints([failed]) == frozenset({"fp-failed"})
 
 
+def test_load_prior_collapsed_inline_fingerprints_ignores_failed_prior_jobs():
+    failed = MagicMock()
+    failed.status = GitHubPublishJobStatus.failed
+    failed.summary_json = {"collapsed_inline_fingerprints": ["fp-failed-only"]}
+    completed = MagicMock()
+    completed.status = GitHubPublishJobStatus.completed
+    completed.summary_json = {"collapsed_inline_fingerprints": ["fp-ok"]}
+    assert github_publish._load_prior_collapsed_inline_fingerprints(
+        [failed, completed]
+    ) == {"fp-ok"}
+
+
 def test_load_ever_inlined_fingerprints_handles_empty_current_summary():
     assert github_publish._load_ever_inlined_fingerprints([], current_job_summary={}) == frozenset()
     assert (

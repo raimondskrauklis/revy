@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import re
 import time
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from uuid import UUID
 
 import httpx
@@ -1334,6 +1334,8 @@ def _load_prior_collapsed_inline_fingerprints(
 ) -> set[str]:
     collapsed = _collapsed_inline_fingerprints_from_summary(current_job_summary)
     for prior_job in jobs:
+        if prior_job.status != GitHubPublishJobStatus.completed:
+            continue
         collapsed.update(_collapsed_inline_fingerprints_from_summary(prior_job.summary_json))
     return collapsed
 
@@ -1448,12 +1450,10 @@ async def _build_publish_surface(
         index_mode=index_job.index_mode if index_job is not None else None,
         fallback_reason=index_job.fallback_reason if index_job is not None else None,
         resolution_metrics_manifest=resolution_metrics_manifest,
-        pr_active_groups=pr_active_groups,
+        pr_active_groups=filtered_pr_active,
         ever_inlined_fingerprints=ever_inlined,
     )
-    formatted = await build_publish_format_result_async(
-        replace(format_ctx, pr_active_groups=filtered_pr_active)
-    )
+    formatted = await build_publish_format_result_async(format_ctx)
     summary_json = {
         **formatted.summary_json,
         "github_inline_threads": serialize_inline_thread_map(
