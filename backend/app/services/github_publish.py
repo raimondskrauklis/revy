@@ -1730,7 +1730,7 @@ async def _flush_publish_surface(
                 pull_request_id=pull_request.id,
             )
             format_ctx_for_rollup = build.format_ctx
-            if collapsed_fingerprints:
+            if effective_collapsed:
                 generation_fingerprints = {
                     group.fingerprint for group in build.format_ctx.groups
                 }
