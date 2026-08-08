@@ -19,6 +19,7 @@
 | PR | Program | Branch | Status |
 |----|---------|--------|--------|
 | *(open)* | Agent workflow pack E2E | `chore/agent-workflow-e2e-validation` | [#73](https://github.com/raimondskrauklis/revy/pull/73) push 1 |
+| [#87](https://github.com/raimondskrauklis/revy/pull/87) | PR summary rollup (post-#85) | `chore/psr-staging-dogfood` | **sign-off PASS** — pushes 1–2 |
 | *(open)* | Finding resolution dogfood | `chore/finding-resolution-staging-dogfood` | P0 pushed — staging validation in progress |
 | [#63](https://github.com/raimondskrauklis/revy/pull/63) | PSA post-#62 deploy | `chore/psa-staging-dogfood` | **sign-off complete** — merged |
 
@@ -26,6 +27,7 @@
 
 | Program | Branch | Findings |
 |---------|--------|----------|
+| PR summary rollup (post-#85 deploy) | `chore/psr-staging-dogfood` | **done** — [#87](https://github.com/raimondskrauklis/revy/pull/87) PASS |
 | Finding resolution dogfood | `chore/finding-resolution-staging-dogfood` | [FINDING_RESOLUTION_DOGFOOD_FINDINGS.md](../finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_FINDINGS.md) |
 | Moonshot formatter signature | `chore/moonshot-formatter-signature` | MR-DG1 in same doc |
 
@@ -37,6 +39,7 @@
 | Review engineering context | [REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md](../review-engineering-context/REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md) |
 | Judge JSON contract | [JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](../judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) |
 | Finding resolution | [FINDING_RESOLUTION_STAGING_VALIDATION.md](../finding-resolution/FINDING_RESOLUTION_STAGING_VALIDATION.md) |
+| PR summary rollup | [PR_SUMMARY_ROLLUP_STAGING_VALIDATION.md](../pr-summary-rollup/PR_SUMMARY_ROLLUP_STAGING_VALIDATION.md) |
 | Agent workflow pack E2E | [AGENT_WORKFLOW_PACK_E2E_VALIDATION.md](./AGENT_WORKFLOW_PACK_E2E_VALIDATION.md) |
 
 ## Shared tooling
