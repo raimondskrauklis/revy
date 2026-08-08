@@ -1227,6 +1227,13 @@ def _issue_comment_meets_product_bar(text: str, ctx: PublishFormatContext) -> bo
     has_table = "| Severity | Category | Title | File |" in normalized
     has_generation_block = "### This generation" in normalized
     has_pr_block = "### Still open on PR" in normalized
+    rollup = ctx.pr_resolution_rollup if isinstance(ctx.pr_resolution_rollup, dict) else {}
+    review_count = int(rollup.get("review_count") or 0)
+    raised_count = int(rollup.get("raised_count") or 0)
+    needs_pr_summary = review_count > 1 or raised_count > 0
+    has_pr_summary = "### PR summary" in normalized
+    if needs_pr_summary and not has_pr_summary:
+        return False
     if "### Findings" in normalized and not has_generation_block:
         return False
     return (
@@ -1279,7 +1286,7 @@ def _build_issue_comment_user_prompt(ctx: PublishFormatContext) -> str:
     pr_active = _active_groups(verdict)
     confidence = compute_publish_confidence(ctx)
     has_security = any(group.category == FindingCategory.security for group in pr_active)
-    return (
+    prompt = (
         "Format the issue comment from this structured review context.\n\n"
         f"PR #{ctx.pull_request_number} revision {ctx.revision_number} head_sha={ctx.head_sha}\n"
         f"Confidence score (use this exact value): {confidence}/5\n"
@@ -1302,6 +1309,14 @@ def _build_issue_comment_user_prompt(ctx: PublishFormatContext) -> str:
         f"Revision note: when revision_number is 1, PR active count equals generation count "
         f"(no prior push); both tables must list the same rows."
     )
+    if isinstance(ctx.pr_resolution_rollup, dict):
+        prompt += (
+            "\nPR lifetime rollup JSON (render ### PR summary (lifetime) from these counts only; "
+            "do not replace or invent):\n"
+            f"{json.dumps(ctx.pr_resolution_rollup, ensure_ascii=False)}\n"
+            "Do not omit ### PR summary (lifetime) when review_count > 1 or raised_count > 0."
+        )
+    return prompt
 
 
 async def build_pr_review_comment(ctx: PublishFormatContext) -> str:
@@ -1342,6 +1357,8 @@ async def build_pr_review_comment(ctx: PublishFormatContext) -> str:
             )
             return fallback
         text = splice_deterministic_findings_tables(text, ctx)
+        text = splice_deterministic_pr_summary_block(text, ctx)
+        text = append_review_metadata_footer(text, ctx)
         footer = _index_footer(ctx)
         if footer and footer not in text:
             text = f"{text}\n\n{footer}"

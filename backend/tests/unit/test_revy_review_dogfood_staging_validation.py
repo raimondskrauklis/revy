@@ -114,3 +114,28 @@ def test_rr_v4_passes_when_latest_publish_clean_despite_historical_skips():
     assert "historical skips" in next(
         c["detail"] for c in gate["checks"] if c["name"] == "RR-V4_thread_resolve_taxonomy"
     )
+
+
+def test_psr_rollup_gate_passes_with_manifest():
+    from scripts.revy_review_dogfood_staging_validation import _evaluate_psr_rollup_gates
+
+    gate = _evaluate_psr_rollup_gates(
+        {
+            "publish_jobs": [
+                {
+                    "status": "completed",
+                    "pr_resolution_rollup": {
+                        "schema_version": 1,
+                        "review_count": 2,
+                        "raised_count": 3,
+                        "resolved_count": 1,
+                        "still_open_display": 2,
+                        "still_open_prior": 1,
+                        "resolved_by_method": {},
+                        "filter_snapshot": {},
+                    },
+                }
+            ]
+        }
+    )
+    assert gate["ready_for_signoff"] is True

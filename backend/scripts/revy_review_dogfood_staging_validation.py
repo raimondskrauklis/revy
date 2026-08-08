@@ -199,6 +199,58 @@ def _thread_resolve_blocking_skips(skipped: dict[str, Any]) -> list[str]:
     return issues
 
 
+_PSR_ROLLUP_REQUIRED_KEYS = (
+    "schema_version",
+    "review_count",
+    "raised_count",
+    "resolved_count",
+    "still_open_display",
+    "still_open_prior",
+    "resolved_by_method",
+    "filter_snapshot",
+)
+
+
+def _evaluate_psr_rollup_gates(metrics: dict[str, Any]) -> dict[str, Any]:
+    publish_jobs = metrics.get("publish_jobs", [])
+    completed = [job for job in publish_jobs if job.get("status") == "completed"]
+    checks: list[dict[str, Any]] = []
+
+    def add(name: str, status: str, detail: str) -> None:
+        checks.append({"name": name, "status": status, "detail": detail})
+
+    if not completed:
+        add("PSR-R1_rollup_persisted", "PENDING", "no completed publish jobs yet")
+        return {"checks": checks, "ready_for_signoff": False}
+
+    with_rollup = [job for job in completed if isinstance(job.get("pr_resolution_rollup"), dict)]
+    if not with_rollup:
+        add("PSR-R1_rollup_persisted", "FAIL", "completed publish jobs missing pr_resolution_rollup")
+        return {"checks": checks, "ready_for_signoff": False}
+
+    latest = with_rollup[-1]["pr_resolution_rollup"]
+    missing = [key for key in _PSR_ROLLUP_REQUIRED_KEYS if key not in latest]
+    if missing:
+        add("PSR-R2_rollup_schema_v1", "FAIL", f"missing keys: {', '.join(missing)}")
+    else:
+        add("PSR-R2_rollup_schema_v1", "PASS", "manifest v1 keys present")
+
+    review_count = int(latest.get("review_count") or 0)
+    if review_count < 1:
+        add("PSR-R3_review_count", "FAIL", f"review_count={review_count}")
+    else:
+        add("PSR-R3_review_count", "PASS", f"review_count={review_count}")
+
+    still_open = latest.get("still_open_display")
+    if not isinstance(still_open, int) or still_open < 0:
+        add("PSR-R4_still_open_display", "FAIL", f"still_open_display={still_open!r}")
+    else:
+        add("PSR-R4_still_open_display", "PASS", f"still_open_display={still_open}")
+
+    ready = all(check["status"] == "PASS" for check in checks)
+    return {"checks": checks, "ready_for_signoff": ready}
+
+
 def _evaluate_rr_v_gates(metrics: dict[str, Any]) -> dict[str, Any]:
     revisions = metrics.get("revisions", [])
     review_runs = metrics.get("review_runs", [])
@@ -427,6 +479,7 @@ async def _fetch_metrics(
                 "inline_publish_422_recovered_count": summary.get(
                     "inline_publish_422_recovered_count"
                 ),
+                "pr_resolution_rollup": summary.get("pr_resolution_rollup"),
             }
         )
 
@@ -454,6 +507,7 @@ async def _fetch_metrics(
         },
     }
     metrics["rr_v_gate"] = _evaluate_rr_v_gates(metrics)
+    metrics["psr_rollup_gate"] = _evaluate_psr_rollup_gates(metrics)
     return metrics
 
 
@@ -468,6 +522,11 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="Exit 1 unless all RR-V checks PASS (no PENDING)",
     )
+    parser.add_argument(
+        "--psr-gate",
+        action="store_true",
+        help="Exit 1 unless PSR rollup checks PASS (no PENDING)",
+    )
     return parser.parse_args()
 
 
@@ -480,6 +539,7 @@ async def _run() -> int:
         since=since,
     )
     gate = metrics["rr_v_gate"]
+    psr_gate = metrics["psr_rollup_gate"]
 
     if args.json:
         print(json.dumps(metrics, indent=2, default=str))
@@ -497,8 +557,14 @@ async def _run() -> int:
         for check in gate["checks"]:
             print(f"  [{check['status']}] {check['name']}: {check['detail']}")
         print(f"  sign-off ready: {gate['ready_for_signoff']}")
+        print("  PSR rollup gate:")
+        for check in psr_gate["checks"]:
+            print(f"  [{check['status']}] {check['name']}: {check['detail']}")
+        print(f"  PSR ready: {psr_gate['ready_for_signoff']}")
 
     if args.rr_v_gate and not gate.get("ready_for_signoff"):
+        return 1
+    if args.psr_gate and not psr_gate.get("ready_for_signoff"):
         return 1
     return 0
 

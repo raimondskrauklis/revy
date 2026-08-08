@@ -56,3 +56,30 @@ async def test_post_publish_pull_request_revision_queues_job():
 
     enqueue_mock.assert_called_once_with(job.id)
     assert response.data.status == GitHubPublishJobStatus.pending
+
+
+def test_github_publish_job_response_includes_pr_resolution_rollup():
+    from app.schemas.github_publish import GitHubPublishJobResponse
+
+    job = GitHubPublishJobORM(
+        review_run_id=uuid.uuid4(),
+        revision_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        head_sha="sha",
+        status=GitHubPublishJobStatus.completed,
+    )
+    job.id = uuid.uuid4()
+    job.inline_comments_posted = False
+    job.created_at = datetime.now(UTC)
+    job.updated_at = datetime.now(UTC)
+    job.summary_json = {
+        "pr_resolution_rollup": {
+            "schema_version": 1,
+            "review_count": 2,
+            "raised_count": 3,
+            "still_open_display": 1,
+        }
+    }
+    response = GitHubPublishJobResponse.model_validate(job)
+    assert response.pr_resolution_rollup is not None
+    assert response.pr_resolution_rollup["review_count"] == 2

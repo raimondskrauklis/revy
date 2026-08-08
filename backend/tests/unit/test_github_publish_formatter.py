@@ -1192,8 +1192,7 @@ async def test_build_pr_review_comment_moonshot_success_includes_greptile_sectio
     assert format_summary_comment(generation_groups=groups, pr_active_groups=groups) in result
     assert "Confidence score" in result
     assert "moderated" in result
-    assert "<details>" in result
-    assert "Review metadata" in result
+    assert "Revision:" in result
 
 
 @pytest.mark.asyncio
@@ -1426,3 +1425,24 @@ def test_build_publish_format_result_summary_json_includes_rollup():
     ctx = _ctx_with_rollup([_group()])
     result = build_publish_format_result(ctx)
     assert "pr_resolution_rollup" in result.summary_json
+
+
+def test_issue_comment_meets_product_bar_requires_pr_summary_when_rollup_present():
+    from app.services.github_publish_formatter import _issue_comment_meets_product_bar
+
+    group = _group(fingerprint="g1")
+    ctx = _ctx_with_rollup([group], pr_active_groups=[group])
+    thin = (
+        "## Revy code review\n\n**Merge recommendation:** x\n"
+        "**Confidence score:** 4/5 — Score is moderated.\n"
+        "### This generation\n| Severity | Category | Title | File |\n"
+        "| --- | --- | --- | --- |\n| warning | bug | Issue | app/main.py |\n"
+        "### Still open on PR\n| Severity | Category | Title | File |\n"
+        "| --- | --- | --- | --- |\n| warning | bug | Issue | app/main.py |\n"
+    )
+    assert _issue_comment_meets_product_bar(thin, ctx) is False
+    with_summary = thin.replace(
+        "**Confidence score:** 4/5 — Score is moderated.\n",
+        "**Confidence score:** 4/5 — Score is moderated.\n\n### PR summary (lifetime)\n\n- **Raised on PR:** 3\n",
+    )
+    assert _issue_comment_meets_product_bar(with_summary, ctx) is True

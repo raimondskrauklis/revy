@@ -711,12 +711,23 @@ async def record_publish_pipeline_step(
         kind=PipelineArtifactKind.summary_markdown,
         content_text=summary_markdown,
     )
-    if issue_comment_markdown:
+    if issue_comment_markdown or isinstance((job.summary_json or {}).get("pr_resolution_rollup"), dict):
+        manifest_payload: dict[str, object] = {}
+        if issue_comment_markdown:
+            manifest_payload["issue_comment_markdown"] = issue_comment_markdown
+        rollup = (job.summary_json or {}).get("pr_resolution_rollup")
+        if isinstance(rollup, dict):
+            manifest_payload["rollup_pass"] = {
+                "raised_count": rollup.get("raised_count"),
+                "resolved_count": rollup.get("resolved_count"),
+                "still_open_display": rollup.get("still_open_display"),
+                "review_count": rollup.get("review_count"),
+            }
         await add_step_artifact(
             session,
             step_id=step.id,
             kind=PipelineArtifactKind.manifest,
-            content_json={"issue_comment_markdown": issue_comment_markdown},
+            content_json=manifest_payload,
         )
 
 
