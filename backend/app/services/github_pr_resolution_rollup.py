@@ -92,6 +92,7 @@ def _is_lifetime_path_removed_resolution(
         group.state == GitHubFindingGroupState.resolved
         and group.resolution_method == ResolutionMethod.absent_and_addressed
         and group.last_seen_revision_id is not None
+        and group.last_seen_revision_id != resolved_at_revision_id
         and group.last_seen_revision_id not in prior_revision_ids
     )
 
@@ -99,12 +100,14 @@ def _is_lifetime_path_removed_resolution(
 def build_prior_revision_ids_by_resolve_revision(
     revisions: list[GitHubPullRequestRevisionORM],
 ) -> dict[UUID, frozenset[UUID]]:
+    """Map each revision to its immediately preceding revision (hygiene pairing)."""
     ordered = sorted(revisions, key=lambda revision: revision.revision_number)
     prior_by_revision: dict[UUID, frozenset[UUID]] = {}
-    seen: list[UUID] = []
-    for revision in ordered:
-        prior_by_revision[revision.id] = frozenset(seen)
-        seen.append(revision.id)
+    for index, revision in enumerate(ordered):
+        if index == 0:
+            prior_by_revision[revision.id] = frozenset()
+        else:
+            prior_by_revision[revision.id] = frozenset({ordered[index - 1].id})
     return prior_by_revision
 
 
@@ -312,6 +315,6 @@ async def review_count_for_in_flight_publish(
     *,
     pull_request_id: UUID,
 ) -> int:
-    """Completed publishes on PR plus the publish currently flushing."""
+    """1-based publish ordinal for the in-flight flush (completed publishes + current)."""
     completed = await count_completed_publish_jobs(session, pull_request_id=pull_request_id)
     return completed + 1

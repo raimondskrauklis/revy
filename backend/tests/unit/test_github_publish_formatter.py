@@ -1086,6 +1086,40 @@ def test_insert_resolution_metrics_block_before_summary_blocks():
     assert generation_idx > metrics_idx
 
 
+def test_insert_resolution_metrics_block_not_before_pr_summary():
+    from app.services.github_publish_formatter import _insert_resolution_metrics_block
+
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=42,
+        head_sha="abc123",
+        revision_number=2,
+        groups=[_group()],
+        resolution_metrics_manifest={
+            "resolution_rate_pct": 50.0,
+            "transition_count": 1,
+            "denominator_active_prior": 2,
+            "transitions_addressed": 1,
+            "transitions_dismissed": {},
+            "compare_failed_count": 0,
+            "still_open_count": 1,
+        },
+    )
+    moonshot = (
+        "## Revy code review\n\n"
+        "### PR summary (lifetime)\n\n"
+        "- **Raised on PR:** 1\n\n"
+        "**Since last push:** 1 addressed\n\n"
+        "### This generation\n"
+    )
+    result = _insert_resolution_metrics_block(moonshot, ctx)
+    pr_idx = result.find("### PR summary (lifetime)")
+    since_idx = result.find("**Since last push:**")
+    metrics_idx = result.find("### Resolution metrics")
+    generation_idx = result.find("### This generation")
+    assert pr_idx < since_idx < metrics_idx < generation_idx
+
+
 def test_has_confidence_rationale_ignores_score_is_in_finding_title():
     from app.services.github_publish_formatter import _has_confidence_rationale_in_comment
 

@@ -1243,8 +1243,6 @@ def _insert_resolution_metrics_block(text: str, ctx: PublishFormatContext) -> st
     if not block or block in text:
         return text
     for marker in (
-        _PR_SUMMARY_HEADING,
-        "**Since last push:**",
         "### Files needing attention",
         "### This generation",
         "### Still open on PR",
