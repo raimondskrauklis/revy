@@ -60,7 +60,7 @@ DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.judge_json_contract_staging
 | [#85](https://github.com/raimondskrauklis/revy/pull/85) (merged) | Feature PR — pre-deploy dogfood | **excluded** |
 | [#87](https://github.com/raimondskrauklis/revy/pull/87) | Post-deploy PSR dogfood | **sign-off complete** — `chore/psr-staging-dogfood` |
 
-**Fixture:** `backend/app/services/psr_staging_probe.py`
+**Fixture:** `backend/tests/fixtures/psr_staging/probe_module.py`
 
 ---
 
