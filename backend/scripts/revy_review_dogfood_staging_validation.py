@@ -228,10 +228,24 @@ def _evaluate_psr_rollup_gates(metrics: dict[str, Any]) -> dict[str, Any]:
         add("PSR-R1_rollup_persisted", "FAIL", "completed publish jobs missing pr_resolution_rollup")
         return {"checks": checks, "ready_for_signoff": False}
 
-    latest = with_rollup[-1]["pr_resolution_rollup"]
+    latest_job = max(
+        with_rollup,
+        key=lambda job: (
+            int(job.get("revision_number") or 0),
+            str(job.get("created_at") or ""),
+        ),
+    )
+    latest = latest_job["pr_resolution_rollup"]
     missing = [key for key in _PSR_ROLLUP_REQUIRED_KEYS if key not in latest]
+    schema_version = latest.get("schema_version")
     if missing:
         add("PSR-R2_rollup_schema_v1", "FAIL", f"missing keys: {', '.join(missing)}")
+    elif schema_version != 1:
+        add(
+            "PSR-R2_rollup_schema_v1",
+            "FAIL",
+            f"schema_version={schema_version!r} (expected 1)",
+        )
     else:
         add("PSR-R2_rollup_schema_v1", "PASS", "manifest v1 keys present")
 

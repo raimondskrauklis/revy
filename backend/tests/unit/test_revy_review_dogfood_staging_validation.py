@@ -139,3 +139,73 @@ def test_psr_rollup_gate_passes_with_manifest():
         }
     )
     assert gate["ready_for_signoff"] is True
+
+
+def test_psr_rollup_gate_fails_on_schema_version_mismatch():
+    from scripts.revy_review_dogfood_staging_validation import _evaluate_psr_rollup_gates
+
+    gate = _evaluate_psr_rollup_gates(
+        {
+            "publish_jobs": [
+                {
+                    "status": "completed",
+                    "revision_number": 2,
+                    "pr_resolution_rollup": {
+                        "schema_version": 2,
+                        "review_count": 2,
+                        "raised_count": 3,
+                        "resolved_count": 1,
+                        "still_open_display": 2,
+                        "still_open_prior": 1,
+                        "resolved_by_method": {},
+                        "filter_snapshot": {},
+                    },
+                }
+            ]
+        }
+    )
+    statuses = {check["name"]: check["status"] for check in gate["checks"]}
+    assert statuses["PSR-R2_rollup_schema_v1"] == "FAIL"
+    assert gate["ready_for_signoff"] is False
+
+
+def test_psr_rollup_gate_uses_highest_revision_number():
+    from scripts.revy_review_dogfood_staging_validation import _evaluate_psr_rollup_gates
+
+    gate = _evaluate_psr_rollup_gates(
+        {
+            "publish_jobs": [
+                {
+                    "status": "completed",
+                    "revision_number": 3,
+                    "pr_resolution_rollup": {
+                        "schema_version": 1,
+                        "review_count": 1,
+                        "raised_count": 1,
+                        "resolved_count": 0,
+                        "still_open_display": 1,
+                        "still_open_prior": 0,
+                        "resolved_by_method": {},
+                        "filter_snapshot": {},
+                    },
+                },
+                {
+                    "status": "completed",
+                    "revision_number": 5,
+                    "pr_resolution_rollup": {
+                        "schema_version": 1,
+                        "review_count": 3,
+                        "raised_count": 2,
+                        "resolved_count": 1,
+                        "still_open_display": 1,
+                        "still_open_prior": 0,
+                        "resolved_by_method": {},
+                        "filter_snapshot": {},
+                    },
+                },
+            ]
+        }
+    )
+    statuses = {check["name"]: check["status"] for check in gate["checks"]}
+    assert statuses["PSR-R3_review_count"] == "PASS"
+    assert any("review_count=3" in check["detail"] for check in gate["checks"])

@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ModelWrapValidatorHandler, model_validator
 
 from app.constants.enums import GitHubPublishJobStatus
 
@@ -28,15 +28,22 @@ class GitHubPublishJobResponse(BaseModel):
     updated_at: datetime
     pr_resolution_rollup: dict | None = None
 
+    @model_validator(mode="wrap")
     @classmethod
-    def from_publish_job(cls, job: Any) -> GitHubPublishJobResponse:
-        response = cls.model_validate(job)
-        if response.pr_resolution_rollup is not None:
-            return response
-        summary_json = getattr(job, "summary_json", None)
+    def _inject_rollup_from_summary_json(
+        cls,
+        data: Any,
+        handler: ModelWrapValidatorHandler[GitHubPublishJobResponse],
+    ) -> GitHubPublishJobResponse:
+        model = handler(data)
+        if model.pr_resolution_rollup is not None:
+            return model
+        summary_json = (
+            data.get("summary_json") if isinstance(data, dict) else getattr(data, "summary_json", None)
+        )
         if not isinstance(summary_json, dict):
-            return response
+            return model
         rollup = summary_json.get("pr_resolution_rollup")
         if not isinstance(rollup, dict):
-            return response
-        return response.model_copy(update={"pr_resolution_rollup": rollup})
+            return model
+        return model.model_copy(update={"pr_resolution_rollup": rollup})
