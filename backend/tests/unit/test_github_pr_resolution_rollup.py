@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -225,7 +225,7 @@ def test_post_collapse_rollup_matches_filtered_ctx():
     )
     check = "check"
     issue = "issue body"
-    collapsed = apply_publish_summary_thread_collapse(
+    apply_publish_summary_thread_collapse(
         check,
         issue,
         ctx,

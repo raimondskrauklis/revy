@@ -18,8 +18,8 @@ from app.constants.enums import (
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.services.github_publish_formatter import (
     PublishFormatContext,
-    append_thread_resolve_skipped_block,
     append_review_metadata_footer,
+    append_thread_resolve_skipped_block,
     apply_publish_summary_thread_collapse,
     build_check_run_summary,
     build_g9_resolution_prose,

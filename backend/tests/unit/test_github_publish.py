@@ -4056,7 +4056,7 @@ def test_inline_comments_posted_true_when_all_recovered_via_422():
 
 @pytest.mark.asyncio
 async def test_run_publish_job_persists_pr_resolution_rollup_on_completed():
-    publish_job_id, session, job, pull_request = _publish_job_context()
+    publish_job_id, session, _job, pull_request = _publish_job_context()
 
     with patch(
         "app.services.github_publish.github_api.installation_auth_headers",
