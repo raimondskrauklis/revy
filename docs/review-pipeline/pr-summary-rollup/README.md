@@ -18,7 +18,7 @@
 
 | Phase | Focus | File | Status |
 |-------|--------|------|--------|
-| P0 | Migration, rollup module, compute + persist | [P0](./waves/PR_SUMMARY_ROLLUP_P0_EXECUTION.md) | pending |
+| P0 | Migration, rollup module, compute + persist | [P0](./waves/PR_SUMMARY_ROLLUP_P0_EXECUTION.md) | Done (`3b8ae99`) |
 | P1 | Formatter surfaces (comment + check) | [P1](./waves/PR_SUMMARY_ROLLUP_P1_EXECUTION.md) | pending |
 | P2 | Moonshot + API + dogfood + trace | [P2](./waves/PR_SUMMARY_ROLLUP_P2_EXECUTION.md) | pending |
 | P3 | Staging sign-off + doc sync | [P3](./waves/PR_SUMMARY_ROLLUP_P3_EXECUTION.md) | pending |
