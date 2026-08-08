@@ -71,6 +71,7 @@ from app.services.github_publish_formatter import (
     PublishFormatContext,
     append_thread_resolve_skipped_block,
     apply_publish_summary_thread_collapse,
+    apply_rollup_to_publish_surfaces,
     build_publish_format_result_async,
     filter_pr_active_groups_for_summary,
 )
@@ -1756,6 +1757,15 @@ async def _flush_publish_surface(
                 raw_pr_active_groups=raw_pr_active_groups,
                 publishable_fingerprints=set(build.publishable_fingerprints),
                 collapsed_fingerprints=effective_collapsed,
+            )
+            ctx_with_rollup = replace(
+                format_ctx_for_rollup,
+                pr_resolution_rollup=rollup_manifest,
+            )
+            check_summary_body, issue_comment_body = apply_rollup_to_publish_surfaces(
+                check_summary_body,
+                issue_comment_body,
+                ctx_with_rollup,
             )
 
         indexed_thread_ids = _fingerprint_thread_ids_from_index(inline_threads, thread_index)

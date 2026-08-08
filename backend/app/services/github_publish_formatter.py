@@ -131,6 +131,7 @@ class PublishFormatContext:
     resolution_metrics_manifest: dict[str, object] | None = None
     pr_active_groups: list[GitHubFindingGroupORM] | None = None
     ever_inlined_fingerprints: frozenset[str] | None = None
+    pr_resolution_rollup: dict[str, object] | None = None
 
 
 @dataclass(frozen=True)
@@ -470,6 +471,148 @@ def display_still_open_prior_count(ctx: PublishFormatContext) -> int:
     )
 
 
+_PR_SUMMARY_HEADING = "### PR summary (lifetime)"
+
+
+def format_pr_resolution_rollup_block(rollup: dict[str, object]) -> str:
+    """Lifetime PR rollup markdown block (PSR P1)."""
+    raised = int(rollup.get("raised_count") or 0)
+    resolved = int(rollup.get("resolved_count") or 0)
+    still_open = int(rollup.get("still_open_display") or 0)
+    rate = rollup.get("lifetime_resolution_rate_pct")
+    by_method = rollup.get("resolved_by_method")
+    lines = [
+        _PR_SUMMARY_HEADING,
+        "",
+        f"- **Raised on PR:** {raised}",
+        f"- **Resolved (lifetime):** {resolved}",
+    ]
+    if isinstance(by_method, dict):
+        method_lines = []
+        for key, label in (
+            ("absent_and_addressed", "addressed"),
+            ("judge_dismissed", "judge dismissed"),
+            ("verification_dismissed", "verification dismissed"),
+            ("human_dismissed", "human dismissed"),
+            ("path_removed", "path removed"),
+        ):
+            count = int(by_method.get(key) or 0)
+            if count:
+                method_lines.append(f"  - {label}: {count}")
+        if method_lines:
+            lines.extend(method_lines)
+    lines.extend(
+        [
+            f"- **Still open (display):** {still_open}",
+        ]
+    )
+    if isinstance(rate, (int, float)):
+        lines.append(f"- **Lifetime resolution rate:** {rate}%")
+    elif resolved + still_open == 0:
+        lines.append("- **Lifetime resolution rate:** N/A")
+    disclosure = rollup.get("lifetime_disclosure")
+    if isinstance(disclosure, str) and disclosure.strip():
+        lines.extend(["", disclosure.strip()])
+    return "\n".join(lines)
+
+
+def format_pr_rollup_check_one_liner(rollup: dict[str, object]) -> str:
+    resolved = int(rollup.get("resolved_count") or 0)
+    raised = int(rollup.get("raised_count") or 0)
+    still_open = int(rollup.get("still_open_display") or 0)
+    return (
+        f"**PR (lifetime):** {resolved} resolved / {raised} raised; "
+        f"{still_open} still open"
+    )
+
+
+def format_push_delta_check_one_liner(ctx: PublishFormatContext) -> str:
+    prose = _g9_resolution_prose_for_ctx(ctx)
+    if not prose:
+        if ctx.revision_number <= 1:
+            return "**This push:** first review on this PR"
+        return "**This push:** no resolution transitions"
+    return f"**This push:** {prose}"
+
+
+def splice_deterministic_pr_summary_block(markdown: str, ctx: PublishFormatContext) -> str:
+    """Insert or replace deterministic PR lifetime summary before push delta sections."""
+    rollup = ctx.pr_resolution_rollup
+    if not isinstance(rollup, dict):
+        return markdown
+    block = format_pr_resolution_rollup_block(rollup)
+    if _PR_SUMMARY_HEADING in markdown:
+        return _replace_markdown_section(markdown, _PR_SUMMARY_HEADING, block)
+    for marker in ("**Since last push:**", "### Resolution metrics (this push)"):
+        idx = markdown.find(marker)
+        if idx >= 0:
+            prefix = markdown[:idx].rstrip()
+            suffix = markdown[idx:]
+            return f"{prefix}\n\n{block}\n\n{suffix}"
+    for marker in ("### Files needing attention", "### This generation"):
+        idx = markdown.find(marker)
+        if idx >= 0:
+            prefix = markdown[:idx].rstrip()
+            suffix = markdown[idx:]
+            return f"{prefix}\n\n{block}\n\n{suffix}"
+    return f"{markdown.rstrip()}\n\n{block}"
+
+
+def append_review_metadata_footer(markdown: str, ctx: PublishFormatContext) -> str:
+    """Replace legacy review metadata with rollup-aware footer (issue comment only)."""
+    rollup = ctx.pr_resolution_rollup if isinstance(ctx.pr_resolution_rollup, dict) else {}
+    review_count = int(rollup.get("review_count") or 0) or None
+    short_sha = ctx.head_sha[:7] if len(ctx.head_sha) >= 7 else ctx.head_sha
+    parts = []
+    if review_count is not None:
+        parts.append(f"Reviews on this PR: {review_count}")
+    parts.append(f"Revision: {ctx.revision_number}")
+    parts.append(f"Head: {short_sha}")
+    footer = f"---\n*{' · '.join(parts)}*"
+    summary_idx = markdown.find("<summary>Review metadata</summary>")
+    if summary_idx >= 0:
+        start = markdown.rfind("<details>", 0, summary_idx)
+        if start >= 0:
+            end = markdown.find("</details>", summary_idx)
+            if end >= 0:
+                end += len("</details>")
+                return markdown[:start].rstrip() + f"\n\n{footer}\n"
+    if footer in markdown:
+        return markdown
+    return f"{markdown.rstrip()}\n\n{footer}"
+
+
+def apply_rollup_to_publish_surfaces(
+    check_summary: str,
+    issue_comment: str,
+    ctx: PublishFormatContext,
+) -> tuple[str, str]:
+    """Apply PR summary block + check one-liners after rollup manifest is available."""
+    if not isinstance(ctx.pr_resolution_rollup, dict):
+        return check_summary, issue_comment
+    issue_comment = splice_deterministic_pr_summary_block(issue_comment, ctx)
+    issue_comment = append_review_metadata_footer(issue_comment, ctx)
+    one_liners = "\n".join(
+        [
+            format_pr_rollup_check_one_liner(ctx.pr_resolution_rollup),
+            format_push_delta_check_one_liner(ctx),
+            "",
+        ]
+    )
+    conf_idx = check_summary.find("**Confidence:**")
+    if conf_idx >= 0:
+        after_conf = check_summary.find("\n\n", conf_idx)
+        if after_conf >= 0:
+            tail = check_summary[after_conf + 2 :]
+            if format_pr_rollup_check_one_liner(ctx.pr_resolution_rollup) not in tail:
+                check_summary = check_summary[: after_conf + 2] + one_liners + tail
+        else:
+            check_summary = f"{check_summary}\n\n{one_liners}"
+    else:
+        check_summary = f"{check_summary}\n\n{one_liners}"
+    return check_summary, issue_comment
+
+
 _SECTION_END_MARKERS = ("\n### ", "\n<details>", "\n---\n")
 
 
@@ -632,6 +775,12 @@ def apply_publish_summary_thread_collapse(
         new_issue = build_pr_review_comment_fallback(filtered_ctx)
     else:
         new_issue = _refresh_issue_pr_verdict_sections(new_issue, filtered_ctx)
+    if isinstance(filtered_ctx.pr_resolution_rollup, dict):
+        new_check, new_issue = apply_rollup_to_publish_surfaces(
+            new_check,
+            new_issue,
+            filtered_ctx,
+        )
     return PublishFormatResult(
         check_summary=new_check,
         issue_comment=new_issue,
@@ -700,11 +849,21 @@ def build_check_run_summary(ctx: PublishFormatContext) -> str:
         "",
         f"**Confidence:** {confidence}/5",
         "",
+    ]
+    if isinstance(ctx.pr_resolution_rollup, dict):
+        lines.extend(
+            [
+                format_pr_rollup_check_one_liner(ctx.pr_resolution_rollup),
+                format_push_delta_check_one_liner(ctx),
+                "",
+            ]
+        )
+    lines.append(
         format_summary_comment(
             generation_groups=ctx.groups,
             pr_active_groups=verdict,
-        ),
-    ]
+        )
+    )
     return "\n".join(lines)
 
 
@@ -948,6 +1107,9 @@ def build_pr_review_comment_fallback(
         publish_confidence_rationale(ctx),
     ]
 
+    if isinstance(ctx.pr_resolution_rollup, dict):
+        lines.extend(["", format_pr_resolution_rollup_block(ctx.pr_resolution_rollup)])
+
     if resolution_prose:
         lines.extend(["", f"**Since last push:** {resolution_prose}"])
 
@@ -982,13 +1144,14 @@ def build_pr_review_comment_fallback(
     if important_files_lines:
         lines.extend(["", *important_files_lines])
 
-    lines.extend(["", *_review_metadata_lines(ctx)])
+    body = "\n".join(lines)
+    body = append_review_metadata_footer(body, ctx)
 
     footer = _index_footer(ctx)
     if footer:
-        lines.extend(["", footer])
+        body = f"{body}\n\n{footer}"
 
-    return "\n".join(lines)
+    return body
 
 
 def _confidence_rationale_snippet(normalized: str) -> str:
@@ -1077,6 +1240,8 @@ def _insert_resolution_metrics_block(text: str, ctx: PublishFormatContext) -> st
     if not block or block in text:
         return text
     for marker in (
+        _PR_SUMMARY_HEADING,
+        "**Since last push:**",
         "### Files needing attention",
         "### This generation",
         "### Still open on PR",
@@ -1206,6 +1371,11 @@ def _build_summary_json(ctx: PublishFormatContext) -> dict:
         "generation_active_count": len(_active_groups(ctx.groups)),
         "pr_active_count": len(_active_groups(verdict)),
         "resolution": resolution,
+        **(
+            {"pr_resolution_rollup": ctx.pr_resolution_rollup}
+            if isinstance(ctx.pr_resolution_rollup, dict)
+            else {}
+        ),
     }
 
 
