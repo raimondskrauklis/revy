@@ -156,6 +156,7 @@ def test_issue_comment_format_system_prompt_lists_required_sections():
     assert "merge recommendation" in prompt
     assert "this generation" in prompt
     assert "still open on pr" in prompt
+    assert "pr summary" in prompt
     assert "security review" in prompt
     assert "important files changed" in prompt
 

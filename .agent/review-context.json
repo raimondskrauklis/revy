@@ -1,21 +1,21 @@
 {
-  "active_program": "finding-resolution-post-wave-c",
+  "active_program": "pr-summary-rollup",
   "programs": [
     {
-      "id": "finding-resolution-post-wave-c",
+      "id": "pr-summary-rollup",
       "scope": ["backend/**"],
       "paths": [
         {
-          "path": "docs/review-pipeline/finding-resolution/waves/FINDING_RESOLUTION_POST_WAVE_C_EXECUTION.md",
-          "description": "Post–wave C LOOP index — M0–D3 execution"
+          "path": "docs/review-pipeline/pr-summary-rollup/waves/PR_SUMMARY_ROLLUP_EXECUTION.md",
+          "description": "PSR LOOP index — P0–P3 execution"
         },
         {
-          "path": "docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_POST_WAVE_C_BACKLOG_FINDINGS.md",
-          "description": "Post–wave C backlog — MR-DG1, FR-CS4, FR-CS8 locks"
+          "path": "docs/review-pipeline/pr-summary-rollup/PR_SUMMARY_ROLLUP_FINDINGS.md",
+          "description": "PSR baseline — manifest v1, PSR-Q1–Q10, pass-01 locks"
         },
         {
-          "path": "docs/review-pipeline/finding-resolution/FINDING_RESOLUTION_POST_WAVE_C_GENERAL_PLAN.md",
-          "description": "Post–wave C general plan — M0 and wave D phases"
+          "path": "docs/review-pipeline/pr-summary-rollup/PR_SUMMARY_ROLLUP_GENERAL_PLAN.md",
+          "description": "PSR general plan — rollup persist, formatter, API, staging"
         }
       ]
     }

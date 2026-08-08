@@ -2849,12 +2849,12 @@ def _publish_job_context():
     session.scalar = AsyncMock(return_value=None)
     session.flush = AsyncMock()
 
-    return publish_job_id, session, job
+    return publish_job_id, session, job, pull_request
 
 
 @pytest.mark.asyncio
 async def test_run_publish_job_marks_failed_on_permanent_error_when_persisting():
-    publish_job_id, session, job = _publish_job_context()
+    publish_job_id, session, job, _ = _publish_job_context()
     request = httpx.Request("POST", "https://api.github.com/check-runs")
     response = httpx.Response(400, request=request)
     error = httpx.HTTPStatusError("bad request", request=request, response=response)
@@ -2880,7 +2880,7 @@ async def test_run_publish_job_marks_failed_on_permanent_error_when_persisting()
 
 @pytest.mark.asyncio
 async def test_run_publish_job_raises_retryable_error_when_persisting():
-    publish_job_id, session, job = _publish_job_context()
+    publish_job_id, session, job, _ = _publish_job_context()
     request = httpx.Request("POST", "https://api.github.com/check-runs")
     response = httpx.Response(503, request=request)
     error = httpx.HTTPStatusError("unavailable", request=request, response=response)
@@ -2905,7 +2905,7 @@ async def test_run_publish_job_raises_retryable_error_when_persisting():
 
 @pytest.mark.asyncio
 async def test_run_publish_job_head_gate_skipped_not_head():
-    publish_job_id, session, job = _publish_job_context()
+    publish_job_id, session, job, _ = _publish_job_context()
     job.head_sha = "old-sha"
     run = GitHubReviewRunORM(
         revision_id=job.revision_id,
@@ -2962,7 +2962,7 @@ async def test_run_publish_job_head_gate_skipped_not_head():
 
 @pytest.mark.asyncio
 async def test_run_publish_job_skipped_superseded():
-    publish_job_id, session, job = _publish_job_context()
+    publish_job_id, session, job, _ = _publish_job_context()
     run = GitHubReviewRunORM(
         revision_id=job.revision_id,
         workspace_id=job.workspace_id,
@@ -3014,7 +3014,7 @@ async def test_run_publish_job_skipped_superseded():
 async def test_run_publish_job_surface_flush_call_order():
     from app.models.github_finding import GitHubFindingORM
 
-    publish_job_id, session, job = _publish_job_context()
+    publish_job_id, session, job, _ = _publish_job_context()
     workspace_id = job.workspace_id
     review_run_id = job.review_run_id
     revision_id = job.revision_id
@@ -3110,7 +3110,7 @@ async def test_run_publish_job_persists_inline_progress_between_posts():
     """Partial inline thread map flushed per post so Celery retry does not duplicate."""
     from app.models.github_finding import GitHubFindingORM
 
-    publish_job_id, session, job = _publish_job_context()
+    publish_job_id, session, job, _ = _publish_job_context()
     workspace_id = job.workspace_id
     review_run_id = job.review_run_id
     revision_id = job.revision_id
@@ -3211,7 +3211,7 @@ async def test_run_publish_job_persists_inline_progress_between_posts():
 
 @pytest.mark.asyncio
 async def test_run_publish_job_head_gate_skipped_not_head_after_build():
-    publish_job_id, session, job = _publish_job_context()
+    publish_job_id, session, job, _ = _publish_job_context()
     base_gets = list(session.get.side_effect)
     run = GitHubReviewRunORM(
         revision_id=job.revision_id,
@@ -3301,7 +3301,7 @@ async def test_run_publish_job_head_gate_skipped_not_head_after_build():
 
 @pytest.mark.asyncio
 async def test_run_publish_job_skipped_superseded_mid_flush_before_inline():
-    publish_job_id, session, job = _publish_job_context()
+    publish_job_id, session, job, _ = _publish_job_context()
     base_gets = list(session.get.side_effect)
     run = GitHubReviewRunORM(
         revision_id=job.revision_id,
@@ -3423,7 +3423,7 @@ async def test_run_publish_job_skipped_superseded_mid_flush_before_inline():
 
 @pytest.mark.asyncio
 async def test_run_publish_job_neutralizes_check_when_skipped_after_surface_writes():
-    publish_job_id, session, job = _publish_job_context()
+    publish_job_id, session, job, _ = _publish_job_context()
     base_gets = list(session.get.side_effect)
     run = GitHubReviewRunORM(
         revision_id=job.revision_id,
@@ -3545,7 +3545,7 @@ async def test_run_publish_job_neutralizes_check_when_skipped_after_surface_writ
 
 @pytest.mark.asyncio
 async def test_run_publish_job_returns_skip_when_neutralize_fails():
-    publish_job_id, session, job = _publish_job_context()
+    publish_job_id, session, job, _ = _publish_job_context()
     base_gets = list(session.get.side_effect)
     run = GitHubReviewRunORM(
         revision_id=job.revision_id,
@@ -4052,3 +4052,30 @@ def test_inline_comments_posted_true_when_all_recovered_via_422():
         for spec in specs
     )
     assert posted is True
+
+
+@pytest.mark.asyncio
+async def test_run_publish_job_persists_pr_resolution_rollup_on_completed():
+    publish_job_id, session, _job, pull_request = _publish_job_context()
+
+    with patch(
+        "app.services.github_publish.github_api.installation_auth_headers",
+        AsyncMock(return_value={"Authorization": "Bearer t"}),
+    ):
+        with patch(
+            "app.services.github_publish.github_api.create_check_run", AsyncMock(return_value=100)
+        ):
+            with patch(
+                "app.services.github_publish.github_api.create_issue_comment",
+                AsyncMock(return_value=200),
+            ):
+                result = await github_publish.run_publish_job(
+                    session, publish_job_id=publish_job_id
+                )
+
+    assert result.status == GitHubPublishJobStatus.completed
+    rollup = (result.summary_json or {}).get("pr_resolution_rollup")
+    assert isinstance(rollup, dict)
+    assert rollup.get("schema_version") == 1
+    assert rollup.get("review_count") == 1
+    assert pull_request.pr_resolution_rollup == rollup

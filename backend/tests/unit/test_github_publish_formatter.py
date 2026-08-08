@@ -18,8 +18,10 @@ from app.constants.enums import (
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.services.github_publish_formatter import (
     PublishFormatContext,
+    append_review_metadata_footer,
     append_thread_resolve_skipped_block,
     apply_publish_summary_thread_collapse,
+    apply_rollup_to_publish_surfaces,
     build_check_run_summary,
     build_g9_resolution_prose,
     build_g9_resolution_prose_from_manifest,
@@ -30,11 +32,13 @@ from app.services.github_publish_formatter import (
     display_still_open_prior_count,
     extract_summary_blocks_section,
     filter_pr_active_groups_for_summary,
+    format_pr_resolution_rollup_block,
     format_resolution_metrics_block,
     format_summary_comment,
     format_thread_resolve_skipped_block,
     normalize_llm_issue_comment,
     splice_deterministic_findings_tables,
+    splice_deterministic_pr_summary_block,
 )
 
 
@@ -55,6 +59,26 @@ def _group(*, state=GitHubFindingGroupState.active, severity=FindingSeverity.war
     return GitHubFindingGroupORM(**defaults)
 
 
+def _rollup(**kwargs) -> dict:
+    defaults = {
+        "schema_version": 1,
+        "review_count": 2,
+        "raised_count": 3,
+        "resolved_count": 1,
+        "still_open_display": 2,
+        "lifetime_resolution_rate_pct": 33.3,
+        "resolved_by_method": {
+            "absent_and_addressed": 1,
+            "judge_dismissed": 0,
+            "verification_dismissed": 0,
+            "human_dismissed": 0,
+            "path_removed": 0,
+        },
+    }
+    defaults.update(kwargs)
+    return defaults
+
+
 def _ctx(groups: list[GitHubFindingGroupORM]) -> PublishFormatContext:
     return PublishFormatContext(
         pull_request_id=uuid.uuid4(),
@@ -62,6 +86,20 @@ def _ctx(groups: list[GitHubFindingGroupORM]) -> PublishFormatContext:
         head_sha="abc123",
         revision_number=2,
         groups=groups,
+    )
+
+
+def _ctx_with_rollup(groups: list[GitHubFindingGroupORM], **kwargs):
+    base = _ctx(groups)
+    return PublishFormatContext(
+        pull_request_id=base.pull_request_id,
+        pull_request_number=base.pull_request_number,
+        head_sha=base.head_sha,
+        revision_number=base.revision_number,
+        groups=base.groups,
+        pr_active_groups=kwargs.get("pr_active_groups"),
+        resolution_metrics_manifest=kwargs.get("resolution_metrics_manifest"),
+        pr_resolution_rollup=kwargs.get("pr_resolution_rollup", _rollup()),
     )
 
 
@@ -740,8 +778,7 @@ def test_build_pr_review_comment_fallback_includes_g9_and_metadata():
     markdown = build_pr_review_comment_fallback(_ctx(groups))
     assert "Confidence score" in markdown
     assert "Since last push" in markdown
-    assert "<details>" in markdown
-    assert "Open in Revy" in markdown
+    assert "Reviews on this PR" in markdown or "Revision:" in markdown
 
 
 def test_normalize_llm_issue_comment_unwraps_json_body():
@@ -971,7 +1008,7 @@ def test_build_pr_review_comment_fallback_greptile_shape():
     assert "### Still open on PR" in markdown
     assert "| Severity | Category | Title | File |" in markdown
     assert "<summary>Important files changed</summary>" in markdown
-    assert "<summary>Review metadata</summary>" in markdown
+    assert "Revision:" in markdown and "Head:" in markdown
 
 
 def test_build_pr_review_comment_fallback_collapses_info_when_priority_exists():
@@ -1047,6 +1084,40 @@ def test_insert_resolution_metrics_block_before_summary_blocks():
     generation_idx = result.find("### This generation")
     assert metrics_idx >= 0
     assert generation_idx > metrics_idx
+
+
+def test_insert_resolution_metrics_block_not_before_pr_summary():
+    from app.services.github_publish_formatter import _insert_resolution_metrics_block
+
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=42,
+        head_sha="abc123",
+        revision_number=2,
+        groups=[_group()],
+        resolution_metrics_manifest={
+            "resolution_rate_pct": 50.0,
+            "transition_count": 1,
+            "denominator_active_prior": 2,
+            "transitions_addressed": 1,
+            "transitions_dismissed": {},
+            "compare_failed_count": 0,
+            "still_open_count": 1,
+        },
+    )
+    moonshot = (
+        "## Revy code review\n\n"
+        "### PR summary (lifetime)\n\n"
+        "- **Raised on PR:** 1\n\n"
+        "**Since last push:** 1 addressed\n\n"
+        "### This generation\n"
+    )
+    result = _insert_resolution_metrics_block(moonshot, ctx)
+    pr_idx = result.find("### PR summary (lifetime)")
+    since_idx = result.find("**Since last push:**")
+    metrics_idx = result.find("### Resolution metrics")
+    generation_idx = result.find("### This generation")
+    assert pr_idx < since_idx < metrics_idx < generation_idx
 
 
 def test_has_confidence_rationale_ignores_score_is_in_finding_title():
@@ -1156,8 +1227,7 @@ async def test_build_pr_review_comment_moonshot_success_includes_greptile_sectio
     assert format_summary_comment(generation_groups=groups, pr_active_groups=groups) in result
     assert "Confidence score" in result
     assert "moderated" in result
-    assert "<details>" in result
-    assert "Review metadata" in result
+    assert "Revision:" in result
 
 
 @pytest.mark.asyncio
@@ -1333,3 +1403,123 @@ def test_index_footer_on_fallback():
     markdown = build_pr_review_comment_fallback(ctx)
     assert "compare_failed" in markdown
     assert "Full-repo index" in markdown
+
+
+def test_format_pr_resolution_rollup_block_lifetime_heading():
+    block = format_pr_resolution_rollup_block(_rollup())
+    assert "### PR summary (lifetime)" in block
+    assert "Raised on PR" in block
+    assert "Lifetime resolution rate" in block
+
+
+def test_build_pr_review_comment_fallback_pr_summary_before_g9():
+    group = _group(fingerprint="g1")
+    prior = _group(fingerprint="prior", severity=FindingSeverity.warning)
+    manifest = {
+        "transitions_addressed": 1,
+        "transitions_dismissed": {},
+        "still_open_count": 1,
+        "denominator_active_prior": 2,
+        "transition_count": 1,
+        "resolution_rate_pct": 50.0,
+    }
+    ctx = _ctx_with_rollup(
+        [group],
+        pr_active_groups=[prior, group],
+        resolution_metrics_manifest=manifest,
+    )
+    markdown = build_pr_review_comment_fallback(ctx)
+    pr_idx = markdown.find("### PR summary (lifetime)")
+    g9_idx = markdown.find("Since last push")
+    assert pr_idx >= 0 and g9_idx > pr_idx
+
+
+def test_splice_deterministic_pr_summary_block_inserts_before_since_last_push():
+    ctx = _ctx_with_rollup([_group()])
+    body = "## Revy code review\n\n**Since last push:** delta\n"
+    result = splice_deterministic_pr_summary_block(body, ctx)
+    assert result.index("### PR summary (lifetime)") < result.index("Since last push")
+
+
+def test_append_review_metadata_footer_includes_review_count():
+    ctx = _ctx_with_rollup([])
+    body = "## Revy code review\n"
+    result = append_review_metadata_footer(body, ctx)
+    assert "Reviews on this PR: 2" in result
+    assert "Head: abc123"[:7] in result or "Head: abc123" in result
+
+
+def test_append_review_metadata_footer_handles_missing_head_sha():
+    ctx = _ctx_with_rollup([])
+    ctx = PublishFormatContext(
+        pull_request_id=ctx.pull_request_id,
+        pull_request_number=ctx.pull_request_number,
+        head_sha="",
+        revision_number=ctx.revision_number,
+        groups=ctx.groups,
+        pr_resolution_rollup=ctx.pr_resolution_rollup,
+    )
+    result = append_review_metadata_footer("## Revy code review\n", ctx)
+    assert "Head: unknown" in result
+
+
+def test_apply_rollup_to_publish_surfaces_does_not_duplicate_check_one_liners():
+    ctx = _ctx_with_rollup([_group()])
+    check = "**Confidence:** 4/5 — moderate"
+    issue = "## Revy code review\n"
+    first_check, _ = apply_rollup_to_publish_surfaces(check, issue, ctx)
+    second_check, _ = apply_rollup_to_publish_surfaces(first_check, issue, ctx)
+    assert second_check.count("**PR (lifetime):**") == 1
+    assert second_check.count("**This push:**") == 1
+
+
+def test_append_review_metadata_footer_replaces_prior_footer():
+    ctx = _ctx_with_rollup([])
+    body = "## Revy code review\n\n---\n*Reviews on this PR: 1 · Revision: 4 · Head: abc1234*\n"
+    ctx2 = PublishFormatContext(
+        pull_request_id=ctx.pull_request_id,
+        pull_request_number=ctx.pull_request_number,
+        head_sha="def5678",
+        revision_number=5,
+        groups=ctx.groups,
+        pr_resolution_rollup=ctx.pr_resolution_rollup,
+    )
+    result = append_review_metadata_footer(body, ctx2)
+    assert result.count("---\n*") == 1
+    assert "Revision: 5" in result
+    assert "Head: def567" in result
+    assert "Revision: 4" not in result
+
+
+def test_build_check_run_summary_pr_rollup_one_liners():
+    ctx = _ctx_with_rollup([_group(severity=FindingSeverity.error)])
+    markdown = build_check_run_summary(ctx)
+    assert "**PR (lifetime):**" in markdown
+    assert "**This push:**" in markdown
+
+
+def test_build_publish_format_result_summary_json_includes_rollup():
+    ctx = _ctx_with_rollup([_group()])
+    result = build_publish_format_result(ctx)
+    assert "pr_resolution_rollup" in result.summary_json
+
+
+def test_issue_comment_meets_product_bar_requires_pr_summary_when_rollup_present():
+    from app.services.github_publish_formatter import _issue_comment_meets_product_bar
+
+    group = _group(fingerprint="g1")
+    ctx = _ctx_with_rollup([group], pr_active_groups=[group])
+    thin = (
+        "## Revy code review\n\n**Merge recommendation:** x\n"
+        "**Confidence score:** 4/5 — Score is moderated.\n"
+        "### This generation\n| Severity | Category | Title | File |\n"
+        "| --- | --- | --- | --- |\n| warning | bug | Issue | app/main.py |\n"
+        "### Still open on PR\n| Severity | Category | Title | File |\n"
+        "| --- | --- | --- | --- |\n| warning | bug | Issue | app/main.py |\n"
+    )
+    assert _issue_comment_meets_product_bar(thin, ctx) is False
+    with_summary = thin.replace(
+        "**Confidence score:** 4/5 — Score is moderated.\n",
+        "**Confidence score:** 4/5 — Score is moderated.\n\n### PR summary (lifetime)\n\n- **Raised on PR:** 3\n",
+    )
+    assert _issue_comment_meets_product_bar(with_summary, ctx) is True

@@ -1,22 +1,22 @@
 {
   "files": [
     {
-      "path": "docs/review-pipeline/revy-review-dogfood/waves/REVY_REVIEW_DOGFOOD_EXECUTION.md",
-      "description": "RR-W1 LOOP index \u2014 R0\u2013R5 cross-repo dogfood execution",
+      "path": "docs/review-pipeline/pr-summary-rollup/waves/PR_SUMMARY_ROLLUP_EXECUTION.md",
+      "description": "PSR LOOP index \u2014 P0\u2013P3 execution",
       "scope": [
         "backend/**"
       ]
     },
     {
-      "path": "docs/review-pipeline/revy-review-dogfood/REVY_REVIEW_DOGFOOD_FINDINGS.md",
-      "description": "TenderPro #130 gap catalog RR-DG*; R0 locks RR-Q5 and RR-DG4 tag",
+      "path": "docs/review-pipeline/pr-summary-rollup/PR_SUMMARY_ROLLUP_FINDINGS.md",
+      "description": "PSR baseline \u2014 manifest v1, PSR-Q1\u2013Q10, pass-01 locks",
       "scope": [
         "backend/**"
       ]
     },
     {
-      "path": "docs/review-pipeline/revy-review-dogfood/REVY_REVIEW_DOGFOOD_GENERAL_PLAN.md",
-      "description": "RR-W1 general plan \u2014 ingest, publish hygiene, resolution stamp, HEAD suppression",
+      "path": "docs/review-pipeline/pr-summary-rollup/PR_SUMMARY_ROLLUP_GENERAL_PLAN.md",
+      "description": "PSR general plan \u2014 rollup persist, formatter, API, staging",
       "scope": [
         "backend/**"
       ]

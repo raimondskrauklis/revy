@@ -612,3 +612,48 @@ async def test_get_resolution_metrics_for_review_run_reads_reconcile_manifest():
     )
 
     assert result == resolution_pass
+
+
+@pytest.mark.asyncio
+async def test_record_publish_pipeline_step_rollup_pass():
+    from app.constants.enums import GitHubPublishJobStatus
+    from app.models.github_publish_job import GitHubPublishJobORM
+    from app.services.github_pipeline_trace import record_publish_pipeline_step
+
+    pipeline_run_id = uuid.uuid4()
+    job = GitHubPublishJobORM(
+        review_run_id=uuid.uuid4(),
+        revision_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        head_sha="abc",
+        status=GitHubPublishJobStatus.completed,
+    )
+    job.id = uuid.uuid4()
+    job.summary_json = {
+        "pr_resolution_rollup": {
+            "raised_count": 5,
+            "resolved_count": 2,
+            "still_open_display": 3,
+            "review_count": 2,
+        }
+    }
+
+    session = AsyncMock()
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    await record_publish_pipeline_step(
+        session,
+        pipeline_run_id=pipeline_run_id,
+        job=job,
+        summary_markdown="check",
+        issue_comment_markdown="issue",
+        duration_ms=10,
+    )
+
+    manifest_artifact = next(
+        call.args[0]
+        for call in session.add.call_args_list
+        if getattr(call.args[0], "kind", None) == PipelineArtifactKind.manifest
+    )
+    assert manifest_artifact.content_json["rollup_pass"]["review_count"] == 2
