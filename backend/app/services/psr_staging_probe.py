@@ -4,8 +4,13 @@
 Safe import-only fixture for multi-revision staging validation (push 1 baseline).
 """
 
-PSR_PROBE_MARKER = "psr-staging-push-1"
+PSR_PROBE_MARKER = "psr-staging-push-2"
 
 
 def psr_probe_value() -> str:
+    return PSR_PROBE_MARKER
+
+
+def psr_probe_composed() -> str:
+    """Return marker for multi-revision rollup validation (push 2)."""
     return PSR_PROBE_MARKER
