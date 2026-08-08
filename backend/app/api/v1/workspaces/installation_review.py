@@ -318,7 +318,7 @@ async def post_publish_pull_request_revision(
     await session.commit()
 
     enqueue_publish_job(job.id)
-    return SuccessResponse(data=GitHubPublishJobResponse.model_validate(job))
+    return SuccessResponse(data=GitHubPublishJobResponse.from_publish_job(job))
 
 
 @router.get(
@@ -350,4 +350,4 @@ async def get_publish_job_for_revision(
     )
     if job is None:
         return SuccessResponse(data=None)
-    return SuccessResponse(data=GitHubPublishJobResponse.model_validate(job))
+    return SuccessResponse(data=GitHubPublishJobResponse.from_publish_job(job))

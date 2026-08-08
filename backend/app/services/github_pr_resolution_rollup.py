@@ -81,6 +81,12 @@ def _is_lifetime_path_removed_resolution(
     *,
     prior_revision_ids_by_resolve_revision: dict[UUID, frozenset[UUID]],
 ) -> bool:
+    """Hygiene path-removed closure at resolve revision (pairing prior only).
+
+    Mirrors ``_is_hygiene_path_removed_closure`` in ``github_resolution_metrics``:
+    last_seen must predate the immediately preceding revision, not merely any
+    earlier revision in PR history.
+    """
     resolved_at_revision_id = group.resolved_at_revision_id
     if resolved_at_revision_id is None:
         return False
@@ -100,7 +106,11 @@ def _is_lifetime_path_removed_resolution(
 def build_prior_revision_ids_by_resolve_revision(
     revisions: list[GitHubPullRequestRevisionORM],
 ) -> dict[UUID, frozenset[UUID]]:
-    """Map each revision to its immediately preceding revision (hygiene pairing)."""
+    """Map each revision to its immediately preceding revision (hygiene pairing).
+
+    Used for lifetime ``path_removed`` bucketing — same single-step prior set as
+    push-pair hygiene closure in ``github_resolution_metrics``.
+    """
     ordered = sorted(revisions, key=lambda revision: revision.revision_number)
     prior_by_revision: dict[UUID, frozenset[UUID]] = {}
     for index, revision in enumerate(ordered):

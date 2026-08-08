@@ -80,6 +80,6 @@ def test_github_publish_job_response_includes_pr_resolution_rollup():
             "still_open_display": 1,
         }
     }
-    response = GitHubPublishJobResponse.model_validate(job)
+    response = GitHubPublishJobResponse.from_publish_job(job)
     assert response.pr_resolution_rollup is not None
     assert response.pr_resolution_rollup["review_count"] == 2
