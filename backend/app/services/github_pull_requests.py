@@ -313,6 +313,7 @@ async def _upsert_pull_request(
     repository: GitHubRepositoryORM,
     fields: dict[str, Any],
     create_revision: bool,
+    update_head_sha: bool = True,
 ) -> tuple[GitHubPullRequestORM, GitHubPullRequestRevisionORM | None]:
     existing = await _find_pull_request(
         session,
@@ -343,27 +344,55 @@ async def _upsert_pull_request(
     existing.is_draft = fields["is_draft"]
     existing.body = fields.get("body")
 
-    if create_revision and fields["head_sha"] != existing.head_sha:
+    if create_revision:
+        if fields["head_sha"] != existing.head_sha:
+            existing_revision = await _get_revision_for_head_sha(
+                session,
+                pull_request_id=existing.id,
+                head_sha=fields["head_sha"],
+            )
+            if existing_revision is not None:
+                existing.head_sha = fields["head_sha"]
+                await session.flush()
+                return existing, existing_revision
+            revision = await _append_revision(
+                session,
+                pull_request=existing,
+                head_sha=fields["head_sha"],
+                base_sha=fields.get("base_sha"),
+            )
+            return existing, revision
+
         existing_revision = await _get_revision_for_head_sha(
             session,
             pull_request_id=existing.id,
             head_sha=fields["head_sha"],
         )
         if existing_revision is not None:
-            existing.head_sha = fields["head_sha"]
             await session.flush()
             return existing, existing_revision
+
         revision = await _append_revision(
             session,
             pull_request=existing,
             head_sha=fields["head_sha"],
             base_sha=fields.get("base_sha"),
         )
+        logger.info(
+            "github_revision_orphan_head_healed",
+            extra={
+                "pull_request_id": str(existing.id),
+                "head_sha": fields["head_sha"],
+                "revision_id": str(revision.id),
+            },
+        )
         return existing, revision
 
-    existing.head_sha = fields["head_sha"]
-    await session.flush()
-    return existing, None
+    if not create_revision:
+        if update_head_sha:
+            existing.head_sha = fields["head_sha"]
+        await session.flush()
+        return existing, None
 
 
 async def _get_revision_for_head_sha(
@@ -430,10 +459,17 @@ async def apply_pull_request_webhook_event(
         )
         if new_revision is None:
             return None
+        bound_revision = await session.get(GitHubPullRequestRevisionORM, new_revision.id)
+        if bound_revision is None:
+            logger.warning(
+                "github_pull_request_synchronize_revision_missing",
+                extra={"revision_id": str(new_revision.id)},
+            )
+            return None
         await apply_resolution_status_for_synchronize(
             session,
             pull_request=pull_request,
-            new_revision=new_revision,
+            new_revision=bound_revision,
         )
         await supersede_stale_generations_for_new_revision(
             session,
@@ -453,6 +489,7 @@ async def apply_pull_request_webhook_event(
             repository=repository,
             fields=fields,
             create_revision=False,
+            update_head_sha=False,
         )
         return None
 
@@ -628,11 +665,21 @@ async def apply_issue_comment_webhook_event(
         head_sha=pull_request.head_sha,
     )
     if revision is None:
-        logger.warning(
-            "github_issue_comment_revision_not_found",
-            extra={"pull_request_id": str(pull_request.id), "head_sha": pull_request.head_sha},
+        revision = await _append_revision(
+            session,
+            pull_request=pull_request,
+            head_sha=pull_request.head_sha,
+            base_sha=None,
         )
-        return None
+        logger.info(
+            "github_revision_orphan_head_healed",
+            extra={
+                "pull_request_id": str(pull_request.id),
+                "head_sha": pull_request.head_sha,
+                "revision_id": str(revision.id),
+                "trigger": "issue_comment",
+            },
+        )
 
     return IssueCommentPipelineIntent(
         workspace_id=repository.workspace_id,
