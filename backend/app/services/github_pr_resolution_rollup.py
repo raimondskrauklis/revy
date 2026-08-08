@@ -91,7 +91,6 @@ def _is_lifetime_path_removed_resolution(
     return (
         group.state == GitHubFindingGroupState.resolved
         and group.resolution_method == ResolutionMethod.absent_and_addressed
-        and group.resolved_at_revision_id == resolved_at_revision_id
         and group.last_seen_revision_id is not None
         and group.last_seen_revision_id not in prior_revision_ids
     )
@@ -155,6 +154,12 @@ def compute_filter_snapshot(
     generation_fingerprints: set[str],
     ever_inlined_fingerprints: set[str] | None,
 ) -> FilterSnapshot:
+    """Build PSR-Q10 filter audit counts for the rollup manifest.
+
+    ``raw_active_before_filters`` counts active groups still eligible for the
+    publish surface (excludes ``resolution_status=addressed`` — those are
+    already surfaced as addressed, not hidden by collapse/orphan/compare filters).
+    """
     filtered_fingerprints = {group.fingerprint for group in filtered_groups}
     raw_active = [
         group

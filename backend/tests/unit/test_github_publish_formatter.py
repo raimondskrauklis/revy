@@ -21,6 +21,7 @@ from app.services.github_publish_formatter import (
     append_review_metadata_footer,
     append_thread_resolve_skipped_block,
     apply_publish_summary_thread_collapse,
+    apply_rollup_to_publish_surfaces,
     build_check_run_summary,
     build_g9_resolution_prose,
     build_g9_resolution_prose_from_manifest,
@@ -1412,6 +1413,30 @@ def test_append_review_metadata_footer_includes_review_count():
     result = append_review_metadata_footer(body, ctx)
     assert "Reviews on this PR: 2" in result
     assert "Head: abc123"[:7] in result or "Head: abc123" in result
+
+
+def test_append_review_metadata_footer_handles_missing_head_sha():
+    ctx = _ctx_with_rollup([])
+    ctx = PublishFormatContext(
+        pull_request_id=ctx.pull_request_id,
+        pull_request_number=ctx.pull_request_number,
+        head_sha="",
+        revision_number=ctx.revision_number,
+        groups=ctx.groups,
+        pr_resolution_rollup=ctx.pr_resolution_rollup,
+    )
+    result = append_review_metadata_footer("## Revy code review\n", ctx)
+    assert "Head: unknown" in result
+
+
+def test_apply_rollup_to_publish_surfaces_does_not_duplicate_check_one_liners():
+    ctx = _ctx_with_rollup([_group()])
+    check = "**Confidence:** 4/5 — moderate"
+    issue = "## Revy code review\n"
+    first_check, _ = apply_rollup_to_publish_surfaces(check, issue, ctx)
+    second_check, _ = apply_rollup_to_publish_surfaces(first_check, issue, ctx)
+    assert second_check.count("**PR (lifetime):**") == 1
+    assert second_check.count("**This push:**") == 1
 
 
 def test_build_check_run_summary_pr_rollup_one_liners():

@@ -562,7 +562,8 @@ def append_review_metadata_footer(markdown: str, ctx: PublishFormatContext) -> s
     """Replace legacy review metadata with rollup-aware footer (issue comment only)."""
     rollup = ctx.pr_resolution_rollup if isinstance(ctx.pr_resolution_rollup, dict) else {}
     review_count = int(rollup.get("review_count") or 0) or None
-    short_sha = ctx.head_sha[:7] if len(ctx.head_sha) >= 7 else ctx.head_sha
+    head_sha = ctx.head_sha or ""
+    short_sha = head_sha[:7] if len(head_sha) >= 7 else (head_sha or "unknown")
     parts = []
     if review_count is not None:
         parts.append(f"Reviews on this PR: {review_count}")
@@ -600,15 +601,16 @@ def apply_rollup_to_publish_surfaces(
         ]
     )
     conf_idx = check_summary.find("**Confidence:**")
+    lifetime_line = format_pr_rollup_check_one_liner(ctx.pr_resolution_rollup)
     if conf_idx >= 0:
         after_conf = check_summary.find("\n\n", conf_idx)
         if after_conf >= 0:
             tail = check_summary[after_conf + 2 :]
-            if format_pr_rollup_check_one_liner(ctx.pr_resolution_rollup) not in tail:
+            if lifetime_line not in tail:
                 check_summary = check_summary[: after_conf + 2] + one_liners + tail
-        else:
+        elif lifetime_line not in check_summary:
             check_summary = f"{check_summary}\n\n{one_liners}"
-    else:
+    elif lifetime_line not in check_summary:
         check_summary = f"{check_summary}\n\n{one_liners}"
     return check_summary, issue_comment
 

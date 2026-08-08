@@ -39,19 +39,10 @@ class GitHubPublishJobResponse(BaseModel):
         if isinstance(summary_json, dict):
             rollup = summary_json.get("pr_resolution_rollup")
             if isinstance(rollup, dict):
-                return {
-                    "id": data.id,
-                    "review_run_id": data.review_run_id,
-                    "revision_id": data.revision_id,
-                    "workspace_id": data.workspace_id,
-                    "head_sha": data.head_sha,
-                    "status": data.status,
-                    "github_check_run_id": data.github_check_run_id,
-                    "github_comment_id": data.github_comment_id,
-                    "inline_comments_posted": data.inline_comments_posted,
-                    "error_message": data.error_message,
-                    "created_at": data.created_at,
-                    "updated_at": data.updated_at,
-                    "pr_resolution_rollup": rollup,
+                orm_fields = {
+                    name: getattr(data, name)
+                    for name in cls.model_fields
+                    if name != "pr_resolution_rollup"
                 }
+                return {**orm_fields, "pr_resolution_rollup": rollup}
         return data
