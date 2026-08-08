@@ -11,8 +11,8 @@
 | P0 | Migration, rollup module, compute + persist | [P0](./PR_SUMMARY_ROLLUP_P0_EXECUTION.md) | Done (`3b8ae99`) |
 | P1 | Formatter surfaces (comment + check) | [P1](./PR_SUMMARY_ROLLUP_P1_EXECUTION.md) | Done (`6dd7335`) |
 | P2 | Moonshot + API + dogfood + trace | [P2](./PR_SUMMARY_ROLLUP_P2_EXECUTION.md) | Done (`6af9c64`) |
-| P3 | Staging sign-off + doc sync | [P3](./PR_SUMMARY_ROLLUP_P3_EXECUTION.md) | Done (code); [staging memo](../PR_SUMMARY_ROLLUP_STAGING_VALIDATION.md) operator pending |
+| P3 | Staging sign-off + doc sync | [P3](./PR_SUMMARY_ROLLUP_P3_EXECUTION.md) | Done — [staging PASS](../PR_SUMMARY_ROLLUP_STAGING_VALIDATION.md) ([#87](https://github.com/raimondskrauklis/revy/pull/87)) |
 
-**Branch:** `feat/pr-summary-rollup` from `main`.
+**Branch:** `feat/pr-summary-rollup` merged ([#85](https://github.com/raimondskrauklis/revy/pull/85)); dogfood [#87](https://github.com/raimondskrauklis/revy/pull/87).
 
-**Next:** `phase-execution` from P0.
+**Next:** none — program complete.

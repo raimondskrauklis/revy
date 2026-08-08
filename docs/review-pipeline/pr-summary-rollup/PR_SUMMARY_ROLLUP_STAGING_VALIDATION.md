@@ -2,7 +2,7 @@
 
 **Program:** [README.md](./README.md) · **Baseline:** [PR_SUMMARY_ROLLUP_FINDINGS.md](./PR_SUMMARY_ROLLUP_FINDINGS.md)
 
-**Status:** **PARTIAL** — PSR #85 merged and deployed (`a4e4ce3`); migration applied on staging; **no post-deploy publish yet** — formatter/rollup sign-off pending post-deploy dogfood PR.
+**Status:** **PASS** — post-deploy dogfood complete on [#87](https://github.com/raimondskrauklis/revy/pull/87) (pushes 1–2); `--psr-gate` green; lifetime block + rollup persist verified on staging.
 
 ---
 
@@ -26,27 +26,30 @@ cd backend
 
 # Post-deploy window (PSR sign-off)
 DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.revy_review_dogfood_staging_validation \
-  --repo raimondskrauklis/revy --pr-number <N> --since 2026-08-08T14:45:07Z --psr-gate --json
-
-# Full PR history (debug / pre-deploy exclusion check)
-DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.revy_review_dogfood_staging_validation \
-  --repo raimondskrauklis/revy --pr-number <N> --psr-gate --json
+  --repo raimondskrauklis/revy --pr-number 87 --since 2026-08-08T14:45:07Z --psr-gate --json
 
 DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.judge_json_contract_staging_metrics \
   --since 2026-08-08T14:45:07Z --json
 ```
 
-### Probe run — 2026-08-08 (post #85 deploy)
+### Probe run — 2026-08-08 (pre-dogfood, #85 only)
 
 | Probe | Result | Evidence |
 |-------|--------|----------|
 | Alembic on staging | **PASS** | `2026_08_08_1000_0030_github_pull_request_pr_resolution_rollup` |
-| Post-deploy `--since 14:45:07Z` revisions | **0** | dogfood JSON: `revision_count: 0`, `completed_review_runs: 0` |
-| Post-deploy completed publishes | **0** | `psr_rollup_gate`: `PSR-R1_rollup_persisted` **PENDING** — `no completed publish jobs yet` |
-| Judge metrics post-deploy | **0 jobs** | `judge_json_contract_staging_metrics --since 2026-08-08T14:45:07Z`: no completed publish jobs in window |
-| PR #85 full history (pre-deploy) | 8 completed publishes, **no rollup** | rev 5–13; all `pr_resolution_rollup: null` on job `summary_json`; PR row `pr_resolution_rollup: null` |
-| PR #85 issue comment (rev 13) | **no lifetime block** | [comment 5225017749](https://github.com/raimondskrauklis/revy/pull/85#issuecomment-5225017749) — pre-deploy formatter; missing `### PR summary (lifetime)` |
-| `--psr-gate` (full #85 history) | **FAIL** | `PSR-R1_rollup_persisted`: `completed publish jobs missing pr_resolution_rollup` (pre-deploy publishes) |
+| Post-deploy window before #87 | **0 publishes** | expected — no dogfood PR yet |
+| PR #85 full history | **excluded** | 8 pre-deploy publishes; no `pr_resolution_rollup`; [comment](https://github.com/raimondskrauklis/revy/pull/85#issuecomment-5225017749) missing lifetime block |
+
+### Probe run — 2026-08-08 (post-dogfood #87)
+
+| Probe | Result | Evidence |
+|-------|--------|----------|
+| Post-deploy revisions | **2** | PR #87 rev 1–2 since `14:45:07Z` |
+| `--psr-gate` | **PASS** | `ready_for_signoff: true`; `PSR-R2` schema v1; `PSR-R3 review_count=2`; `PSR-R4 still_open_display=1` |
+| PR row ≡ job rollup | **PASS** | `pr_resolution_rollup.review_count=2` on both; `PR row matches job: True` |
+| Issue comment lifetime block | **PASS** | [comment 5226701333](https://github.com/raimondskrauklis/revy/pull/87#issuecomment-5226701333) updated `2026-08-08T15:14:15Z`; `### PR summary (lifetime)` before push metrics |
+| `still_open_display` parity | **PASS** | rollup `still_open_display=1`; block 2 has 1 row (rev 2) |
+| Check run one-liners | **PASS** | head `1d6c149`: `PR (lifetime): 1 resolved / 2 raised; 1 still open` + `This push: 1 issue fixed since last push` |
 
 ---
 
@@ -54,26 +57,10 @@ DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.judge_json_contract_staging
 
 | PR | Role | Status |
 |----|------|--------|
-| [#85](https://github.com/raimondskrauklis/revy/pull/85) (merged) | Feature PR — multi-revision dogfood pre-deploy | **excluded** from sign-off |
-| *(next)* | Post-deploy PSR dogfood | **not opened** — `chore/psr-staging-dogfood` |
+| [#85](https://github.com/raimondskrauklis/revy/pull/85) (merged) | Feature PR — pre-deploy dogfood | **excluded** |
+| [#87](https://github.com/raimondskrauklis/revy/pull/87) | Post-deploy PSR dogfood | **sign-off complete** — `chore/psr-staging-dogfood` |
 
----
-
-## Validation plan (operator)
-
-Follow [staging-validation README](../staging-validation/README.md) SV-Q2 pattern (PSA #63).
-
-1. **Open post-deploy dogfood PR** — branch `chore/psr-staging-dogfood` off `main` (`a4e4ce3`+); minimal `backend/**` touch (probe file or noop comment).
-2. **Push 1** — baseline rev 1 after deploy; wait for Revy publish; confirm issue comment has `### PR summary (lifetime)` before G9 / `### This generation`.
-3. **Push 2** — second revision; verify lifetime + push delta parity, `review_count >= 2`, `still_open_display` matches block-2 row count.
-4. **Push 3** (optional) — cleanup / regrowth; verify check-run one-liners (lifetime + this push).
-5. **Run probes** after each publish:
-   - `revy_review_dogfood_staging_validation --psr-gate --since 2026-08-08T14:45:07Z`
-   - GitHub: issue comment URL + check run output
-   - SQL parity: `github_publish_jobs.summary_json.pr_resolution_rollup` ≡ `github_pull_requests.pr_resolution_rollup`
-6. **Sign-off** when `--psr-gate` `ready_for_signoff: true` on post-deploy PR.
-
-**Do not** re-trigger Revy on merged #85 for sign-off — merged PR will not get new revisions; use a new chore PR.
+**Fixture:** `backend/app/services/psr_staging_probe.py`
 
 ---
 
@@ -81,10 +68,10 @@ Follow [staging-validation README](../staging-validation/README.md) SV-Q2 patter
 
 | Push | Intent | Status |
 |------|--------|--------|
-| — | PR #85 rev 1–13 (feature branch) | **excluded** — pre-deploy |
-| 1 | Baseline rev 1 — PR summary + rollup persist | pending (post-deploy PR) |
-| 2 | Rev ≥2 — lifetime + push delta parity | pending |
-| 3 | Check-run one-liners + API field | pending |
+| — | PR #85 rev 1–13 | **excluded** — pre-deploy |
+| 1 | Baseline rev 1 — PR summary + rollup persist | **done** `4837aac` |
+| 2 | Rev ≥2 — lifetime + push delta parity | **done** `1d6c149` |
+| 3 | Check-run one-liners + API field | **done** on push 2 (one-liners); API via unit test |
 
 ---
 
@@ -92,11 +79,11 @@ Follow [staging-validation README](../staging-validation/README.md) SV-Q2 patter
 
 | Check | Pass | Evidence |
 |-------|------|----------|
-| Issue comment has `### PR summary (lifetime)` before G9 | pending | — |
-| `pr_resolution_rollup` on completed publish job `summary_json` | pending | — |
-| `github_pull_requests.pr_resolution_rollup` matches job manifest | pending | — |
-| `still_open_display` equals block-2 row count | pending | — |
-| Dogfood `--psr-gate` green | pending | post-deploy: `PSR-R1` PENDING (no jobs); pre-deploy #85: FAIL |
+| Issue comment has `### PR summary (lifetime)` before G9 | **yes** | [comment 5226701333](https://github.com/raimondskrauklis/revy/pull/87#issuecomment-5226701333) — lifetime block before `### Resolution metrics (this push)` |
+| `pr_resolution_rollup` on completed publish job `summary_json` | **yes** | rev 2 job: `review_count=2`, `raised_count=2`, `resolved_count=1`, `schema_version=1` |
+| `github_pull_requests.pr_resolution_rollup` matches job manifest | **yes** | PR row `1d6c149` — `PR row matches job: True` |
+| `still_open_display` equals block-2 row count | **yes** | `still_open_display=1`; 1 row in `### Still open on PR` |
+| Dogfood `--psr-gate` green | **yes** | `ready_for_signoff: true` after rev 2 |
 
 ---
 
@@ -104,19 +91,20 @@ Follow [staging-validation README](../staging-validation/README.md) SV-Q2 patter
 
 | Check | Pass | Evidence |
 |-------|------|----------|
-| Check run one-liners (lifetime + this push) | pending | — |
-| API `GET publish-job` returns `pr_resolution_rollup` | pending | — |
+| Check run one-liners (lifetime + this push) | **yes** | Revy check on `1d6c149`: lifetime + this-push lines in `output.summary` |
+| API `GET publish-job` returns `pr_resolution_rollup` | **yes** | `test_github_publish_job_response_includes_pr_resolution_rollup` (PSR-Q8); job JSON on staging has field |
 
 ---
 
 ## Results (operator)
 
-| Push | `head_sha` | Notes |
-|------|------------|-------|
-| — | `e0f8d7d` | PR #85 rev 13 — **excluded**; [comment](https://github.com/raimondskrauklis/revy/pull/85#issuecomment-5225017749); no lifetime block; `pr_resolution_rollup` null on job + PR row |
-| 1 | — | pending post-deploy dogfood PR |
+| Push | `head_sha` | `review_count` | `still_open_display` | Notes |
+|------|------------|----------------|----------------------|-------|
+| — | `e0f8d7d` | — | — | PR #85 rev 13 — **excluded** (pre-deploy) |
+| 1 | `4837aac` | 1 | 2 | rev 1; 2 findings raised; [comment](https://github.com/raimondskrauklis/revy/pull/87#issuecomment-5226701333) first publish `15:11:09Z` |
+| 2 | `1d6c149` | 2 | 1 | rev 2; 1 addressed; comment updated `15:14:15Z`; push delta + lifetime rate 50% |
 
-**Pre-deploy PR #85 summary (staging DB):** 13 revisions, 8 completed review runs, 23 finding groups (11 resolved). Latest publish rev 13 — no rollup persisted (worker lacked PSR flush at publish time).
+**Rev 2 rollup snapshot:** `raised_count=2`, `resolved_count=1`, `still_open_display=1`, `still_open_prior=0`, `lifetime_resolution_rate_pct=50.0`.
 
 ---
 
@@ -125,13 +113,11 @@ Follow [staging-validation README](../staging-validation/README.md) SV-Q2 patter
 | Check | Status | Evidence |
 |-------|--------|----------|
 | Migration `0030` on staging | **PASS** | alembic `2026_08_08_1000_0030_github_pull_request_pr_resolution_rollup` |
-| Post-deploy publish with rollup | **pending** | 0 completed publishes since `2026-08-08T14:45:07Z` |
-| `--psr-gate` | **pending** | `ready_for_signoff: false` |
-| Staging PASS (formatter + persist) | **pending** | Open `chore/psr-staging-dogfood`; complete pushes 1–2 per validation plan |
+| Post-deploy publish with rollup | **PASS** | PR #87 rev 1–2 completed publishes since `2026-08-08T14:45:07Z` |
+| `--psr-gate` | **PASS** | `ready_for_signoff: true` (rev 2) |
+| Staging PASS (formatter + persist) | **PASS** | [#87](https://github.com/raimondskrauklis/revy/pull/87) pushes 1–2; lifetime block + PR row parity |
 
-**Unit gate (local, not staging):** `test_github_pr_resolution_rollup.py`, `test_github_publish_formatter.py`, `test_revy_review_dogfood_staging_validation.py` — green on merge branch (Revy pass on `e0f8d7d`).
-
-**Note:** SOS P2 orphan-filter fix ([#86](https://github.com/raimondskrauklis/revy/pull/86)) merged separately — document if observed during post-deploy dogfood; does not block PSR code ship.
+**Operator sign-off (PSR):** PR lifetime rollup + push delta surfaces **PASS** on post-deploy worker. Program P3.2 human gate cleared.
 
 ---
 
@@ -139,6 +125,6 @@ Follow [staging-validation README](../staging-validation/README.md) SV-Q2 patter
 
 | Doc | Change |
 |-----|--------|
-| `README.md` | Program shipped; link this memo; staging sign-off row stays pending |
-| `waves/PR_SUMMARY_ROLLUP_EXECUTION.md` | P0–P3 Done; P3.2 human gate open until sign-off PASS |
-| `PR_SUMMARY_ROLLUP_GENERAL_PLAN.md` | Execution index → shipped; staging pending |
+| `README.md` | Status → shipped + staging PASS |
+| `waves/PR_SUMMARY_ROLLUP_EXECUTION.md` | P3.2 sign-off PASS |
+| `PR_SUMMARY_ROLLUP_GENERAL_PLAN.md` | Execution index → shipped |
