@@ -777,12 +777,6 @@ def apply_publish_summary_thread_collapse(
         new_issue = build_pr_review_comment_fallback(filtered_ctx)
     else:
         new_issue = _refresh_issue_pr_verdict_sections(new_issue, filtered_ctx)
-    if isinstance(filtered_ctx.pr_resolution_rollup, dict):
-        new_check, new_issue = apply_rollup_to_publish_surfaces(
-            new_check,
-            new_issue,
-            filtered_ctx,
-        )
     return PublishFormatResult(
         check_summary=new_check,
         issue_comment=new_issue,
