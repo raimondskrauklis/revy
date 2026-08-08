@@ -558,8 +558,20 @@ def splice_deterministic_pr_summary_block(markdown: str, ctx: PublishFormatConte
     return f"{markdown.rstrip()}\n\n{block}"
 
 
+def _strip_rollup_metadata_footer(markdown: str) -> str:
+    marker = "\n---\n*"
+    idx = markdown.rfind(marker)
+    if idx < 0:
+        return markdown
+    tail = markdown[idx:]
+    if "Revision:" in tail and tail.rstrip().endswith("*"):
+        return markdown[:idx].rstrip()
+    return markdown
+
+
 def append_review_metadata_footer(markdown: str, ctx: PublishFormatContext) -> str:
     """Replace legacy review metadata with rollup-aware footer (issue comment only)."""
+    markdown = _strip_rollup_metadata_footer(markdown)
     rollup = ctx.pr_resolution_rollup if isinstance(ctx.pr_resolution_rollup, dict) else {}
     review_count = int(rollup.get("review_count") or 0) or None
     head_sha = ctx.head_sha or ""

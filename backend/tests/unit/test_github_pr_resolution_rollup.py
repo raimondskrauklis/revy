@@ -197,6 +197,23 @@ def test_build_resolved_by_method_path_removed_bucket():
     assert counts["absent_and_addressed"] == 1
 
 
+def test_build_resolved_by_method_skips_path_removed_on_first_revision():
+    first_revision_id = uuid.uuid4()
+    group = _group(
+        fingerprint="rev1",
+        state=GitHubFindingGroupState.resolved,
+        resolution_method=ResolutionMethod.absent_and_addressed,
+        resolved_at_revision_id=first_revision_id,
+        last_seen_revision_id=uuid.uuid4(),
+    )
+    counts = build_resolved_by_method(
+        [group],
+        prior_revision_ids_by_resolve_revision={first_revision_id: frozenset()},
+    )
+    assert counts["path_removed"] == 0
+    assert counts["absent_and_addressed"] == 1
+
+
 def test_compute_filter_snapshot_collapsed_hidden():
     collapsed = _group(fingerprint="collapsed-fp")
     generation = _group(fingerprint="gen-1")

@@ -99,6 +99,7 @@ def _is_lifetime_path_removed_resolution(
         and group.resolution_method == ResolutionMethod.absent_and_addressed
         and group.last_seen_revision_id is not None
         and group.last_seen_revision_id != resolved_at_revision_id
+        and prior_revision_ids
         and group.last_seen_revision_id not in prior_revision_ids
     )
 

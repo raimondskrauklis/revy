@@ -1473,6 +1473,24 @@ def test_apply_rollup_to_publish_surfaces_does_not_duplicate_check_one_liners():
     assert second_check.count("**This push:**") == 1
 
 
+def test_append_review_metadata_footer_replaces_prior_footer():
+    ctx = _ctx_with_rollup([])
+    body = "## Revy code review\n\n---\n*Reviews on this PR: 1 · Revision: 4 · Head: abc1234*\n"
+    ctx2 = PublishFormatContext(
+        pull_request_id=ctx.pull_request_id,
+        pull_request_number=ctx.pull_request_number,
+        head_sha="def5678",
+        revision_number=5,
+        groups=ctx.groups,
+        pr_resolution_rollup=ctx.pr_resolution_rollup,
+    )
+    result = append_review_metadata_footer(body, ctx2)
+    assert result.count("---\n*") == 1
+    assert "Revision: 5" in result
+    assert "Head: def567" in result
+    assert "Revision: 4" not in result
+
+
 def test_build_check_run_summary_pr_rollup_one_liners():
     ctx = _ctx_with_rollup([_group(severity=FindingSeverity.error)])
     markdown = build_check_run_summary(ctx)
