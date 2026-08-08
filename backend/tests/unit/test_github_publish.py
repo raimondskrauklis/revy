@@ -5,7 +5,7 @@ Harness notes (GH-6):
 - Autouse `_publish_formatter_defaults` mocks format, prior jobs, thread index, and resolve (unless `@pytest.mark.resolve_unmocked`).
 - `resolve_unmocked` tests call real `_resolve_stale_inline_threads`; patch `github_api` GraphQL only.
 - Prefer `_publish_job_context()` + targeted patches over ordered `session.scalars` side_effect chains.
-- Build phase (`_build_publish_surface`) runs before flush; scalars order is groups → revision ids (×2) → inline findings → resolve queries.
+- Build phase (`_build_publish_surface`) runs before flush; with autouse patches use `_surface_build_scalars` (groups → publishable outcome/inline → optional inline posts).
 - Inline posts persist partial `summary_json` via `session.flush` per comment (retry-safe); one `_checkpoint_publish_surface` after full flush.
 """
 
@@ -67,6 +67,26 @@ def _scalars_sequence(*items: object):
     return _next
 
 
+def _surface_build_scalars(
+    *,
+    group_findings=None,
+    publishable_inline=None,
+    include_inline_posts: bool = True,
+):
+    """Scalars for ``_build_publish_surface`` with autouse prior-job + pr-active patches."""
+
+    group_findings = group_findings if group_findings is not None else []
+    if publishable_inline is None:
+        publishable_inline = []
+    parts: list[object] = [group_findings]
+    if group_findings:
+        parts.append([])
+    parts.extend([[], publishable_inline])
+    if include_inline_posts:
+        parts.append(publishable_inline)
+    return _scalars_sequence(*parts)
+
+
 @pytest.fixture(autouse=True)
 def _publish_formatter_defaults(request):
     resolve_ctx = (
@@ -98,30 +118,38 @@ def _publish_formatter_defaults(request):
                 AsyncMock(return_value=None),
             ):
                 with patch(
-                    "app.services.github_publish._fetch_prior_completed_publish_jobs",
-                    AsyncMock(return_value=[]),
+                    "app.services.github_publish.find_prior_issue_comment_id_for_pull_request",
+                    AsyncMock(return_value=None),
                 ):
-                    with resolve_ctx:
+                    with patch(
+                        "app.services.github_publish._fetch_prior_reusable_publish_jobs",
+                        AsyncMock(return_value=[]),
+                    ):
                         with patch(
-                            "app.services.github_publish.github_api.build_review_thread_index",
-                            AsyncMock(return_value=_review_thread_index()),
+                            "app.services.github_publish._load_pr_active_groups",
+                            AsyncMock(return_value=[]),
                         ):
-                            with patch(
-                                "app.services.github_publish.build_publish_format_result_async",
-                                AsyncMock(
-                                    return_value=PublishFormatResult(
-                                        check_summary="## Revy review\n\n**Confidence:** 5/5",
-                                        issue_comment="## Revy code review\n\nfull narrative",
-                                        confidence=5,
-                                        summary_json={
-                                            "confidence": 5,
-                                            "active_count": 0,
-                                            "resolution": {},
-                                        },
-                                    )
-                                ),
-                            ):
-                                yield
+                            with resolve_ctx:
+                                with patch(
+                                    "app.services.github_publish.github_api.build_review_thread_index",
+                                    AsyncMock(return_value=_review_thread_index()),
+                                ):
+                                    with patch(
+                                        "app.services.github_publish.build_publish_format_result_async",
+                                        AsyncMock(
+                                            return_value=PublishFormatResult(
+                                                check_summary="## Revy review\n\n**Confidence:** 5/5",
+                                                issue_comment="## Revy code review\n\nfull narrative",
+                                                confidence=5,
+                                                summary_json={
+                                                    "confidence": 5,
+                                                    "active_count": 0,
+                                                    "resolution": {},
+                                                },
+                                            )
+                                        ),
+                                    ):
+                                        yield
 
 
 def test_compute_check_conclusion_neutral_on_critical():
@@ -251,6 +279,62 @@ def test_load_inline_thread_map_keeps_latest_comment_id():
     newer = MagicMock()
     newer.summary_json = {"github_inline_threads": {"fp": 999}}
     assert github_publish._load_inline_thread_map([older, newer]) == {"fp": 999}
+
+
+def test_load_ever_inlined_fingerprints_unions_prior_jobs():
+    job_a = MagicMock()
+    job_a.summary_json = {"github_inline_threads": {"fp-a": 100}}
+    job_b = MagicMock()
+    job_b.summary_json = {"github_inline_threads": {"fp-b": 200}}
+    assert github_publish._load_ever_inlined_fingerprints([job_a, job_b]) == frozenset(
+        {"fp-a", "fp-b"}
+    )
+
+
+def test_load_ever_inlined_fingerprints_includes_current_job_summary():
+    prior = MagicMock()
+    prior.summary_json = {"github_inline_threads": {"fp-a": 100}}
+    assert github_publish._load_ever_inlined_fingerprints(
+        [prior],
+        current_job_summary={"github_inline_threads": {"fp-retry": 300}},
+    ) == frozenset({"fp-a", "fp-retry"})
+
+
+def test_load_ever_inlined_fingerprints_includes_failed_prior_job():
+    failed = MagicMock()
+    failed.summary_json = {"github_inline_threads": {"fp-failed": 400}}
+    assert github_publish._load_ever_inlined_fingerprints([failed]) == frozenset({"fp-failed"})
+
+
+def test_load_prior_collapsed_inline_fingerprints_ignores_failed_prior_jobs():
+    failed = MagicMock()
+    failed.status = GitHubPublishJobStatus.failed
+    failed.summary_json = {"collapsed_inline_fingerprints": ["fp-failed-only"]}
+    completed = MagicMock()
+    completed.status = GitHubPublishJobStatus.completed
+    completed.summary_json = {"collapsed_inline_fingerprints": ["fp-ok"]}
+    assert github_publish._load_prior_collapsed_inline_fingerprints(
+        [failed, completed]
+    ) == {"fp-ok"}
+
+
+def test_load_ever_inlined_fingerprints_handles_empty_current_summary():
+    assert github_publish._load_ever_inlined_fingerprints([], current_job_summary={}) == frozenset()
+    assert (
+        github_publish._load_ever_inlined_fingerprints(
+            [],
+            current_job_summary={"confidence": 5},
+        )
+        == frozenset()
+    )
+
+
+def test_load_ever_inlined_fingerprints_includes_v2_inline_map():
+    prior = MagicMock()
+    prior.summary_json = {
+        "github_inline_threads": {"fp-v2": {"comment_id": 500, "thread_id": "PRRT_x"}},
+    }
+    assert github_publish._load_ever_inlined_fingerprints([prior]) == frozenset({"fp-v2"})
 
 
 def test_deserialize_inline_thread_map_legacy_int():
@@ -1019,14 +1103,16 @@ async def test_run_publish_job_persists_thread_map_after_resolve_when_inline_ski
 
     session = AsyncMock()
     session.get = AsyncMock(
-        side_effect=[job, run, revision, pull_request, repository, installation]
+        side_effect=[job, run, revision, pull_request, repository, installation, run, revision]
     )
-    session.scalars = AsyncMock(side_effect=_scalars_sequence([], [revision_id], [], [], [], []))
+    session.scalars = AsyncMock(
+        side_effect=_scalars_sequence([], [], [], [], [], [], [])
+    )
     session.scalar = AsyncMock(return_value=None)
     session.flush = AsyncMock()
 
     with patch(
-        "app.services.github_publish._fetch_prior_completed_publish_jobs",
+        "app.services.github_publish._fetch_prior_reusable_publish_jobs",
         AsyncMock(return_value=[prior_job]),
     ):
         with patch(
@@ -1462,7 +1548,9 @@ async def test_run_publish_job_posts_inline_for_warning_finding():
     session.get = AsyncMock(
         side_effect=[job, run, revision, pull_request, repository, installation, group, group]
     )
-    session.scalars = AsyncMock(side_effect=[[], [], [finding]])
+    session.scalars = AsyncMock(
+        side_effect=_surface_build_scalars(publishable_inline=[finding])
+    )
     session.scalar = AsyncMock(return_value=None)
     session.flush = AsyncMock()
     session.commit = AsyncMock()
@@ -1892,7 +1980,9 @@ async def test_run_publish_job_posts_inline_when_prior_job_failed_before_inline(
     session.get = AsyncMock(
         side_effect=[job, run, revision, pull_request, repository, installation, group, group]
     )
-    session.scalars = AsyncMock(side_effect=_scalars_sequence([], [], [finding]))
+    session.scalars = AsyncMock(
+        side_effect=_surface_build_scalars(publishable_inline=[finding])
+    )
     session.scalar = AsyncMock(side_effect=[uuid.uuid4(), None])
     session.flush = AsyncMock()
 
@@ -2133,9 +2223,14 @@ async def test_run_publish_job_posts_inline_after_surface_checkpoint():
 
     session = AsyncMock()
     session.get = AsyncMock(
-        side_effect=[job, run, revision, pull_request, repository, installation, group, group]
+        side_effect=[job, run, revision, pull_request, repository, installation, group, group, group]
     )
-    session.scalars = AsyncMock(side_effect=_scalars_sequence([finding], [], [], [finding]))
+    session.scalars = AsyncMock(
+        side_effect=_surface_build_scalars(
+            group_findings=[finding],
+            publishable_inline=[finding],
+        )
+    )
     session.scalar = AsyncMock(side_effect=[uuid.uuid4(), uuid.uuid4()])
     session.flush = AsyncMock()
     session.commit = AsyncMock()
@@ -2356,15 +2451,17 @@ async def test_run_publish_job_same_sha_re_publish_persists_thread_map():
 
     session = AsyncMock()
     session.get = AsyncMock(
-        side_effect=[job, run, revision, pull_request, repository, installation]
+        side_effect=[job, run, revision, pull_request, repository, installation, run, revision]
     )
-    session.scalars = AsyncMock(side_effect=_scalars_sequence([], [revision_id], [], [], [], []))
+    session.scalars = AsyncMock(
+        side_effect=_scalars_sequence([], [], [], [], [], [], [])
+    )
     session.scalar = AsyncMock(return_value=existing_job)
     session.flush = AsyncMock()
 
     resolve_mock = AsyncMock()
     with patch(
-        "app.services.github_publish._fetch_prior_completed_publish_jobs",
+        "app.services.github_publish._fetch_prior_reusable_publish_jobs",
         AsyncMock(return_value=[prior_job]),
     ):
         with patch(
@@ -2481,7 +2578,9 @@ async def test_run_publish_job_inline_skipped_no_group(caplog):
     session.get = AsyncMock(
         side_effect=[job, run, revision, pull_request, repository, installation, None]
     )
-    session.scalars = AsyncMock(side_effect=[[], [revision_id], [revision_id], [finding]])
+    session.scalars = AsyncMock(
+        side_effect=_surface_build_scalars(publishable_inline=[finding])
+    )
     session.scalar = AsyncMock(return_value=None)
     session.flush = AsyncMock()
 
@@ -2623,23 +2722,13 @@ async def test_run_publish_job_reactivates_inline_same_publish():
             group,
         ]
     )
-    session.scalars = AsyncMock(
-        side_effect=[
-            [],
-            [revision_id],
-            [revision_id],
-            [finding],
-            [],
-            [finding],
-            [],
-        ]
-    )
+    session.scalars = AsyncMock(side_effect=_scalars_sequence([], [finding]))
     session.scalar = AsyncMock(return_value=None)
     session.flush = AsyncMock()
 
     inline_mock = AsyncMock(return_value=8002)
     with patch(
-        "app.services.github_publish._fetch_prior_completed_publish_jobs",
+        "app.services.github_publish._fetch_prior_reusable_publish_jobs",
         AsyncMock(return_value=[prior_job]),
     ):
         with patch(
@@ -2959,14 +3048,9 @@ async def test_run_publish_job_surface_flush_call_order():
     )
     finding.id = uuid.uuid4()
 
-    session.get = AsyncMock(side_effect=[*base_gets, group])
+    session.get = AsyncMock(side_effect=[*base_gets, group, group])
     session.scalars = AsyncMock(
-        side_effect=[
-            [],
-            [revision_id],
-            [revision_id],
-            [finding],
-        ]
+        side_effect=_surface_build_scalars(publishable_inline=[finding])
     )
 
     call_order: list[str] = []
@@ -2982,7 +3066,7 @@ async def test_run_publish_job_surface_flush_call_order():
     prior_job.summary_json = {"github_inline_threads": {"stale-fp": 9001}}
 
     with patch(
-        "app.services.github_publish._fetch_prior_completed_publish_jobs",
+        "app.services.github_publish._fetch_prior_reusable_publish_jobs",
         AsyncMock(return_value=[prior_job]),
     ):
         with patch(
@@ -3064,15 +3148,18 @@ async def test_run_publish_job_persists_inline_progress_between_posts():
         groups_and_findings.append((group, finding))
 
     session.get = AsyncMock(
-        side_effect=[*base_gets, groups_and_findings[0][0], groups_and_findings[1][0]]
+        side_effect=[
+            *base_gets,
+            groups_and_findings[0][0],
+            groups_and_findings[1][0],
+            groups_and_findings[0][0],
+            groups_and_findings[1][0],
+        ]
     )
     session.scalars = AsyncMock(
-        side_effect=[
-            [],
-            [revision_id],
-            [revision_id],
-            [groups_and_findings[0][1], groups_and_findings[1][1]],
-        ]
+        side_effect=_surface_build_scalars(
+            publishable_inline=[groups_and_findings[0][1], groups_and_findings[1][1]],
+        )
     )
     flush_mock = AsyncMock()
     session.flush = flush_mock

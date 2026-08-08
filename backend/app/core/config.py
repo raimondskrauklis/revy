@@ -96,6 +96,9 @@ class Settings(BaseSettings):
     revy_moonshot_model_standard: str = "kimi-k2.7-code"
     revy_moonshot_model_deep: str = "kimi-k3"
     revy_moonshot_model_critical: str = "kimi-k3"
+    # Thinking models share reasoning_content + content under max_completion_tokens.
+    # Moonshot API default when omitted is ~1024 — too low for K2/K3 (see staging dogfood).
+    revy_moonshot_max_completion_tokens: int = 32768
     revy_anthropic_model: str = "claude-sonnet-5"
     revy_judge_structured_output: bool = False
     # Optional Anthropic-compatible gateway (e.g. RTU llm.ai.rtu.lv) — does not replace direct API
@@ -153,6 +156,18 @@ class Settings(BaseSettings):
         if clamped != value:
             logger.warning(
                 "review_coalesce_seconds=%s clamped to %s (allowed range 0-10)",
+                value,
+                clamped,
+            )
+        return clamped
+
+    @field_validator("revy_moonshot_max_completion_tokens", mode="after")
+    @classmethod
+    def _clamp_moonshot_max_completion_tokens(cls, value: int) -> int:
+        clamped = max(16_000, min(131_072, value))
+        if clamped != value:
+            logger.warning(
+                "revy_moonshot_max_completion_tokens=%s clamped to %s (allowed range 16000-131072)",
                 value,
                 clamped,
             )

@@ -98,7 +98,7 @@ assert job_id is not None or session.add.called
 | 1 | Index 429 / slow | Voyage free trial 3 RPM; env typo `oyage-code-3` | [#45](https://github.com/raimondskrauklis/revy/pull/45) — client retry + config strip |
 | 2 | Review `AttributeError: 'str' has no attribute 'value'` on `run.profile` | SQLAlchemy String enum hydrated as `str` | [#46](https://github.com/raimondskrauklis/revy/pull/46) — `_review_profile_str()` + worker retry policy |
 | 3 | Moonshot **400** on review | `kimi-k2.7-code` rejects `temperature≠1.0` | [#47](https://github.com/raimondskrauklis/revy/pull/47) — per-model request body |
-| 4 | Moonshot **200** but `github_review_run_failed` | `max_completion_tokens=8192` exhausted by K2 `reasoning_content`; empty `content` | [#48](https://github.com/raimondskrauklis/revy/pull/48) — omit cap for K2 thinking models |
+| 4 | Moonshot **200** but `github_review_run_failed` / `Moonshot review response truncated` | `max_completion_tokens` too low — K2/K3 `reasoning_content` exhausts budget before JSON/markdown `content` | [#48](https://github.com/raimondskrauklis/revy/pull/48) omitted cap (API default ~1024); set `REVY_MOONSHOT_MAX_COMPLETION_TOKENS=32768` (min 16000 per Moonshot docs) |
 | 5 | Reconcile `category.value` on `str` | Same String-enum hydration pattern | [#49](https://github.com/raimondskrauklis/revy/pull/49) — `stored_enum_value()` |
 | 6 | Publish stuck `processing` (Bugbot) | Permanent HTTP error with `persist_github_surface=True` returned without `failed` | [#47](https://github.com/raimondskrauklis/revy/pull/47) (publish half) |
 
@@ -133,8 +133,8 @@ assert job_id is not None or session.add.called
 |-------|--------|
 | Temperature | Must omit or use default `1.0` — `0.2` → 400 |
 | Thinking | Always on; do not pass `thinking` param for k2.7 |
-| Completion budget | Do not cap `max_completion_tokens` too low — thinking + JSON share budget; HTTP 200 with empty `content` possible |
-| K3 (`deep` / `critical`) | Use `reasoning_effort` in code (`high` / `max`), not env |
+| Completion budget | `reasoning_content` + `content` share `max_completion_tokens`. Set `REVY_MOONSHOT_MAX_COMPLETION_TOKENS` (default **32768**, min 16000). Omitting the param uses API default ~1024 → `finish_reason: length`, empty `content`, review run `failed` |
+| K3 (`deep` / `critical`) | Use `reasoning_effort` in code (`high` / `max`), not env. Omit `max_completion_tokens` — API default 131072 |
 
 ### 3. Worker retries (post-#46)
 

@@ -27,13 +27,13 @@ from app.services.github_publish_formatter import (
     build_publish_format_result,
     compute_confidence,
     count_resolution_status,
+    display_still_open_prior_count,
     extract_summary_blocks_section,
     filter_pr_active_groups_for_summary,
     format_resolution_metrics_block,
     format_summary_comment,
     format_thread_resolve_skipped_block,
     normalize_llm_issue_comment,
-    resolution_counts_from_manifest,
     splice_deterministic_findings_tables,
 )
 
@@ -188,10 +188,9 @@ def test_summary_json_resolution_uses_manifest_when_present():
         },
     )
     summary = build_publish_format_result(ctx).summary_json
-    assert summary["resolution"] == resolution_counts_from_manifest(ctx.resolution_metrics_manifest)
     assert summary["resolution"]["addressed"] == 1
     assert summary["resolution"]["verification_dismissed"] == 1
-    assert summary["resolution"]["still_open"] == 2
+    assert summary["resolution"]["still_open"] == 0
 
 
 def test_build_pr_review_comment_fallback_g9_from_manifest_not_generation_groups():
@@ -395,6 +394,178 @@ def test_filter_pr_active_groups_for_summary_keeps_addressed_pending_pass2_out()
         collapsed_fingerprints=set(),
     )
     assert filtered == []
+
+
+def test_filter_pr_active_groups_for_summary_excludes_never_inlined_orphan():
+    orphan = _group(
+        severity=FindingSeverity.warning,
+        fingerprint="orphan-fp",
+        file_path="docs/plan.md",
+        resolution_status=ResolutionStatus.still_open,
+    )
+    inlined = _group(
+        severity=FindingSeverity.warning,
+        fingerprint="inlined-fp",
+        file_path="docs/other.md",
+        resolution_status=ResolutionStatus.still_open,
+    )
+    filtered = filter_pr_active_groups_for_summary(
+        [orphan, inlined],
+        publishable_fingerprints=set(),
+        collapsed_fingerprints=set(),
+        generation_fingerprints=set(),
+        ever_inlined_fingerprints={"inlined-fp"},
+    )
+    assert [g.fingerprint for g in filtered] == ["inlined-fp"]
+
+
+def test_filter_pr_active_groups_for_summary_keeps_never_inlined_in_generation():
+    orphan = _group(
+        severity=FindingSeverity.warning,
+        fingerprint="orphan-fp",
+        file_path="docs/plan.md",
+    )
+    filtered = filter_pr_active_groups_for_summary(
+        [orphan],
+        publishable_fingerprints={"orphan-fp"},
+        collapsed_fingerprints=set(),
+        generation_fingerprints={"orphan-fp"},
+        ever_inlined_fingerprints=set(),
+    )
+    assert [g.fingerprint for g in filtered] == ["orphan-fp"]
+
+
+def test_filter_pr_active_groups_for_summary_keeps_orphan_when_generation_scope_unknown():
+    orphan = _group(
+        severity=FindingSeverity.warning,
+        fingerprint="orphan-fp",
+        file_path="docs/plan.md",
+        resolution_status=ResolutionStatus.still_open,
+    )
+    filtered = filter_pr_active_groups_for_summary(
+        [orphan],
+        publishable_fingerprints=set(),
+        collapsed_fingerprints=set(),
+        generation_fingerprints=None,
+        ever_inlined_fingerprints=set(),
+    )
+    assert [g.fingerprint for g in filtered] == ["orphan-fp"]
+
+
+def test_format_resolution_metrics_block_display_still_open_override():
+    block = format_resolution_metrics_block(
+        {
+            "resolution_rate_pct": 50.0,
+            "transition_count": 1,
+            "denominator_active_prior": 2,
+            "transitions_addressed": 1,
+            "transitions_dismissed": {},
+            "still_open_count": 1,
+            "compare_failed_count": 0,
+        },
+        display_still_open_prior=0,
+    )
+    assert "Still open from prior review" not in block
+    assert "100.0% (1/1 prior active)" in block
+
+
+def test_format_resolution_metrics_block_display_override_includes_compare_failed():
+    block = format_resolution_metrics_block(
+        {
+            "resolution_rate_pct": 50.0,
+            "transition_count": 1,
+            "denominator_active_prior": 2,
+            "transitions_addressed": 1,
+            "transitions_dismissed": {},
+            "still_open_count": 1,
+            "compare_failed_count": 1,
+        },
+        display_still_open_prior=0,
+    )
+    assert "100.0% (1/1 prior active)" in block
+    assert "Compare blocked" in block
+
+
+def test_format_resolution_metrics_block_display_override_caps_hidden_still_open():
+    block = format_resolution_metrics_block(
+        {
+            "resolution_rate_pct": 50.0,
+            "transition_count": 1,
+            "denominator_active_prior": 2,
+            "transitions_addressed": 1,
+            "transitions_dismissed": {},
+            "still_open_count": 0,
+            "compare_failed_count": 0,
+        },
+        display_still_open_prior=1,
+    )
+    assert "50.0% (1/2 prior active)" in block
+
+
+def test_build_g9_resolution_prose_from_manifest_display_still_open_override():
+    prose = build_g9_resolution_prose_from_manifest(
+        {
+            "transitions_addressed": 1,
+            "still_open_count": 1,
+            "transitions_dismissed": {},
+        },
+        display_still_open_prior=0,
+    )
+    assert "1 issue fixed since last push" in prose
+    assert "still open" not in prose
+
+
+def test_clean_generation_hides_orphan_from_block2_and_narrative():
+    orphan = _group(
+        severity=FindingSeverity.warning,
+        fingerprint="orphan-fp",
+        file_path="docs/plan.md",
+        title="Corpus sync prose",
+        resolution_status=ResolutionStatus.still_open,
+    )
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=491,
+        head_sha="abc123",
+        revision_number=3,
+        groups=[],
+        pr_active_groups=[orphan],
+        ever_inlined_fingerprints=frozenset(),
+        resolution_metrics_manifest={
+            "resolution_rate_pct": 50.0,
+            "transition_count": 1,
+            "denominator_active_prior": 2,
+            "transitions_addressed": 1,
+            "transitions_dismissed": {},
+            "still_open_count": 1,
+            "compare_failed_count": 0,
+        },
+    )
+    filtered_ctx = PublishFormatContext(
+        pull_request_id=ctx.pull_request_id,
+        pull_request_number=ctx.pull_request_number,
+        head_sha=ctx.head_sha,
+        revision_number=ctx.revision_number,
+        groups=ctx.groups,
+        resolution_metrics_manifest=ctx.resolution_metrics_manifest,
+        pr_active_groups=filter_pr_active_groups_for_summary(
+            [orphan],
+            publishable_fingerprints=set(),
+            collapsed_fingerprints=set(),
+            generation_fingerprints=set(),
+            ever_inlined_fingerprints=set(),
+        ),
+        ever_inlined_fingerprints=frozenset(),
+    )
+    assert display_still_open_prior_count(filtered_ctx) == 0
+    summary = build_publish_format_result(filtered_ctx).summary_json
+    assert summary["resolution"]["still_open"] == 0
+    assert summary["pr_active_count"] == 0
+    issue = build_pr_review_comment_fallback(filtered_ctx)
+    assert "Corpus sync prose" not in issue
+    assert "docs/plan.md" not in issue
+    assert "Still open from prior review" not in issue
+    assert "without active findings" in issue.lower()
 
 
 def test_apply_publish_summary_thread_collapse_literal_merge_replacement():

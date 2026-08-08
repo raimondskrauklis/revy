@@ -20,20 +20,26 @@ Master **blocks run** until gate green. Skipping Bugbot to save time is when cor
 |------|------|------------|
 | Before **first** push on a branch | Local Bugbot on `uncommitted changes` or `branch changes` | **No** |
 | Before **each phase** commit (LOOP) | Same | **No** |
+| Before **push** when Revy check active on PR | Revy idle — `gh pr checks`; no push while `pending`/`in_progress` | **No** |
 | After fixing Greptile (`babysit-pr`) | VALIDATE → CLOSE (re-CLOSE until clean) | **No** |
+| After fixing Revy (`babysit-revy-pr`) | Poll 120s until idle → fix → Bugbot → push → loop | **No** |
 | After `ruff`/test fixes only | Re-run Bugbot if Python changed | **No** |
 
-**Greptile on PR is post-push** dogfood — distill into findings. **Local Bugbot** stays (Cursor, pre-push). **Revy GitHub App suspended** for #50 (2026-07-27) — no webhook/autostart/token burn; re-enable at deploy milestones. **GitHub Bugbot** not on #50; operator/arch reference for RQ4+ bar.
+**Revy on PR (when app enabled):** post-push check on our own PRs — **wait for idle before the next push** so we do not stack runs or push over an in-flight review. If Revy is suspended (no check row), gate is a no-op.
+
+**Greptile on PR is post-push** dogfood — distill into findings. **Local Bugbot** stays (Cursor, pre-push). **GitHub Bugbot** not on #50; operator/arch reference for RQ4+ bar.
 
 ```text
-implement → pytest → ruff → phase gate → LOCAL BUGBOT → commit → push
+implement → pytest → ruff → phase gate → LOCAL BUGBOT → commit
+                                              │
+                    Revy idle? (if check on PR) ──no pending──► push
                                               │
                     ┌─────────────────────────┴─────────────────────────┐
                     ▼                                                   ▼
-            Greptile (PR review)                              Revy — suspended on GitHub for #50 dogfood (no new runs)
-            babysit-pr fixes valid threads                    (may lag branch — note in dogfood)
+            Greptile (PR review, optional)                    Revy (PR check, when enabled)
+            babysit-pr on user ask only                         wait idle → push fixes
                     │
-                    └── fix → ruff → VALIDATE → CLOSE (until clean) → push
+                    └── fix → ruff → VALIDATE → CLOSE → Revy idle → push
 ```
 
 ---
@@ -116,7 +122,8 @@ Patterns that worked on PR #50 (Composer-class parent):
 [ ] Phase gate green
 [ ] LOCAL BUGBOT Pass 1 — blockers fixed
 [ ] LOCAL BUGBOT Pass 2+ — Closed + Deferred tables; re-gate if blockers
-[ ] Commit: feat(review-quality): RQn …
+[ ] Revy idle on PR? (if check present — no pending/in_progress)
+[ ] Commit: feat(<program>): <PhaseId> …
 [ ] Push
 [ ] Optional: note dogfood row (Greptile/Revy when available)
 [ ] Migration pause? STOP — do not continue LOOP

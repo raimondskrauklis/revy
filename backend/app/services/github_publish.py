@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import re
 import time
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from uuid import UUID
 
 import httpx
@@ -158,7 +158,10 @@ _PUBLISH_SURFACE_REUSE_STATUSES = (
     GitHubPublishJobStatus.skipped_superseded,
 )
 
-_PUBLISH_INLINE_THREAD_REUSE_STATUSES = (GitHubPublishJobStatus.completed,)
+_PUBLISH_INLINE_THREAD_REUSE_STATUSES = (
+    GitHubPublishJobStatus.completed,
+    GitHubPublishJobStatus.failed,  # partial inline flush may checkpoint github_inline_threads
+)
 
 
 async def _skip_publish_job_at_gate(
@@ -573,6 +576,25 @@ def _load_inline_thread_map(jobs: list[GitHubPublishJobORM]) -> dict[str, int]:
     return merged
 
 
+def _load_ever_inlined_fingerprints(
+    jobs: list[GitHubPublishJobORM],
+    *,
+    current_job_summary: dict | None = None,
+) -> frozenset[str]:
+    """Fingerprints that ever received a tracked inline comment on this PR.
+
+    Sources: prior publish jobs in ``jobs`` (completed + failed for inline-thread
+    reuse) via ``deserialize_inline_thread_map``, plus the current job's
+    ``summary_json.github_inline_threads`` when retrying a partial flush.
+    """
+    fingerprints = set(_load_inline_thread_map(jobs).keys())
+    if isinstance(current_job_summary, dict):
+        inline = current_job_summary.get("github_inline_threads")
+        if isinstance(inline, dict):
+            fingerprints.update(deserialize_inline_thread_map(inline).keys())
+    return frozenset(fingerprints)
+
+
 def _load_v2_inline_thread_map(jobs: list[GitHubPublishJobORM]) -> dict[str, dict[str, int | str]]:
     merged: dict[str, dict[str, int | str]] = {}
     for prior in jobs:
@@ -610,11 +632,12 @@ def _fingerprint_thread_ids_from_index(
     return thread_ids
 
 
-async def _fetch_prior_completed_publish_jobs(
+async def _fetch_prior_reusable_publish_jobs(
     session: AsyncSession,
     *,
     pull_request_id: UUID,
 ) -> list[GitHubPublishJobORM]:
+    """Prior publish jobs whose inline thread maps may be reused (completed + failed)."""
     revision_ids = list(
         await session.scalars(
             select(GitHubPullRequestRevisionORM.id).where(
@@ -641,7 +664,7 @@ async def _load_prior_inline_thread_map(
     *,
     pull_request_id: UUID,
 ) -> dict[str, int]:
-    jobs = await _fetch_prior_completed_publish_jobs(session, pull_request_id=pull_request_id)
+    jobs = await _fetch_prior_reusable_publish_jobs(session, pull_request_id=pull_request_id)
     return _load_inline_thread_map(jobs)
 
 
@@ -1316,6 +1339,8 @@ def _load_prior_collapsed_inline_fingerprints(
 ) -> set[str]:
     collapsed = _collapsed_inline_fingerprints_from_summary(current_job_summary)
     for prior_job in jobs:
+        if prior_job.status != GitHubPublishJobStatus.completed:
+            continue
         collapsed.update(_collapsed_inline_fingerprints_from_summary(prior_job.summary_json))
     return collapsed
 
@@ -1380,7 +1405,7 @@ async def _build_publish_surface(
         review_run_id=job.review_run_id,
         pull_request_id=pull_request.id,
     )
-    prior_jobs = await _fetch_prior_completed_publish_jobs(
+    prior_jobs = await _fetch_prior_reusable_publish_jobs(
         session,
         pull_request_id=pull_request.id,
     )
@@ -1399,12 +1424,17 @@ async def _build_publish_surface(
         prior_jobs,
         current_job_summary=job.summary_json,
     )
+    ever_inlined = _load_ever_inlined_fingerprints(
+        prior_jobs,
+        current_job_summary=job.summary_json,
+    )
     generation_fingerprints = {group.fingerprint for group in groups}
     filtered_pr_active = filter_pr_active_groups_for_summary(
         pr_active_groups,
         publishable_fingerprints=publishable_fingerprints,
         collapsed_fingerprints=prior_collapsed,
         generation_fingerprints=generation_fingerprints,
+        ever_inlined_fingerprints=set(ever_inlined),
     )
     conclusion = compute_check_conclusion(groups)
     index_job = await get_latest_completed_index_job(
@@ -1425,11 +1455,10 @@ async def _build_publish_surface(
         index_mode=index_job.index_mode if index_job is not None else None,
         fallback_reason=index_job.fallback_reason if index_job is not None else None,
         resolution_metrics_manifest=resolution_metrics_manifest,
-        pr_active_groups=pr_active_groups,
+        pr_active_groups=filtered_pr_active,
+        ever_inlined_fingerprints=ever_inlined,
     )
-    formatted = await build_publish_format_result_async(
-        replace(format_ctx, pr_active_groups=filtered_pr_active)
-    )
+    formatted = await build_publish_format_result_async(format_ctx)
     summary_json = {
         **formatted.summary_json,
         "github_inline_threads": serialize_inline_thread_map(

@@ -94,6 +94,10 @@ def _reasoning_effort_for_profile(profile: str) -> str:
     return "high"
 
 
+def _max_completion_tokens() -> int:
+    return settings.revy_moonshot_max_completion_tokens
+
+
 def _chat_completion_body(
     *,
     model: str,
@@ -108,11 +112,12 @@ def _chat_completion_body(
     if json_response:
         body["response_format"] = {"type": "json_object"}
     if _uses_k3_params(model):
+        # K3 API default max_completion_tokens is 131072 when omitted — do not cap lower.
         body["reasoning_effort"] = _reasoning_effort_for_profile(profile)
         return body
     if _uses_k2_thinking_params(model):
-        # K2 thinking models share the completion budget between reasoning_content and
-        # content; omit max_completion_tokens so Moonshot applies the model default.
+        # K2 thinking: reasoning_content + content share budget; API default ~1024 when omitted.
+        body["max_completion_tokens"] = _max_completion_tokens()
         return body
     body["temperature"] = 0.2
     return body
@@ -129,12 +134,15 @@ def _extract_message_content(choice: dict, *, model: str) -> str:
     if isinstance(content, str) and content.strip():
         return content
     finish_reason = choice.get("finish_reason")
+    reasoning_content = message.get("reasoning_content")
+    reasoning_chars = len(reasoning_content) if isinstance(reasoning_content, str) else 0
     logger.error(
         "moonshot_review_empty_content",
         extra={
             "model": model,
             "finish_reason": finish_reason,
-            "has_reasoning_content": bool(message.get("reasoning_content")),
+            "has_reasoning_content": bool(reasoning_content),
+            "reasoning_content_chars": reasoning_chars,
         },
     )
     if finish_reason == "length":

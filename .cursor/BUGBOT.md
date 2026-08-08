@@ -1,6 +1,6 @@
 # Bugbot — review pipeline contract
 
-**Active program:** revy-review-dogfood — cross-repo operator trust (TenderPro #130): revision ingest idempotency, thread resolve taxonomy, resolution stamp, HEAD suppression.
+**Active program:** revy-review-dogfood — cross-repo operator trust: revision ingest idempotency, thread resolve taxonomy, resolution stamp, HEAD suppression.
 
 When reviewing **backend** changes for RR-W1, treat these as authoritative:
 
