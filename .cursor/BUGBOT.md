@@ -1,12 +1,12 @@
 # Bugbot — review pipeline contract
 
-**Active program:** revy-review-dogfood — cross-repo operator trust: revision ingest idempotency, thread resolve taxonomy, resolution stamp, HEAD suppression.
+**Active program:** pr-summary-rollup — persisted PR lifetime rollup + this-push manifest on every publish.
 
-When reviewing **backend** changes for RR-W1, treat these as authoritative:
+When reviewing **backend** changes for PSR, treat these as authoritative:
 
-- [REVY_REVIEW_DOGFOOD_EXECUTION.md](../docs/review-pipeline/revy-review-dogfood/waves/REVY_REVIEW_DOGFOOD_EXECUTION.md) — R0–R5 LOOP index
-- [REVY_REVIEW_DOGFOOD_FINDINGS.md](../docs/review-pipeline/revy-review-dogfood/REVY_REVIEW_DOGFOOD_FINDINGS.md) — RR-DG* gaps; RR-Q5 app dedupe; RR-DG4 `stale_closure_blocked`
-- [REVY_REVIEW_DOGFOOD_GENERAL_PLAN.md](../docs/review-pipeline/revy-review-dogfood/REVY_REVIEW_DOGFOOD_GENERAL_PLAN.md) — R0–R5 goals
+- [PR_SUMMARY_ROLLUP_EXECUTION.md](../docs/review-pipeline/pr-summary-rollup/waves/PR_SUMMARY_ROLLUP_EXECUTION.md) — P0–P3 LOOP index
+- [PR_SUMMARY_ROLLUP_FINDINGS.md](../docs/review-pipeline/pr-summary-rollup/PR_SUMMARY_ROLLUP_FINDINGS.md) — manifest v1, PSR-Q1–Q10, post-collapse compute locks
+- [PR_SUMMARY_ROLLUP_GENERAL_PLAN.md](../docs/review-pipeline/pr-summary-rollup/PR_SUMMARY_ROLLUP_GENERAL_PLAN.md) — P0–P3 goals
 
 **Agent workflow:**
 

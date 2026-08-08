@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import re
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from uuid import UUID
 
 import httpx
@@ -61,6 +61,11 @@ from app.services.github_pipeline_trace import (
     record_publish_pipeline_step,
     record_publish_skip_on_pipeline,
     resolve_pipeline_github_check_run_id,
+)
+from app.services.github_pr_resolution_rollup import (
+    build_pr_resolution_rollup,
+    load_prior_revision_ids_by_resolve_revision,
+    review_count_for_in_flight_publish,
 )
 from app.services.github_publish_formatter import (
     PublishFormatContext,
@@ -1236,6 +1241,7 @@ class PublishFlushResult:
     skipped_job: GitHubPublishJobORM | None = None
     published_check_summary: str | None = None
     published_issue_comment: str | None = None
+    pr_resolution_rollup: dict | None = None
 
 
 def _sort_publishable_groups(groups: list[GitHubFindingGroupORM]) -> list[GitHubFindingGroupORM]:
@@ -1322,6 +1328,52 @@ async def _load_pr_active_groups(
                 GitHubFindingGroupORM.state == GitHubFindingGroupState.active,
             )
         )
+    )
+
+
+async def _load_pr_groups_for_rollup(
+    session: AsyncSession,
+    *,
+    pull_request_id: UUID,
+) -> list[GitHubFindingGroupORM]:
+    return list(
+        await session.scalars(
+            select(GitHubFindingGroupORM).where(
+                GitHubFindingGroupORM.pull_request_id == pull_request_id,
+                GitHubFindingGroupORM.state != GitHubFindingGroupState.superseded,
+            )
+        )
+    )
+
+
+async def _build_pr_resolution_rollup_manifest(
+    session: AsyncSession,
+    *,
+    ctx: PublishFormatContext,
+    pull_request_id: UUID,
+    revision_id: UUID,
+    raw_pr_active_groups: list[GitHubFindingGroupORM],
+    publishable_fingerprints: set[str],
+    collapsed_fingerprints: set[str],
+) -> dict:
+    all_pr_groups = await _load_pr_groups_for_rollup(session, pull_request_id=pull_request_id)
+    review_count = await review_count_for_in_flight_publish(
+        session,
+        pull_request_id=pull_request_id,
+    )
+    prior_revision_ids_by_resolve_revision = await load_prior_revision_ids_by_resolve_revision(
+        session,
+        pull_request_id=pull_request_id,
+    )
+    return build_pr_resolution_rollup(
+        ctx,
+        all_pr_groups,
+        review_count=review_count,
+        computed_at_revision_id=revision_id,
+        raw_pr_active_groups=raw_pr_active_groups,
+        publishable_fingerprints=publishable_fingerprints,
+        collapsed_fingerprints=collapsed_fingerprints,
+        prior_revision_ids_by_resolve_revision=prior_revision_ids_by_resolve_revision,
     )
 
 
@@ -1670,6 +1722,42 @@ async def _flush_publish_surface(
                 thread_resolve_skipped,
             )
 
+        rollup_manifest: dict | None = None
+        if build.format_ctx is not None:
+            raw_pr_active_groups = await _load_pr_active_groups(
+                session,
+                pull_request_id=pull_request.id,
+            )
+            format_ctx_for_rollup = build.format_ctx
+            if collapsed_fingerprints:
+                generation_fingerprints = {
+                    group.fingerprint for group in build.format_ctx.groups
+                }
+                filtered_pr_active = filter_pr_active_groups_for_summary(
+                    raw_pr_active_groups,
+                    publishable_fingerprints=set(build.publishable_fingerprints),
+                    collapsed_fingerprints=effective_collapsed,
+                    generation_fingerprints=generation_fingerprints,
+                    ever_inlined_fingerprints=(
+                        set(build.format_ctx.ever_inlined_fingerprints)
+                        if build.format_ctx.ever_inlined_fingerprints is not None
+                        else None
+                    ),
+                )
+                format_ctx_for_rollup = replace(
+                    build.format_ctx,
+                    pr_active_groups=filtered_pr_active,
+                )
+            rollup_manifest = await _build_pr_resolution_rollup_manifest(
+                session,
+                ctx=format_ctx_for_rollup,
+                pull_request_id=pull_request.id,
+                revision_id=job.revision_id,
+                raw_pr_active_groups=raw_pr_active_groups,
+                publishable_fingerprints=set(build.publishable_fingerprints),
+                collapsed_fingerprints=effective_collapsed,
+            )
+
         indexed_thread_ids = _fingerprint_thread_ids_from_index(inline_threads, thread_index)
         job.summary_json = {
             **(job.summary_json or {}),
@@ -1950,6 +2038,7 @@ async def _flush_publish_surface(
     return PublishFlushResult(
         published_check_summary=check_summary_body,
         published_issue_comment=issue_comment_body,
+        pr_resolution_rollup=rollup_manifest,
     )
 
 
@@ -2066,6 +2155,13 @@ async def run_publish_job(
         )
         if flush_result.skipped_job is not None:
             return flush_result.skipped_job
+
+        if flush_result.pr_resolution_rollup is not None:
+            job.summary_json = {
+                **(job.summary_json or {}),
+                "pr_resolution_rollup": flush_result.pr_resolution_rollup,
+            }
+            pull_request.pr_resolution_rollup = flush_result.pr_resolution_rollup
 
         job.status = GitHubPublishJobStatus.completed
         await session.flush()

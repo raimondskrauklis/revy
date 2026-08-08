@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.constants.enums import GitHubPullRequestState
@@ -51,6 +52,7 @@ class GitHubPullRequestORM(TimestampedModel):
         default=False,
         server_default="false",
     )
+    pr_resolution_rollup: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
 
 class GitHubPullRequestRevisionORM(TimestampedModel):
