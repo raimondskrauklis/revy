@@ -40,7 +40,8 @@ each phase: implement → pytest gate → Bugbot → commit (push when user/LOOP
 | P3 — Surface flush | No spill on any channel | [REVIEW_GENERATION_LIFECYCLE_P3_EXECUTION.md](./REVIEW_GENERATION_LIFECYCLE_P3_EXECUTION.md) | **done** |
 | P4 — Coalesce | Autostart debounce ≤10 s | [REVIEW_GENERATION_LIFECYCLE_P4_EXECUTION.md](./REVIEW_GENERATION_LIFECYCLE_P4_EXECUTION.md) | **done** |
 | P5 — Judge + dogfood | RG-6 filter, trace, doc sync | [REVIEW_GENERATION_LIFECYCLE_P5_EXECUTION.md](./REVIEW_GENERATION_LIFECYCLE_P5_EXECUTION.md) | **done** |
+| Post-ship — Restart hotfix | RG-15 index supersede + deferred resolution | [P2 § P2.7](./REVIEW_GENERATION_LIFECYCLE_P2_EXECUTION.md#p27--post-ship-restart-hotfix-pr-89) | **in flight** — [PR #89](https://github.com/raimondskrauklis/revy/pull/89) |
 
-**Dogfood log:** create `REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md` in **P5** (two pushes ~8 s apart; inline thread count metric).
+**Dogfood log:** [REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md](./REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md) (two pushes ~8 s apart; inline thread count metric).
 
 **Peer review:** `execution-peer-review` (2026-07-28) — gaps incorporated in execution files.

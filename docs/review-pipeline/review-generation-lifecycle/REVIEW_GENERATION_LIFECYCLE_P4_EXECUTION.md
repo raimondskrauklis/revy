@@ -9,6 +9,7 @@ Phase **P4** of [REVIEW_GENERATION_LIFECYCLE_GENERAL_PLAN.md](./REVIEW_GENERATIO
 - **Default `review_coalesce_seconds=0`** — coalesce off; no behavior change until configured.
 - When `review_coalesce_seconds > 0`: only **`pull_request.synchronize` autostart** path debounced; `@revy review` (`GitHubIndexJobTriggerSource.command`) and admin manual index **bypass** coalesce.
 - Revision row created **immediately** on synchronize (`create_revision=True` unchanged).
+- Resolution pairing (`apply_resolution_for_synchronize`) is a **separate** async task — coalesce debounces only `maybe_enqueue_pipeline_for_revision`, not resolution (RG-15).
 - New Celery task `schedule_autostart_pipeline_for_revision` with `apply_async(countdown=review_coalesce_seconds, kwargs={revision_id, token})`.
 - Token = `revision_id` string; at fire time re-check `is_authoritative_for_pull_request_head` — stale task **no-ops** (v1 cancel mechanism).
 - **v1:** no `celery_task_id` column on revision; no Redis — each synchronize schedules a new delayed task; only the task whose `revision_id` is still authoritative enqueues.

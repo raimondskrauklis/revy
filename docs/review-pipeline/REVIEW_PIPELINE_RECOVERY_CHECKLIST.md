@@ -71,11 +71,12 @@
 - [ ] Staging smoke § post–review-quality re-run after deploy
 - [ ] Merge `docs/agent-work` → `main` (with doc sync bundle)
 
-### Track J — Generation lifecycle — **shipped** (PR #54, branch `feat/review-generation-lifecycle`)
+### Track J — Generation lifecycle — **shipped** (PR #54 on `main`; restart hotfix PR #89)
 
 - [x] P0–P5 LOOP — HEAD gate, supersede, surface flush, coalesce, judge publish gate, trace fields
-- [ ] Merge PR [#54](https://github.com/raimondskrauklis/revy/pull/54) → `main`
-- [ ] Staging dogfood — two pushes ~8 s apart ([dogfood log](./review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md))
+- [x] Merge PR [#54](https://github.com/raimondskrauklis/revy/pull/54) → `main`
+- [ ] Merge PR [#89](https://github.com/raimondskrauklis/revy/pull/89) — index-job supersede + deferred resolution (RG-15)
+- [ ] Staging dogfood — push during run + `@revy review` restart ([P2 § P2.7](./review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_P2_EXECUTION.md#p27--post-ship-restart-hotfix-pr-89))
 - [ ] Optional tag `review-generation-lifecycle-v1` on `main`
 
 ### Track L — Judge JSON contract — **merged** (#58) · staging validation in progress

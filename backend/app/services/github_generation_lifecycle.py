@@ -5,6 +5,12 @@ Trace field contract (manifest keys — wired in P5):
 - ``generation_superseded_at`` — ISO timestamp when a review run is superseded
 - ``publish_skipped_not_head`` — publish skipped because revision is not PR HEAD
 
+Supersede scope (P2 + PR #89):
+- Review runs: ``GitHubReviewRunStatus.superseded``
+- Index jobs: ``GitHubIndexJobStatus.failed`` with error ``Superseded by newer commit``
+- On new revision: older revision review runs + index jobs
+- On same HEAD (``@revy review`` or same-SHA ``synchronize``): active review runs + index jobs
+
 Smart-trigger guard (do not supersede / coalesce on these paths):
 | Event | Path | Behavior |
 | Bot ``@revy review`` comment | ``apply_issue_comment_webhook_event`` | ignored when ``login == revy_bot_login`` |

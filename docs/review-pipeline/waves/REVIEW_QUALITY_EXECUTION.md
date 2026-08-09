@@ -241,10 +241,10 @@ cd backend && pipenv run pytest \
    - `judge_dismissed` if `state=resolved`
    - `addressed` if compare diff touches `file_path` + line region (latest finding lines)
    - else `still_open`
-2. **Hook** — `apply_resolution_status_for_synchronize` in `github_pull_requests.py` on `synchronize` action after new revision flush (inside webhook handler, before worker enqueues pipeline via `maybe_enqueue_pipeline_for_revision`). Requires compare from RQ1.
+2. **Hook** — `apply_resolution_status_for_synchronize` in `github_resolution_metrics.py`; scheduled from `process_github_event` on `synchronize` via Celery task `apply_resolution_for_synchronize` (background — does **not** block pipeline enqueue; RG-15). Requires compare from RQ1.
 3. **G9 input** — counts from `resolution_status`; G8 `summary_json` prior delta is **RQ7** concern (load prior publish job for same PR).
 
-**Files:** `services/github_resolution_metrics.py`, `services/github_pull_requests.py`, `tests/unit/test_github_resolution_metrics.py`
+**Files:** `services/github_resolution_metrics.py`, `workers/github_tasks.py` (`apply_resolution_for_synchronize`), `tests/unit/test_github_resolution_metrics.py`
 
 **Deliverable:**
 
