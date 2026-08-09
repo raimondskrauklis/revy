@@ -555,34 +555,50 @@ def _section_end_marker_matches(tail: str, index: int, marker: str) -> bool:
     if marker.endswith("**Since last push:**"):
         return True
     if marker == "\n### Resolution metrics":
-        return next_char in " (\n\r"
+        if next_char in "\n\r":
+            return True
+        return tail.startswith(" (this push)", end)
     if marker in ("\n### Files needing attention", "\n### This generation"):
         return next_char in "\n\r"
     return next_char in "\n\r"
 
 
+def _at_line_start(text: str, index: int) -> bool:
+    return index <= 0 or text[index - 1] in "\n\r"
+
+
 def _pr_summary_section_end_offset(tail: str) -> int:
-    """Offset where lifetime block ends; ignores section markers inside <details>."""
+    """Offset where lifetime block ends; ignores markers inside <details> or fences."""
     details_depth = 0
+    fence_depth = 0
     tail_lower = tail.lower()
     i = 0
     while i < len(tail):
-        if details_depth == 0:
+        if fence_depth == 0 and details_depth == 0:
             for marker in _PR_SUMMARY_SECTION_END_MARKERS:
                 if _section_end_marker_matches(tail, i, marker):
                     return i
-        if tail_lower.startswith("<details", i):
-            gt = tail.find(">", i)
-            if gt < 0:
-                i += 1
+        if _at_line_start(tail, i) and tail.startswith("```", i):
+            line_end = tail.find("\n", i)
+            if line_end < 0:
+                line_end = len(tail)
+            if tail[i:line_end].strip().startswith("```"):
+                fence_depth ^= 1
+                i = line_end
                 continue
-            details_depth += 1
-            i = gt + 1
-            continue
-        if tail_lower.startswith("</details>", i):
-            details_depth = max(0, details_depth - 1)
-            i += len("</details>")
-            continue
+        if fence_depth == 0:
+            if tail_lower.startswith("<details", i):
+                gt = tail.find(">", i)
+                if gt < 0:
+                    i += 1
+                    continue
+                details_depth += 1
+                i = gt + 1
+                continue
+            if tail_lower.startswith("</details>", i):
+                details_depth = max(0, details_depth - 1)
+                i += len("</details>")
+                continue
         i += 1
     return len(tail)
 
@@ -874,6 +890,8 @@ def _replace_markdown_section(
     start_marker: str,
     new_block: str,
 ) -> str:
+    if start_marker == _PR_SUMMARY_HEADING:
+        return _replace_pr_summary_section(markdown, new_block)
     start = markdown.find(start_marker)
     if start < 0:
         return markdown

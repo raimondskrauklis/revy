@@ -1520,6 +1520,43 @@ def test_splice_ignores_pr_summary_heading_mention_in_prose():
     )
 
 
+def test_replace_pr_summary_section_ignores_details_in_code_fence():
+    old = (
+        "### PR summary (lifetime)\n\n"
+        "```\n"
+        "<details><summary>x</summary></details>\n"
+        "```\n\n"
+        "**Since last push:** delta\n"
+    )
+    result = _replace_pr_summary_section(old, "NEW_BLOCK")
+    assert result == "NEW_BLOCK\n\n**Since last push:** delta\n"
+
+
+def test_replace_pr_summary_section_ignores_resolution_metrics_explained_in_disclosure():
+    old = (
+        "### PR summary (lifetime)\n\n"
+        "| | Count |\n"
+        "Note ### Resolution metrics explained in docs.\n\n"
+        "**Since last push:** delta\n"
+    )
+    result = _replace_pr_summary_section(old, "NEW_BLOCK")
+    assert result == "NEW_BLOCK\n\n**Since last push:** delta\n"
+
+
+def test_replace_markdown_section_delegates_pr_summary_to_dedicated_splice():
+    from app.services.github_publish_formatter import _replace_markdown_section
+
+    old = (
+        "### PR summary (lifetime)\n\n"
+        "<details><summary>X</summary>\n\n"
+        "inner\n\n"
+        "</details>\n\n"
+        "**Since last push:** delta\n"
+    )
+    result = _replace_markdown_section(old, "### PR summary (lifetime)", "NEW_BLOCK")
+    assert result == "NEW_BLOCK\n\n**Since last push:** delta\n"
+
+
 def test_replace_pr_summary_section_ignores_generation_findings_heading_suffix():
     old = (
         "### PR summary (lifetime)\n\n"
