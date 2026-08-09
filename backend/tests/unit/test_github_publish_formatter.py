@@ -1502,12 +1502,26 @@ def test_replace_pr_summary_section_ignores_generation_findings_heading_suffix()
     assert result == "NEW_BLOCK\n### This generation\n| row |\n"
 
 
+def test_splice_deterministic_pr_summary_block_inserts_before_resolution_metrics_alias():
+    ctx = _ctx_with_rollup([_group()])
+    body = "## Revy code review\n\n### Resolution metrics (this push)\n| x |\n"
+    result = splice_deterministic_pr_summary_block(body, ctx)
+    assert result.index("### PR summary (lifetime)") < result.index("### Resolution metrics")
+
+
 def test_splice_deterministic_pr_summary_block_inserts_before_footer():
     ctx = _ctx_with_rollup([_group()])
-    body = "## Revy code review\n\nNarrative only.\n\n<details><summary>Review metadata</summary></details>"
+    body = (
+        "## Revy code review\n\n"
+        "Narrative only.\n\n"
+        "<details><summary>Earlier details</summary></details>\n\n"
+        "<details><summary>Review metadata</summary></details>"
+    )
     result = splice_deterministic_pr_summary_block(body, ctx)
-    assert result.index("### PR summary (lifetime)") < result.index("<details>")
-    assert result.index("Narrative only.") < result.index("### PR summary (lifetime)")
+    assert result.index("### PR summary (lifetime)") < result.index(
+        "<details><summary>Review metadata</summary>"
+    )
+    assert result.index("Earlier details") < result.index("### PR summary (lifetime)")
 
 
 def test_splice_deterministic_pr_summary_block_idempotent_with_details():

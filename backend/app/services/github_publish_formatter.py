@@ -512,7 +512,13 @@ def _optional_lifetime_rate_pct(value: object) -> float | None:
     return None
 
 
-def _find_splice_marker(markdown: str, marker: str, start: int = 0) -> int:
+def _find_splice_marker(
+    markdown: str,
+    marker: str,
+    start: int = 0,
+    *,
+    heading_suffixes: tuple[str, ...] = (),
+) -> int:
     """Find marker at line start; heading markers must not prefix a longer heading."""
     require_heading_eol = marker.startswith("###")
     while True:
@@ -524,7 +530,12 @@ def _find_splice_marker(markdown: str, marker: str, start: int = 0) -> int:
             continue
         if require_heading_eol:
             end = idx + len(marker)
-            if end < len(markdown) and markdown[end] not in "\n\r":
+            remainder = markdown[end:]
+            if (
+                remainder
+                and remainder[0] not in "\n\r"
+                and not any(remainder.startswith(suffix) for suffix in heading_suffixes)
+            ):
                 start = idx + 1
                 continue
         return idx
@@ -736,8 +747,18 @@ def splice_deterministic_pr_summary_block(markdown: str, ctx: PublishFormatConte
     block = format_pr_resolution_rollup_block(rollup)
     if _PR_SUMMARY_HEADING in markdown:
         return _replace_pr_summary_section(markdown, block)
-    for marker in ("**Since last push:**", "### Resolution metrics (this push)"):
+    for marker in ("**Since last push:**",):
         idx = _find_splice_marker(markdown, marker)
+        if idx >= 0:
+            prefix = markdown[:idx].rstrip()
+            suffix = markdown[idx:]
+            return f"{prefix}\n\n{block}\n\n{suffix}"
+    for marker in ("### Resolution metrics (this push)", "### Resolution metrics"):
+        idx = _find_splice_marker(
+            markdown,
+            marker,
+            heading_suffixes=(" (this push)",) if marker == "### Resolution metrics" else (),
+        )
         if idx >= 0:
             prefix = markdown[:idx].rstrip()
             suffix = markdown[idx:]
@@ -748,8 +769,8 @@ def splice_deterministic_pr_summary_block(markdown: str, ctx: PublishFormatConte
             prefix = markdown[:idx].rstrip()
             suffix = markdown[idx:]
             return f"{prefix}\n\n{block}\n\n{suffix}"
-    for footer_marker in ("\n<details>", "\n---\n*"):
-        idx = markdown.find(footer_marker)
+    for footer_marker in ("\n---\n*", "\n<details><summary>Review metadata</summary>"):
+        idx = markdown.rfind(footer_marker)
         if idx >= 0:
             return f"{markdown[:idx].rstrip()}\n\n{block}\n\n{markdown[idx:].lstrip()}"
     return f"{markdown.rstrip()}\n\n{block}"
