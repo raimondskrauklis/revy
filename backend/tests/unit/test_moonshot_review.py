@@ -81,6 +81,11 @@ def test_parse_review_json_invalid_raises():
         parse_review_json(json.dumps([]))
 
 
+def test_parse_review_json_rejects_non_list_findings():
+    with pytest.raises(ValueError, match="review_json_findings_not_list"):
+        parse_review_json(json.dumps({"findings": {"title": "x"}}))
+
+
 def test_parse_review_json_strips_markdown_fence():
     raw = """```json
 {"findings": [{"title": "x", "severity": "info", "category": "other", "message": "m"}]}

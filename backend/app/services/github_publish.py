@@ -2123,15 +2123,6 @@ async def run_publish_job(
     job.error_message = None
     await session.flush()
 
-    from app.services.github_resolution_metrics import apply_resolution_status_for_synchronize
-
-    await apply_resolution_status_for_synchronize(
-        session,
-        pull_request=pull_request,
-        new_revision=revision,
-    )
-    await session.flush()
-
     retry_posted_inline = deserialize_inline_thread_map(
         (job.summary_json or {}).get("github_inline_threads")
     )
