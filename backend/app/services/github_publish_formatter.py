@@ -533,6 +533,13 @@ def _canonical_newlines(markdown: str) -> str:
     return markdown.replace("\r\n", "\n").replace("\r", "\n")
 
 
+def _heading_suffix_matches(remainder: str, suffix: str) -> bool:
+    if not remainder.startswith(suffix):
+        return False
+    after = remainder[len(suffix) :]
+    return not after or after[0] in "\n\r"
+
+
 def _find_splice_marker(
     markdown: str,
     marker: str,
@@ -555,7 +562,10 @@ def _find_splice_marker(
             if (
                 remainder
                 and remainder[0] not in "\n\r"
-                and not any(remainder.startswith(suffix) for suffix in heading_suffixes)
+                and not any(
+                    _heading_suffix_matches(remainder, suffix)
+                    for suffix in heading_suffixes
+                )
             ):
                 start = idx + 1
                 continue
@@ -574,7 +584,7 @@ def _section_end_marker_matches(tail: str, index: int, marker: str) -> bool:
     if marker == "\n### Resolution metrics":
         if next_char in "\n\r":
             return True
-        return tail.startswith(" (this push)", end)
+        return _heading_suffix_matches(tail[end:], " (this push)")
     if marker in ("\n### Files needing attention", "\n### This generation"):
         return next_char in "\n\r"
     return next_char in "\n\r"
@@ -586,6 +596,7 @@ def _at_line_start(text: str, index: int) -> bool:
 
 def _pr_summary_section_end_offset(tail: str) -> int:
     """Offset where lifetime block ends; ignores markers inside <details> or fences."""
+    footer_idx = _find_review_footer_insert_index(tail)
     details_depth = 0
     fence_depth = 0
     tail_lower = tail.lower()
@@ -594,6 +605,8 @@ def _pr_summary_section_end_offset(tail: str) -> int:
         if fence_depth == 0 and details_depth == 0:
             for marker in _PR_SUMMARY_SECTION_END_MARKERS:
                 if _section_end_marker_matches(tail, i, marker):
+                    if footer_idx >= 0:
+                        return min(i, footer_idx)
                     return i
         if _at_line_start(tail, i) and tail.startswith("```", i):
             line_end = tail.find("\n", i)
@@ -617,6 +630,8 @@ def _pr_summary_section_end_offset(tail: str) -> int:
                 i += len("</details>")
                 continue
         i += 1
+    if footer_idx >= 0:
+        return footer_idx
     return len(tail)
 
 

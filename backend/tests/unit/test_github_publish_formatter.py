@@ -1569,6 +1569,33 @@ def test_replace_pr_summary_section_ignores_generation_findings_heading_suffix()
     assert result == "NEW_BLOCK\n### This generation\n| row |\n"
 
 
+def test_replace_pr_summary_section_preserves_review_footer():
+    old = (
+        "### PR summary (lifetime)\n\n"
+        "| | Count |\n"
+        "|--|--:|\n"
+        "| Raised on this PR | 1 |\n\n"
+        "<details><summary>Review metadata</summary></details>\n\n"
+        "---\n"
+        "* Revision: 2 · Head: abc1234*"
+    )
+    result = _replace_pr_summary_section(old, "NEW_BLOCK")
+    assert result.startswith("NEW_BLOCK\n")
+    assert "<details><summary>Review metadata</summary>" in result
+    assert "* Revision: 2 · Head: abc1234*" in result
+
+
+def test_replace_pr_summary_section_ignores_resolution_metrics_explained_heading():
+    old = (
+        "### PR summary (lifetime)\n\n"
+        "### Resolution metrics (this push) explained\n\n"
+        "### Resolution metrics (this push)\n| x |\n"
+    )
+    result = _replace_pr_summary_section(old, "NEW_BLOCK")
+    assert "explained" not in result
+    assert result.endswith("NEW_BLOCK\n### Resolution metrics (this push)\n| x |\n")
+
+
 def test_format_pr_resolution_rollup_block_tolerates_non_numeric_filter_snapshot():
     block = format_pr_resolution_rollup_block(
         _rollup(
