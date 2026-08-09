@@ -443,19 +443,23 @@ def test_apply_resolution_for_synchronize_enqueues_follow_up_index_job():
 
     with patch("app.workers.github_tasks.get_db_context", return_value=_db_context(session)):
         with patch(
-            "app.workers.github_tasks.apply_resolution_status_for_synchronize",
-            AsyncMock(),
+            "app.workers.github_tasks.is_authoritative_for_pull_request_head",
+            AsyncMock(return_value=True),
         ):
-            with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
-                github_tasks.apply_resolution_for_synchronize.run(
-                    str(revision_id),
-                    index_job_id=str(job_id),
-                )
+            with patch(
+                "app.workers.github_tasks.apply_resolution_status_for_synchronize",
+                AsyncMock(),
+            ):
+                with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
+                    github_tasks.apply_resolution_for_synchronize.run(
+                        str(revision_id),
+                        index_job_id=str(job_id),
+                    )
 
     enqueue_mock.assert_called_once_with(job_id)
 
 
-def test_apply_resolution_for_synchronize_runs_for_stale_revision():
+def test_apply_resolution_for_synchronize_skips_stale_revision():
     revision_id = uuid.uuid4()
     revision = MagicMock()
     revision.pull_request_id = uuid.uuid4()
@@ -466,12 +470,18 @@ def test_apply_resolution_for_synchronize_runs_for_stale_revision():
 
     with patch("app.workers.github_tasks.get_db_context", return_value=_db_context(session)):
         with patch(
-            "app.workers.github_tasks.apply_resolution_status_for_synchronize",
-            AsyncMock(),
-        ) as resolution_mock:
-            github_tasks.apply_resolution_for_synchronize.run(str(revision_id))
+            "app.workers.github_tasks.is_authoritative_for_pull_request_head",
+            AsyncMock(return_value=False),
+        ):
+            with patch(
+                "app.workers.github_tasks.apply_resolution_status_for_synchronize",
+                AsyncMock(),
+            ) as resolution_mock:
+                with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
+                    github_tasks.apply_resolution_for_synchronize.run(str(revision_id))
 
-    resolution_mock.assert_awaited_once()
+    resolution_mock.assert_not_awaited()
+    enqueue_mock.assert_not_called()
 
 
 def test_apply_resolution_for_synchronize_skips_retry_on_permanent_not_found():
@@ -480,18 +490,22 @@ def test_apply_resolution_for_synchronize_skips_retry_on_permanent_not_found():
     session.get = AsyncMock(return_value=None)
 
     with patch("app.workers.github_tasks.get_db_context", return_value=_db_context(session)):
-        with patch.object(
-            github_tasks.apply_resolution_for_synchronize,
-            "retry",
-            side_effect=AssertionError("retry should not be called"),
+        with patch(
+            "app.workers.github_tasks.is_authoritative_for_pull_request_head",
+            AsyncMock(return_value=True),
         ):
-            with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
-                github_tasks.apply_resolution_for_synchronize.run(
-                    str(revision_id),
-                    index_job_id=str(uuid.uuid4()),
-                )
+            with patch.object(
+                github_tasks.apply_resolution_for_synchronize,
+                "retry",
+                side_effect=AssertionError("retry should not be called"),
+            ):
+                with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
+                    github_tasks.apply_resolution_for_synchronize.run(
+                        str(revision_id),
+                        index_job_id=str(uuid.uuid4()),
+                    )
 
-    enqueue_mock.assert_called_once()
+    enqueue_mock.assert_not_called()
 
 
 def test_apply_resolution_for_synchronize_does_not_enqueue_on_celery_retry():

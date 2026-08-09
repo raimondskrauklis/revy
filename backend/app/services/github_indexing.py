@@ -399,6 +399,7 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
         )
         return job
 
+    await session.flush()
     await session.refresh(job)
 
     revision = await session.get(GitHubPullRequestRevisionORM, job.revision_id)

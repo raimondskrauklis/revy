@@ -75,16 +75,24 @@ def schedule_autostart_pipeline_for_revision(revision_id: str, workspace_id: str
     max_retries=3,
 )
 def apply_resolution_for_synchronize(self, revision_id: str, index_job_id: str | None = None) -> None:
-    async def _run() -> None:
+    follow_up_index_job_id = UUID(index_job_id) if index_job_id is not None else None
+
+    async def _run() -> str:
         revision_uuid = UUID(revision_id)
         async with get_db_context() as session:
+            if not await is_authoritative_for_pull_request_head(session, revision_id=revision_uuid):
+                logger.info(
+                    "resolution_synchronize_stale_revision",
+                    extra={"revision_id": revision_id},
+                )
+                return "skipped_stale"
             revision = await session.get(GitHubPullRequestRevisionORM, revision_uuid)
             if revision is None:
                 logger.warning(
                     "resolution_synchronize_task_permanent_failure",
                     extra={"revision_id": revision_id, "error": "resolution_revision_not_found"},
                 )
-                return
+                return "skipped_permanent"
             pull_request = await session.get(GitHubPullRequestORM, revision.pull_request_id)
             if pull_request is None:
                 logger.warning(
@@ -94,19 +102,18 @@ def apply_resolution_for_synchronize(self, revision_id: str, index_job_id: str |
                         "error": "resolution_pull_request_not_found",
                     },
                 )
-                return
+                return "skipped_permanent"
             await apply_resolution_status_for_synchronize(
                 session,
                 pull_request=pull_request,
                 new_revision=revision,
             )
             await session.commit()
+        return "applied"
 
-    enqueue_follow_up = False
     fatal_exc: Exception | None = None
     try:
-        run_worker_async(_run())
-        enqueue_follow_up = True
+        outcome = run_worker_async(_run())
     except Retry:
         raise
     except Exception as exc:
@@ -116,12 +123,18 @@ def apply_resolution_for_synchronize(self, revision_id: str, index_job_id: str |
         )
         if self.request.retries < self.max_retries:
             raise self.retry(exc=exc, countdown=15 * (2**self.request.retries)) from exc
-        enqueue_follow_up = True
+        if follow_up_index_job_id is not None:
+            enqueue_index_job(follow_up_index_job_id)
         fatal_exc = exc
-    if enqueue_follow_up and index_job_id is not None:
-        enqueue_index_job(UUID(index_job_id))
     if fatal_exc is not None:
         raise fatal_exc
+    if outcome == "applied" and follow_up_index_job_id is not None:
+        enqueue_index_job(follow_up_index_job_id)
+    elif outcome != "applied":
+        logger.info(
+            "resolution_synchronize_task_skipped",
+            extra={"revision_id": revision_id, "outcome": outcome},
+        )
 
 
 @celery_app.task(name="app.workers.github_tasks.process_github_event", bind=True, max_retries=3)
