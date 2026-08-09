@@ -67,13 +67,26 @@ def schedule_autostart_pipeline_for_revision(revision_id: str, workspace_id: str
     run_worker_async(_run())
 
 
-@celery_app.task(name="app.workers.github_tasks.apply_resolution_for_synchronize")
-def apply_resolution_for_synchronize(revision_id: str) -> None:
+@celery_app.task(
+    name="app.workers.github_tasks.apply_resolution_for_synchronize",
+    bind=True,
+    max_retries=3,
+)
+def apply_resolution_for_synchronize(self, revision_id: str) -> None:
     async def _run() -> None:
         revision_uuid = UUID(revision_id)
         async with get_db_context() as session:
             revision = await session.get(GitHubPullRequestRevisionORM, revision_uuid)
             if revision is None:
+                return
+            if not await is_authoritative_for_pull_request_head(
+                session,
+                revision_id=revision_uuid,
+            ):
+                logger.info(
+                    "resolution_synchronize_skipped_not_authoritative",
+                    extra={"revision_id": revision_id},
+                )
                 return
             pull_request = await session.get(GitHubPullRequestORM, revision.pull_request_id)
             if pull_request is None:
@@ -84,7 +97,16 @@ def apply_resolution_for_synchronize(revision_id: str) -> None:
                 new_revision=revision,
             )
 
-    run_worker_async(_run())
+    try:
+        run_worker_async(_run())
+    except Exception as exc:
+        logger.error(
+            "resolution_synchronize_task_failed",
+            extra={"revision_id": revision_id, "error": str(exc), "retries": self.request.retries},
+        )
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=exc, countdown=15 * (2**self.request.retries)) from exc
+        raise
 
 
 @celery_app.task(name="app.workers.github_tasks.process_github_event", bind=True, max_retries=3)
