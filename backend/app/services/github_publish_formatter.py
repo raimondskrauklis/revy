@@ -495,10 +495,27 @@ _HIDDEN_FILTER_KEYS = (
 )
 
 
+def _safe_snapshot_int(value: object) -> int:
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return 0
+    return 0
+
+
 def _hidden_total_from_filter_snapshot(filter_snapshot: object) -> int:
     if not isinstance(filter_snapshot, dict):
         return 0
-    return sum(int(filter_snapshot.get(key) or 0) for key, _ in _HIDDEN_FILTER_KEYS)
+    return sum(
+        _safe_snapshot_int(filter_snapshot.get(key)) for key, _ in _HIDDEN_FILTER_KEYS
+    )
 
 
 def _optional_lifetime_rate_pct(value: object) -> float | None:
@@ -638,7 +655,7 @@ def _format_pr_summary_details_block(
     if hidden_total > 0 and isinstance(filter_snapshot, dict):
         lines.append("**Hidden from tables** (no open GitHub thread to act on)")
         for key, label in _HIDDEN_FILTER_KEYS:
-            count = int(filter_snapshot.get(key) or 0)
+            count = _safe_snapshot_int(filter_snapshot.get(key))
             if count:
                 lines.append(f"- {label}: {count}")
         lines.append("")
@@ -652,7 +669,7 @@ def _format_pr_summary_details_block(
             f"display open ({still_open}) + hidden ({hidden_total})."
         )
     elif isinstance(filter_snapshot, dict):
-        raw_active = int(filter_snapshot.get("raw_active_before_filters") or 0)
+        raw_active = _safe_snapshot_int(filter_snapshot.get("raw_active_before_filters"))
         lines.append(
             f"Reconciliation: {raised} raised; {resolved} resolved; "
             f"{still_open} display open; {hidden_total} hidden."
@@ -742,7 +759,7 @@ def _find_review_footer_insert_index(markdown: str) -> int:
         tail = text[footer_idx:]
         if "Revision:" in tail and tail.rstrip().endswith("*"):
             candidates.append(footer_idx)
-    return max(candidates) if candidates else -1
+    return min(candidates) if candidates else -1
 
 
 def _replace_pr_summary_section(markdown: str, new_block: str) -> str:

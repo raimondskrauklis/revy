@@ -1569,6 +1569,34 @@ def test_replace_pr_summary_section_ignores_generation_findings_heading_suffix()
     assert result == "NEW_BLOCK\n### This generation\n| row |\n"
 
 
+def test_format_pr_resolution_rollup_block_tolerates_non_numeric_filter_snapshot():
+    block = format_pr_resolution_rollup_block(
+        _rollup(
+            filter_snapshot={
+                "collapsed_hidden": "bad",
+                "orphan_never_inlined_hidden": 2,
+                "compare_failed_hidden": None,
+            }
+        )
+    )
+    assert "Hidden from tables | 2 |" in block
+
+
+def test_splice_inserts_before_earliest_footer_marker():
+    ctx = _ctx_with_rollup([_group()])
+    body = (
+        "## Revy code review\n\n"
+        "Narrative only.\n\n"
+        "<details><summary>Review metadata</summary></details>\n\n"
+        "---\n"
+        "* Revision: 2 · Head: abc1234*"
+    )
+    result = splice_deterministic_pr_summary_block(body, ctx)
+    pr_idx = result.index("### PR summary (lifetime)")
+    assert pr_idx < result.index("<details><summary>Review metadata</summary>")
+    assert pr_idx < result.index("* Revision:")
+
+
 def test_splice_deterministic_pr_summary_block_handles_crlf():
     ctx = _ctx_with_rollup([_group()])
     body = "## Revy code review\r\n\r\n**Since last push:** delta\r\n"
