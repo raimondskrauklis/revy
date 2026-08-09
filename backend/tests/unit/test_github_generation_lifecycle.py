@@ -225,7 +225,7 @@ async def test_supersede_stale_generations_for_new_revision_finalizes_pipelines(
     finalize_mock.assert_awaited_once_with(
         session,
         pipeline_run_id=pipeline_run_id,
-        summary="Superseded by newer commit",
+        summary="Superseded by newer run",
     )
 
 
@@ -323,7 +323,7 @@ async def test_supersede_active_generations_for_revision_supersedes_index_jobs()
     finalize_mock.assert_awaited_once_with(
         session,
         pipeline_run_id=pipeline_run_id,
-        summary="Superseded by newer commit",
+        summary="Superseded by newer run",
     )
 
 

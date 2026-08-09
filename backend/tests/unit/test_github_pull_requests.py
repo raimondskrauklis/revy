@@ -227,7 +227,7 @@ async def test_apply_pull_request_synchronize_appends_revision():
     existing.id = uuid.uuid4()
 
     session = _session_with_nested()
-    session.scalar = AsyncMock(side_effect=[installation, repository, existing, None, None])
+    session.scalar = AsyncMock(side_effect=[installation, repository, existing, existing, None, None])
 
     async def _session_get(_model, revision_id):
         revision = GitHubPullRequestRevisionORM(
@@ -257,8 +257,10 @@ async def test_apply_pull_request_synchronize_appends_revision():
             )
 
     assert result is not None
+    assert result.new_revision is True
+    assert result.pipeline_retrigger is True
     supersede_stale_mock.assert_awaited_once()
-    supersede_active_mock.assert_awaited_once()
+    supersede_active_mock.assert_not_awaited()
 
     assert existing.revision_count == 2
     assert existing.head_sha == "newsha"
@@ -286,7 +288,7 @@ async def test_apply_pull_request_synchronize_updates_is_draft():
     existing.id = uuid.uuid4()
 
     session = _session_with_nested()
-    session.scalar = AsyncMock(side_effect=[installation, repository, existing, None, None])
+    session.scalar = AsyncMock(side_effect=[installation, repository, existing, existing, None, None])
 
     async def _session_get(_model, revision_id):
         revision = GitHubPullRequestRevisionORM(
@@ -347,7 +349,7 @@ async def test_apply_pull_request_synchronize_same_sha_skips_revision():
 
     session = AsyncMock()
     session.scalar = AsyncMock(
-        side_effect=[installation, repository, existing, existing_revision],
+        side_effect=[installation, repository, existing, existing, existing_revision],
     )
     session.get = AsyncMock(return_value=existing_revision)
     session.add = MagicMock()
@@ -361,11 +363,14 @@ async def test_apply_pull_request_synchronize_same_sha_skips_revision():
             "app.services.github_pull_requests.supersede_active_generations_for_revision",
             AsyncMock(),
         ):
-            await apply_pull_request_webhook_event(
+            result = await apply_pull_request_webhook_event(
                 session,
                 _pull_request_payload(action="synchronize", head_sha="same-sha"),
             )
 
+    assert result is not None
+    assert result.new_revision is False
+    assert result.pipeline_retrigger is True
     assert existing.revision_count == 1
     session.add.assert_not_called()
     session.flush.assert_awaited()
@@ -391,7 +396,7 @@ async def test_apply_pull_request_synchronize_same_sha_heals_missing_revision():
     existing.id = uuid.uuid4()
 
     session = _session_with_nested()
-    session.scalar = AsyncMock(side_effect=[installation, repository, existing, None, None])
+    session.scalar = AsyncMock(side_effect=[installation, repository, existing, existing, None, None])
 
     async def _session_get(_model, revision_id):
         revision = GitHubPullRequestRevisionORM(
@@ -421,10 +426,11 @@ async def test_apply_pull_request_synchronize_same_sha_heals_missing_revision():
             )
 
     assert result is not None
+    assert result.new_revision is True
     assert existing.revision_count == 2
     session.add.assert_called_once()
     supersede_stale_mock.assert_awaited_once()
-    supersede_active_mock.assert_awaited_once()
+    supersede_active_mock.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -665,7 +671,7 @@ async def test_synchronize_returns_existing_revision_when_head_sha_row_exists():
 
     session = _session_with_nested()
     session.scalar = AsyncMock(
-        side_effect=[installation, repository, existing, prior_revision],
+        side_effect=[installation, repository, existing, existing, prior_revision],
     )
     session.get = AsyncMock(return_value=prior_revision)
     session.add = MagicMock()
@@ -686,6 +692,8 @@ async def test_synchronize_returns_existing_revision_when_head_sha_row_exists():
 
     assert result is not None
     assert result.revision_id == prior_revision.id
+    assert result.new_revision is False
+    assert result.pipeline_retrigger is True
     assert existing.revision_count == 2
     session.add.assert_not_called()
     supersede_stale_mock.assert_awaited_once()

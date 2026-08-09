@@ -63,6 +63,7 @@ class PullRequestWebhookResult:
     revision_id: UUID
     new_revision: bool
     action: str
+    pipeline_retrigger: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -450,9 +451,16 @@ async def apply_pull_request_webhook_event(
             revision_id=new_revision.id,
             new_revision=True,
             action=action,
+            pipeline_retrigger=True,
         )
 
     if action == "synchronize":
+        existing = await _find_pull_request(
+            session,
+            repository_id=repository.id,
+            github_pull_request_id=fields["github_pull_request_id"],
+        )
+        prior_revision_count = existing.revision_count if existing is not None else 0
         pull_request, new_revision = await _upsert_pull_request(
             session,
             repository=repository,
@@ -473,15 +481,21 @@ async def apply_pull_request_webhook_event(
             pull_request_id=pull_request.id,
             keep_revision_id=new_revision.id,
         )
-        await supersede_active_generations_for_revision(
-            session,
-            revision_id=bound_revision.id,
+        created_new_revision = (
+            prior_revision_count > 0
+            and pull_request.revision_count > prior_revision_count
         )
+        if not created_new_revision:
+            await supersede_active_generations_for_revision(
+                session,
+                revision_id=bound_revision.id,
+            )
         return PullRequestWebhookResult(
             workspace_id=repository.workspace_id,
             revision_id=new_revision.id,
-            new_revision=True,
+            new_revision=created_new_revision,
             action=action,
+            pipeline_retrigger=True,
         )
 
     if action == "edited":

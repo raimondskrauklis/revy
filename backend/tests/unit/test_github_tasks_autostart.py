@@ -197,6 +197,42 @@ def test_process_github_event_enqueues_pipeline_on_pull_request_synchronize():
     enqueue_mock.assert_called_once_with(job_id)
 
 
+def test_process_github_event_enqueues_on_same_sha_synchronize_retrigger():
+    workspace_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    job_id = uuid.uuid4()
+    delivery = _delivery(event_type="pull_request")
+    session = AsyncMock()
+    session.get = AsyncMock(return_value=delivery)
+
+    result = PullRequestWebhookResult(
+        workspace_id=workspace_id,
+        revision_id=revision_id,
+        new_revision=False,
+        action="synchronize",
+        pipeline_retrigger=True,
+    )
+
+    with patch("app.workers.github_tasks.get_db_context", return_value=_db_context(session)):
+        with patch(
+            "app.workers.github_tasks.apply_pull_request_webhook_event",
+            AsyncMock(return_value=result),
+        ):
+            with patch(
+                "app.workers.github_tasks.apply_resolution_for_synchronize.delay",
+            ) as resolution_mock:
+                with patch(
+                    "app.workers.github_tasks.maybe_enqueue_pipeline_for_revision",
+                    AsyncMock(return_value=job_id),
+                ) as pipeline_mock:
+                    with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
+                        github_tasks.process_github_event.run("d-auto")
+
+    resolution_mock.assert_called_once_with(str(revision_id))
+    pipeline_mock.assert_awaited_once()
+    enqueue_mock.assert_called_once_with(job_id)
+
+
 def test_process_github_event_skips_enqueue_when_no_new_revision():
     delivery = _delivery(event_type="pull_request")
     session = AsyncMock()

@@ -134,8 +134,8 @@ def process_github_event(self, delivery_id: str) -> None:
                 result = await apply_pull_request_webhook_event(session, payload)
                 if (
                     result is not None
-                    and result.new_revision
                     and result.action in {"opened", "synchronize"}
+                    and (result.new_revision or result.pipeline_retrigger)
                 ):
                     if result.action == "synchronize":
                         resolution_revision_ids.append(str(result.revision_id))

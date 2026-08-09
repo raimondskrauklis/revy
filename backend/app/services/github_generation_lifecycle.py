@@ -7,7 +7,7 @@ Trace field contract (manifest keys — wired in P5):
 
 Supersede scope (P2 + PR #89):
 - Review runs: ``GitHubReviewRunStatus.superseded``
-- Index jobs: ``GitHubIndexJobStatus.failed`` with error ``Superseded by newer commit``
+- Index jobs: ``GitHubIndexJobStatus.failed`` with error ``Superseded by newer run``
 - On new revision: older revision review runs + index jobs
 - On same HEAD (``@revy review`` or same-SHA ``synchronize``): active review runs + index jobs
 
@@ -43,7 +43,7 @@ from app.services.github_pipeline_trace import (
 
 logger = get_logger(__name__)
 
-_SUPERSEDED_CHECK_SUMMARY = "Superseded by newer commit"
+_SUPERSEDED_CHECK_SUMMARY = "Superseded by newer run"
 
 _ACTIVE_REVIEW_RUN_STATUSES = (
     GitHubReviewRunStatus.pending,
@@ -55,7 +55,7 @@ _ACTIVE_INDEX_JOB_STATUSES = (
     GitHubIndexJobStatus.processing,
 )
 
-_SUPERSEDED_INDEX_ERROR = "Superseded by newer commit"
+_SUPERSEDED_INDEX_ERROR = "Superseded by newer run"
 
 
 @dataclass(frozen=True)
