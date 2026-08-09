@@ -16,7 +16,10 @@ from app.services.github_generation_lifecycle import (
     is_authoritative_for_pull_request_head,
     supersede_active_generations_for_revision,
 )
-from app.services.github_indexing import enqueue_index_job
+from app.services.github_indexing import (
+    enqueue_index_job,
+    fail_pending_index_job_for_resolution_error,
+)
 from app.services.github_installations import apply_installation_webhook_event
 from app.services.github_pull_requests import (
     apply_issue_comment_webhook_event,
@@ -123,10 +126,18 @@ def apply_resolution_for_synchronize(self, revision_id: str, index_job_id: str |
         )
         if self.request.retries < self.max_retries:
             raise self.retry(exc=exc, countdown=15 * (2**self.request.retries)) from exc
-        if follow_up_index_job_id is not None:
-            enqueue_index_job(follow_up_index_job_id)
         fatal_exc = exc
     if fatal_exc is not None:
+        if follow_up_index_job_id is not None:
+
+            async def _fail_follow_up() -> None:
+                async with get_db_context() as session:
+                    await fail_pending_index_job_for_resolution_error(
+                        session,
+                        index_job_id=follow_up_index_job_id,
+                    )
+
+            run_worker_async(_fail_follow_up())
         raise fatal_exc
     if outcome == "applied" and follow_up_index_job_id is not None:
         enqueue_index_job(follow_up_index_job_id)
@@ -164,9 +175,8 @@ def process_github_event(self, delivery_id: str) -> None:
                         github_installation_id=installation["id"],
                         action=action,
                     )
-                return
 
-            if event_type == "pull_request":
+            elif event_type == "pull_request":
                 result = await apply_pull_request_webhook_event(session, payload)
                 if (
                     result is not None
@@ -202,9 +212,8 @@ def process_github_event(self, delivery_id: str) -> None:
                         )
                         if job_id is not None:
                             index_job_ids.append(job_id)
-                return
 
-            if event_type == "issue_comment":
+            elif event_type == "issue_comment":
                 intent = await apply_issue_comment_webhook_event(session, payload)
                 if intent is not None:
                     await supersede_active_generations_for_revision(
@@ -219,17 +228,14 @@ def process_github_event(self, delivery_id: str) -> None:
                     )
                     if job_id is not None:
                         index_job_ids.append(job_id)
-                return
 
-            if event_type == "pull_request_review":
+            elif event_type == "pull_request_review":
                 await apply_pull_request_review_webhook_event(session, payload)
-                return
 
-            if event_type in {"push", "installation_repositories"}:
-                if event_type == "installation_repositories":
-                    await apply_installation_repositories_webhook_event(session, payload)
-                    return
+            elif event_type == "installation_repositories":
+                await apply_installation_repositories_webhook_event(session, payload)
 
+            elif event_type == "push":
                 logger.info(
                     "github_webhook_event_stub",
                     extra={
@@ -238,12 +244,12 @@ def process_github_event(self, delivery_id: str) -> None:
                         "installation_id": delivery.installation_id,
                     },
                 )
-                return
 
-            logger.info(
-                "github_webhook_event_unhandled",
-                extra={"delivery_id": delivery_id, "event_type": event_type},
-            )
+            else:
+                logger.info(
+                    "github_webhook_event_unhandled",
+                    extra={"delivery_id": delivery_id, "event_type": event_type},
+                )
 
     try:
         run_worker_async(_run())

@@ -508,6 +508,32 @@ def test_apply_resolution_for_synchronize_skips_retry_on_permanent_not_found():
     enqueue_mock.assert_not_called()
 
 
+def test_apply_resolution_for_synchronize_does_not_enqueue_when_retries_exhausted():
+    revision_id = uuid.uuid4()
+    index_job_id = uuid.uuid4()
+
+    with patch(
+        "app.workers.github_tasks.run_worker_async",
+        side_effect=[RuntimeError("resolution failed"), None],
+    ) as run_async_mock:
+        with patch.object(github_tasks.apply_resolution_for_synchronize, "max_retries", 0):
+            with patch.object(
+                github_tasks.apply_resolution_for_synchronize,
+                "retry",
+                side_effect=AssertionError("retry should not be called"),
+            ) as retry_mock:
+                with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
+                    with pytest.raises(RuntimeError, match="resolution failed"):
+                        github_tasks.apply_resolution_for_synchronize.run(
+                            str(revision_id),
+                            index_job_id=str(index_job_id),
+                        )
+
+    retry_mock.assert_not_called()
+    enqueue_mock.assert_not_called()
+    assert run_async_mock.call_count == 2
+
+
 def test_apply_resolution_for_synchronize_does_not_enqueue_on_celery_retry():
     revision_id = uuid.uuid4()
     index_job_id = uuid.uuid4()

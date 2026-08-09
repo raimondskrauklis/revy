@@ -59,6 +59,15 @@ def _is_superseded_index_job(job: GitHubIndexJobORM) -> bool:
         and job.error_message == SUPERSEDED_INDEX_ERROR
     )
 
+
+async def _delete_index_job_chunks(session: AsyncSession, *, index_job_id: UUID) -> None:
+    await session.execute(
+        delete(GitHubCodeChunkORM).where(
+            GitHubCodeChunkORM.index_job_id == index_job_id,
+        )
+    )
+    await session.flush()
+
 CHUNK_LIST_DEFAULT_LIMIT = 100
 CHUNK_LIST_MAX_LIMIT = 500
 
@@ -366,6 +375,19 @@ def _collect_chunks_for_paths(
     return raw_chunks, file_count
 
 
+async def fail_pending_index_job_for_resolution_error(
+    session: AsyncSession,
+    *,
+    index_job_id: UUID,
+) -> None:
+    job = await session.get(GitHubIndexJobORM, index_job_id)
+    if job is None or job.status != GitHubIndexJobStatus.pending:
+        return
+    job.status = GitHubIndexJobStatus.failed
+    job.error_message = "resolution_pairing_failed"
+    await session.flush()
+
+
 async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubIndexJobORM:
     job = await session.get(GitHubIndexJobORM, index_job_id)
     if job is None:
@@ -621,13 +643,40 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
             new_count=new_count,
             embed_batches=embed_batches,
         )
+        await session.flush()
         await session.refresh(job)
         if _is_superseded_index_job(job):
+            await _delete_index_job_chunks(session, index_job_id=index_job_id)
             return job
-        job.status = GitHubIndexJobStatus.completed
-        job.chunk_count = await _revision_chunk_count(session, revision_id=job.revision_id)
+
+        chunk_count = await _revision_chunk_count(session, revision_id=job.revision_id)
         if job.index_mode == GitHubIndexMode.full:
             await _set_full_mode_warning(session, job, file_count=indexed_file_count)
+        await session.flush()
+
+        completed = await session.execute(
+            update(GitHubIndexJobORM)
+            .where(
+                GitHubIndexJobORM.id == index_job_id,
+                GitHubIndexJobORM.status == GitHubIndexJobStatus.processing,
+            )
+            .values(
+                status=GitHubIndexJobStatus.completed,
+                chunk_count=chunk_count,
+            )
+        )
+        if completed.rowcount == 0:
+            await session.refresh(job)
+            if _is_superseded_index_job(job):
+                logger.info(
+                    "github_index_job_abandoned_superseded_on_complete",
+                    extra={"index_job_id": str(index_job_id)},
+                )
+                await _delete_index_job_chunks(session, index_job_id=index_job_id)
+            return job
+
+        job.status = GitHubIndexJobStatus.completed
+        job.chunk_count = chunk_count
         await session.flush()
         return job
     except httpx.HTTPStatusError as exc:
