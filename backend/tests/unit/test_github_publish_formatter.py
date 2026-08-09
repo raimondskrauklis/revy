@@ -1580,7 +1580,7 @@ def test_replace_pr_summary_section_preserves_review_footer():
         "* Revision: 2 · Head: abc1234*"
     )
     result = _replace_pr_summary_section(old, "NEW_BLOCK")
-    assert result.startswith("NEW_BLOCK\n")
+    assert result.startswith("NEW_BLOCK")
     assert "<details><summary>Review metadata</summary>" in result
     assert "* Revision: 2 · Head: abc1234*" in result
 
@@ -1594,6 +1594,21 @@ def test_replace_pr_summary_section_ignores_resolution_metrics_explained_heading
     result = _replace_pr_summary_section(old, "NEW_BLOCK")
     assert "explained" not in result
     assert result.endswith("NEW_BLOCK\n### Resolution metrics (this push)\n| x |\n")
+
+
+def test_splice_ignores_unvalidated_review_metadata_details_block():
+    ctx = _ctx_with_rollup([_group()])
+    body = (
+        "## Revy code review\n\n"
+        "<details><summary>Review metadata</summary>\n\n"
+        "Narrative prose, not rollup footer metadata.\n\n"
+        "</details>\n\n"
+        "---\n"
+        "* Revision: 2 · Head: abc1234*"
+    )
+    result = splice_deterministic_pr_summary_block(body, ctx)
+    assert result.index("Narrative prose") < result.index("### PR summary (lifetime)")
+    assert result.index("### PR summary (lifetime)") < result.index("* Revision:")
 
 
 def test_format_pr_resolution_rollup_block_tolerates_non_numeric_filter_snapshot():

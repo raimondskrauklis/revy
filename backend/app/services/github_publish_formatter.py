@@ -761,11 +761,39 @@ def format_pr_resolution_rollup_block(rollup: dict[str, object]) -> str:
     return "\n".join(lines)
 
 
+_REVIEW_METADATA_SUMMARY = "<summary>Review metadata</summary>"
+
+
+def _review_metadata_details_is_footer(block: str) -> bool:
+    if "Revision:" in block or "Head:" in block:
+        return True
+    if "head_sha" in block or "revision_number" in block:
+        return True
+    after_summary = block.split("</summary>", 1)[-1].replace("</details>", "").strip()
+    return not after_summary
+
+
+def _find_valid_review_metadata_details_index(text: str) -> int:
+    search_from = len(text)
+    while search_from > 0:
+        summary_idx = text.rfind(_REVIEW_METADATA_SUMMARY, 0, search_from)
+        if summary_idx < 0:
+            return -1
+        start = text.rfind("<details>", 0, summary_idx)
+        close = text.find("</details>", summary_idx)
+        if start >= 0 and close >= 0:
+            block = text[start : close + len("</details>")]
+            if _review_metadata_details_is_footer(block):
+                return start
+        search_from = summary_idx
+    return -1
+
+
 def _find_review_footer_insert_index(markdown: str) -> int:
     """Index before rollup metadata footer (validated --- block or Review metadata details)."""
     text = _canonical_newlines(markdown)
     candidates: list[int] = []
-    details_idx = text.rfind("\n<details><summary>Review metadata</summary>")
+    details_idx = _find_valid_review_metadata_details_index(text)
     if details_idx >= 0:
         candidates.append(details_idx)
     footer_marker = "\n---\n*"
