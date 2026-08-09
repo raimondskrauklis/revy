@@ -488,17 +488,17 @@ _RESOLVED_METHOD_LABELS = (
 )
 
 
+_HIDDEN_FILTER_KEYS = (
+    ("collapsed_hidden", "collapsed inline threads"),
+    ("orphan_never_inlined_hidden", "never-inlined summary-only"),
+    ("compare_failed_hidden", "compare/closure blocked"),
+)
+
+
 def _hidden_total_from_filter_snapshot(filter_snapshot: object) -> int:
     if not isinstance(filter_snapshot, dict):
         return 0
-    return sum(
-        int(filter_snapshot.get(key) or 0)
-        for key in (
-            "collapsed_hidden",
-            "orphan_never_inlined_hidden",
-            "compare_failed_hidden",
-        )
-    )
+    return sum(int(filter_snapshot.get(key) or 0) for key, _ in _HIDDEN_FILTER_KEYS)
 
 
 def _optional_lifetime_rate_pct(value: object) -> float | None:
@@ -512,41 +512,30 @@ def _optional_lifetime_rate_pct(value: object) -> float | None:
     return None
 
 
-def _details_depth_at(tail: str, index: int) -> int:
-    """Nesting depth of <details> at byte offset (supports attributes on open tag)."""
-    depth = 0
+def _pr_summary_section_end_offset(tail: str) -> int:
+    """Offset where lifetime block ends; ignores section markers inside <details>."""
+    details_depth = 0
+    tail_lower = tail.lower()
     i = 0
-    while i < index:
-        lower = tail[i:].lower()
-        if lower.startswith("<details"):
+    while i < len(tail):
+        if details_depth == 0:
+            for marker in _PR_SUMMARY_SECTION_END_MARKERS:
+                if tail.startswith(marker, i):
+                    return i
+        if tail_lower.startswith("<details", i):
             gt = tail.find(">", i)
-            if gt < 0 or gt >= index:
-                break
-            depth += 1
+            if gt < 0:
+                i += 1
+                continue
+            details_depth += 1
             i = gt + 1
             continue
-        if lower.startswith("</details>"):
-            depth = max(0, depth - 1)
+        if tail_lower.startswith("</details>", i):
+            details_depth = max(0, details_depth - 1)
             i += len("</details>")
             continue
         i += 1
-    return depth
-
-
-def _pr_summary_section_end_offset(tail: str) -> int:
-    """Offset in tail where the lifetime block ends (ignores markers inside <details>)."""
-    end_offset = len(tail)
-    for marker in _PR_SUMMARY_SECTION_END_MARKERS:
-        start = 0
-        while True:
-            idx = tail.find(marker, start)
-            if idx < 0:
-                break
-            if _details_depth_at(tail, idx) == 0:
-                end_offset = min(end_offset, idx)
-                break
-            start = idx + 1
-    return end_offset
+    return len(tail)
 
 
 def _format_publishable_status_line(*, still_open: int, hidden_total: int) -> str:
@@ -583,11 +572,7 @@ def _format_pr_summary_details_block(
     filter_snapshot = rollup.get("filter_snapshot")
     if hidden_total > 0 and isinstance(filter_snapshot, dict):
         lines.append("**Hidden from tables** (no open GitHub thread to act on)")
-        for key, label in (
-            ("collapsed_hidden", "collapsed inline threads"),
-            ("orphan_never_inlined_hidden", "never-inlined summary-only"),
-            ("compare_failed_hidden", "compare/closure blocked"),
-        ):
+        for key, label in _HIDDEN_FILTER_KEYS:
             count = int(filter_snapshot.get(key) or 0)
             if count:
                 lines.append(f"- {label}: {count}")
