@@ -643,7 +643,12 @@ def _replace_pr_summary_section(markdown: str, new_block: str) -> str:
     replacement = new_block.rstrip()
     if replacement:
         replacement = f"{replacement}\n"
-    return markdown[:start] + replacement + tail[end_offset:].lstrip("\n")
+    remaining = tail[end_offset:]
+    if remaining.startswith(("**Since last push:**", "### ")):
+        remaining = f"\n\n{remaining}"
+    elif remaining.startswith("\n**Since last push:**") or remaining.startswith("\n### "):
+        remaining = f"\n{remaining}"
+    return markdown[:start] + replacement + remaining
 
 
 def format_pr_rollup_check_one_liner(rollup: dict[str, object]) -> str:

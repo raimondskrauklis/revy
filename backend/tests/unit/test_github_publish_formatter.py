@@ -1462,6 +1462,16 @@ def test_splice_deterministic_pr_summary_block_idempotent_with_details():
     assert second.count("<details>") == 1
     assert second.count("Lifetime breakdown") == 1
     assert second.index("### PR summary (lifetime)") < second.index("Since last push")
+    assert "\n\n**Since last push:**" in second or "\n\n### Resolution metrics" in second
+
+
+def test_replace_pr_summary_section_preserves_blank_line_before_push_delta():
+    ctx = _ctx_with_rollup([_group()])
+    body = "## Revy code review\n\n**Since last push:** delta\n"
+    result = splice_deterministic_pr_summary_block(body, ctx)
+    idx = result.index("**Since last push:**")
+    before = result[idx - 2 : idx]
+    assert before == "\n\n"
 
 
 def test_build_pr_review_comment_fallback_pr_summary_before_g9():
