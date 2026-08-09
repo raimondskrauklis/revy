@@ -286,7 +286,8 @@ async def test_supersede_active_generations_for_revision_finalizes_pipelines():
                 revision_id=revision.id,
             )
 
-    assert superseded_ids == [pending.id]
+    assert superseded_ids.review_run_ids == [pending.id]
+    assert superseded_ids.index_job_ids == []
     finalize_mock.assert_awaited_once()
 
 

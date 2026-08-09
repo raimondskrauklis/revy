@@ -59,7 +59,7 @@ _SUPERSEDED_INDEX_ERROR = "Superseded by newer commit"
 
 
 @dataclass(frozen=True)
-class SupersedeStaleOutcome:
+class SupersedeOutcome:
     review_run_ids: list[UUID]
     index_job_ids: list[UUID]
 
@@ -301,7 +301,7 @@ async def supersede_stale_generations_for_new_revision(
     *,
     pull_request_id: UUID,
     keep_revision_id: UUID,
-) -> SupersedeStaleOutcome:
+) -> SupersedeOutcome:
     """On synchronize: supersede in-flight runs on older revisions and neutralize G10 checks."""
     superseded_review_ids = await mark_review_runs_superseded_for_pull_request(
         session,
@@ -321,7 +321,7 @@ async def supersede_stale_generations_for_new_revision(
         session,
         index_job_ids=superseded_index_ids,
     )
-    return SupersedeStaleOutcome(
+    return SupersedeOutcome(
         review_run_ids=superseded_review_ids,
         index_job_ids=superseded_index_ids,
     )
@@ -331,7 +331,7 @@ async def supersede_active_generations_for_revision(
     session: AsyncSession,
     *,
     revision_id: UUID,
-) -> list[UUID]:
+) -> SupersedeOutcome:
     """On command enqueue or same-SHA synchronize: supersede in-flight on the HEAD revision."""
     superseded_review_ids = await mark_active_review_runs_superseded_for_revision(
         session,
@@ -349,4 +349,7 @@ async def supersede_active_generations_for_revision(
         session,
         index_job_ids=superseded_index_ids,
     )
-    return superseded_review_ids
+    return SupersedeOutcome(
+        review_run_ids=superseded_review_ids,
+        index_job_ids=superseded_index_ids,
+    )

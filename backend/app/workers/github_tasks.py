@@ -78,10 +78,10 @@ def apply_resolution_for_synchronize(self, revision_id: str) -> None:
         async with get_db_context() as session:
             revision = await session.get(GitHubPullRequestRevisionORM, revision_uuid)
             if revision is None:
-                return
+                raise RuntimeError("resolution_revision_not_found")
             pull_request = await session.get(GitHubPullRequestORM, revision.pull_request_id)
             if pull_request is None:
-                return
+                raise RuntimeError("resolution_pull_request_not_found")
             await apply_resolution_status_for_synchronize(
                 session,
                 pull_request=pull_request,
@@ -211,7 +211,7 @@ def process_github_event(self, delivery_id: str) -> None:
             raise self.retry(exc=exc, countdown=15 * (2**self.request.retries)) from exc
         raise
     else:
-        for job_id in index_job_ids:
-            enqueue_index_job(job_id)
         for revision_id in resolution_revision_ids:
             apply_resolution_for_synchronize.delay(revision_id)
+        for job_id in index_job_ids:
+            enqueue_index_job(job_id)
