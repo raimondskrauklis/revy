@@ -1532,6 +1532,28 @@ def test_replace_pr_summary_section_ignores_generation_findings_heading_suffix()
     assert result == "NEW_BLOCK\n### This generation\n| row |\n"
 
 
+def test_splice_deterministic_pr_summary_block_handles_crlf():
+    ctx = _ctx_with_rollup([_group()])
+    body = "## Revy code review\r\n\r\n**Since last push:** delta\r\n"
+    result = splice_deterministic_pr_summary_block(body, ctx)
+    assert result.index("### PR summary (lifetime)") < result.index("**Since last push:**")
+
+
+def test_splice_inserts_before_rollup_footer_not_generic_hr():
+    ctx = _ctx_with_rollup([_group()])
+    body = (
+        "## Revy code review\n\n"
+        "Notes only.\n\n"
+        "---\n"
+        "* unrelated bullet\n\n"
+        "---\n"
+        "* Revision: 2 · Head: abc1234*"
+    )
+    result = splice_deterministic_pr_summary_block(body, ctx)
+    assert result.index("### PR summary (lifetime)") < result.index("* Revision:")
+    assert result.index("unrelated bullet") < result.index("### PR summary (lifetime)")
+
+
 def test_splice_deterministic_pr_summary_block_inserts_before_resolution_metrics_alias():
     ctx = _ctx_with_rollup([_group()])
     body = "## Revy code review\n\n### Resolution metrics (this push)\n| x |\n"

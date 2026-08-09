@@ -512,6 +512,10 @@ def _optional_lifetime_rate_pct(value: object) -> float | None:
     return None
 
 
+def _canonical_newlines(markdown: str) -> str:
+    return markdown.replace("\r\n", "\n").replace("\r", "\n")
+
+
 def _find_splice_marker(
     markdown: str,
     marker: str,
@@ -525,7 +529,7 @@ def _find_splice_marker(
         idx = markdown.find(marker, start)
         if idx < 0:
             return -1
-        if idx > 0 and markdown[idx - 1] not in "\n":
+        if idx > 0 and markdown[idx - 1] not in "\n\r":
             start = idx + 1
             continue
         if require_heading_eol:
@@ -709,8 +713,25 @@ def format_pr_resolution_rollup_block(rollup: dict[str, object]) -> str:
     return "\n".join(lines)
 
 
+def _find_review_footer_insert_index(markdown: str) -> int:
+    """Index before rollup metadata footer (validated --- block or Review metadata details)."""
+    text = _canonical_newlines(markdown)
+    candidates: list[int] = []
+    details_idx = text.rfind("\n<details><summary>Review metadata</summary>")
+    if details_idx >= 0:
+        candidates.append(details_idx)
+    footer_marker = "\n---\n*"
+    footer_idx = text.rfind(footer_marker)
+    if footer_idx >= 0:
+        tail = text[footer_idx:]
+        if "Revision:" in tail and tail.rstrip().endswith("*"):
+            candidates.append(footer_idx)
+    return max(candidates) if candidates else -1
+
+
 def _replace_pr_summary_section(markdown: str, new_block: str) -> str:
     """Replace PR summary section without truncating inner <details> in the rollup block."""
+    markdown = _canonical_newlines(markdown)
     start = _find_splice_marker(markdown, _PR_SUMMARY_HEADING)
     if start < 0:
         return markdown
@@ -744,6 +765,7 @@ def splice_deterministic_pr_summary_block(markdown: str, ctx: PublishFormatConte
     rollup = ctx.pr_resolution_rollup
     if not isinstance(rollup, dict):
         return markdown
+    markdown = _canonical_newlines(markdown)
     block = format_pr_resolution_rollup_block(rollup)
     if _find_splice_marker(markdown, _PR_SUMMARY_HEADING) >= 0:
         return _replace_pr_summary_section(markdown, block)
@@ -769,10 +791,9 @@ def splice_deterministic_pr_summary_block(markdown: str, ctx: PublishFormatConte
             prefix = markdown[:idx].rstrip()
             suffix = markdown[idx:]
             return f"{prefix}\n\n{block}\n\n{suffix}"
-    for footer_marker in ("\n---\n*", "\n<details><summary>Review metadata</summary>"):
-        idx = markdown.rfind(footer_marker)
-        if idx >= 0:
-            return f"{markdown[:idx].rstrip()}\n\n{block}\n\n{markdown[idx:].lstrip()}"
+    footer_idx = _find_review_footer_insert_index(markdown)
+    if footer_idx >= 0:
+        return f"{markdown[:footer_idx].rstrip()}\n\n{block}\n\n{markdown[footer_idx:].lstrip()}"
     return f"{markdown.rstrip()}\n\n{block}"
 
 
