@@ -21,7 +21,10 @@ from app.services.github_finding_judge import (
     record_review_run_judge_status,
 )
 from app.services.github_finding_reconcile import reconcile_review_run
-from app.services.github_generation_lifecycle import is_review_run_superseded
+from app.services.github_generation_lifecycle import (
+    is_authoritative_for_pull_request_head,
+    is_review_run_superseded,
+)
 from app.services.github_pipeline_trace import (
     finalize_pipeline_github_check_for_review_run,
     get_pipeline_run_for_review_run,
@@ -155,7 +158,10 @@ def reconcile_review_run_task(self, review_run_id: str) -> None:
                         GitHubPullRequestORM,
                         current_revision.pull_request_id,
                     )
-                    if pull_request is not None:
+                    if pull_request is not None and await is_authoritative_for_pull_request_head(
+                        session,
+                        revision_id=current_revision.id,
+                    ):
                         await apply_resolution_status_for_synchronize(
                             session,
                             pull_request=pull_request,

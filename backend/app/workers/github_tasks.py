@@ -8,7 +8,6 @@ from app.constants.enums import GitHubIndexJobTriggerSource
 from app.core.config import settings
 from app.core.database import get_db_context
 from app.core.logging import get_logger
-from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
 from app.models.github_webhook_delivery import GitHubWebhookDeliveryORM
 from app.services.github_generation_lifecycle import (
     is_authoritative_for_pull_request_head,
@@ -22,20 +21,11 @@ from app.services.github_pull_requests import (
     apply_pull_request_webhook_event,
 )
 from app.services.github_repositories import apply_installation_repositories_webhook_event
-from app.services.github_resolution_metrics import apply_resolution_status_for_synchronize
 from app.services.review_pipeline import maybe_enqueue_pipeline_for_revision
 from app.workers.async_runner import run_worker_async
 from app.workers.celery_app import celery_app
 
 logger = get_logger(__name__)
-
-
-class ResolutionRevisionNotFoundError(RuntimeError):
-    """Revision row deleted before background resolution task ran."""
-
-
-class ResolutionPullRequestNotFoundError(RuntimeError):
-    """Pull request row missing for a revision scheduled for resolution pairing."""
 
 
 async def _maybe_enqueue_autostart_pipeline_for_revision(
@@ -75,49 +65,9 @@ def schedule_autostart_pipeline_for_revision(revision_id: str, workspace_id: str
     run_worker_async(_run())
 
 
-@celery_app.task(
-    name="app.workers.github_tasks.apply_resolution_for_synchronize",
-    bind=True,
-    max_retries=3,
-)
-def apply_resolution_for_synchronize(self, revision_id: str) -> None:
-    async def _run() -> None:
-        revision_uuid = UUID(revision_id)
-        async with get_db_context() as session:
-            revision = await session.get(GitHubPullRequestRevisionORM, revision_uuid)
-            if revision is None:
-                raise ResolutionRevisionNotFoundError(revision_id)
-            pull_request = await session.get(GitHubPullRequestORM, revision.pull_request_id)
-            if pull_request is None:
-                raise ResolutionPullRequestNotFoundError(revision.pull_request_id)
-            await apply_resolution_status_for_synchronize(
-                session,
-                pull_request=pull_request,
-                new_revision=revision,
-            )
-            await session.commit()
-
-    try:
-        run_worker_async(_run())
-    except (ResolutionRevisionNotFoundError, ResolutionPullRequestNotFoundError) as exc:
-        logger.warning(
-            "resolution_synchronize_task_permanent_failure",
-            extra={"revision_id": revision_id, "error": str(exc)},
-        )
-    except Exception as exc:
-        logger.error(
-            "resolution_synchronize_task_failed",
-            extra={"revision_id": revision_id, "error": str(exc), "retries": self.request.retries},
-        )
-        if self.request.retries < self.max_retries:
-            raise self.retry(exc=exc, countdown=15 * (2**self.request.retries)) from exc
-        raise
-
-
 @celery_app.task(name="app.workers.github_tasks.process_github_event", bind=True, max_retries=3)
 def process_github_event(self, delivery_id: str) -> None:
     index_job_ids: list[UUID] = []
-    resolution_revision_ids: list[str] = []
 
     async def _run() -> None:
         async with get_db_context() as session:
@@ -150,8 +100,6 @@ def process_github_event(self, delivery_id: str) -> None:
                     and result.action in {"opened", "synchronize"}
                     and (result.new_revision or result.pipeline_retrigger)
                 ):
-                    if result.action == "synchronize":
-                        resolution_revision_ids.append(str(result.revision_id))
                     if (
                         result.action == "synchronize"
                         and settings.review_coalesce_seconds > 0
@@ -225,8 +173,5 @@ def process_github_event(self, delivery_id: str) -> None:
             raise self.retry(exc=exc, countdown=15 * (2**self.request.retries)) from exc
         raise
     else:
-        # Resolution pairing and pipeline enqueue run concurrently after webhook commit (RG-15).
-        for revision_id in resolution_revision_ids:
-            apply_resolution_for_synchronize.delay(revision_id)
         for job_id in index_job_ids:
             enqueue_index_job(job_id)
