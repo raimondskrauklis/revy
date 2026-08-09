@@ -1490,6 +1490,26 @@ def test_format_pr_summary_details_skips_exact_reconciliation_without_snapshot()
     assert "5 raised; 3 resolved" not in block
 
 
+def test_replace_pr_summary_section_ignores_generation_findings_heading_suffix():
+    old = (
+        "### PR summary (lifetime)\n\n"
+        "Disclosure mentions\n"
+        "### This generation findings in prose\n\n"
+        "### This generation\n| row |\n"
+    )
+    result = _replace_pr_summary_section(old, "NEW_BLOCK")
+    assert "Disclosure mentions" not in result
+    assert result == "NEW_BLOCK\n### This generation\n| row |\n"
+
+
+def test_splice_deterministic_pr_summary_block_inserts_before_footer():
+    ctx = _ctx_with_rollup([_group()])
+    body = "## Revy code review\n\nNarrative only.\n\n<details><summary>Review metadata</summary></details>"
+    result = splice_deterministic_pr_summary_block(body, ctx)
+    assert result.index("### PR summary (lifetime)") < result.index("<details>")
+    assert result.index("Narrative only.") < result.index("### PR summary (lifetime)")
+
+
 def test_splice_deterministic_pr_summary_block_idempotent_with_details():
     ctx = _ctx_with_rollup(
         [_group()],

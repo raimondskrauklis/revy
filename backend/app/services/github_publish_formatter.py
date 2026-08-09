@@ -512,6 +512,40 @@ def _optional_lifetime_rate_pct(value: object) -> float | None:
     return None
 
 
+def _find_splice_marker(markdown: str, marker: str, start: int = 0) -> int:
+    """Find marker at line start; heading markers must not prefix a longer heading."""
+    require_heading_eol = marker.startswith("###")
+    while True:
+        idx = markdown.find(marker, start)
+        if idx < 0:
+            return -1
+        if idx > 0 and markdown[idx - 1] not in "\n":
+            start = idx + 1
+            continue
+        if require_heading_eol:
+            end = idx + len(marker)
+            if end < len(markdown) and markdown[end] not in "\n\r":
+                start = idx + 1
+                continue
+        return idx
+
+
+def _section_end_marker_matches(tail: str, index: int, marker: str) -> bool:
+    if not tail.startswith(marker, index):
+        return False
+    end = index + len(marker)
+    if end >= len(tail):
+        return True
+    next_char = tail[end]
+    if marker.endswith("**Since last push:**"):
+        return True
+    if marker == "\n### Resolution metrics":
+        return next_char in " (\n\r"
+    if marker in ("\n### Files needing attention", "\n### This generation"):
+        return next_char in "\n\r"
+    return next_char in "\n\r"
+
+
 def _pr_summary_section_end_offset(tail: str) -> int:
     """Offset where lifetime block ends; ignores section markers inside <details>."""
     details_depth = 0
@@ -520,7 +554,7 @@ def _pr_summary_section_end_offset(tail: str) -> int:
     while i < len(tail):
         if details_depth == 0:
             for marker in _PR_SUMMARY_SECTION_END_MARKERS:
-                if tail.startswith(marker, i):
+                if _section_end_marker_matches(tail, i, marker):
                     return i
         if tail_lower.startswith("<details", i):
             gt = tail.find(">", i)
@@ -703,17 +737,21 @@ def splice_deterministic_pr_summary_block(markdown: str, ctx: PublishFormatConte
     if _PR_SUMMARY_HEADING in markdown:
         return _replace_pr_summary_section(markdown, block)
     for marker in ("**Since last push:**", "### Resolution metrics (this push)"):
-        idx = markdown.find(marker)
+        idx = _find_splice_marker(markdown, marker)
         if idx >= 0:
             prefix = markdown[:idx].rstrip()
             suffix = markdown[idx:]
             return f"{prefix}\n\n{block}\n\n{suffix}"
     for marker in ("### Files needing attention", "### This generation"):
-        idx = markdown.find(marker)
+        idx = _find_splice_marker(markdown, marker)
         if idx >= 0:
             prefix = markdown[:idx].rstrip()
             suffix = markdown[idx:]
             return f"{prefix}\n\n{block}\n\n{suffix}"
+    for footer_marker in ("\n<details>", "\n---\n*"):
+        idx = markdown.find(footer_marker)
+        if idx >= 0:
+            return f"{markdown[:idx].rstrip()}\n\n{block}\n\n{markdown[idx:].lstrip()}"
     return f"{markdown.rstrip()}\n\n{block}"
 
 
