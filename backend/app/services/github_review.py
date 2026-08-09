@@ -1076,6 +1076,14 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> Revie
         parse_exc: json.JSONDecodeError | ValueError | None = None
         for attempt in range(2):
             if attempt > 0:
+                logger.warning(
+                    "github_review_json_parse_retry",
+                    extra={
+                        "review_run_id": str(review_run_id),
+                        "attempt": attempt + 1,
+                        "error": str(parse_exc),
+                    },
+                )
                 review_started_at = time.monotonic()
             raw_json = await _call_llm(
                 model_ref=model_ref,

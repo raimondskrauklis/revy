@@ -131,13 +131,9 @@ def test_reconcile_task_records_resolution_pass_on_pipeline():
                                 AsyncMock(return_value=resolution_pass),
                             ):
                                 with patch(
-                                    "app.workers.reconcile_tasks.apply_resolution_status_for_synchronize",
-                                    AsyncMock(return_value=0),
+                                    "app.workers.reconcile_tasks.get_pipeline_run_for_review_run",
+                                    AsyncMock(return_value=pipeline_run),
                                 ):
-                                    with patch(
-                                        "app.workers.reconcile_tasks.get_pipeline_run_for_review_run",
-                                        AsyncMock(return_value=pipeline_run),
-                                    ):
                                         with patch(
                                             "app.workers.reconcile_tasks.record_reconcile_pipeline_step",
                                             AsyncMock(),

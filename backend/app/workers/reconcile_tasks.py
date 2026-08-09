@@ -21,10 +21,7 @@ from app.services.github_finding_judge import (
     record_review_run_judge_status,
 )
 from app.services.github_finding_reconcile import reconcile_review_run
-from app.services.github_generation_lifecycle import (
-    is_authoritative_for_pull_request_head,
-    is_review_run_superseded,
-)
+from app.services.github_generation_lifecycle import is_review_run_superseded
 from app.services.github_pipeline_trace import (
     finalize_pipeline_github_check_for_review_run,
     get_pipeline_run_for_review_run,
@@ -33,7 +30,6 @@ from app.services.github_pipeline_trace import (
 )
 from app.services.github_publish import enqueue_publish_for_review_run
 from app.services.github_resolution_metrics import (
-    apply_resolution_status_for_synchronize,
     compute_resolution_transitions,
     get_last_published_prior_revision,
 )
@@ -147,26 +143,6 @@ def reconcile_review_run_task(self, review_run_id: str) -> None:
                 )
                 await session.commit()
                 return
-
-            if review_run is not None:
-                current_revision = await session.get(
-                    GitHubPullRequestRevisionORM,
-                    review_run.revision_id,
-                )
-                if current_revision is not None:
-                    pull_request = await session.get(
-                        GitHubPullRequestORM,
-                        current_revision.pull_request_id,
-                    )
-                    if pull_request is not None and await is_authoritative_for_pull_request_head(
-                        session,
-                        revision_id=current_revision.id,
-                    ):
-                        await apply_resolution_status_for_synchronize(
-                            session,
-                            pull_request=pull_request,
-                            new_revision=current_revision,
-                        )
 
             await session.commit()
             enqueue_publish_for_review_run(UUID(review_run_id))
