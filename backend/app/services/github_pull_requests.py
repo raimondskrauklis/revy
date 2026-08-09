@@ -481,10 +481,14 @@ async def apply_pull_request_webhook_event(
             pull_request_id=pull_request.id,
             keep_revision_id=new_revision.id,
         )
-        created_new_revision = (
-            prior_revision_count > 0
-            and pull_request.revision_count > prior_revision_count
-        )
+        created_new_revision = pull_request.revision_count > prior_revision_count
+        if (
+            existing is None
+            and created_new_revision
+            and pull_request.revision_count > 1
+        ):
+            # Upsert recovered an existing PR (race) without appending a revision.
+            created_new_revision = False
         if not created_new_revision:
             await supersede_active_generations_for_revision(
                 session,
