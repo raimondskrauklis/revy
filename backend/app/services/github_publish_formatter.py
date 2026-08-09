@@ -501,6 +501,34 @@ def _hidden_total_from_filter_snapshot(filter_snapshot: object) -> int:
     )
 
 
+def _optional_lifetime_rate_pct(value: object) -> float | None:
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return float(value)
+        except ValueError:
+            return None
+    return None
+
+
+def _pr_summary_section_end_offset(tail: str) -> int:
+    """Offset in tail where the lifetime block ends (after inner </details> if present)."""
+    search_from = 0
+    details_open = tail.find("<details>")
+    if details_open >= 0:
+        details_close = tail.find("</details>", details_open)
+        if details_close >= 0:
+            search_from = details_close + len("</details>")
+    end_offset = len(tail)
+    region = tail[search_from:]
+    for marker in _PR_SUMMARY_SECTION_END_MARKERS:
+        idx = region.find(marker)
+        if idx >= 0:
+            end_offset = min(end_offset, search_from + idx)
+    return end_offset
+
+
 def _format_publishable_status_line(*, still_open: int, hidden_total: int) -> str:
     if still_open > 0:
         return (
@@ -569,8 +597,8 @@ def _format_pr_summary_details_block(
             "prior-revision pairing; tables use display-filtered counts."
         )
 
-    rate = rollup.get("lifetime_resolution_rate_pct")
-    if isinstance(rate, (int, float)):
+    rate = _optional_lifetime_rate_pct(rollup.get("lifetime_resolution_rate_pct"))
+    if rate is not None:
         lines.append(
             f"Lifetime resolution rate ({rate}%) uses display open only, not raw DB active count."
         )
@@ -635,20 +663,8 @@ def _replace_pr_summary_section(markdown: str, new_block: str) -> str:
         return markdown
     end = start + len(_PR_SUMMARY_HEADING)
     tail = markdown[end:]
-    end_offset = len(tail)
-    for marker in _PR_SUMMARY_SECTION_END_MARKERS:
-        idx = tail.find(marker)
-        if idx >= 0:
-            end_offset = min(end_offset, idx)
-    replacement = new_block.rstrip()
-    if replacement:
-        replacement = f"{replacement}\n"
-    remaining = tail[end_offset:]
-    if remaining.startswith(("**Since last push:**", "### ")):
-        remaining = f"\n\n{remaining}"
-    elif remaining.startswith("\n**Since last push:**") or remaining.startswith("\n### "):
-        remaining = f"\n{remaining}"
-    return markdown[:start] + replacement + remaining
+    end_offset = _pr_summary_section_end_offset(tail)
+    return markdown[:start] + new_block.rstrip() + tail[end_offset:]
 
 
 def format_pr_rollup_check_one_liner(rollup: dict[str, object]) -> str:

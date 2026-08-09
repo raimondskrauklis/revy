@@ -18,6 +18,7 @@ from app.constants.enums import (
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.services.github_publish_formatter import (
     PublishFormatContext,
+    _replace_pr_summary_section,
     append_review_metadata_footer,
     append_thread_resolve_skipped_block,
     apply_publish_summary_thread_collapse,
@@ -1441,6 +1442,25 @@ def test_format_pr_resolution_rollup_block_501_fixture():
     assert "| Hidden from tables | 12 |" in block
     assert "Reconciliation: raised (29) = resolved (17) + display open (0) + hidden (12)" in block
     assert "collapsed inline threads" in block
+
+
+def test_format_pr_resolution_rollup_block_accepts_string_rate():
+    block = format_pr_resolution_rollup_block(
+        _rollup(lifetime_resolution_rate_pct="33.3")
+    )
+    assert "Lifetime resolution rate (33.3%)" in block
+
+
+def test_replace_pr_summary_section_ignores_markers_inside_details():
+    old = (
+        "### PR summary (lifetime)\n\n"
+        "<details><summary>X</summary>\n\n"
+        "Note ### This generation inside\n\n"
+        "</details>\n\n"
+        "### This generation\n| row |\n"
+    )
+    result = _replace_pr_summary_section(old, "NEW_BLOCK")
+    assert result == "NEW_BLOCK\n### This generation\n| row |\n"
 
 
 def test_splice_deterministic_pr_summary_block_idempotent_with_details():
