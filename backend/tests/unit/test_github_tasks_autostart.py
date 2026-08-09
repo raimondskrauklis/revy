@@ -191,10 +191,10 @@ def test_process_github_event_enqueues_pipeline_on_pull_request_synchronize():
                     with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
                         github_tasks.process_github_event.run("d-auto")
 
-    resolution_mock.assert_called_once_with(str(revision_id))
+    resolution_mock.assert_called_once_with(str(revision_id), index_job_id=str(job_id))
     pipeline_mock.assert_awaited_once()
     assert pipeline_mock.await_args.kwargs["trigger"] == GitHubIndexJobTriggerSource.autostart
-    enqueue_mock.assert_called_once_with(job_id)
+    enqueue_mock.assert_not_called()
 
 
 def test_process_github_event_enqueues_on_same_sha_synchronize_retrigger():
@@ -228,9 +228,9 @@ def test_process_github_event_enqueues_on_same_sha_synchronize_retrigger():
                     with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
                         github_tasks.process_github_event.run("d-auto")
 
-    resolution_mock.assert_called_once_with(str(revision_id))
+    resolution_mock.assert_called_once_with(str(revision_id), index_job_id=str(job_id))
     pipeline_mock.assert_awaited_once()
-    enqueue_mock.assert_called_once_with(job_id)
+    enqueue_mock.assert_not_called()
 
 
 def test_process_github_event_skips_enqueue_when_no_new_revision():
@@ -287,7 +287,7 @@ def test_process_github_event_synchronize_coalesce_zero_enqueues_immediately():
 
     pipeline_mock.assert_awaited_once()
     schedule_mock.assert_not_called()
-    enqueue_mock.assert_called_once_with(job_id)
+    enqueue_mock.assert_not_called()
 
 
 def test_process_github_event_synchronize_coalesce_schedules_delayed_autostart():
@@ -426,6 +426,45 @@ def test_schedule_autostart_pipeline_for_revision_skips_stale_revision():
 
     pipeline_mock.assert_not_awaited()
     enqueue_mock.assert_not_called()
+
+
+def test_apply_resolution_for_synchronize_enqueues_follow_up_index_job():
+    revision_id = uuid.uuid4()
+    job_id = uuid.uuid4()
+    session = AsyncMock()
+    revision = MagicMock()
+    revision.pull_request_id = uuid.uuid4()
+    pull_request = MagicMock()
+    session.get = AsyncMock(side_effect=[revision, pull_request])
+    session.commit = AsyncMock()
+
+    with patch("app.workers.github_tasks.get_db_context", return_value=_db_context(session)):
+        with patch(
+            "app.workers.github_tasks.apply_resolution_status_for_synchronize",
+            AsyncMock(),
+        ):
+            with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
+                github_tasks.apply_resolution_for_synchronize.run(
+                    str(revision_id),
+                    index_job_id=str(job_id),
+                )
+
+    enqueue_mock.assert_called_once_with(job_id)
+
+
+def test_apply_resolution_for_synchronize_skips_retry_on_permanent_not_found():
+    revision_id = uuid.uuid4()
+    job_id = uuid.uuid4()
+    session = AsyncMock()
+    session.get = AsyncMock(return_value=None)
+
+    task = github_tasks.apply_resolution_for_synchronize
+    with patch.object(task, "retry", side_effect=AssertionError("retry should not be called")):
+        with patch("app.workers.github_tasks.get_db_context", return_value=_db_context(session)):
+            with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
+                task.run(str(revision_id), index_job_id=str(job_id))
+
+    enqueue_mock.assert_called_once_with(job_id)
 
 
 def test_schedule_autostart_pipeline_for_revision_enqueues_when_authoritative():

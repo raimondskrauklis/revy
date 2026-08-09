@@ -29,6 +29,11 @@ from app.workers.celery_app import celery_app
 
 logger = get_logger(__name__)
 
+_RESOLUTION_PERMANENT_ERRORS = frozenset({
+    "resolution_revision_not_found",
+    "resolution_pull_request_not_found",
+})
+
 
 async def _maybe_enqueue_autostart_pipeline_for_revision(
     session,
@@ -72,7 +77,7 @@ def schedule_autostart_pipeline_for_revision(revision_id: str, workspace_id: str
     bind=True,
     max_retries=3,
 )
-def apply_resolution_for_synchronize(self, revision_id: str) -> None:
+def apply_resolution_for_synchronize(self, revision_id: str, index_job_id: str | None = None) -> None:
     async def _run() -> None:
         revision_uuid = UUID(revision_id)
         async with get_db_context() as session:
@@ -92,13 +97,27 @@ def apply_resolution_for_synchronize(self, revision_id: str) -> None:
     try:
         run_worker_async(_run())
     except Exception as exc:
+        error = str(exc)
+        if error in _RESOLUTION_PERMANENT_ERRORS:
+            logger.warning(
+                "resolution_synchronize_task_permanent_failure",
+                extra={"revision_id": revision_id, "error": error},
+            )
+            if index_job_id is not None:
+                enqueue_index_job(UUID(index_job_id))
+            return
         logger.error(
             "resolution_synchronize_task_failed",
-            extra={"revision_id": revision_id, "error": str(exc), "retries": self.request.retries},
+            extra={"revision_id": revision_id, "error": error, "retries": self.request.retries},
         )
         if self.request.retries < self.max_retries:
             raise self.retry(exc=exc, countdown=15 * (2**self.request.retries)) from exc
+        if index_job_id is not None:
+            enqueue_index_job(UUID(index_job_id))
         raise
+    else:
+        if index_job_id is not None:
+            enqueue_index_job(UUID(index_job_id))
 
 
 @celery_app.task(name="app.workers.github_tasks.process_github_event", bind=True, max_retries=3)
@@ -212,7 +231,16 @@ def process_github_event(self, delivery_id: str) -> None:
             raise self.retry(exc=exc, countdown=15 * (2**self.request.retries)) from exc
         raise
     else:
-        for revision_id in resolution_revision_ids:
-            apply_resolution_for_synchronize.delay(revision_id)
+        deferred_index_job_ids: set[UUID] = set()
+        for index, revision_id in enumerate(resolution_revision_ids):
+            follow_up_index_job_id: str | None = None
+            if index < len(index_job_ids):
+                follow_up_index_job_id = str(index_job_ids[index])
+                deferred_index_job_ids.add(index_job_ids[index])
+            apply_resolution_for_synchronize.delay(
+                revision_id,
+                index_job_id=follow_up_index_job_id,
+            )
         for job_id in index_job_ids:
-            enqueue_index_job(job_id)
+            if job_id not in deferred_index_job_ids:
+                enqueue_index_job(job_id)
