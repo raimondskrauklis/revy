@@ -127,7 +127,7 @@ def apply_resolution_for_synchronize(self, revision_id: str, index_job_id: str |
 @celery_app.task(name="app.workers.github_tasks.process_github_event", bind=True, max_retries=3)
 def process_github_event(self, delivery_id: str) -> None:
     index_job_ids: list[UUID] = []
-    resolution_revision_ids: list[str] = []
+    resolution_follow_ups: list[tuple[str, UUID | None]] = []
 
     async def _run() -> None:
         async with get_db_context() as session:
@@ -161,17 +161,25 @@ def process_github_event(self, delivery_id: str) -> None:
                     and (result.new_revision or result.pipeline_retrigger)
                 ):
                     if result.action == "synchronize":
-                        resolution_revision_ids.append(str(result.revision_id))
-                    if (
-                        result.action == "synchronize"
-                        and settings.review_coalesce_seconds > 0
-                    ):
-                        schedule_autostart_pipeline_for_revision.apply_async(
-                            kwargs={
-                                "revision_id": str(result.revision_id),
-                                "workspace_id": str(result.workspace_id),
-                            },
-                            countdown=settings.review_coalesce_seconds,
+                        paired_index_job_id: UUID | None = None
+                        if settings.review_coalesce_seconds > 0:
+                            schedule_autostart_pipeline_for_revision.apply_async(
+                                kwargs={
+                                    "revision_id": str(result.revision_id),
+                                    "workspace_id": str(result.workspace_id),
+                                },
+                                countdown=settings.review_coalesce_seconds,
+                            )
+                        else:
+                            paired_index_job_id = await _maybe_enqueue_autostart_pipeline_for_revision(
+                                session,
+                                workspace_id=result.workspace_id,
+                                revision_id=result.revision_id,
+                            )
+                            if paired_index_job_id is not None:
+                                index_job_ids.append(paired_index_job_id)
+                        resolution_follow_ups.append(
+                            (str(result.revision_id), paired_index_job_id),
                         )
                     else:
                         job_id = await _maybe_enqueue_autostart_pipeline_for_revision(
@@ -236,14 +244,14 @@ def process_github_event(self, delivery_id: str) -> None:
         raise
     else:
         deferred_index_job_ids: set[UUID] = set()
-        for index, revision_id in enumerate(resolution_revision_ids):
-            follow_up_index_job_id: str | None = None
-            if index < len(index_job_ids):
-                follow_up_index_job_id = str(index_job_ids[index])
-                deferred_index_job_ids.add(index_job_ids[index])
+        for revision_id, follow_up_index_job_id in resolution_follow_ups:
+            if follow_up_index_job_id is not None:
+                deferred_index_job_ids.add(follow_up_index_job_id)
             apply_resolution_for_synchronize.delay(
                 revision_id,
-                index_job_id=follow_up_index_job_id,
+                index_job_id=(
+                    str(follow_up_index_job_id) if follow_up_index_job_id is not None else None
+                ),
             )
         for job_id in index_job_ids:
             if job_id not in deferred_index_job_ids:
