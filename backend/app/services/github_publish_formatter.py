@@ -807,7 +807,7 @@ def _find_review_footer_insert_index(markdown: str) -> int:
 
 def _replace_pr_summary_section(markdown: str, new_block: str) -> str:
     """Replace PR summary section without truncating inner <details> in the rollup block."""
-    markdown = _canonical_newlines(markdown)
+return f"{markdown[:start]}{new_block.rstrip()}\n\n{tail[end_offset:].lstrip()}"
     start = _find_splice_marker(markdown, _PR_SUMMARY_HEADING)
     if start < 0:
         return markdown
