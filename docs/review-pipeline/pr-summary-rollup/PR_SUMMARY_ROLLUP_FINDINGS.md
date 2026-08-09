@@ -198,6 +198,12 @@ Persisted on **`github_publish_jobs.summary_json.pr_resolution_rollup`** and **`
 
 ---
 
+## Follow-on (P4)
+
+Lifetime scan UX on long PRs — [PR_SUMMARY_ROLLUP_P4_READABILITY_FINDINGS.md](./PR_SUMMARY_ROLLUP_P4_READABILITY_FINDINGS.md) (kp-platform #501 dogfood). Formatter-only; PSR-Q11–Q14.
+
+---
+
 ## Parking lot
 
 - Time-series rollup per revision for Revy UI sparkline

@@ -1,22 +1,22 @@
 {
   "files": [
     {
-      "path": "docs/review-pipeline/pr-summary-rollup/waves/PR_SUMMARY_ROLLUP_EXECUTION.md",
-      "description": "PSR LOOP index \u2014 P0\u2013P3 execution",
+      "path": "docs/review-pipeline/pr-summary-rollup/waves/PR_SUMMARY_ROLLUP_P4_EXECUTION.md",
+      "description": "PSR P4 execution \u2014 lifetime readability scan + details",
       "scope": [
         "backend/**"
       ]
     },
     {
-      "path": "docs/review-pipeline/pr-summary-rollup/PR_SUMMARY_ROLLUP_FINDINGS.md",
-      "description": "PSR baseline \u2014 manifest v1, PSR-Q1\u2013Q10, pass-01 locks",
+      "path": "docs/review-pipeline/pr-summary-rollup/PR_SUMMARY_ROLLUP_P4_READABILITY_FINDINGS.md",
+      "description": "PSR P4 baseline \u2014 PSR-Q11\u2013Q18, splice boundary, #501 dogfood",
       "scope": [
         "backend/**"
       ]
     },
     {
       "path": "docs/review-pipeline/pr-summary-rollup/PR_SUMMARY_ROLLUP_GENERAL_PLAN.md",
-      "description": "PSR general plan \u2014 rollup persist, formatter, API, staging",
+      "description": "PSR general plan \u2014 P0\u2013P4 phases",
       "scope": [
         "backend/**"
       ]

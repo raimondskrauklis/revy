@@ -472,48 +472,178 @@ def display_still_open_prior_count(ctx: PublishFormatContext) -> int:
 
 
 _PR_SUMMARY_HEADING = "### PR summary (lifetime)"
+_PR_SUMMARY_DETAILS_SUMMARY = "Lifetime breakdown"
+_PR_SUMMARY_SECTION_END_MARKERS = (
+    "\n\n**Since last push:**",
+    "\n### Resolution metrics",
+    "\n### Files needing attention",
+    "\n### This generation",
+)
+_RESOLVED_METHOD_LABELS = (
+    ("absent_and_addressed", "addressed"),
+    ("judge_dismissed", "judge dismissed"),
+    ("verification_dismissed", "verification dismissed"),
+    ("human_dismissed", "human dismissed"),
+    ("path_removed", "path removed"),
+)
+
+
+def _hidden_total_from_filter_snapshot(filter_snapshot: object) -> int:
+    if not isinstance(filter_snapshot, dict):
+        return 0
+    return sum(
+        int(filter_snapshot.get(key) or 0)
+        for key in (
+            "collapsed_hidden",
+            "orphan_never_inlined_hidden",
+            "compare_failed_hidden",
+        )
+    )
+
+
+def _format_publishable_status_line(*, still_open: int, hidden_total: int) -> str:
+    if still_open > 0:
+        return (
+            f"**Publishable status:** {still_open} open — see Still open on PR"
+        )
+    if hidden_total > 0:
+        return (
+            "**Publishable status:** Nothing to act on in the tables below "
+            f"({hidden_total} hidden from display — expand breakdown)."
+        )
+    return "**Publishable status:** Nothing to act on in the tables below."
+
+
+def _format_pr_summary_details_block(
+    rollup: dict[str, object],
+    *,
+    raised: int,
+    resolved: int,
+    still_open: int,
+    hidden_total: int,
+) -> list[str]:
+    lines: list[str] = []
+    by_method = rollup.get("resolved_by_method")
+    if isinstance(by_method, dict) and resolved > 0:
+        lines.append("**Resolved (lifetime)**")
+        for key, label in _RESOLVED_METHOD_LABELS:
+            count = int(by_method.get(key) or 0)
+            if count:
+                lines.append(f"- {label}: {count}")
+        lines.append("")
+
+    filter_snapshot = rollup.get("filter_snapshot")
+    if hidden_total > 0 and isinstance(filter_snapshot, dict):
+        lines.append("**Hidden from tables** (no open GitHub thread to act on)")
+        for key, label in (
+            ("collapsed_hidden", "collapsed inline threads"),
+            ("orphan_never_inlined_hidden", "never-inlined summary-only"),
+            ("compare_failed_hidden", "compare/closure blocked"),
+        ):
+            count = int(filter_snapshot.get(key) or 0)
+            if count:
+                lines.append(f"- {label}: {count}")
+        lines.append("")
+
+    if raised == resolved + still_open + hidden_total:
+        lines.append(
+            f"Reconciliation: raised ({raised}) = resolved ({resolved}) + "
+            f"display open ({still_open}) + hidden ({hidden_total})."
+        )
+    elif isinstance(filter_snapshot, dict):
+        raw_active = int(filter_snapshot.get("raw_active_before_filters") or 0)
+        lines.append(
+            f"Reconciliation: {raised} raised; {resolved} resolved; "
+            f"{still_open} display open; {hidden_total} hidden."
+        )
+        if raw_active:
+            lines.append(
+                f"Raw active before display filters: {raw_active} "
+                "(may include addressed-pending groups)."
+            )
+
+    still_open_prior = int(rollup.get("still_open_prior") or 0)
+    if still_open_prior != still_open:
+        lines.append(
+            "Push metrics may show a different prior-open count — push block uses "
+            "prior-revision pairing; tables use display-filtered counts."
+        )
+
+    rate = rollup.get("lifetime_resolution_rate_pct")
+    if isinstance(rate, (int, float)):
+        lines.append(
+            f"Lifetime resolution rate ({rate}%) uses display open only, not raw DB active count."
+        )
+    elif resolved + still_open == 0:
+        lines.append("Lifetime resolution rate: N/A (no resolved or display-open groups).")
+
+    return lines
 
 
 def format_pr_resolution_rollup_block(rollup: dict[str, object]) -> str:
-    """Lifetime PR rollup markdown block (PSR P1)."""
+    """Lifetime PR rollup markdown block (PSR P1 + P4 scan/details)."""
     raised = int(rollup.get("raised_count") or 0)
     resolved = int(rollup.get("resolved_count") or 0)
     still_open = int(rollup.get("still_open_display") or 0)
-    rate = rollup.get("lifetime_resolution_rate_pct")
-    by_method = rollup.get("resolved_by_method")
+    filter_snapshot = rollup.get("filter_snapshot")
+    hidden_total = _hidden_total_from_filter_snapshot(filter_snapshot)
+
     lines = [
         _PR_SUMMARY_HEADING,
         "",
-        f"- **Raised on PR:** {raised}",
-        f"- **Resolved (lifetime):** {resolved}",
+        _format_publishable_status_line(still_open=still_open, hidden_total=hidden_total),
+        "",
+        "| | Count |",
+        "|--|--:|",
+        f"| Raised on this PR | {raised} |",
+        f"| Resolved (lifetime) | {resolved} |",
+        f"| Still open (in tables) | {still_open} |",
     ]
-    if isinstance(by_method, dict):
-        method_lines = []
-        for key, label in (
-            ("absent_and_addressed", "addressed"),
-            ("judge_dismissed", "judge dismissed"),
-            ("verification_dismissed", "verification dismissed"),
-            ("human_dismissed", "human dismissed"),
-            ("path_removed", "path removed"),
-        ):
-            count = int(by_method.get(key) or 0)
-            if count:
-                method_lines.append(f"  - {label}: {count}")
-        if method_lines:
-            lines.extend(method_lines)
-    lines.extend(
-        [
-            f"- **Still open (display):** {still_open}",
-        ]
-    )
-    if isinstance(rate, (int, float)):
-        lines.append(f"- **Lifetime resolution rate:** {rate}%")
-    elif resolved + still_open == 0:
-        lines.append("- **Lifetime resolution rate:** N/A")
+    if hidden_total > 0:
+        lines.append(f"| Hidden from tables | {hidden_total} |")
+
     disclosure = rollup.get("lifetime_disclosure")
     if isinstance(disclosure, str) and disclosure.strip():
         lines.extend(["", disclosure.strip()])
+
+    detail_lines = _format_pr_summary_details_block(
+        rollup,
+        raised=raised,
+        resolved=resolved,
+        still_open=still_open,
+        hidden_total=hidden_total,
+    )
+    if detail_lines:
+        lines.extend(
+            [
+                "",
+                "<details>",
+                f"<summary>{_PR_SUMMARY_DETAILS_SUMMARY}</summary>",
+                "",
+                *detail_lines,
+                "</details>",
+            ]
+        )
+
     return "\n".join(lines)
+
+
+def _replace_pr_summary_section(markdown: str, new_block: str) -> str:
+    """Replace PR summary section without truncating inner <details> in the rollup block."""
+    start = markdown.find(_PR_SUMMARY_HEADING)
+    if start < 0:
+        return markdown
+    end = start + len(_PR_SUMMARY_HEADING)
+    tail = markdown[end:]
+    end_offset = len(tail)
+    for marker in _PR_SUMMARY_SECTION_END_MARKERS:
+        idx = tail.find(marker)
+        if idx >= 0:
+            end_offset = min(end_offset, idx)
+    replacement = new_block.rstrip()
+    if replacement:
+        replacement = f"{replacement}\n"
+    return markdown[:start] + replacement + tail[end_offset:].lstrip("\n")
 
 
 def format_pr_rollup_check_one_liner(rollup: dict[str, object]) -> str:
@@ -542,7 +672,7 @@ def splice_deterministic_pr_summary_block(markdown: str, ctx: PublishFormatConte
         return markdown
     block = format_pr_resolution_rollup_block(rollup)
     if _PR_SUMMARY_HEADING in markdown:
-        return _replace_markdown_section(markdown, _PR_SUMMARY_HEADING, block)
+        return _replace_pr_summary_section(markdown, block)
     for marker in ("**Since last push:**", "### Resolution metrics (this push)"):
         idx = markdown.find(marker)
         if idx >= 0:
@@ -1317,8 +1447,8 @@ def _build_issue_comment_user_prompt(ctx: PublishFormatContext) -> str:
     )
     if isinstance(ctx.pr_resolution_rollup, dict):
         prompt += (
-            "\nPR lifetime rollup JSON (render ### PR summary (lifetime) from these counts only; "
-            "do not replace or invent):\n"
+            "\nPR lifetime rollup JSON (deterministic formatter owns the full ### PR summary block; "
+            "Moonshot must not emit scan tables or <details> for lifetime — heading stub at most):\n"
             f"{json.dumps(ctx.pr_resolution_rollup, ensure_ascii=False)}\n"
             "Do not omit ### PR summary (lifetime) when review_count > 1 or raised_count > 0."
         )

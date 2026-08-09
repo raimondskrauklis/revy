@@ -1408,8 +1408,60 @@ def test_index_footer_on_fallback():
 def test_format_pr_resolution_rollup_block_lifetime_heading():
     block = format_pr_resolution_rollup_block(_rollup())
     assert "### PR summary (lifetime)" in block
-    assert "Raised on PR" in block
-    assert "Lifetime resolution rate" in block
+    assert "Publishable status" in block
+    assert "Raised on this PR" in block
+    assert "Still open (in tables)" in block
+    assert "<details>" in block
+    assert "Lifetime breakdown" in block
+
+
+def test_format_pr_resolution_rollup_block_501_fixture():
+    block = format_pr_resolution_rollup_block(
+        _rollup(
+            raised_count=29,
+            resolved_count=17,
+            still_open_display=0,
+            still_open_prior=0,
+            lifetime_resolution_rate_pct=100.0,
+            resolved_by_method={
+                "absent_and_addressed": 11,
+                "judge_dismissed": 2,
+                "verification_dismissed": 0,
+                "human_dismissed": 0,
+                "path_removed": 4,
+            },
+            filter_snapshot={
+                "raw_active_before_filters": 12,
+                "collapsed_hidden": 11,
+                "orphan_never_inlined_hidden": 1,
+                "compare_failed_hidden": 0,
+            },
+        )
+    )
+    assert "| Hidden from tables | 12 |" in block
+    assert "Reconciliation: raised (29) = resolved (17) + display open (0) + hidden (12)" in block
+    assert "collapsed inline threads" in block
+
+
+def test_splice_deterministic_pr_summary_block_idempotent_with_details():
+    ctx = _ctx_with_rollup(
+        [_group()],
+        pr_resolution_rollup=_rollup(
+            filter_snapshot={
+                "raw_active_before_filters": 1,
+                "collapsed_hidden": 0,
+                "orphan_never_inlined_hidden": 0,
+                "compare_failed_hidden": 0,
+            }
+        ),
+    )
+    body = "## Revy code review\n\n**Since last push:** delta\n"
+    first = splice_deterministic_pr_summary_block(body, ctx)
+    second = splice_deterministic_pr_summary_block(first, ctx)
+    assert second.count("### PR summary (lifetime)") == 1
+    assert second.count("<details>") == 1
+    assert second.count("Lifetime breakdown") == 1
+    assert second.index("### PR summary (lifetime)") < second.index("Since last push")
 
 
 def test_build_pr_review_comment_fallback_pr_summary_before_g9():

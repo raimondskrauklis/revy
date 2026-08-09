@@ -2,7 +2,7 @@
 
 # P3 — Staging sign-off + doc sync (execution)
 
-Phase **P3** of [`PR_SUMMARY_ROLLUP_GENERAL_PLAN.md`](../PR_SUMMARY_ROLLUP_GENERAL_PLAN.md). Baseline: [`PR_SUMMARY_ROLLUP_FINDINGS.md`](../PR_SUMMARY_ROLLUP_FINDINGS.md) §experiment/verification. **P3 only — final phase.**
+Phase **P3** of [`PR_SUMMARY_ROLLUP_GENERAL_PLAN.md`](../PR_SUMMARY_ROLLUP_GENERAL_PLAN.md). Baseline: [`PR_SUMMARY_ROLLUP_FINDINGS.md`](../PR_SUMMARY_ROLLUP_FINDINGS.md) §experiment/verification. **P3 only** (P4 readability follows).
 
 **Goal:** Dogfood PASS on multi-revision PR post-deploy; program docs marked shipped.
 
@@ -78,4 +78,4 @@ cd backend && pipenv run pytest tests/unit/test_github_pr_resolution_rollup.py t
 
 **Human gate:** P3.2 staging PASS in `PR_SUMMARY_ROLLUP_STAGING_VALIDATION.md`.
 
-**Next:** none — program complete.
+**Next:** [P4 readability](../PR_SUMMARY_ROLLUP_P4_READABILITY_FINDINGS.md) — scan + `<details>` explain layer.
