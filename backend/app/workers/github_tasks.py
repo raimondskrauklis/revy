@@ -87,6 +87,7 @@ def apply_resolution_for_synchronize(self, revision_id: str) -> None:
                 pull_request=pull_request,
                 new_revision=revision,
             )
+            await session.commit()
 
     try:
         run_worker_async(_run())
