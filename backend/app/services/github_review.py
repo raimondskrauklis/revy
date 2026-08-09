@@ -1071,7 +1071,7 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> Revie
         run.model_id = model_ref.model_id
         await session.flush()
 
-        review_started_at = time.monotonic()
+        review_duration_ms = 0
         raw_json: str | None = None
         parse_exc: json.JSONDecodeError | ValueError | None = None
         for attempt in range(2):
@@ -1084,13 +1084,13 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> Revie
                         "error": str(parse_exc),
                     },
                 )
-                review_started_at = time.monotonic()
+            attempt_started = time.monotonic()
             raw_json = await _call_llm(
                 model_ref=model_ref,
                 profile=_review_profile_str(run.profile),
                 prompt=prompt,
             )
-            review_duration_ms = int((time.monotonic() - review_started_at) * 1000)
+            review_duration_ms += int((time.monotonic() - attempt_started) * 1000)
             try:
                 raw_findings = moonshot_review.parse_review_json(raw_json)
                 parse_exc = None

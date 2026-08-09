@@ -30,14 +30,6 @@ from app.workers.celery_app import celery_app
 logger = get_logger(__name__)
 
 
-class ResolutionRevisionNotFoundError(RuntimeError):
-    """Revision row deleted before background resolution task ran."""
-
-
-class ResolutionPullRequestNotFoundError(RuntimeError):
-    """Pull request row missing for a revision scheduled for resolution pairing."""
-
-
 async def _maybe_enqueue_autostart_pipeline_for_revision(
     session,
     *,
@@ -92,10 +84,21 @@ def apply_resolution_for_synchronize(self, revision_id: str) -> None:
                 return
             revision = await session.get(GitHubPullRequestRevisionORM, revision_uuid)
             if revision is None:
-                raise ResolutionRevisionNotFoundError(revision_id)
+                logger.warning(
+                    "resolution_synchronize_task_permanent_failure",
+                    extra={"revision_id": revision_id, "error": "resolution_revision_not_found"},
+                )
+                return
             pull_request = await session.get(GitHubPullRequestORM, revision.pull_request_id)
             if pull_request is None:
-                raise ResolutionPullRequestNotFoundError(revision.pull_request_id)
+                logger.warning(
+                    "resolution_synchronize_task_permanent_failure",
+                    extra={
+                        "revision_id": revision_id,
+                        "error": "resolution_pull_request_not_found",
+                    },
+                )
+                return
             await apply_resolution_status_for_synchronize(
                 session,
                 pull_request=pull_request,
@@ -105,11 +108,6 @@ def apply_resolution_for_synchronize(self, revision_id: str) -> None:
 
     try:
         run_worker_async(_run())
-    except (ResolutionRevisionNotFoundError, ResolutionPullRequestNotFoundError) as exc:
-        logger.warning(
-            "resolution_synchronize_task_permanent_failure",
-            extra={"revision_id": revision_id, "error": str(exc)},
-        )
     except Exception as exc:
         logger.error(
             "resolution_synchronize_task_failed",

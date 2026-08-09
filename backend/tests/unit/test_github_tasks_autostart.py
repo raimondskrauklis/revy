@@ -451,14 +451,17 @@ def test_apply_resolution_for_synchronize_skips_retry_on_permanent_not_found():
     session = AsyncMock()
     session.get = AsyncMock(return_value=None)
 
-    task = github_tasks.apply_resolution_for_synchronize
-    with patch.object(task, "retry", side_effect=AssertionError("retry should not be called")):
-        with patch("app.workers.github_tasks.get_db_context", return_value=_db_context(session)):
-            with patch(
-                "app.workers.github_tasks.is_authoritative_for_pull_request_head",
-                AsyncMock(return_value=True),
+    with patch("app.workers.github_tasks.get_db_context", return_value=_db_context(session)):
+        with patch(
+            "app.workers.github_tasks.is_authoritative_for_pull_request_head",
+            AsyncMock(return_value=True),
+        ):
+            with patch.object(
+                github_tasks.apply_resolution_for_synchronize,
+                "retry",
+                side_effect=AssertionError("retry should not be called"),
             ):
-                task.run(str(revision_id))
+                github_tasks.apply_resolution_for_synchronize.run(str(revision_id))
 
 
 def test_schedule_autostart_pipeline_for_revision_enqueues_when_authoritative():

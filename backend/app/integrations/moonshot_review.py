@@ -267,6 +267,8 @@ async def complete_issue_comment_markdown(
 def parse_review_json(raw: str) -> list[dict]:
     """Parse LLM JSON payload — raises ValueError on invalid shape."""
     payload = parse_llm_json_object(raw)
+    if not isinstance(payload, dict):
+        raise ValueError("review_json_not_object")
     findings = payload.get("findings")
     if findings is None:
         return []
