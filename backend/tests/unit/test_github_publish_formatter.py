@@ -1490,6 +1490,36 @@ def test_format_pr_summary_details_skips_exact_reconciliation_without_snapshot()
     assert "5 raised; 3 resolved" not in block
 
 
+def test_replace_pr_summary_section_ignores_heading_in_prose():
+    old = (
+        "## Revy code review\n\n"
+        "See ### PR summary (lifetime) in docs.\n\n"
+        "### PR summary (lifetime)\n\n"
+        "| | Count |\n"
+        "|--|--:|\n"
+        "| Raised on this PR | 1 |\n\n"
+        "**Since last push:** delta\n"
+    )
+    result = _replace_pr_summary_section(old, "NEW_BLOCK")
+    assert "See ### PR summary (lifetime) in docs." in result
+    assert result.index("NEW_BLOCK") < result.index("**Since last push:**")
+
+
+def test_splice_ignores_pr_summary_heading_mention_in_prose():
+    ctx = _ctx_with_rollup([_group()])
+    body = (
+        "## Revy code review\n\n"
+        "Mention ### PR summary (lifetime) in narrative.\n\n"
+        "**Since last push:** delta\n"
+    )
+    result = splice_deterministic_pr_summary_block(body, ctx)
+    assert "Mention ### PR summary (lifetime) in narrative." in result
+    assert "**Publishable status:**" in result
+    assert result.index("### PR summary (lifetime)\n\n**Publishable") > result.index(
+        "narrative."
+    )
+
+
 def test_replace_pr_summary_section_ignores_generation_findings_heading_suffix():
     old = (
         "### PR summary (lifetime)\n\n"

@@ -711,7 +711,7 @@ def format_pr_resolution_rollup_block(rollup: dict[str, object]) -> str:
 
 def _replace_pr_summary_section(markdown: str, new_block: str) -> str:
     """Replace PR summary section without truncating inner <details> in the rollup block."""
-    start = markdown.find(_PR_SUMMARY_HEADING)
+    start = _find_splice_marker(markdown, _PR_SUMMARY_HEADING)
     if start < 0:
         return markdown
     end = start + len(_PR_SUMMARY_HEADING)
@@ -745,7 +745,7 @@ def splice_deterministic_pr_summary_block(markdown: str, ctx: PublishFormatConte
     if not isinstance(rollup, dict):
         return markdown
     block = format_pr_resolution_rollup_block(rollup)
-    if _PR_SUMMARY_HEADING in markdown:
+    if _find_splice_marker(markdown, _PR_SUMMARY_HEADING) >= 0:
         return _replace_pr_summary_section(markdown, block)
     for marker in ("**Since last push:**",):
         idx = _find_splice_marker(markdown, marker)
