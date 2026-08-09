@@ -90,6 +90,7 @@ def apply_resolution_for_synchronize(revision_id: str) -> None:
 @celery_app.task(name="app.workers.github_tasks.process_github_event", bind=True, max_retries=3)
 def process_github_event(self, delivery_id: str) -> None:
     index_job_ids: list[UUID] = []
+    resolution_revision_ids: list[str] = []
 
     async def _run() -> None:
         async with get_db_context() as session:
@@ -123,7 +124,7 @@ def process_github_event(self, delivery_id: str) -> None:
                     and result.action in {"opened", "synchronize"}
                 ):
                     if result.action == "synchronize":
-                        apply_resolution_for_synchronize.delay(str(result.revision_id))
+                        resolution_revision_ids.append(str(result.revision_id))
                     if (
                         result.action == "synchronize"
                         and settings.review_coalesce_seconds > 0
@@ -199,3 +200,5 @@ def process_github_event(self, delivery_id: str) -> None:
     else:
         for job_id in index_job_ids:
             enqueue_index_job(job_id)
+        for revision_id in resolution_revision_ids:
+            apply_resolution_for_synchronize.delay(revision_id)

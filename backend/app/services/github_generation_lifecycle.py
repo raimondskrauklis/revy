@@ -193,6 +193,7 @@ async def _mark_index_job_ids_superseded_cas(
     *,
     revision_id: UUID | None = None,
 ) -> list[UUID]:
+    """CAS pending/processing index jobs to terminal ``failed`` (RG-Q12 — no ``superseded`` enum)."""
     superseded_ids: list[UUID] = []
     for job_id in job_ids:
         result = await session.execute(
