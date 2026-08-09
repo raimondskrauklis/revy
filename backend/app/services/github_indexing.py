@@ -9,7 +9,7 @@ from pathlib import Path
 from uuid import UUID
 
 import httpx
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import (
@@ -19,6 +19,7 @@ from app.constants.enums import (
     ReviewProfile,
     stored_enum_value,
 )
+from app.constants.github_messages import SUPERSEDED_INDEX_ERROR
 from app.core.config import settings
 from app.core.exceptions import (
     ConflictError,
@@ -51,13 +52,11 @@ from app.services.code_chunking import chunk_file_content
 
 logger = get_logger(__name__)
 
-_SUPERSEDED_INDEX_ERROR = "Superseded by newer run"
-
 
 def _is_superseded_index_job(job: GitHubIndexJobORM) -> bool:
     return (
         job.status == GitHubIndexJobStatus.failed
-        and job.error_message == _SUPERSEDED_INDEX_ERROR
+        and job.error_message == SUPERSEDED_INDEX_ERROR
     )
 
 CHUNK_LIST_DEFAULT_LIMIT = 100
@@ -379,12 +378,28 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
         )
         return job
 
-    if _is_superseded_index_job(job):
+    claimed = await session.execute(
+        update(GitHubIndexJobORM)
+        .where(
+            GitHubIndexJobORM.id == index_job_id,
+            GitHubIndexJobORM.status == GitHubIndexJobStatus.pending,
+        )
+        .values(
+            status=GitHubIndexJobStatus.processing,
+            error_message=None,
+        )
+    )
+    if claimed.rowcount == 0:
+        await session.refresh(job)
+        if _is_superseded_index_job(job):
+            return job
+        logger.info(
+            "github_index_job_skip_non_pending",
+            extra={"index_job_id": str(index_job_id), "status": stored_enum_value(job.status)},
+        )
         return job
 
-    job.status = GitHubIndexJobStatus.processing
-    job.error_message = None
-    await session.flush()
+    await session.refresh(job)
 
     revision = await session.get(GitHubPullRequestRevisionORM, job.revision_id)
     if revision is None:

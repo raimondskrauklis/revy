@@ -3,6 +3,9 @@
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+from celery.exceptions import Retry
+
 from app.constants.enums import GitHubIndexJobTriggerSource
 from app.models.github_webhook_delivery import GitHubWebhookDeliveryORM
 from app.services.github_pull_requests import IssueCommentPipelineIntent, PullRequestWebhookResult
@@ -489,6 +492,24 @@ def test_apply_resolution_for_synchronize_skips_retry_on_permanent_not_found():
                 )
 
     enqueue_mock.assert_called_once()
+
+
+def test_apply_resolution_for_synchronize_does_not_enqueue_on_celery_retry():
+    revision_id = uuid.uuid4()
+    index_job_id = uuid.uuid4()
+
+    with patch(
+        "app.workers.github_tasks.run_worker_async",
+        side_effect=Retry("retrying"),
+    ):
+        with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
+            with pytest.raises(Retry):
+                github_tasks.apply_resolution_for_synchronize.run(
+                    str(revision_id),
+                    index_job_id=str(index_job_id),
+                )
+
+    enqueue_mock.assert_not_called()
 
 
 def test_schedule_autostart_pipeline_for_revision_enqueues_when_authoritative():

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from celery.exceptions import Retry
+
 from app.constants.enums import GitHubIndexJobTriggerSource
 from app.core.config import settings
 from app.core.database import get_db_context
@@ -100,8 +102,13 @@ def apply_resolution_for_synchronize(self, revision_id: str, index_job_id: str |
             )
             await session.commit()
 
+    enqueue_follow_up = False
+    fatal_exc: Exception | None = None
     try:
         run_worker_async(_run())
+        enqueue_follow_up = True
+    except Retry:
+        raise
     except Exception as exc:
         logger.error(
             "resolution_synchronize_task_failed",
@@ -109,10 +116,12 @@ def apply_resolution_for_synchronize(self, revision_id: str, index_job_id: str |
         )
         if self.request.retries < self.max_retries:
             raise self.retry(exc=exc, countdown=15 * (2**self.request.retries)) from exc
-        raise
-    finally:
-        if index_job_id is not None:
-            enqueue_index_job(UUID(index_job_id))
+        enqueue_follow_up = True
+        fatal_exc = exc
+    if enqueue_follow_up and index_job_id is not None:
+        enqueue_index_job(UUID(index_job_id))
+    if fatal_exc is not None:
+        raise fatal_exc
 
 
 @celery_app.task(name="app.workers.github_tasks.process_github_event", bind=True, max_retries=3)

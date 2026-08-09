@@ -30,6 +30,7 @@ from app.constants.enums import (
     GitHubReviewRunStatus,
     stored_enum_value,
 )
+from app.constants.github_messages import SUPERSEDED_CHECK_SUMMARY, SUPERSEDED_INDEX_ERROR
 from app.core.logging import get_logger
 from app.models.github_index_job import GitHubIndexJobORM
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
@@ -43,8 +44,6 @@ from app.services.github_pipeline_trace import (
 
 logger = get_logger(__name__)
 
-_SUPERSEDED_CHECK_SUMMARY = "Superseded by newer run"
-
 _ACTIVE_REVIEW_RUN_STATUSES = (
     GitHubReviewRunStatus.pending,
     GitHubReviewRunStatus.processing,
@@ -54,8 +53,6 @@ _ACTIVE_INDEX_JOB_STATUSES = (
     GitHubIndexJobStatus.pending,
     GitHubIndexJobStatus.processing,
 )
-
-_SUPERSEDED_INDEX_ERROR = "Superseded by newer run"
 
 
 @dataclass(frozen=True)
@@ -190,7 +187,7 @@ async def finalize_pipeline_checks_for_superseded_review_runs(
             await finalize_pipeline_github_check_neutral(
                 session,
                 pipeline_run_id=pipeline_run.id,
-                summary=_SUPERSEDED_CHECK_SUMMARY,
+                summary=SUPERSEDED_CHECK_SUMMARY,
             )
 
 
@@ -212,7 +209,7 @@ async def _mark_index_job_ids_superseded_cas(
         )
         .values(
             status=GitHubIndexJobStatus.failed,
-            error_message=_SUPERSEDED_INDEX_ERROR,
+            error_message=SUPERSEDED_INDEX_ERROR,
         )
         .returning(GitHubIndexJobORM.id)
     )
@@ -296,7 +293,7 @@ async def finalize_pipeline_checks_for_superseded_index_jobs(
         await finalize_pipeline_github_check_neutral(
             session,
             pipeline_run_id=pipeline_run.id,
-            summary=_SUPERSEDED_CHECK_SUMMARY,
+            summary=SUPERSEDED_CHECK_SUMMARY,
         )
 
 

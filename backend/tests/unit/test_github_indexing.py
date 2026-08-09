@@ -16,6 +16,7 @@ from app.constants.enums import (
     GitHubPullRequestState,
     GitHubRepositoryStatus,
 )
+from app.constants.github_messages import SUPERSEDED_INDEX_ERROR
 from app.core.exceptions import ServiceUnavailableError
 from app.models.github_code_chunk import GitHubCodeChunkORM
 from app.models.github_index_job import GitHubIndexJobORM
@@ -289,6 +290,30 @@ async def test_run_index_job_skips_non_pending_status():
         result = await run_index_job(session, index_job_id=job.id)
 
     assert result.status == GitHubIndexJobStatus.processing
+    download_mock.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_run_index_job_skips_superseded_after_claim_race():
+    session, job, _revision = _index_job_fixture()
+    job.status = GitHubIndexJobStatus.pending
+    job.error_message = None
+
+    claim_result = MagicMock()
+    claim_result.rowcount = 0
+    session.execute = AsyncMock(return_value=claim_result)
+
+    async def _refresh(refreshed_job):
+        refreshed_job.status = GitHubIndexJobStatus.failed
+        refreshed_job.error_message = SUPERSEDED_INDEX_ERROR
+
+    session.refresh = AsyncMock(side_effect=_refresh)
+
+    with patch("app.services.github_indexing.download_repository_tarball", AsyncMock()) as download_mock:
+        result = await run_index_job(session, index_job_id=job.id)
+
+    assert result.status == GitHubIndexJobStatus.failed
+    assert result.error_message == SUPERSEDED_INDEX_ERROR
     download_mock.assert_not_awaited()
 
 
