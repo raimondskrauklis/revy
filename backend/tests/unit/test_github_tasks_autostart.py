@@ -428,22 +428,23 @@ def test_schedule_autostart_pipeline_for_revision_skips_stale_revision():
     enqueue_mock.assert_not_called()
 
 
-def test_apply_resolution_for_synchronize_skips_stale_revision():
+def test_apply_resolution_for_synchronize_runs_for_stale_revision():
     revision_id = uuid.uuid4()
+    revision = MagicMock()
+    revision.pull_request_id = uuid.uuid4()
+    pull_request = MagicMock()
     session = AsyncMock()
+    session.get = AsyncMock(side_effect=[revision, pull_request])
+    session.commit = AsyncMock()
 
     with patch("app.workers.github_tasks.get_db_context", return_value=_db_context(session)):
         with patch(
-            "app.workers.github_tasks.is_authoritative_for_pull_request_head",
-            AsyncMock(return_value=False),
-        ):
-            with patch(
-                "app.workers.github_tasks.apply_resolution_status_for_synchronize",
-                AsyncMock(),
-            ) as resolution_mock:
-                github_tasks.apply_resolution_for_synchronize.run(str(revision_id))
+            "app.workers.github_tasks.apply_resolution_status_for_synchronize",
+            AsyncMock(),
+        ) as resolution_mock:
+            github_tasks.apply_resolution_for_synchronize.run(str(revision_id))
 
-    resolution_mock.assert_not_awaited()
+    resolution_mock.assert_awaited_once()
 
 
 def test_apply_resolution_for_synchronize_skips_retry_on_permanent_not_found():
@@ -452,16 +453,12 @@ def test_apply_resolution_for_synchronize_skips_retry_on_permanent_not_found():
     session.get = AsyncMock(return_value=None)
 
     with patch("app.workers.github_tasks.get_db_context", return_value=_db_context(session)):
-        with patch(
-            "app.workers.github_tasks.is_authoritative_for_pull_request_head",
-            AsyncMock(return_value=True),
+        with patch.object(
+            github_tasks.apply_resolution_for_synchronize,
+            "retry",
+            side_effect=AssertionError("retry should not be called"),
         ):
-            with patch.object(
-                github_tasks.apply_resolution_for_synchronize,
-                "retry",
-                side_effect=AssertionError("retry should not be called"),
-            ):
-                github_tasks.apply_resolution_for_synchronize.run(str(revision_id))
+            github_tasks.apply_resolution_for_synchronize.run(str(revision_id))
 
 
 def test_schedule_autostart_pipeline_for_revision_enqueues_when_authoritative():

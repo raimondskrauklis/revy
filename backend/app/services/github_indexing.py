@@ -51,6 +51,15 @@ from app.services.code_chunking import chunk_file_content
 
 logger = get_logger(__name__)
 
+_SUPERSEDED_INDEX_ERROR = "Superseded by newer run"
+
+
+def _is_superseded_index_job(job: GitHubIndexJobORM) -> bool:
+    return (
+        job.status == GitHubIndexJobStatus.failed
+        and job.error_message == _SUPERSEDED_INDEX_ERROR
+    )
+
 CHUNK_LIST_DEFAULT_LIMIT = 100
 CHUNK_LIST_MAX_LIMIT = 500
 
@@ -332,6 +341,8 @@ async def _fail_index_job_after_chunk_work(
     job = await session.get(GitHubIndexJobORM, index_job_id)
     if job is None:
         raise NotFoundError("Index job not found")
+    if _is_superseded_index_job(job):
+        return job
     job.status = GitHubIndexJobStatus.failed
     job.error_message = error_message[:2000]
     if preserved_fallback_reason is not None:
@@ -366,6 +377,9 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
             "github_index_job_skip_non_pending",
             extra={"index_job_id": str(index_job_id), "status": stored_enum_value(job.status)},
         )
+        return job
+
+    if _is_superseded_index_job(job):
         return job
 
     job.status = GitHubIndexJobStatus.processing
@@ -591,6 +605,9 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
             new_count=new_count,
             embed_batches=embed_batches,
         )
+        await session.refresh(job)
+        if _is_superseded_index_job(job):
+            return job
         job.status = GitHubIndexJobStatus.completed
         job.chunk_count = await _revision_chunk_count(session, revision_id=job.revision_id)
         if job.index_mode == GitHubIndexMode.full:
