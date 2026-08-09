@@ -512,20 +512,40 @@ def _optional_lifetime_rate_pct(value: object) -> float | None:
     return None
 
 
+def _details_depth_at(tail: str, index: int) -> int:
+    """Nesting depth of <details> at byte offset (supports attributes on open tag)."""
+    depth = 0
+    i = 0
+    while i < index:
+        lower = tail[i:].lower()
+        if lower.startswith("<details"):
+            gt = tail.find(">", i)
+            if gt < 0 or gt >= index:
+                break
+            depth += 1
+            i = gt + 1
+            continue
+        if lower.startswith("</details>"):
+            depth = max(0, depth - 1)
+            i += len("</details>")
+            continue
+        i += 1
+    return depth
+
+
 def _pr_summary_section_end_offset(tail: str) -> int:
-    """Offset in tail where the lifetime block ends (after inner </details> if present)."""
-    search_from = 0
-    details_open = tail.find("<details>")
-    if details_open >= 0:
-        details_close = tail.find("</details>", details_open)
-        if details_close >= 0:
-            search_from = details_close + len("</details>")
+    """Offset in tail where the lifetime block ends (ignores markers inside <details>)."""
     end_offset = len(tail)
-    region = tail[search_from:]
     for marker in _PR_SUMMARY_SECTION_END_MARKERS:
-        idx = region.find(marker)
-        if idx >= 0:
-            end_offset = min(end_offset, search_from + idx)
+        start = 0
+        while True:
+            idx = tail.find(marker, start)
+            if idx < 0:
+                break
+            if _details_depth_at(tail, idx) == 0:
+                end_offset = min(end_offset, idx)
+                break
+            start = idx + 1
     return end_offset
 
 
@@ -573,7 +593,10 @@ def _format_pr_summary_details_block(
                 lines.append(f"- {label}: {count}")
         lines.append("")
 
-    if raised == resolved + still_open + hidden_total:
+    if (
+        isinstance(filter_snapshot, dict)
+        and raised == resolved + still_open + hidden_total
+    ):
         lines.append(
             f"Reconciliation: raised ({raised}) = resolved ({resolved}) + "
             f"display open ({still_open}) + hidden ({hidden_total})."

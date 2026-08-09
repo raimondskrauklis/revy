@@ -1463,6 +1463,33 @@ def test_replace_pr_summary_section_ignores_markers_inside_details():
     assert result == "NEW_BLOCK\n### This generation\n| row |\n"
 
 
+def test_replace_pr_summary_section_ignores_markers_in_nested_details():
+    old = (
+        "### PR summary (lifetime)\n\n"
+        "<details open><summary>Outer</summary>\n"
+        "<details><summary>Inner</summary>\n"
+        "\n### This generation\n"
+        "</details>\n"
+        "</details>\n\n"
+        "### This generation\n| row |\n"
+    )
+    result = _replace_pr_summary_section(old, "NEW_BLOCK")
+    assert result == "NEW_BLOCK\n### This generation\n| row |\n"
+
+
+def test_format_pr_summary_details_skips_exact_reconciliation_without_snapshot():
+    block = format_pr_resolution_rollup_block(
+        _rollup(
+            raised_count=5,
+            resolved_count=3,
+            still_open_display=2,
+            filter_snapshot=None,
+        )
+    )
+    assert "raised (5) = resolved (3)" not in block
+    assert "5 raised; 3 resolved" not in block
+
+
 def test_splice_deterministic_pr_summary_block_idempotent_with_details():
     ctx = _ctx_with_rollup(
         [_group()],
