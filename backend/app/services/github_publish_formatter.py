@@ -472,48 +472,349 @@ def display_still_open_prior_count(ctx: PublishFormatContext) -> int:
 
 
 _PR_SUMMARY_HEADING = "### PR summary (lifetime)"
+_PR_SUMMARY_DETAILS_SUMMARY = "Lifetime breakdown"
+_PR_SUMMARY_SECTION_END_MARKERS = (
+    "\n\n**Since last push:**",
+    "\n### Resolution metrics",
+    "\n### Files needing attention",
+    "\n### This generation",
+)
+_RESOLVED_METHOD_LABELS = (
+    ("absent_and_addressed", "addressed"),
+    ("judge_dismissed", "judge dismissed"),
+    ("verification_dismissed", "verification dismissed"),
+    ("human_dismissed", "human dismissed"),
+    ("path_removed", "path removed"),
+)
+
+
+_HIDDEN_FILTER_KEYS = (
+    ("collapsed_hidden", "collapsed inline threads"),
+    ("orphan_never_inlined_hidden", "never-inlined summary-only"),
+    ("compare_failed_hidden", "compare/closure blocked"),
+)
+
+
+def _safe_snapshot_int(value: object) -> int:
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return 0
+    return 0
+
+
+def _hidden_total_from_filter_snapshot(filter_snapshot: object) -> int:
+    if not isinstance(filter_snapshot, dict):
+        return 0
+    return sum(
+        _safe_snapshot_int(filter_snapshot.get(key)) for key, _ in _HIDDEN_FILTER_KEYS
+    )
+
+
+def _optional_lifetime_rate_pct(value: object) -> float | None:
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return float(value)
+        except ValueError:
+            return None
+    return None
+
+
+def _canonical_newlines(markdown: str) -> str:
+    return markdown.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _heading_suffix_matches(remainder: str, suffix: str) -> bool:
+    if not remainder.startswith(suffix):
+        return False
+    after = remainder[len(suffix) :]
+    return not after or after[0] in "\n\r"
+
+
+def _find_splice_marker(
+    markdown: str,
+    marker: str,
+    start: int = 0,
+    *,
+    heading_suffixes: tuple[str, ...] = (),
+) -> int:
+    """Find marker at line start; heading markers must not prefix a longer heading."""
+    require_heading_eol = marker.startswith("###")
+    while True:
+        idx = markdown.find(marker, start)
+        if idx < 0:
+            return -1
+        if idx > 0 and markdown[idx - 1] not in "\n\r":
+            start = idx + 1
+            continue
+        if require_heading_eol:
+            end = idx + len(marker)
+            remainder = markdown[end:]
+            if (
+                remainder
+                and remainder[0] not in "\n\r"
+                and not any(
+                    _heading_suffix_matches(remainder, suffix)
+                    for suffix in heading_suffixes
+                )
+            ):
+                start = idx + 1
+                continue
+        return idx
+
+
+def _section_end_marker_matches(tail: str, index: int, marker: str) -> bool:
+    if not tail.startswith(marker, index):
+        return False
+    end = index + len(marker)
+    if end >= len(tail):
+        return True
+    next_char = tail[end]
+    if marker.endswith("**Since last push:**"):
+        return True
+    if marker == "\n### Resolution metrics":
+        if next_char in "\n\r":
+            return True
+        return _heading_suffix_matches(tail[end:], " (this push)")
+    if marker in ("\n### Files needing attention", "\n### This generation"):
+        return next_char in "\n\r"
+    return next_char in "\n\r"
+
+
+def _at_line_start(text: str, index: int) -> bool:
+    return index <= 0 or text[index - 1] in "\n\r"
+
+
+def _pr_summary_section_end_offset(tail: str) -> int:
+    """Offset where lifetime block ends; ignores markers inside <details> or fences."""
+    footer_idx = _find_review_footer_insert_index(tail)
+    details_depth = 0
+    fence_depth = 0
+    tail_lower = tail.lower()
+    i = 0
+    while i < len(tail):
+        if fence_depth == 0 and details_depth == 0:
+            for marker in _PR_SUMMARY_SECTION_END_MARKERS:
+                if _section_end_marker_matches(tail, i, marker):
+                    if footer_idx >= 0:
+                        return min(i, footer_idx)
+                    return i
+        if _at_line_start(tail, i) and tail.startswith("```", i):
+            line_end = tail.find("\n", i)
+            if line_end < 0:
+                line_end = len(tail)
+            if tail[i:line_end].strip().startswith("```"):
+                fence_depth ^= 1
+                i = line_end
+                continue
+        if fence_depth == 0:
+            if tail_lower.startswith("<details", i):
+                gt = tail.find(">", i)
+                if gt < 0:
+                    i += 1
+                    continue
+                details_depth += 1
+                i = gt + 1
+                continue
+            if tail_lower.startswith("</details>", i):
+                details_depth = max(0, details_depth - 1)
+                i += len("</details>")
+                continue
+        i += 1
+    if footer_idx >= 0:
+        return footer_idx
+    return len(tail)
+
+
+def _format_publishable_status_line(*, still_open: int, hidden_total: int) -> str:
+    if still_open > 0:
+        return (
+            f"**Publishable status:** {still_open} open — see Still open on PR"
+        )
+    if hidden_total > 0:
+        return (
+            "**Publishable status:** Nothing to act on in the tables below "
+            f"({hidden_total} hidden from display — expand breakdown)."
+        )
+    return "**Publishable status:** Nothing to act on in the tables below."
+
+
+def _format_pr_summary_details_block(
+    rollup: dict[str, object],
+    *,
+    raised: int,
+    resolved: int,
+    still_open: int,
+    hidden_total: int,
+) -> list[str]:
+    lines: list[str] = []
+    by_method = rollup.get("resolved_by_method")
+    if isinstance(by_method, dict) and resolved > 0:
+        lines.append("**Resolved (lifetime)**")
+        for key, label in _RESOLVED_METHOD_LABELS:
+            count = int(by_method.get(key) or 0)
+            if count:
+                lines.append(f"- {label}: {count}")
+        lines.append("")
+
+    filter_snapshot = rollup.get("filter_snapshot")
+    if hidden_total > 0 and isinstance(filter_snapshot, dict):
+        lines.append("**Hidden from tables** (no open GitHub thread to act on)")
+        for key, label in _HIDDEN_FILTER_KEYS:
+            count = _safe_snapshot_int(filter_snapshot.get(key))
+            if count:
+                lines.append(f"- {label}: {count}")
+        lines.append("")
+
+    if (
+        isinstance(filter_snapshot, dict)
+        and raised == resolved + still_open + hidden_total
+    ):
+        lines.append(
+            f"Reconciliation: raised ({raised}) = resolved ({resolved}) + "
+            f"display open ({still_open}) + hidden ({hidden_total})."
+        )
+    elif isinstance(filter_snapshot, dict):
+        raw_active = _safe_snapshot_int(filter_snapshot.get("raw_active_before_filters"))
+        lines.append(
+            f"Reconciliation: {raised} raised; {resolved} resolved; "
+            f"{still_open} display open; {hidden_total} hidden."
+        )
+        if raw_active:
+            lines.append(
+                f"Raw active before display filters: {raw_active} "
+                "(may include addressed-pending groups)."
+            )
+
+    still_open_prior = int(rollup.get("still_open_prior") or 0)
+    if still_open_prior != still_open:
+        lines.append(
+            "Push metrics may show a different prior-open count — push block uses "
+            "prior-revision pairing; tables use display-filtered counts."
+        )
+
+    rate = _optional_lifetime_rate_pct(rollup.get("lifetime_resolution_rate_pct"))
+    if rate is not None:
+        lines.append(
+            f"Lifetime resolution rate ({rate}%) uses display open only, not raw DB active count."
+        )
+    elif resolved + still_open == 0:
+        lines.append("Lifetime resolution rate: N/A (no resolved or display-open groups).")
+
+    return lines
 
 
 def format_pr_resolution_rollup_block(rollup: dict[str, object]) -> str:
-    """Lifetime PR rollup markdown block (PSR P1)."""
+    """Lifetime PR rollup markdown block (PSR P1 + P4 scan/details)."""
     raised = int(rollup.get("raised_count") or 0)
     resolved = int(rollup.get("resolved_count") or 0)
     still_open = int(rollup.get("still_open_display") or 0)
-    rate = rollup.get("lifetime_resolution_rate_pct")
-    by_method = rollup.get("resolved_by_method")
+    filter_snapshot = rollup.get("filter_snapshot")
+    hidden_total = _hidden_total_from_filter_snapshot(filter_snapshot)
+
     lines = [
         _PR_SUMMARY_HEADING,
         "",
-        f"- **Raised on PR:** {raised}",
-        f"- **Resolved (lifetime):** {resolved}",
+        _format_publishable_status_line(still_open=still_open, hidden_total=hidden_total),
+        "",
+        "| | Count |",
+        "|--|--:|",
+        f"| Raised on this PR | {raised} |",
+        f"| Resolved (lifetime) | {resolved} |",
+        f"| Still open (in tables) | {still_open} |",
     ]
-    if isinstance(by_method, dict):
-        method_lines = []
-        for key, label in (
-            ("absent_and_addressed", "addressed"),
-            ("judge_dismissed", "judge dismissed"),
-            ("verification_dismissed", "verification dismissed"),
-            ("human_dismissed", "human dismissed"),
-            ("path_removed", "path removed"),
-        ):
-            count = int(by_method.get(key) or 0)
-            if count:
-                method_lines.append(f"  - {label}: {count}")
-        if method_lines:
-            lines.extend(method_lines)
-    lines.extend(
-        [
-            f"- **Still open (display):** {still_open}",
-        ]
-    )
-    if isinstance(rate, (int, float)):
-        lines.append(f"- **Lifetime resolution rate:** {rate}%")
-    elif resolved + still_open == 0:
-        lines.append("- **Lifetime resolution rate:** N/A")
+    if hidden_total > 0:
+        lines.append(f"| Hidden from tables | {hidden_total} |")
+
     disclosure = rollup.get("lifetime_disclosure")
     if isinstance(disclosure, str) and disclosure.strip():
         lines.extend(["", disclosure.strip()])
+
+    detail_lines = _format_pr_summary_details_block(
+        rollup,
+        raised=raised,
+        resolved=resolved,
+        still_open=still_open,
+        hidden_total=hidden_total,
+    )
+    if detail_lines:
+        lines.extend(
+            [
+                "",
+                "<details>",
+                f"<summary>{_PR_SUMMARY_DETAILS_SUMMARY}</summary>",
+                "",
+                *detail_lines,
+                "</details>",
+            ]
+        )
+
     return "\n".join(lines)
+
+
+_REVIEW_METADATA_SUMMARY = "<summary>Review metadata</summary>"
+
+
+def _review_metadata_details_is_footer(block: str) -> bool:
+    if "Revision:" in block or "Head:" in block:
+        return True
+    if "head_sha" in block or "revision_number" in block:
+        return True
+    after_summary = block.split("</summary>", 1)[-1].replace("</details>", "").strip()
+    return not after_summary
+
+
+def _find_valid_review_metadata_details_index(text: str) -> int:
+    search_from = len(text)
+    while search_from > 0:
+        summary_idx = text.rfind(_REVIEW_METADATA_SUMMARY, 0, search_from)
+        if summary_idx < 0:
+            return -1
+        start = text.rfind("<details>", 0, summary_idx)
+        close = text.find("</details>", summary_idx)
+        if start >= 0 and close >= 0:
+            block = text[start : close + len("</details>")]
+            if _review_metadata_details_is_footer(block):
+                return start
+        search_from = summary_idx
+    return -1
+
+
+def _find_review_footer_insert_index(markdown: str) -> int:
+    """Index before rollup metadata footer (validated --- block or Review metadata details)."""
+    text = _canonical_newlines(markdown)
+    candidates: list[int] = []
+    details_idx = _find_valid_review_metadata_details_index(text)
+    if details_idx >= 0:
+        candidates.append(details_idx)
+    footer_marker = "\n---\n*"
+    footer_idx = text.rfind(footer_marker)
+    if footer_idx >= 0:
+        tail = text[footer_idx:]
+        if "Revision:" in tail and tail.rstrip().endswith("*"):
+            candidates.append(footer_idx)
+    return min(candidates) if candidates else -1
+
+
+def _replace_pr_summary_section(markdown: str, new_block: str) -> str:
+    """Replace PR summary section without truncating inner <details> in the rollup block."""
+    markdown = _canonical_newlines(markdown)
+    start = _find_splice_marker(markdown, _PR_SUMMARY_HEADING)
+    if start < 0:
+        return markdown
+    end = start + len(_PR_SUMMARY_HEADING)
+    tail = markdown[end:]
+    end_offset = _pr_summary_section_end_offset(tail)
+    return markdown[:start] + new_block.rstrip() + tail[end_offset:]
 
 
 def format_pr_rollup_check_one_liner(rollup: dict[str, object]) -> str:
@@ -540,21 +841,35 @@ def splice_deterministic_pr_summary_block(markdown: str, ctx: PublishFormatConte
     rollup = ctx.pr_resolution_rollup
     if not isinstance(rollup, dict):
         return markdown
+    markdown = _canonical_newlines(markdown)
     block = format_pr_resolution_rollup_block(rollup)
-    if _PR_SUMMARY_HEADING in markdown:
-        return _replace_markdown_section(markdown, _PR_SUMMARY_HEADING, block)
-    for marker in ("**Since last push:**", "### Resolution metrics (this push)"):
-        idx = markdown.find(marker)
+    if _find_splice_marker(markdown, _PR_SUMMARY_HEADING) >= 0:
+        return _replace_pr_summary_section(markdown, block)
+    for marker in ("**Since last push:**",):
+        idx = _find_splice_marker(markdown, marker)
+        if idx >= 0:
+            prefix = markdown[:idx].rstrip()
+            suffix = markdown[idx:]
+            return f"{prefix}\n\n{block}\n\n{suffix}"
+    for marker in ("### Resolution metrics (this push)", "### Resolution metrics"):
+        idx = _find_splice_marker(
+            markdown,
+            marker,
+            heading_suffixes=(" (this push)",) if marker == "### Resolution metrics" else (),
+        )
         if idx >= 0:
             prefix = markdown[:idx].rstrip()
             suffix = markdown[idx:]
             return f"{prefix}\n\n{block}\n\n{suffix}"
     for marker in ("### Files needing attention", "### This generation"):
-        idx = markdown.find(marker)
+        idx = _find_splice_marker(markdown, marker)
         if idx >= 0:
             prefix = markdown[:idx].rstrip()
             suffix = markdown[idx:]
             return f"{prefix}\n\n{block}\n\n{suffix}"
+    footer_idx = _find_review_footer_insert_index(markdown)
+    if footer_idx >= 0:
+        return f"{markdown[:footer_idx].rstrip()}\n\n{block}\n\n{markdown[footer_idx:].lstrip()}"
     return f"{markdown.rstrip()}\n\n{block}"
 
 
@@ -635,6 +950,8 @@ def _replace_markdown_section(
     start_marker: str,
     new_block: str,
 ) -> str:
+    if start_marker == _PR_SUMMARY_HEADING:
+        return _replace_pr_summary_section(markdown, new_block)
     start = markdown.find(start_marker)
     if start < 0:
         return markdown
@@ -1317,8 +1634,8 @@ def _build_issue_comment_user_prompt(ctx: PublishFormatContext) -> str:
     )
     if isinstance(ctx.pr_resolution_rollup, dict):
         prompt += (
-            "\nPR lifetime rollup JSON (render ### PR summary (lifetime) from these counts only; "
-            "do not replace or invent):\n"
+            "\nPR lifetime rollup JSON (deterministic formatter owns the full ### PR summary block; "
+            "Moonshot must not emit scan tables or <details> for lifetime — heading stub at most):\n"
             f"{json.dumps(ctx.pr_resolution_rollup, ensure_ascii=False)}\n"
             "Do not omit ### PR summary (lifetime) when review_count > 1 or raised_count > 0."
         )

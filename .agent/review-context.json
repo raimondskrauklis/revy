@@ -6,16 +6,16 @@
       "scope": ["backend/**"],
       "paths": [
         {
-          "path": "docs/review-pipeline/pr-summary-rollup/waves/PR_SUMMARY_ROLLUP_EXECUTION.md",
-          "description": "PSR LOOP index — P0–P3 execution"
+          "path": "docs/review-pipeline/pr-summary-rollup/waves/PR_SUMMARY_ROLLUP_P4_EXECUTION.md",
+          "description": "PSR P4 execution — lifetime readability scan + details"
         },
         {
-          "path": "docs/review-pipeline/pr-summary-rollup/PR_SUMMARY_ROLLUP_FINDINGS.md",
-          "description": "PSR baseline — manifest v1, PSR-Q1–Q10, pass-01 locks"
+          "path": "docs/review-pipeline/pr-summary-rollup/PR_SUMMARY_ROLLUP_P4_READABILITY_FINDINGS.md",
+          "description": "PSR P4 baseline — PSR-Q11–Q18, splice boundary, #501 dogfood"
         },
         {
           "path": "docs/review-pipeline/pr-summary-rollup/PR_SUMMARY_ROLLUP_GENERAL_PLAN.md",
-          "description": "PSR general plan — rollup persist, formatter, API, staging"
+          "description": "PSR general plan — P0–P4 phases"
         }
       ]
     }

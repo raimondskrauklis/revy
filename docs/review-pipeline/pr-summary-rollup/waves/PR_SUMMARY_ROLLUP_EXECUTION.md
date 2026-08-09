@@ -12,7 +12,8 @@
 | P1 | Formatter surfaces (comment + check) | [P1](./PR_SUMMARY_ROLLUP_P1_EXECUTION.md) | Done (`6dd7335`) |
 | P2 | Moonshot + API + dogfood + trace | [P2](./PR_SUMMARY_ROLLUP_P2_EXECUTION.md) | Done (`6af9c64`) |
 | P3 | Staging sign-off + doc sync | [P3](./PR_SUMMARY_ROLLUP_P3_EXECUTION.md) | Done — [staging PASS](../PR_SUMMARY_ROLLUP_STAGING_VALIDATION.md) ([#87](https://github.com/raimondskrauklis/revy/pull/87)) |
+| P4 | Lifetime readability (scan + `<details>`) | [P4](./PR_SUMMARY_ROLLUP_P4_EXECUTION.md) | Done — staging spot-check pending |
 
-**Branch:** `feat/pr-summary-rollup` merged ([#85](https://github.com/raimondskrauklis/revy/pull/85)); dogfood [#87](https://github.com/raimondskrauklis/revy/pull/87).
+**Branch:** `feat/psr-p4-readability` from `main`.
 
-**Next:** none — program complete.
+**Next:** merge P4 PR → deploy → P4.4 staging spot-check on kp-platform #501-class publish.

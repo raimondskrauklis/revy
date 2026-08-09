@@ -64,6 +64,22 @@ PSR-Q1–Q10 · pass-01 implementation locks (post-collapse compute, `_load_pr_g
 
 **Depends on:** P2 deployed to staging.
 
+**Status:** Done — [#87](https://github.com/raimondskrauklis/revy/pull/87) staging PASS.
+
 ---
 
-**Next step:** `execution-peer-review` → `phase-execution` on `feat/pr-summary-rollup` from `main`.
+## P4 — Lifetime readability (scan + explain)
+
+**Goal:** Authors scanning long PRs understand lifetime counts — especially when display-open is 0 but raised ≫ resolved.
+
+**Scope — in:** P4.0 splice boundary fix; publishable status + scan table; `<details>` breakdown; guarded reconciliation (PSR-Q15); push cross-ref in details only (PSR-Q16); Moonshot stub + deterministic splice (PSR-Q18); formatter tests; staging spot-check (#501). **Out:** rollup math, filter rules, main-table hidden rows, push-block rewrite, check-run hidden context.
+
+**Deliverables:** `_replace_pr_summary_section`; updated `format_pr_resolution_rollup_block`; [pass-02](./reviews/execution-peer-review/pass-02-2026-08-09.md) cleared; human gate PSR-Q14.
+
+**Depends on:** P3 shipped; [kp-platform #501](https://github.com/raimondskrauklis/kp-platform/pull/501) dogfood.
+
+**Baseline:** [PR_SUMMARY_ROLLUP_P4_READABILITY_FINDINGS.md](./PR_SUMMARY_ROLLUP_P4_READABILITY_FINDINGS.md)
+
+---
+
+**Next step:** `phase-execution` on `feat/psr-p4-readability` from `main`, starting **P4.0** (splice fix).

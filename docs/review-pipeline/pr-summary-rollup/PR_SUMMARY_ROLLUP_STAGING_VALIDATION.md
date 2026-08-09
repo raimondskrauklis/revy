@@ -121,6 +121,21 @@ DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.judge_json_contract_staging
 
 ---
 
+## P4 readability wave (pending post-deploy)
+
+**Deploy boundary:** TBD — record after P4 merge + worker deploy.
+
+| Check | Pass | Evidence |
+|-------|------|----------|
+| Scan table + publishable status in comment | pending | post-deploy publish on #501-class PR |
+| `<details>` reconciliation explains hidden count | pending | expand breakdown; `29 = 17 + 0 + 12` without code |
+| Double-splice idempotent | **PASS** (unit) | `test_splice_deterministic_pr_summary_block_idempotent_with_details` |
+| PSR-Q14 verbosity trim | pending | human gate after staging spot-check |
+
+**Case study:** [kp-platform #501](https://github.com/raimondskrauklis/kp-platform/pull/501) — pre-P4 comment; re-publish after deploy to validate.
+
+---
+
 ## Doc sync (P3)
 
 | Doc | Change |

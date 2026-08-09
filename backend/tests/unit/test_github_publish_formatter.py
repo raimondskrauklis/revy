@@ -18,6 +18,7 @@ from app.constants.enums import (
 from app.models.github_finding_group import GitHubFindingGroupORM
 from app.services.github_publish_formatter import (
     PublishFormatContext,
+    _replace_pr_summary_section,
     append_review_metadata_footer,
     append_thread_resolve_skipped_block,
     apply_publish_summary_thread_collapse,
@@ -1408,8 +1409,309 @@ def test_index_footer_on_fallback():
 def test_format_pr_resolution_rollup_block_lifetime_heading():
     block = format_pr_resolution_rollup_block(_rollup())
     assert "### PR summary (lifetime)" in block
-    assert "Raised on PR" in block
-    assert "Lifetime resolution rate" in block
+    assert "Publishable status" in block
+    assert "Raised on this PR" in block
+    assert "Still open (in tables)" in block
+    assert "<details>" in block
+    assert "Lifetime breakdown" in block
+
+
+def test_format_pr_resolution_rollup_block_501_fixture():
+    block = format_pr_resolution_rollup_block(
+        _rollup(
+            raised_count=29,
+            resolved_count=17,
+            still_open_display=0,
+            still_open_prior=0,
+            lifetime_resolution_rate_pct=100.0,
+            resolved_by_method={
+                "absent_and_addressed": 11,
+                "judge_dismissed": 2,
+                "verification_dismissed": 0,
+                "human_dismissed": 0,
+                "path_removed": 4,
+            },
+            filter_snapshot={
+                "raw_active_before_filters": 12,
+                "collapsed_hidden": 11,
+                "orphan_never_inlined_hidden": 1,
+                "compare_failed_hidden": 0,
+            },
+        )
+    )
+    assert "| Hidden from tables | 12 |" in block
+    assert "Reconciliation: raised (29) = resolved (17) + display open (0) + hidden (12)" in block
+    assert "collapsed inline threads" in block
+
+
+def test_format_pr_resolution_rollup_block_accepts_string_rate():
+    block = format_pr_resolution_rollup_block(
+        _rollup(lifetime_resolution_rate_pct="33.3")
+    )
+    assert "Lifetime resolution rate (33.3%)" in block
+
+
+def test_replace_pr_summary_section_ignores_markers_inside_details():
+    old = (
+        "### PR summary (lifetime)\n\n"
+        "<details><summary>X</summary>\n\n"
+        "Note ### This generation inside\n\n"
+        "</details>\n\n"
+        "### This generation\n| row |\n"
+    )
+    result = _replace_pr_summary_section(old, "NEW_BLOCK")
+    assert result == "NEW_BLOCK\n### This generation\n| row |\n"
+
+
+def test_replace_pr_summary_section_ignores_markers_in_nested_details():
+    old = (
+        "### PR summary (lifetime)\n\n"
+        "<details open><summary>Outer</summary>\n"
+        "<details><summary>Inner</summary>\n"
+        "\n### This generation\n"
+        "</details>\n"
+        "</details>\n\n"
+        "### This generation\n| row |\n"
+    )
+    result = _replace_pr_summary_section(old, "NEW_BLOCK")
+    assert result == "NEW_BLOCK\n### This generation\n| row |\n"
+
+
+def test_format_pr_summary_details_skips_exact_reconciliation_without_snapshot():
+    block = format_pr_resolution_rollup_block(
+        _rollup(
+            raised_count=5,
+            resolved_count=3,
+            still_open_display=2,
+            filter_snapshot=None,
+        )
+    )
+    assert "raised (5) = resolved (3)" not in block
+    assert "5 raised; 3 resolved" not in block
+
+
+def test_replace_pr_summary_section_ignores_heading_in_prose():
+    old = (
+        "## Revy code review\n\n"
+        "See ### PR summary (lifetime) in docs.\n\n"
+        "### PR summary (lifetime)\n\n"
+        "| | Count |\n"
+        "|--|--:|\n"
+        "| Raised on this PR | 1 |\n\n"
+        "**Since last push:** delta\n"
+    )
+    result = _replace_pr_summary_section(old, "NEW_BLOCK")
+    assert "See ### PR summary (lifetime) in docs." in result
+    assert result.index("NEW_BLOCK") < result.index("**Since last push:**")
+
+
+def test_splice_ignores_pr_summary_heading_mention_in_prose():
+    ctx = _ctx_with_rollup([_group()])
+    body = (
+        "## Revy code review\n\n"
+        "Mention ### PR summary (lifetime) in narrative.\n\n"
+        "**Since last push:** delta\n"
+    )
+    result = splice_deterministic_pr_summary_block(body, ctx)
+    assert "Mention ### PR summary (lifetime) in narrative." in result
+    assert "**Publishable status:**" in result
+    assert result.index("### PR summary (lifetime)\n\n**Publishable") > result.index(
+        "narrative."
+    )
+
+
+def test_replace_pr_summary_section_ignores_details_in_code_fence():
+    old = (
+        "### PR summary (lifetime)\n\n"
+        "```\n"
+        "<details><summary>x</summary></details>\n"
+        "```\n\n"
+        "**Since last push:** delta\n"
+    )
+    result = _replace_pr_summary_section(old, "NEW_BLOCK")
+    assert result == "NEW_BLOCK\n\n**Since last push:** delta\n"
+
+
+def test_replace_pr_summary_section_ignores_resolution_metrics_explained_in_disclosure():
+    old = (
+        "### PR summary (lifetime)\n\n"
+        "| | Count |\n"
+        "Note ### Resolution metrics explained in docs.\n\n"
+        "**Since last push:** delta\n"
+    )
+    result = _replace_pr_summary_section(old, "NEW_BLOCK")
+    assert result == "NEW_BLOCK\n\n**Since last push:** delta\n"
+
+
+def test_replace_markdown_section_delegates_pr_summary_to_dedicated_splice():
+    from app.services.github_publish_formatter import _replace_markdown_section
+
+    old = (
+        "### PR summary (lifetime)\n\n"
+        "<details><summary>X</summary>\n\n"
+        "inner\n\n"
+        "</details>\n\n"
+        "**Since last push:** delta\n"
+    )
+    result = _replace_markdown_section(old, "### PR summary (lifetime)", "NEW_BLOCK")
+    assert result == "NEW_BLOCK\n\n**Since last push:** delta\n"
+
+
+def test_replace_pr_summary_section_ignores_generation_findings_heading_suffix():
+    old = (
+        "### PR summary (lifetime)\n\n"
+        "Disclosure mentions\n"
+        "### This generation findings in prose\n\n"
+        "### This generation\n| row |\n"
+    )
+    result = _replace_pr_summary_section(old, "NEW_BLOCK")
+    assert "Disclosure mentions" not in result
+    assert result == "NEW_BLOCK\n### This generation\n| row |\n"
+
+
+def test_replace_pr_summary_section_preserves_review_footer():
+    old = (
+        "### PR summary (lifetime)\n\n"
+        "| | Count |\n"
+        "|--|--:|\n"
+        "| Raised on this PR | 1 |\n\n"
+        "<details><summary>Review metadata</summary></details>\n\n"
+        "---\n"
+        "* Revision: 2 · Head: abc1234*"
+    )
+    result = _replace_pr_summary_section(old, "NEW_BLOCK")
+    assert result.startswith("NEW_BLOCK")
+    assert "<details><summary>Review metadata</summary>" in result
+    assert "* Revision: 2 · Head: abc1234*" in result
+
+
+def test_replace_pr_summary_section_ignores_resolution_metrics_explained_heading():
+    old = (
+        "### PR summary (lifetime)\n\n"
+        "### Resolution metrics (this push) explained\n\n"
+        "### Resolution metrics (this push)\n| x |\n"
+    )
+    result = _replace_pr_summary_section(old, "NEW_BLOCK")
+    assert "explained" not in result
+    assert result.endswith("NEW_BLOCK\n### Resolution metrics (this push)\n| x |\n")
+
+
+def test_splice_ignores_unvalidated_review_metadata_details_block():
+    ctx = _ctx_with_rollup([_group()])
+    body = (
+        "## Revy code review\n\n"
+        "<details><summary>Review metadata</summary>\n\n"
+        "Narrative prose, not rollup footer metadata.\n\n"
+        "</details>\n\n"
+        "---\n"
+        "* Revision: 2 · Head: abc1234*"
+    )
+    result = splice_deterministic_pr_summary_block(body, ctx)
+    assert result.index("Narrative prose") < result.index("### PR summary (lifetime)")
+    assert result.index("### PR summary (lifetime)") < result.index("* Revision:")
+
+
+def test_format_pr_resolution_rollup_block_tolerates_non_numeric_filter_snapshot():
+    block = format_pr_resolution_rollup_block(
+        _rollup(
+            filter_snapshot={
+                "collapsed_hidden": "bad",
+                "orphan_never_inlined_hidden": 2,
+                "compare_failed_hidden": None,
+            }
+        )
+    )
+    assert "Hidden from tables | 2 |" in block
+
+
+def test_splice_inserts_before_earliest_footer_marker():
+    ctx = _ctx_with_rollup([_group()])
+    body = (
+        "## Revy code review\n\n"
+        "Narrative only.\n\n"
+        "<details><summary>Review metadata</summary></details>\n\n"
+        "---\n"
+        "* Revision: 2 · Head: abc1234*"
+    )
+    result = splice_deterministic_pr_summary_block(body, ctx)
+    pr_idx = result.index("### PR summary (lifetime)")
+    assert pr_idx < result.index("<details><summary>Review metadata</summary>")
+    assert pr_idx < result.index("* Revision:")
+
+
+def test_splice_deterministic_pr_summary_block_handles_crlf():
+    ctx = _ctx_with_rollup([_group()])
+    body = "## Revy code review\r\n\r\n**Since last push:** delta\r\n"
+    result = splice_deterministic_pr_summary_block(body, ctx)
+    assert result.index("### PR summary (lifetime)") < result.index("**Since last push:**")
+
+
+def test_splice_inserts_before_rollup_footer_not_generic_hr():
+    ctx = _ctx_with_rollup([_group()])
+    body = (
+        "## Revy code review\n\n"
+        "Notes only.\n\n"
+        "---\n"
+        "* unrelated bullet\n\n"
+        "---\n"
+        "* Revision: 2 · Head: abc1234*"
+    )
+    result = splice_deterministic_pr_summary_block(body, ctx)
+    assert result.index("### PR summary (lifetime)") < result.index("* Revision:")
+    assert result.index("unrelated bullet") < result.index("### PR summary (lifetime)")
+
+
+def test_splice_deterministic_pr_summary_block_inserts_before_resolution_metrics_alias():
+    ctx = _ctx_with_rollup([_group()])
+    body = "## Revy code review\n\n### Resolution metrics (this push)\n| x |\n"
+    result = splice_deterministic_pr_summary_block(body, ctx)
+    assert result.index("### PR summary (lifetime)") < result.index("### Resolution metrics")
+
+
+def test_splice_deterministic_pr_summary_block_inserts_before_footer():
+    ctx = _ctx_with_rollup([_group()])
+    body = (
+        "## Revy code review\n\n"
+        "Narrative only.\n\n"
+        "<details><summary>Earlier details</summary></details>\n\n"
+        "<details><summary>Review metadata</summary></details>"
+    )
+    result = splice_deterministic_pr_summary_block(body, ctx)
+    assert result.index("### PR summary (lifetime)") < result.index(
+        "<details><summary>Review metadata</summary>"
+    )
+    assert result.index("Earlier details") < result.index("### PR summary (lifetime)")
+
+
+def test_splice_deterministic_pr_summary_block_idempotent_with_details():
+    ctx = _ctx_with_rollup(
+        [_group()],
+        pr_resolution_rollup=_rollup(
+            filter_snapshot={
+                "raw_active_before_filters": 1,
+                "collapsed_hidden": 0,
+                "orphan_never_inlined_hidden": 0,
+                "compare_failed_hidden": 0,
+            }
+        ),
+    )
+    body = "## Revy code review\n\n**Since last push:** delta\n"
+    first = splice_deterministic_pr_summary_block(body, ctx)
+    second = splice_deterministic_pr_summary_block(first, ctx)
+    assert second.count("### PR summary (lifetime)") == 1
+    assert second.count("<details>") == 1
+    assert second.count("Lifetime breakdown") == 1
+    assert second.index("### PR summary (lifetime)") < second.index("Since last push")
+    assert "\n\n**Since last push:**" in second or "\n\n### Resolution metrics" in second
+
+
+def test_replace_pr_summary_section_preserves_blank_line_before_push_delta():
+    ctx = _ctx_with_rollup([_group()])
+    body = "## Revy code review\n\n**Since last push:** delta\n"
+    result = splice_deterministic_pr_summary_block(body, ctx)
+    idx = result.index("**Since last push:**")
+    before = result[idx - 2 : idx]
+    assert before == "\n\n"
 
 
 def test_build_pr_review_comment_fallback_pr_summary_before_g9():
