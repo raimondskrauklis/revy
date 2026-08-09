@@ -244,20 +244,21 @@ async def test_apply_pull_request_synchronize_appends_revision():
     session.flush = AsyncMock()
 
     with patch(
-        "app.services.github_pull_requests.apply_resolution_status_for_synchronize",
-        AsyncMock(return_value=0),
-    ):
+        "app.services.github_pull_requests.supersede_stale_generations_for_new_revision",
+        AsyncMock(),
+    ) as supersede_stale_mock:
         with patch(
-            "app.services.github_pull_requests.supersede_stale_generations_for_new_revision",
+            "app.services.github_pull_requests.supersede_active_generations_for_revision",
             AsyncMock(),
-        ) as supersede_mock:
+        ) as supersede_active_mock:
             result = await apply_pull_request_webhook_event(
                 session,
                 _pull_request_payload(action="synchronize", head_sha="newsha"),
             )
 
     assert result is not None
-    supersede_mock.assert_awaited_once()
+    supersede_stale_mock.assert_awaited_once()
+    supersede_active_mock.assert_awaited_once()
 
     assert existing.revision_count == 2
     assert existing.head_sha == "newsha"
@@ -302,11 +303,11 @@ async def test_apply_pull_request_synchronize_updates_is_draft():
     session.flush = AsyncMock()
 
     with patch(
-        "app.services.github_pull_requests.apply_resolution_status_for_synchronize",
-        AsyncMock(return_value=0),
+        "app.services.github_pull_requests.supersede_stale_generations_for_new_revision",
+        AsyncMock(),
     ):
         with patch(
-            "app.services.github_pull_requests.supersede_stale_generations_for_new_revision",
+            "app.services.github_pull_requests.supersede_active_generations_for_revision",
             AsyncMock(),
         ):
             await apply_pull_request_webhook_event(
@@ -353,11 +354,11 @@ async def test_apply_pull_request_synchronize_same_sha_skips_revision():
     session.flush = AsyncMock()
 
     with patch(
-        "app.services.github_pull_requests.apply_resolution_status_for_synchronize",
-        AsyncMock(return_value=0),
+        "app.services.github_pull_requests.supersede_stale_generations_for_new_revision",
+        AsyncMock(),
     ):
         with patch(
-            "app.services.github_pull_requests.supersede_stale_generations_for_new_revision",
+            "app.services.github_pull_requests.supersede_active_generations_for_revision",
             AsyncMock(),
         ):
             await apply_pull_request_webhook_event(
@@ -407,13 +408,13 @@ async def test_apply_pull_request_synchronize_same_sha_heals_missing_revision():
     session.flush = AsyncMock()
 
     with patch(
-        "app.services.github_pull_requests.apply_resolution_status_for_synchronize",
-        AsyncMock(return_value=0),
-    ):
+        "app.services.github_pull_requests.supersede_stale_generations_for_new_revision",
+        AsyncMock(),
+    ) as supersede_stale_mock:
         with patch(
-            "app.services.github_pull_requests.supersede_stale_generations_for_new_revision",
+            "app.services.github_pull_requests.supersede_active_generations_for_revision",
             AsyncMock(),
-        ) as supersede_mock:
+        ) as supersede_active_mock:
             result = await apply_pull_request_webhook_event(
                 session,
                 _pull_request_payload(action="synchronize", head_sha="orphan-sha"),
@@ -422,7 +423,8 @@ async def test_apply_pull_request_synchronize_same_sha_heals_missing_revision():
     assert result is not None
     assert existing.revision_count == 2
     session.add.assert_called_once()
-    supersede_mock.assert_awaited_once()
+    supersede_stale_mock.assert_awaited_once()
+    supersede_active_mock.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -670,13 +672,13 @@ async def test_synchronize_returns_existing_revision_when_head_sha_row_exists():
     session.flush = AsyncMock()
 
     with patch(
-        "app.services.github_pull_requests.apply_resolution_status_for_synchronize",
-        AsyncMock(return_value=0),
-    ):
+        "app.services.github_pull_requests.supersede_stale_generations_for_new_revision",
+        AsyncMock(),
+    ) as supersede_stale_mock:
         with patch(
-            "app.services.github_pull_requests.supersede_stale_generations_for_new_revision",
+            "app.services.github_pull_requests.supersede_active_generations_for_revision",
             AsyncMock(),
-        ) as supersede_mock:
+        ) as supersede_active_mock:
             result = await apply_pull_request_webhook_event(
                 session,
                 _pull_request_payload(action="synchronize", head_sha="retry-sha"),
@@ -686,7 +688,8 @@ async def test_synchronize_returns_existing_revision_when_head_sha_row_exists():
     assert result.revision_id == prior_revision.id
     assert existing.revision_count == 2
     session.add.assert_not_called()
-    supersede_mock.assert_awaited_once()
+    supersede_stale_mock.assert_awaited_once()
+    supersede_active_mock.assert_awaited_once()
 
 
 @pytest.mark.asyncio

@@ -5,7 +5,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.constants.enums import GitHubPullRequestState, GitHubReviewRunStatus, ReviewProfile
+from app.constants.enums import (
+    GitHubIndexJobStatus,
+    GitHubIndexJobTriggerSource,
+    GitHubPullRequestState,
+    GitHubReviewRunStatus,
+    ReviewProfile,
+)
+from app.models.github_index_job import GitHubIndexJobORM
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.services.github_generation_lifecycle import (
@@ -65,6 +72,21 @@ def _review_run(
     )
     run.id = uuid.uuid4()
     return run
+
+
+def _index_job(
+    revision: GitHubPullRequestRevisionORM,
+    *,
+    status: GitHubIndexJobStatus,
+) -> GitHubIndexJobORM:
+    job = GitHubIndexJobORM(
+        revision_id=revision.id,
+        workspace_id=uuid.uuid4(),
+        status=status,
+        trigger_source=GitHubIndexJobTriggerSource.autostart,
+    )
+    job.id = uuid.uuid4()
+    return job
 
 
 @pytest.mark.asyncio
@@ -170,7 +192,7 @@ async def test_supersede_stale_generations_for_new_revision_finalizes_pipelines(
 
     session = AsyncMock()
     session.get = AsyncMock(return_value=keep_revision)
-    session.scalars = AsyncMock(side_effect=[[old_revision.id], [pending_old.id]])
+    session.scalars = AsyncMock(side_effect=[[old_revision.id], [pending_old.id], []])
     session.execute = _cas_execute_mock()
     session.flush = AsyncMock()
 
@@ -209,7 +231,7 @@ async def test_supersede_on_synchronize_hook_marks_older_runs_only():
 
     session = AsyncMock()
     session.get = AsyncMock(return_value=h2_revision)
-    session.scalars = AsyncMock(side_effect=[[h1_revision.id], [h1_run.id]])
+    session.scalars = AsyncMock(side_effect=[[h1_revision.id], [h1_run.id], []])
     session.execute = _cas_execute_mock()
     session.flush = AsyncMock()
 
@@ -235,7 +257,7 @@ async def test_supersede_active_generations_for_revision_finalizes_pipelines():
 
     session = AsyncMock()
     session.get = AsyncMock(return_value=revision)
-    session.scalars = AsyncMock(return_value=[pending.id])
+    session.scalars = AsyncMock(side_effect=[[pending.id], []])
     session.execute = _cas_execute_mock()
     session.flush = AsyncMock()
 
@@ -257,3 +279,39 @@ async def test_supersede_active_generations_for_revision_finalizes_pipelines():
 
     assert superseded_ids == [pending.id]
     finalize_mock.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_supersede_active_generations_for_revision_supersedes_index_jobs():
+    pull_request = _pull_request()
+    revision = _revision(pull_request, revision_number=1, head_sha="sha")
+    pending_index = _index_job(revision, status=GitHubIndexJobStatus.pending)
+    pipeline_run_id = uuid.uuid4()
+
+    session = AsyncMock()
+    session.get = AsyncMock(return_value=revision)
+    session.scalars = AsyncMock(side_effect=[[], [pending_index.id]])
+    session.execute = _cas_execute_mock()
+    session.flush = AsyncMock()
+
+    pipeline_run = MagicMock()
+    pipeline_run.id = pipeline_run_id
+
+    with patch(
+        "app.services.github_generation_lifecycle.get_pipeline_run_for_index_job",
+        AsyncMock(return_value=pipeline_run),
+    ):
+        with patch(
+            "app.services.github_generation_lifecycle.finalize_pipeline_github_check_neutral",
+            AsyncMock(),
+        ) as finalize_mock:
+            await supersede_active_generations_for_revision(
+                session,
+                revision_id=revision.id,
+            )
+
+    finalize_mock.assert_awaited_once_with(
+        session,
+        pipeline_run_id=pipeline_run_id,
+        summary="Superseded by newer commit",
+    )

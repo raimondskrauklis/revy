@@ -105,11 +105,15 @@ def test_process_github_event_enqueues_pipeline_for_issue_comment_command():
             AsyncMock(return_value=intent),
         ):
             with patch(
-                "app.workers.github_tasks.maybe_enqueue_pipeline_for_revision",
-                AsyncMock(return_value=job_id),
-            ) as pipeline_mock:
-                with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
-                    github_tasks.process_github_event.run("d-auto")
+                "app.workers.github_tasks.supersede_active_generations_for_revision",
+                AsyncMock(),
+            ):
+                with patch(
+                    "app.workers.github_tasks.maybe_enqueue_pipeline_for_revision",
+                    AsyncMock(return_value=job_id),
+                ) as pipeline_mock:
+                    with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
+                        github_tasks.process_github_event.run("d-auto")
 
     assert pipeline_mock.await_args.kwargs["trigger"] == GitHubIndexJobTriggerSource.command
     enqueue_mock.assert_called_once_with(job_id)
@@ -136,12 +140,16 @@ def test_process_github_event_enqueues_pipeline_on_pull_request_synchronize():
             AsyncMock(return_value=result),
         ):
             with patch(
-                "app.workers.github_tasks.maybe_enqueue_pipeline_for_revision",
-                AsyncMock(return_value=job_id),
-            ) as pipeline_mock:
-                with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
-                    github_tasks.process_github_event.run("d-auto")
+                "app.workers.github_tasks.apply_resolution_for_synchronize.delay",
+            ) as resolution_mock:
+                with patch(
+                    "app.workers.github_tasks.maybe_enqueue_pipeline_for_revision",
+                    AsyncMock(return_value=job_id),
+                ) as pipeline_mock:
+                    with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
+                        github_tasks.process_github_event.run("d-auto")
 
+    resolution_mock.assert_called_once_with(str(revision_id))
     pipeline_mock.assert_awaited_once()
     assert pipeline_mock.await_args.kwargs["trigger"] == GitHubIndexJobTriggerSource.autostart
     enqueue_mock.assert_called_once_with(job_id)
@@ -187,14 +195,17 @@ def test_process_github_event_synchronize_coalesce_zero_enqueues_immediately():
                 AsyncMock(return_value=result),
             ):
                 with patch(
-                    "app.workers.github_tasks.maybe_enqueue_pipeline_for_revision",
-                    AsyncMock(return_value=job_id),
-                ) as pipeline_mock:
+                    "app.workers.github_tasks.apply_resolution_for_synchronize.delay",
+                ):
                     with patch(
-                        "app.workers.github_tasks.schedule_autostart_pipeline_for_revision.apply_async",
-                    ) as schedule_mock:
-                        with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
-                            github_tasks.process_github_event.run("d-auto")
+                        "app.workers.github_tasks.maybe_enqueue_pipeline_for_revision",
+                        AsyncMock(return_value=job_id),
+                    ) as pipeline_mock:
+                        with patch(
+                            "app.workers.github_tasks.schedule_autostart_pipeline_for_revision.apply_async",
+                        ) as schedule_mock:
+                            with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
+                                github_tasks.process_github_event.run("d-auto")
 
     pipeline_mock.assert_awaited_once()
     schedule_mock.assert_not_called()
@@ -222,14 +233,17 @@ def test_process_github_event_synchronize_coalesce_schedules_delayed_autostart()
                 AsyncMock(return_value=result),
             ):
                 with patch(
-                    "app.workers.github_tasks.maybe_enqueue_pipeline_for_revision",
-                    AsyncMock(),
-                ) as pipeline_mock:
+                    "app.workers.github_tasks.apply_resolution_for_synchronize.delay",
+                ):
                     with patch(
-                        "app.workers.github_tasks.schedule_autostart_pipeline_for_revision.apply_async",
-                    ) as schedule_mock:
-                        with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
-                            github_tasks.process_github_event.run("d-auto")
+                        "app.workers.github_tasks.maybe_enqueue_pipeline_for_revision",
+                        AsyncMock(),
+                    ) as pipeline_mock:
+                        with patch(
+                            "app.workers.github_tasks.schedule_autostart_pipeline_for_revision.apply_async",
+                        ) as schedule_mock:
+                            with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
+                                github_tasks.process_github_event.run("d-auto")
 
     pipeline_mock.assert_not_awaited()
     enqueue_mock.assert_not_called()
