@@ -308,8 +308,8 @@ async def test_supersede_active_generations_for_revision_supersedes_index_jobs()
     pipeline_run.id = pipeline_run_id
 
     with patch(
-        "app.services.github_generation_lifecycle.get_pipeline_run_for_index_job",
-        AsyncMock(return_value=pipeline_run),
+        "app.services.github_generation_lifecycle.get_pipeline_runs_for_index_jobs",
+        AsyncMock(return_value={pending_index.id: pipeline_run}),
     ):
         with patch(
             "app.services.github_generation_lifecycle.finalize_pipeline_github_check_neutral",
@@ -340,3 +340,34 @@ async def test_mark_index_job_ids_superseded_cas_bulk_update():
     assert superseded_ids == [job_a, job_b]
     session.execute.assert_awaited_once()
     session.flush.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_finalize_pipeline_checks_for_superseded_index_jobs_batches_lookup():
+    job_a = uuid.uuid4()
+    job_b = uuid.uuid4()
+    pipeline_a = MagicMock()
+    pipeline_a.id = uuid.uuid4()
+    pipeline_b = MagicMock()
+    pipeline_b.id = uuid.uuid4()
+    session = AsyncMock()
+
+    with patch(
+        "app.services.github_generation_lifecycle.get_pipeline_runs_for_index_jobs",
+        AsyncMock(return_value={job_a: pipeline_a, job_b: pipeline_b}),
+    ) as lookup_mock:
+        with patch(
+            "app.services.github_generation_lifecycle.finalize_pipeline_github_check_neutral",
+            AsyncMock(),
+        ) as finalize_mock:
+            from app.services.github_generation_lifecycle import (
+                finalize_pipeline_checks_for_superseded_index_jobs,
+            )
+
+            await finalize_pipeline_checks_for_superseded_index_jobs(
+                session,
+                index_job_ids=[job_a, job_b],
+            )
+
+    lookup_mock.assert_awaited_once_with(session, index_job_ids=[job_a, job_b])
+    assert finalize_mock.await_count == 2

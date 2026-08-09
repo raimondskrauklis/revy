@@ -36,8 +36,8 @@ from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullReque
 from app.models.github_review_run import GitHubReviewRunORM
 from app.services.github_pipeline_trace import (
     finalize_pipeline_github_check_neutral,
-    get_pipeline_run_for_index_job,
     get_pipeline_run_for_review_run,
+    get_pipeline_runs_for_index_jobs,
     record_generation_superseded_on_pipeline,
 )
 
@@ -285,8 +285,12 @@ async def finalize_pipeline_checks_for_superseded_index_jobs(
     *,
     index_job_ids: list[UUID],
 ) -> None:
+    pipeline_runs_by_job_id = await get_pipeline_runs_for_index_jobs(
+        session,
+        index_job_ids=index_job_ids,
+    )
     for index_job_id in index_job_ids:
-        pipeline_run = await get_pipeline_run_for_index_job(session, index_job_id=index_job_id)
+        pipeline_run = pipeline_runs_by_job_id.get(index_job_id)
         if pipeline_run is None:
             continue
         await finalize_pipeline_github_check_neutral(

@@ -81,6 +81,15 @@ def test_parse_review_json_invalid_raises():
         parse_review_json(json.dumps([]))
 
 
+def test_parse_review_json_strips_markdown_fence():
+    raw = """```json
+{"findings": [{"title": "x", "severity": "info", "category": "other", "message": "m"}]}
+```"""
+    findings = parse_review_json(raw)
+    assert len(findings) == 1
+    assert findings[0]["title"] == "x"
+
+
 def test_chat_completion_body_k2_7_code_omits_temperature():
     body = _chat_completion_body(
         model="kimi-k2.7-code",

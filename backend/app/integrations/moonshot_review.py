@@ -2,13 +2,12 @@
 """Moonshot Kimi review client — R4 (OpenAI-compatible chat completions)."""
 from __future__ import annotations
 
-import json
-
 import httpx
 
 from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError
 from app.core.logging import get_logger
+from app.integrations.judge_llm_errors import parse_llm_json_object
 
 logger = get_logger(__name__)
 
@@ -267,9 +266,7 @@ async def complete_issue_comment_markdown(
 
 def parse_review_json(raw: str) -> list[dict]:
     """Parse LLM JSON payload — raises ValueError on invalid shape."""
-    payload = json.loads(raw)
-    if not isinstance(payload, dict):
-        raise ValueError("review_json_not_object")
+    payload = parse_llm_json_object(raw)
     findings = payload.get("findings")
     if findings is None:
         return []

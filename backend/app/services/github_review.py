@@ -1072,23 +1072,31 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> Revie
         await session.flush()
 
         review_started_at = time.monotonic()
-        raw_json = await _call_llm(
-            model_ref=model_ref,
-            profile=_review_profile_str(run.profile),
-            prompt=prompt,
-        )
-        review_duration_ms = int((time.monotonic() - review_started_at) * 1000)
-
-        try:
-            raw_findings = moonshot_review.parse_review_json(raw_json)
-        except (json.JSONDecodeError, ValueError) as exc:
+        raw_json: str | None = None
+        parse_exc: json.JSONDecodeError | ValueError | None = None
+        for attempt in range(2):
+            if attempt > 0:
+                review_started_at = time.monotonic()
+            raw_json = await _call_llm(
+                model_ref=model_ref,
+                profile=_review_profile_str(run.profile),
+                prompt=prompt,
+            )
+            review_duration_ms = int((time.monotonic() - review_started_at) * 1000)
+            try:
+                raw_findings = moonshot_review.parse_review_json(raw_json)
+                parse_exc = None
+                break
+            except (json.JSONDecodeError, ValueError) as exc:
+                parse_exc = exc
+        if parse_exc is not None:
             run.status = GitHubReviewRunStatus.failed
-            run.error_message = str(exc)[:2000]
+            run.error_message = str(parse_exc)[:2000]
             await session.flush()
             return ReviewRunOutcome(
                 run=run,
                 context_pack=context_pack,
-                raw_response=raw_json,
+                raw_response=raw_json or "",
                 parse_report={"parsed_count": 0, "dropped_count": 0, "drop_reasons": {}},
                 retrieve_duration_ms=retrieve_duration_ms,
                 review_duration_ms=review_duration_ms,
