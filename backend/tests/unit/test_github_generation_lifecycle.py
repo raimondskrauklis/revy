@@ -16,6 +16,7 @@ from app.models.github_index_job import GitHubIndexJobORM
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.services.github_generation_lifecycle import (
+    _mark_index_job_ids_superseded_cas,
     is_authoritative_for_pull_request_head,
     is_review_run_superseded,
     mark_active_review_runs_superseded_for_revision,
@@ -115,6 +116,12 @@ def _cas_execute_mock() -> AsyncMock:
     return AsyncMock(return_value=result)
 
 
+def _bulk_index_execute_mock(job_ids: list[uuid.UUID]) -> AsyncMock:
+    result = MagicMock()
+    result.scalars.return_value.all.return_value = job_ids
+    return AsyncMock(return_value=result)
+
+
 @pytest.mark.asyncio
 async def test_mark_review_runs_superseded_for_pull_request_older_revisions_only():
     pull_request = _pull_request()
@@ -207,13 +214,14 @@ async def test_supersede_stale_generations_for_new_revision_finalizes_pipelines(
             "app.services.github_generation_lifecycle.finalize_pipeline_github_check_neutral",
             AsyncMock(),
         ) as finalize_mock:
-            superseded_ids = await supersede_stale_generations_for_new_revision(
+            outcome = await supersede_stale_generations_for_new_revision(
                 session,
                 pull_request_id=pull_request.id,
                 keep_revision_id=keep_revision.id,
             )
 
-    assert superseded_ids == [pending_old.id]
+    assert outcome.review_run_ids == [pending_old.id]
+    assert outcome.index_job_ids == []
     finalize_mock.assert_awaited_once_with(
         session,
         pipeline_run_id=pipeline_run_id,
@@ -239,13 +247,14 @@ async def test_supersede_on_synchronize_hook_marks_older_runs_only():
         "app.services.github_generation_lifecycle.finalize_pipeline_checks_for_superseded_review_runs",
         AsyncMock(),
     ):
-        superseded_ids = await supersede_stale_generations_for_new_revision(
+        outcome = await supersede_stale_generations_for_new_revision(
             session,
             pull_request_id=pull_request.id,
             keep_revision_id=h2_revision.id,
         )
 
-    assert superseded_ids == [h1_run.id]
+    assert outcome.review_run_ids == [h1_run.id]
+    assert outcome.index_job_ids == []
 
 
 @pytest.mark.asyncio
@@ -291,7 +300,7 @@ async def test_supersede_active_generations_for_revision_supersedes_index_jobs()
     session = AsyncMock()
     session.get = AsyncMock(return_value=revision)
     session.scalars = AsyncMock(side_effect=[[], [pending_index.id]])
-    session.execute = _cas_execute_mock()
+    session.execute = _bulk_index_execute_mock([pending_index.id])
     session.flush = AsyncMock()
 
     pipeline_run = MagicMock()
@@ -315,3 +324,18 @@ async def test_supersede_active_generations_for_revision_supersedes_index_jobs()
         pipeline_run_id=pipeline_run_id,
         summary="Superseded by newer commit",
     )
+
+
+@pytest.mark.asyncio
+async def test_mark_index_job_ids_superseded_cas_bulk_update():
+    job_a = uuid.uuid4()
+    job_b = uuid.uuid4()
+    session = AsyncMock()
+    session.execute = _bulk_index_execute_mock([job_a, job_b])
+    session.flush = AsyncMock()
+
+    superseded_ids = await _mark_index_job_ids_superseded_cas(session, [job_a, job_b])
+
+    assert superseded_ids == [job_a, job_b]
+    session.execute.assert_awaited_once()
+    session.flush.assert_awaited_once()

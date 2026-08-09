@@ -79,15 +79,6 @@ def apply_resolution_for_synchronize(self, revision_id: str) -> None:
             revision = await session.get(GitHubPullRequestRevisionORM, revision_uuid)
             if revision is None:
                 return
-            if not await is_authoritative_for_pull_request_head(
-                session,
-                revision_id=revision_uuid,
-            ):
-                logger.info(
-                    "resolution_synchronize_skipped_not_authoritative",
-                    extra={"revision_id": revision_id},
-                )
-                return
             pull_request = await session.get(GitHubPullRequestORM, revision.pull_request_id)
             if pull_request is None:
                 return

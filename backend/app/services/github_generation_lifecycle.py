@@ -19,6 +19,7 @@ Smart-trigger guard (do not supersede / coalesce on these paths):
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy import select, update
@@ -55,6 +56,12 @@ _ACTIVE_INDEX_JOB_STATUSES = (
 )
 
 _SUPERSEDED_INDEX_ERROR = "Superseded by newer commit"
+
+
+@dataclass(frozen=True)
+class SupersedeStaleOutcome:
+    review_run_ids: list[UUID]
+    index_job_ids: list[UUID]
 
 
 async def is_authoritative_for_pull_request_head(
@@ -194,22 +201,23 @@ async def _mark_index_job_ids_superseded_cas(
     revision_id: UUID | None = None,
 ) -> list[UUID]:
     """CAS pending/processing index jobs to terminal ``failed`` (RG-Q12 — no ``superseded`` enum)."""
-    superseded_ids: list[UUID] = []
-    for job_id in job_ids:
-        result = await session.execute(
-            update(GitHubIndexJobORM)
-            .where(
-                GitHubIndexJobORM.id == job_id,
-                GitHubIndexJobORM.status.in_(_ACTIVE_INDEX_JOB_STATUSES),
-            )
-            .values(
-                status=GitHubIndexJobStatus.failed,
-                error_message=_SUPERSEDED_INDEX_ERROR,
-            )
+    if not job_ids:
+        return []
+
+    result = await session.execute(
+        update(GitHubIndexJobORM)
+        .where(
+            GitHubIndexJobORM.id.in_(job_ids),
+            GitHubIndexJobORM.status.in_(_ACTIVE_INDEX_JOB_STATUSES),
         )
-        if result.rowcount == 0:
-            continue
-        superseded_ids.append(job_id)
+        .values(
+            status=GitHubIndexJobStatus.failed,
+            error_message=_SUPERSEDED_INDEX_ERROR,
+        )
+        .returning(GitHubIndexJobORM.id)
+    )
+    superseded_ids = list(result.scalars().all())
+    for job_id in superseded_ids:
         logger.info(
             "index_job_superseded",
             extra={
@@ -293,7 +301,7 @@ async def supersede_stale_generations_for_new_revision(
     *,
     pull_request_id: UUID,
     keep_revision_id: UUID,
-) -> list[UUID]:
+) -> SupersedeStaleOutcome:
     """On synchronize: supersede in-flight runs on older revisions and neutralize G10 checks."""
     superseded_review_ids = await mark_review_runs_superseded_for_pull_request(
         session,
@@ -313,7 +321,10 @@ async def supersede_stale_generations_for_new_revision(
         session,
         index_job_ids=superseded_index_ids,
     )
-    return superseded_review_ids
+    return SupersedeStaleOutcome(
+        review_run_ids=superseded_review_ids,
+        index_job_ids=superseded_index_ids,
+    )
 
 
 async def supersede_active_generations_for_revision(
