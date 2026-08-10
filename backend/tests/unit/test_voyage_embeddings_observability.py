@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, patch
 import httpx
 import pytest
 
+from app.constants.enums import GitHubReviewRunFailureClass
 from app.core.exceptions import ServiceUnavailableError
 from app.integrations.voyage_embeddings import VoyageEmbedRecorderContext, embed_texts
 
@@ -54,6 +55,40 @@ async def test_embed_texts_writes_index_embed_attempt_row():
     assert context.request_model == "voyage-code-3.5"
     assert context.batch_size == 1
     complete_mock.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_embed_texts_records_timeout_failure_class_on_runtime_error_cause():
+    pipeline_run_id = uuid.uuid4()
+    index_job_id = uuid.uuid4()
+    recorder = VoyageEmbedRecorderContext(
+        pipeline_run_id=pipeline_run_id,
+        index_job_id=index_job_id,
+        request_model="voyage-code-3.5",
+    )
+    timeout_exc = httpx.TimeoutException("timed out")
+
+    def _raise_retry_exhausted(*_args, **_kwargs) -> None:
+        raise RuntimeError("voyage_embeddings_retry_exhausted") from timeout_exc
+
+    client = AsyncMock()
+    client.post = AsyncMock(side_effect=_raise_retry_exhausted)
+
+    with patch("app.integrations.voyage_embeddings.settings") as mock_settings:
+        mock_settings.embeddings_enabled = True
+        mock_settings.voyage_api_key = "test-key"
+        mock_settings.revy_embedding_model = "voyage-code-3.5"
+        mock_settings.revy_embedding_dimensions = 1024
+        with patch("app.integrations.voyage_embeddings.try_start_attempt", AsyncMock(return_value=uuid.uuid4())):
+            with patch(
+                "app.integrations.voyage_embeddings.try_fail_attempt",
+                AsyncMock(),
+            ) as fail_mock:
+                with pytest.raises(RuntimeError):
+                    await embed_texts(client, ["hello"], recorder=recorder)
+
+    fail_context = fail_mock.await_args.kwargs["context"]
+    assert fail_context.failure_class == GitHubReviewRunFailureClass.timeout
 
 
 @pytest.mark.asyncio

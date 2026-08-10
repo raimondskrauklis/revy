@@ -77,6 +77,18 @@ def _log_voyage_error(response: httpx.Response) -> None:
     )
 
 
+def _embed_attempt_failure_class(
+    exc: BaseException,
+) -> GitHubReviewRunFailureClass | None:
+    if isinstance(exc, httpx.TimeoutException):
+        return GitHubReviewRunFailureClass.timeout
+    if isinstance(exc, RuntimeError) and isinstance(exc.__cause__, httpx.TimeoutException):
+        return GitHubReviewRunFailureClass.timeout
+    if isinstance(exc, ServiceUnavailableError):
+        return GitHubReviewRunFailureClass.parse_error
+    return None
+
+
 async def _post_embeddings(
     client: httpx.AsyncClient,
     *,
@@ -232,7 +244,7 @@ async def embed_texts(
                 await try_fail_attempt(
                     attempt_id,
                     context=LlmAttemptFailContext(
-                        failure_class=GitHubReviewRunFailureClass.timeout,
+                        failure_class=_embed_attempt_failure_class(exc),
                         wait_ms=int((time.monotonic() - attempt_started) * 1000),
                     ),
                     exc=exc,
@@ -243,7 +255,7 @@ async def embed_texts(
                 await try_fail_attempt(
                     attempt_id,
                     context=LlmAttemptFailContext(
-                        failure_class=GitHubReviewRunFailureClass.parse_error,
+                        failure_class=_embed_attempt_failure_class(exc),
                         wait_ms=int((time.monotonic() - attempt_started) * 1000),
                     ),
                     exc=exc,
@@ -254,6 +266,7 @@ async def embed_texts(
                 await try_fail_attempt(
                     attempt_id,
                     context=LlmAttemptFailContext(
+                        failure_class=_embed_attempt_failure_class(exc),
                         wait_ms=int((time.monotonic() - attempt_started) * 1000),
                     ),
                     exc=exc,
