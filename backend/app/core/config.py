@@ -322,7 +322,7 @@ class Settings(BaseSettings):
         return self.revy_revision_timeout_standard_seconds
 
     def revy_revision_llm_http_timeout_seconds(self, profile: str) -> int:
-        """LLM HTTP timeout — strictly below Celery soft_time_limit for the same profile."""
+        """LLM HTTP timeout — below Celery soft_time_limit when possible, with a 60 s floor."""
         task_timeout = self.revy_revision_timeout_seconds(profile)
         buffer_seconds = max(0, self.revy_revision_celery_timeout_buffer_seconds)
         return max(60, task_timeout - buffer_seconds)

@@ -2,7 +2,6 @@
 """GitHub PR revision review — R4."""
 from __future__ import annotations
 
-import json
 import re
 import time
 from collections import defaultdict
@@ -1073,7 +1072,7 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> Revie
 
         review_duration_ms = 0
         raw_json: str | None = None
-        parse_exc: json.JSONDecodeError | ValueError | None = None
+        parse_exc: ValueError | None = None
         for attempt in range(2):
             if attempt > 0:
                 logger.warning(
@@ -1095,7 +1094,7 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> Revie
                 raw_findings = moonshot_review.parse_review_json(raw_json)
                 parse_exc = None
                 break
-            except (json.JSONDecodeError, ValueError, TypeError, AttributeError) as exc:
+            except ValueError as exc:
                 parse_exc = exc
         if parse_exc is not None:
             run.status = GitHubReviewRunStatus.failed
