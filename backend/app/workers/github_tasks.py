@@ -199,6 +199,7 @@ def apply_resolution_for_synchronize(
     index_job_id: str | None = None,
     coalesce_workspace_id: str | None = None,
     coalesce_schedule_at: str | None = None,
+    pair_resolution: bool = True,
 ) -> None:
     follow_up_index_job_id = UUID(index_job_id) if index_job_id is not None else None
 
@@ -228,15 +229,67 @@ def apply_resolution_for_synchronize(
                     },
                 )
                 return "skipped_permanent"
-            await apply_resolution_status_for_synchronize(
-                session,
-                pull_request=pull_request,
-                new_revision=revision,
-            )
+            if pair_resolution:
+                await apply_resolution_status_for_synchronize(
+                    session,
+                    pull_request=pull_request,
+                    new_revision=revision,
+                )
             await session.commit()
         return "applied"
 
+    def _run_post_outcome(outcome: str) -> None:
+        if outcome == "applied":
+            if follow_up_index_job_id is not None:
+                enqueue_index_job(follow_up_index_job_id)
+            elif coalesce_workspace_id is not None and coalesce_schedule_at is not None:
+                _schedule_coalesced_autostart(
+                    revision_id=revision_id,
+                    workspace_id=coalesce_workspace_id,
+                    schedule_at=coalesce_schedule_at,
+                )
+        if (
+            outcome == "skipped_stale"
+            and coalesce_workspace_id is not None
+            and coalesce_schedule_at is not None
+        ):
+            _handoff_stale_coalesce_resolution_task(
+                stale_revision_id=revision_id,
+                coalesce_workspace_id=coalesce_workspace_id,
+                coalesce_schedule_at=coalesce_schedule_at,
+            )
+        if outcome in {"skipped_stale", "skipped_permanent"} and follow_up_index_job_id is not None:
+            try:
+                run_worker_async(
+                    _cleanup_pending_index_job_after_resolution_failure(follow_up_index_job_id),
+                )
+            except Exception as cleanup_exc:  # noqa: BLE001
+                logger.error(
+                    "resolution_synchronize_cleanup_failed",
+                    extra={
+                        "revision_id": revision_id,
+                        "index_job_id": str(follow_up_index_job_id),
+                        "error": str(cleanup_exc),
+                    },
+                )
+        if (
+            outcome == "skipped_permanent"
+            and coalesce_workspace_id is not None
+            and coalesce_schedule_at is not None
+        ):
+            _schedule_coalesced_autostart(
+                revision_id=revision_id,
+                workspace_id=coalesce_workspace_id,
+                schedule_at=coalesce_schedule_at,
+            )
+        elif outcome not in {"applied", "skipped_stale", "skipped_permanent"}:
+            logger.info(
+                "resolution_synchronize_task_skipped",
+                extra={"revision_id": revision_id, "outcome": outcome},
+            )
+
     fatal_exc: Exception | None = None
+    outcome: str | None = None
     try:
         outcome = run_worker_async(_run())
     except Retry:
@@ -264,51 +317,68 @@ def apply_resolution_for_synchronize(
                         "error": str(cleanup_exc),
                     },
                 )
-        raise fatal_exc
-    if outcome == "applied":
-        if follow_up_index_job_id is not None:
-            enqueue_index_job(follow_up_index_job_id)
-        elif coalesce_workspace_id is not None and coalesce_schedule_at is not None:
+        if coalesce_workspace_id is not None and coalesce_schedule_at is not None:
             _schedule_coalesced_autostart(
                 revision_id=revision_id,
                 workspace_id=coalesce_workspace_id,
                 schedule_at=coalesce_schedule_at,
             )
-    if (
-        outcome == "skipped_stale"
-        and coalesce_workspace_id is not None
-        and coalesce_schedule_at is not None
-    ):
-        _handoff_stale_coalesce_resolution_task(
-            stale_revision_id=revision_id,
-            coalesce_workspace_id=coalesce_workspace_id,
-            coalesce_schedule_at=coalesce_schedule_at,
+        raise fatal_exc
+
+    post_outcome_exc: Exception | None = None
+    try:
+        assert outcome is not None
+        _run_post_outcome(outcome)
+    except Exception as exc:
+        logger.error(
+            "resolution_synchronize_post_outcome_failed",
+            extra={"revision_id": revision_id, "error": str(exc), "retries": self.request.retries},
         )
-    if outcome in {"skipped_stale", "skipped_permanent"} and follow_up_index_job_id is not None:
-        try:
-            run_worker_async(
-                _cleanup_pending_index_job_after_resolution_failure(follow_up_index_job_id),
-            )
-        except Exception as cleanup_exc:  # noqa: BLE001
-            logger.error(
-                "resolution_synchronize_cleanup_failed",
-                extra={
+        if self.request.retries < self.max_retries:
+            raise self.retry(
+                exc=exc,
+                countdown=15 * (2**self.request.retries),
+                kwargs={
                     "revision_id": revision_id,
-                    "index_job_id": str(follow_up_index_job_id),
-                    "error": str(cleanup_exc),
+                    "index_job_id": index_job_id,
+                    "coalesce_workspace_id": coalesce_workspace_id,
+                    "coalesce_schedule_at": coalesce_schedule_at,
+                    "pair_resolution": False,
                 },
+            ) from exc
+        post_outcome_exc = exc
+    if post_outcome_exc is not None:
+        if follow_up_index_job_id is not None:
+            try:
+                run_worker_async(
+                    _cleanup_pending_index_job_after_resolution_failure(follow_up_index_job_id),
+                )
+            except Exception as cleanup_exc:  # noqa: BLE001
+                logger.error(
+                    "resolution_synchronize_cleanup_failed",
+                    extra={
+                        "revision_id": revision_id,
+                        "index_job_id": str(follow_up_index_job_id),
+                        "error": str(cleanup_exc),
+                    },
+                )
+        if (
+            coalesce_workspace_id is not None
+            and coalesce_schedule_at is not None
+            and outcome != "skipped_stale"
+        ):
+            _schedule_coalesced_autostart(
+                revision_id=revision_id,
+                workspace_id=coalesce_workspace_id,
+                schedule_at=coalesce_schedule_at,
             )
-    elif outcome not in {"applied", "skipped_stale", "skipped_permanent"}:
-        logger.info(
-            "resolution_synchronize_task_skipped",
-            extra={"revision_id": revision_id, "outcome": outcome},
-        )
+        raise post_outcome_exc
 
 
 @celery_app.task(name="app.workers.github_tasks.process_github_event", bind=True, max_retries=3)
 def process_github_event(self, delivery_id: str) -> None:
     index_job_ids: list[UUID] = []
-    resolution_follow_ups: list[tuple[str, UUID | None, str | None, str | None]] = []
+    resolution_follow_ups: list[tuple[str, UUID | None, str | None, str | None, bool]] = []
 
     async def _run() -> None:
         async with get_db_context() as session:
@@ -362,6 +432,7 @@ def process_github_event(self, delivery_id: str) -> None:
                                 paired_index_job_id,
                                 coalesce_workspace_id,
                                 coalesce_schedule_at,
+                                result.new_revision,
                             ),
                         )
                     else:
@@ -428,6 +499,7 @@ def process_github_event(self, delivery_id: str) -> None:
             follow_up_index_job_id,
             coalesce_workspace_id,
             coalesce_schedule_at,
+            pair_resolution,
         ) in resolution_follow_ups:
             if follow_up_index_job_id is not None:
                 deferred_index_job_ids.add(follow_up_index_job_id)
@@ -438,6 +510,7 @@ def process_github_event(self, delivery_id: str) -> None:
                 ),
                 coalesce_workspace_id=coalesce_workspace_id,
                 coalesce_schedule_at=coalesce_schedule_at,
+                pair_resolution=pair_resolution,
             )
         for job_id in index_job_ids:
             if job_id not in deferred_index_job_ids:

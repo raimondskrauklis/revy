@@ -675,6 +675,14 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
                     extra={"index_job_id": str(index_job_id)},
                 )
                 await _delete_index_job_chunks(session, index_job_id=index_job_id)
+            else:
+                logger.warning(
+                    "github_index_job_complete_cas_lost",
+                    extra={
+                        "index_job_id": str(index_job_id),
+                        "status": job.status.value,
+                    },
+                )
             return job
 
         job.status = GitHubIndexJobStatus.completed

@@ -295,7 +295,7 @@ synchronize (head_sha = H2)
 | RG-Q5 | Buffer inline vs batch review API? | **locked** | Sequential post in one flush; no mid-loop GitHub persist; batch API defer |
 | RG-Q6 | Relationship to github-surface-hardening | **locked** | Hardening = thread hygiene; this = generation hygiene — complementary |
 | RG-Q7 | Summary channel before inline flush? | **locked** | **No** — full GitHub surface flush at publish end (stricter Greptile bar) |
-| RG-Q8 | Superseded SHA checks? | **locked** | `finalize_pipeline_github_check_neutral` — “Superseded by newer commit” |
+| RG-Q8 | Superseded SHA checks? | **locked** | `finalize_pipeline_github_check_neutral` — “Superseded by newer run” (`SUPERSEDED_CHECK_SUMMARY`) |
 | RG-Q9 | Generation authority model? | **locked** | **`GitHubReviewRunStatus.superseded`** = source of truth; publish job terminal skip statuses; pipeline trace mirrors |
 | RG-Q10 | Judge vs publish when outcome missing? | **locked** | Per-finding: hold **candidates** only; publish **rest**; missing outcome = bug, not silent dismiss |
 | RG-Q11 | Non-authoritative index at task entry? | **locked** | Allow index DB work; **skip G10 start** + **skip review enqueue** when not authoritative |

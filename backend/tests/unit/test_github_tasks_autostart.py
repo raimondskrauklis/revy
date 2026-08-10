@@ -200,6 +200,7 @@ def test_process_github_event_enqueues_pipeline_on_pull_request_synchronize():
         index_job_id=str(job_id),
         coalesce_workspace_id=None,
         coalesce_schedule_at=None,
+        pair_resolution=True,
     )
     pipeline_mock.assert_awaited_once()
     assert pipeline_mock.await_args.kwargs["trigger"] == GitHubIndexJobTriggerSource.autostart
@@ -242,6 +243,7 @@ def test_process_github_event_enqueues_on_same_sha_synchronize_retrigger():
         index_job_id=str(job_id),
         coalesce_workspace_id=None,
         coalesce_schedule_at=None,
+        pair_resolution=False,
     )
     pipeline_mock.assert_awaited_once()
     enqueue_mock.assert_not_called()
@@ -345,6 +347,7 @@ def test_process_github_event_synchronize_coalesce_schedules_delayed_autostart()
     assert call_kwargs["index_job_id"] is None
     assert call_kwargs["coalesce_workspace_id"] == str(workspace_id)
     assert call_kwargs["coalesce_schedule_at"] is not None
+    assert call_kwargs["pair_resolution"] is True
 
 
 def test_apply_resolution_for_synchronize_schedules_coalesced_autostart_after_resolution():
@@ -586,6 +589,62 @@ def test_apply_resolution_for_synchronize_enqueues_follow_up_index_job():
                     )
 
     enqueue_mock.assert_called_once_with(job_id)
+
+
+def test_apply_resolution_for_synchronize_skips_resolution_pairing_when_disabled():
+    revision_id = uuid.uuid4()
+    revision = MagicMock()
+    revision.pull_request_id = uuid.uuid4()
+    pull_request = MagicMock()
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[revision, pull_request])
+    session.commit = AsyncMock()
+
+    with patch("app.workers.github_tasks.get_db_context", return_value=_db_context(session)):
+        with patch(
+            "app.workers.github_tasks.is_authoritative_for_pull_request_head",
+            AsyncMock(return_value=True),
+        ):
+            with patch(
+                "app.workers.github_tasks.apply_resolution_status_for_synchronize",
+                AsyncMock(),
+            ) as resolution_mock:
+                with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
+                    github_tasks.apply_resolution_for_synchronize.run(
+                        str(revision_id),
+                        pair_resolution=False,
+                    )
+
+    resolution_mock.assert_not_awaited()
+    enqueue_mock.assert_not_called()
+
+
+def test_apply_resolution_for_synchronize_schedules_coalesce_fallback_on_fatal_failure():
+    revision_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    schedule_at = (datetime.now(UTC) + timedelta(seconds=5)).isoformat()
+
+    with patch(
+        "app.workers.github_tasks.run_worker_async",
+        side_effect=RuntimeError("resolution failed"),
+    ):
+        with patch.object(github_tasks.apply_resolution_for_synchronize, "max_retries", 0):
+            with patch.object(
+                github_tasks.apply_resolution_for_synchronize,
+                "retry",
+                side_effect=AssertionError("retry should not be called"),
+            ):
+                with patch(
+                    "app.workers.github_tasks.schedule_autostart_pipeline_for_revision.apply_async",
+                ) as schedule_mock:
+                    with pytest.raises(RuntimeError, match="resolution failed"):
+                        github_tasks.apply_resolution_for_synchronize.run(
+                            str(revision_id),
+                            coalesce_workspace_id=str(workspace_id),
+                            coalesce_schedule_at=schedule_at,
+                        )
+
+    schedule_mock.assert_called_once()
 
 
 def test_apply_resolution_for_synchronize_cleans_up_pending_job_on_skip():
