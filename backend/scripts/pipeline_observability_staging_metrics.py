@@ -19,7 +19,7 @@ from scripts.staging_metrics_common import (
     staging_database_url,
 )
 
-_EXPECTED_ALEMBIC = "2026_08_10_1200_0031_pipeline_observability"
+_EXPECTED_ALEMBIC = "2026_08_10_1300_0032_github_pipeline_runs_models_snapshot"
 _ALEMBIC_SQL = "SELECT version_num FROM alembic_version LIMIT 1;"
 _ATTEMPTS_TABLE_SQL = """
 SELECT EXISTS (
@@ -51,6 +51,7 @@ def _attempts_sql(scope: StagingScope) -> str:
 SELECT count(*)::int AS attempt_rows,
        count(DISTINCT a.review_run_id)::int AS review_runs_with_attempts,
        count(*) FILTER (WHERE a.step_type = 'review')::int AS review_step_attempts,
+       count(*) FILTER (WHERE a.step_type = 'index_embed')::int AS index_embed_attempts,
        count(*) FILTER (WHERE a.failure_class IS NOT NULL)::int AS failed_attempts,
        count(*) FILTER (WHERE a.failure_class = 'timeout')::int AS timeout_attempts,
        percentile_cont(0.5) WITHIN GROUP (ORDER BY a.wait_ms)
@@ -70,6 +71,7 @@ WHERE repo.full_name = $1 AND pr.number = $2
 SELECT count(*)::int AS attempt_rows,
        count(DISTINCT review_run_id)::int AS review_runs_with_attempts,
        count(*) FILTER (WHERE step_type = 'review')::int AS review_step_attempts,
+       count(*) FILTER (WHERE step_type = 'index_embed')::int AS index_embed_attempts,
        count(*) FILTER (WHERE failure_class IS NOT NULL)::int AS failed_attempts,
        count(*) FILTER (WHERE failure_class = 'timeout')::int AS timeout_attempts,
        percentile_cont(0.5) WITHIN GROUP (ORDER BY wait_ms)
@@ -111,9 +113,9 @@ def _evaluate_po_p0_gate(metrics: dict[str, Any], *, require_runs: bool) -> dict
 
     alembic = metrics.get("alembic_version")
     if alembic == _EXPECTED_ALEMBIC:
-        add("alembic_0031", "PASS", alembic)
+        add("alembic_0032", "PASS", alembic)
     else:
-        add("alembic_0031", "FAIL", f"expected {_EXPECTED_ALEMBIC!r}, got {alembic!r}")
+        add("alembic_0032", "FAIL", f"expected {_EXPECTED_ALEMBIC!r}, got {alembic!r}")
 
     if metrics.get("attempts_table_exists"):
         add("attempts_table", "PASS", "github_llm_call_attempts present")

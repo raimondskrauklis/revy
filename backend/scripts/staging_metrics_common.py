@@ -81,6 +81,23 @@ JOIN github_repositories repo ON repo.id = pr.repository_id
     )
 
 
+def pipeline_run_pr_join(scope: StagingScope) -> tuple[str, str]:
+    if not scope.pr_scoped:
+        return (
+            "FROM github_pipeline_runs pr",
+            "($1::timestamptz IS NULL OR pr.created_at >= $1::timestamptz)",
+        )
+    return (
+        """
+FROM github_pipeline_runs pr
+JOIN github_pull_request_revisions rev ON rev.id = pr.revision_id
+JOIN github_pull_requests gp ON gp.id = rev.pull_request_id
+JOIN github_repositories repo ON repo.id = gp.repository_id
+""".strip(),
+        "repo.full_name = $1 AND gp.number = $2 AND ($3::timestamptz IS NULL OR pr.created_at >= $3::timestamptz)",
+    )
+
+
 def scope_query_args(scope: StagingScope) -> tuple:
     if scope.pr_scoped:
         return (scope.repo_full_name, scope.pr_number, scope.since)

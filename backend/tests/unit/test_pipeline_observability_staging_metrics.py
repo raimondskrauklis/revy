@@ -8,7 +8,7 @@ from scripts.pipeline_observability_staging_metrics import (
 
 def _metrics(
     *,
-    alembic: str = "2026_08_10_1200_0031_pipeline_observability",
+    alembic: str = "2026_08_10_1300_0032_github_pipeline_runs_models_snapshot",
     table_exists: bool = True,
     total_runs: int = 3,
     with_timing_stats: int = 3,

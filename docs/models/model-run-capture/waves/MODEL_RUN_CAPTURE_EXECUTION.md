@@ -25,4 +25,6 @@
 | MRC-P2 | `models_snapshot` + staging metrics by model | [P2](./MODEL_RUN_CAPTURE_P2_EXECUTION.md) | in progress (P2.1 shipped) |
 | MRC-P3 | API exposure + staging sign-off | [P3](./MODEL_RUN_CAPTURE_P3_EXECUTION.md) | pending |
 
-**Next after execution peer-review:** `phase-execution` from [MODEL_RUN_CAPTURE_P0_EXECUTION.md](./MODEL_RUN_CAPTURE_P0_EXECUTION.md) (execution peer-review pass 1δ — BLOCK: no).
+**Staging validation:** [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](../MODEL_RUN_CAPTURE_STAGING_VALIDATION.md) — post-#96 deploy dogfood PR (#96 does not self-validate).
+
+**Next:** resume `phase-execution` from [MODEL_RUN_CAPTURE_P2_EXECUTION.md](./MODEL_RUN_CAPTURE_P2_EXECUTION.md) P2.2 after staging sign-off.

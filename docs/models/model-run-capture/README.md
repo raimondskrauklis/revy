@@ -7,6 +7,7 @@ Durable **which model ran** audit trail for embeddings, reviewer, judge, and pub
 | [MODEL_RUN_CAPTURE_FINDINGS.md](./MODEL_RUN_CAPTURE_FINDINGS.md) | Baseline — current capture gaps, target catalog |
 | [MODEL_RUN_CAPTURE_GENERAL_PLAN.md](./MODEL_RUN_CAPTURE_GENERAL_PLAN.md) | Phased plan — MRC-P0–P3 |
 | [waves/README.md](./waves/README.md) | Execution index — phase-execution LOOP order |
+| [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](./MODEL_RUN_CAPTURE_STAGING_VALIDATION.md) | Staging sign-off — embedding identity + attempt rows (#96) |
 | [reviews/architecture-peer-review/](./reviews/architecture-peer-review/README.md) | Architecture peer review — pass index |
 | [reviews/execution-peer-review/](./reviews/execution-peer-review/README.md) | Execution peer review — pass index |
 

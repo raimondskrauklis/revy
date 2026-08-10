@@ -33,6 +33,45 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
 
 See [REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md](../review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md) and [JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](../review-pipeline/judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md).
 
+## Model run capture (`model_run_capture_staging_metrics.py`)
+
+MRC-P0/P1 staging gates — index manifest embedding model, `index_embed` attempt rows, judge/publish step model fields. Post-#96 deploy boundary: `2026-08-10T19:35:30Z`.
+
+```bash
+cd backend
+PR=<dogfood-pr-number>
+SINCE=2026-08-10T19:35:30Z
+
+DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.model_run_capture_staging_metrics \
+  --since $SINCE --pr-number $PR --require-runs --mrc-gate --json
+```
+
+**MRC gate:** Exit code **1** when any check is `FAIL` (`INCONCLUSIVE` does not fail). `models_snapshot` population is `INCONCLUSIVE` until MRC-P2.2 ships.
+
+See [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](../models/model-run-capture/MODEL_RUN_CAPTURE_STAGING_VALIDATION.md).
+
+## Pipeline observability (`pipeline_observability_staging_metrics.py`)
+
+PO P0 schema + attempt row probes. Expects alembic `0032` after #96 deploy.
+
+```bash
+cd backend
+
+DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.pipeline_observability_staging_metrics \
+  --since 2026-08-10T19:35:30Z --pr-number $PR --require-runs --po-p0-gate --json
+```
+
+## Generation lifecycle (`generation_lifecycle_staging_metrics.py`)
+
+RG-15 supersede + stuck `processing` checks.
+
+```bash
+cd backend
+
+DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.generation_lifecycle_staging_metrics \
+  --since $SINCE --pr-number $PR --require-activity --rg15-gate --json
+```
+
 ## RR-W1 dogfood gate (`revy_review_dogfood_staging_validation.py`)
 
 Per-PR closure-loop validation on `raimondskrauklis/revy` staging dogfood PRs. Requires **≥5 completed review runs** and DB evidence for resolution/judge/publish parity. Uses `STAGING_DATABASE_URL` when set (falls back to `DATABASE_URL`).

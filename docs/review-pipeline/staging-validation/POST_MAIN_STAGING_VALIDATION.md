@@ -2,7 +2,7 @@
 
 **Purpose:** Dogfood PR on `revy-staging` after [#89](https://github.com/raimondskrauklis/revy/pull/89) and [#92](https://github.com/raimondskrauklis/revy/pull/92) — **full index → review → publish cycles** on the validation PR, not idle system-wide windows.
 
-**Dogfood PR #93:** closed. **#94** merged + deployed. **Push 4:** [#95](https://github.com/raimondskrauklis/revy/pull/95).
+**Dogfood PR #93:** closed. **#94** merged + deployed. **Push 4:** [#95](https://github.com/raimondskrauklis/revy/pull/95) (closed). **#96** merged + deployed — MRC validation: [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](../models/model-run-capture/MODEL_RUN_CAPTURE_STAGING_VALIDATION.md).
 
 ---
 
@@ -11,10 +11,11 @@
 | Deploy | `--since` ISO | Role |
 |--------|---------------|------|
 | #89 generation lifecycle | `2026-08-10T11:18:54Z` | RG-15 worker code baseline |
-| **#92 pipeline observability P0** | `2026-08-10T14:23:32Z` | **Dogfood window** — migration `0031` + recorder |
+| **#92 pipeline observability P0** | `2026-08-10T14:23:32Z` | PO P0 dogfood window — migration `0031` |
 | **#94 RG-15 check UX** | `2026-08-10T15:28:53Z` | Queued GitHub check + probe scripts |
+| **#96 model-run-capture** | `2026-08-10T19:35:30Z` | **MRC dogfood window** — migration `0032` + P0/P1 |
 
-**Rule:** Probes use `--pr-number 93 --since 2026-08-10T14:23:32Z`. Run scripts from `main` after #94 merge.
+**Rule:** PO/RG-15 probes on closed #93/#95 use `--since 2026-08-10T14:23:32Z`. MRC probes use `--since 2026-08-10T19:35:30Z` on the **post-#96 dogfood PR** (not #96 — merged code cannot self-validate).
 
 ---
 
@@ -66,6 +67,6 @@ DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.generation_lifecycle_stagin
 | RG-15 queued check UX | **PASS** (initial) | #95 push 4 post-#94 deploy; 2 runs, 1 superseded |
 | PO P4 SLO (`--po-gate`) | **INCONCLUSIVE** | `wait_ms` null on success path until P1 |
 
-**Next:** optional push 5 for in-flight overlap supersede (poll DB `processing` before push 2).
+**Next:** open MRC dogfood PR (`chore/mrc-staging-dogfood`) — push 6 probe + full pipeline gate. Optional push 5 overlap supersede on closed #95 track.
 
-**Related:** [pipeline observability](../pipeline-observability/PIPELINE_OBSERVABILITY_STAGING_VALIDATION.md) · [generation lifecycle](../review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_STAGING_VALIDATION.md)
+**Related:** [model-run-capture validation](../models/model-run-capture/MODEL_RUN_CAPTURE_STAGING_VALIDATION.md) · [pipeline observability](../pipeline-observability/PIPELINE_OBSERVABILITY_STAGING_VALIDATION.md) · [generation lifecycle](../review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_STAGING_VALIDATION.md)

@@ -76,6 +76,14 @@
         "since_flag": "--since",
         "json_flag": "--json",
         "note": "DATABASE_SSL_INSECURE=1 — staging operator only; see docs/utils/BACKEND_SCRIPTS_RUNBOOK.md"
+      },
+      {
+        "id": "model_run_capture",
+        "command": "cd backend && DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.model_run_capture_staging_metrics",
+        "since_flag": "--since",
+        "json_flag": "--json",
+        "gate_flag": "--mrc-gate",
+        "note": "Post-#96 deploy — use --pr-number and --require-runs for dogfood sign-off"
       }
     ],
     "evidence_runbook": "docs/utils/BACKEND_SCRIPTS_RUNBOOK.md"
