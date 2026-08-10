@@ -444,7 +444,7 @@ async def _judge_candidates_missing_outcome(
     return False
 
 
-async def record_review_run_judge_status(
+async def record_review_run_judge_status_with_model(
     session: AsyncSession,
     *,
     review_run_id: UUID,
@@ -546,6 +546,21 @@ async def record_review_run_judge_status(
     return judged, model_ref
 
 
+async def record_review_run_judge_status(
+    session: AsyncSession,
+    *,
+    review_run_id: UUID,
+    artifacts_out: list[JudgeCandidateArtifact] | None = None,
+) -> int:
+    """Backward-compatible wrapper — returns judged count only."""
+    judged, _model_ref = await record_review_run_judge_status_with_model(
+        session,
+        review_run_id=review_run_id,
+        artifacts_out=artifacts_out,
+    )
+    return judged
+
+
 async def finalize_review_run_judge_status(
     session: AsyncSession,
     *,
@@ -575,4 +590,4 @@ async def run_judge_for_review_run(
     session: AsyncSession, *, review_run_id: UUID
 ) -> tuple[int, ModelRef | None]:
     """Run judge on escalation candidates. Returns outcome count and model ref when judged."""
-    return await record_review_run_judge_status(session, review_run_id=review_run_id)
+    return await record_review_run_judge_status_with_model(session, review_run_id=review_run_id)

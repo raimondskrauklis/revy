@@ -46,6 +46,10 @@ from app.schemas.github_pipeline import (
     PipelineStepResponse,
 )
 from app.services.github_indexing import ensure_revision_access
+from app.services.github_pipeline_run_lookup import (
+    get_pipeline_run_for_index_job,
+    get_pipeline_runs_for_index_jobs,
+)
 
 logger = get_logger(__name__)
 
@@ -86,33 +90,6 @@ async def get_pipeline_run_for_review_run(
     return await session.scalar(
         select(GitHubPipelineRunORM).where(GitHubPipelineRunORM.review_run_id == review_run_id)
     )
-
-
-async def get_pipeline_run_for_index_job(
-    session: AsyncSession,
-    *,
-    index_job_id: UUID,
-) -> GitHubPipelineRunORM | None:
-    return await session.scalar(
-        select(GitHubPipelineRunORM).where(GitHubPipelineRunORM.index_job_id == index_job_id)
-    )
-
-
-async def get_pipeline_runs_for_index_jobs(
-    session: AsyncSession,
-    *,
-    index_job_ids: list[UUID],
-) -> dict[UUID, GitHubPipelineRunORM]:
-    if not index_job_ids:
-        return {}
-    rows = await session.scalars(
-        select(GitHubPipelineRunORM).where(GitHubPipelineRunORM.index_job_id.in_(index_job_ids))
-    )
-    return {
-        pipeline_run.index_job_id: pipeline_run
-        for pipeline_run in rows
-        if pipeline_run.index_job_id is not None
-    }
 
 
 async def ensure_pipeline_run_for_index_job(

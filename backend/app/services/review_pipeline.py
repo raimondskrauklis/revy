@@ -25,8 +25,8 @@ from app.models.github_review_run import GitHubReviewRunORM
 from app.models.workspaces import WorkspaceORM
 from app.services.github_generation_lifecycle import is_authoritative_for_pull_request_head
 from app.services.github_indexing import index_job_in_progress
+from app.services.github_pipeline_run_lookup import get_pipeline_run_for_index_job
 from app.services.github_pipeline_trace import (
-    get_pipeline_run_for_index_job,
     link_review_run_to_pipeline,
     provision_queued_pipeline_github_check,
 )

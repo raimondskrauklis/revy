@@ -77,16 +77,43 @@ def _log_voyage_error(response: httpx.Response) -> None:
     )
 
 
+def _embed_http_status(exc: BaseException) -> int | None:
+    if isinstance(exc, httpx.HTTPStatusError) and exc.response is not None:
+        return exc.response.status_code
+    cause = exc.__cause__
+    if isinstance(cause, httpx.HTTPStatusError) and cause.response is not None:
+        return cause.response.status_code
+    return None
+
+
 def _embed_attempt_failure_class(
     exc: BaseException,
 ) -> GitHubReviewRunFailureClass | None:
     if isinstance(exc, httpx.TimeoutException):
         return GitHubReviewRunFailureClass.timeout
-    if isinstance(exc, RuntimeError) and isinstance(exc.__cause__, httpx.TimeoutException):
-        return GitHubReviewRunFailureClass.timeout
+    if isinstance(exc, RuntimeError):
+        cause = exc.__cause__
+        if isinstance(cause, httpx.TimeoutException):
+            return GitHubReviewRunFailureClass.timeout
+        if isinstance(cause, httpx.HTTPStatusError) and cause.response is not None:
+            if cause.response.status_code == 429:
+                return GitHubReviewRunFailureClass.rate_limit
+            return GitHubReviewRunFailureClass.provider_error
     if isinstance(exc, ServiceUnavailableError):
         return GitHubReviewRunFailureClass.parse_error
     return None
+
+
+def _embed_attempt_fail_context(
+    exc: BaseException,
+    *,
+    wait_ms: int,
+) -> LlmAttemptFailContext:
+    return LlmAttemptFailContext(
+        failure_class=_embed_attempt_failure_class(exc),
+        wait_ms=wait_ms,
+        http_status=_embed_http_status(exc),
+    )
 
 
 async def _post_embeddings(
@@ -249,8 +276,8 @@ async def embed_texts(
             if attempt_id is not None:
                 await try_fail_attempt(
                     attempt_id,
-                    context=LlmAttemptFailContext(
-                        failure_class=_embed_attempt_failure_class(exc),
+                    context=_embed_attempt_fail_context(
+                        exc,
                         wait_ms=int((time.monotonic() - attempt_started) * 1000),
                     ),
                     exc=exc,

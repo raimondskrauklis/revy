@@ -29,7 +29,7 @@ from app.services.github_indexing import create_index_job, list_revision_chunks,
 @pytest.fixture(autouse=True)
 def _index_job_no_pipeline_run(monkeypatch):
     monkeypatch.setattr(
-        "app.services.github_pipeline_trace.get_pipeline_run_for_index_job",
+        "app.services.github_indexing.get_pipeline_run_for_index_job",
         AsyncMock(return_value=None),
     )
 
