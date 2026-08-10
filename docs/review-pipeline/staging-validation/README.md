@@ -18,7 +18,7 @@
 
 | PR | Program | Branch | Status |
 |----|---------|--------|--------|
-| *(open)* | Model run capture (post-#96) | `chore/mrc-staging-dogfood` | probe v6 — not opened |
+| *(open)* | Model run capture (post-#96) | `chore/mrc-staging-dogfood` | [#97](https://github.com/raimondskrauklis/revy/pull/97) — **MRC-P0 PASS** push 1 |
 | *(open)* | Agent workflow pack E2E | `chore/agent-workflow-e2e-validation` | [#73](https://github.com/raimondskrauklis/revy/pull/73) push 1 |
 | [#87](https://github.com/raimondskrauklis/revy/pull/87) | PR summary rollup (post-#85) | `chore/psr-staging-dogfood` | **sign-off PASS** — pushes 1–2 |
 | *(open)* | Finding resolution dogfood | `chore/finding-resolution-staging-dogfood` | P0 pushed — staging validation in progress |

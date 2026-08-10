@@ -35,6 +35,31 @@
 
 ---
 
+## Probe results (PR #97 — post-#96 deploy, 2026-08-10)
+
+**Dogfood PR:** [#97](https://github.com/raimondskrauklis/revy/pull/97) · `--since 2026-08-10T19:35:30Z` · `head_sha` `79626fa`
+
+| Gate | Result | Detail |
+|------|--------|--------|
+| MRC P0 `--mrc-p0-gate` | **PASS** | alembic `0032`; `2/2` embed manifest + step model |
+| MRC P1 embed | **PASS** | `2` `index_embed` rows; parity `2/0` |
+| MRC P1 judge/publish steps | **PARTIAL** | judge `0/2` (skipped); publish `1/2` (fallback path) |
+| PO P0 `--po-p0-gate` | **PASS** | 2 runs; 4 attempt rows |
+| RG-15 `--rg15-gate` | **PASS** | no stuck processing |
+
+```bash
+cd backend
+PR=97
+SINCE=2026-08-10T19:35:30Z
+
+DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.model_run_capture_staging_metrics \
+  --since $SINCE --pr-number $PR --require-runs --mrc-gate --json
+```
+
+**Related:** [model-run-capture validation](../models/model-run-capture/MODEL_RUN_CAPTURE_STAGING_VALIDATION.md)
+
+---
+
 ## Probe results (staging DB — PR #93, script from #94 branch)
 
 **2026-08-10** — local run against staging (no deploy needed for probe SQL fix):
