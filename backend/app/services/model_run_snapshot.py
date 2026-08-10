@@ -80,8 +80,10 @@ def _embedding_from_index(step: StepSnapshotInput) -> dict[str, Any] | None:
     if embed_batches == 0:
         return None
     embedding_model = manifest.get("embedding_model")
+    if not isinstance(embedding_model, str) or not embedding_model:
+        return None
     provider = manifest.get("embedding_provider") or step.model_provider
-    model_id = embedding_model or step.model_id
+    model_id = embedding_model
     dimensions = manifest.get("embedding_dimensions")
     parsed_dimensions = dimensions if isinstance(dimensions, int) else None
     return _model_entry(
@@ -218,6 +220,7 @@ async def persist_models_snapshot(
     pipeline_run_id: UUID,
 ) -> dict[str, Any] | None:
     """Write `github_pipeline_runs.models_snapshot` from completed pipeline steps."""
+    await session.flush()
     pipeline_run = await session.scalar(
         select(GitHubPipelineRunORM)
         .where(GitHubPipelineRunORM.id == pipeline_run_id)

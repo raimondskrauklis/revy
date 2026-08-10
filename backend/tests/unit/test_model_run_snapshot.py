@@ -251,4 +251,5 @@ async def test_persist_models_snapshot_writes_pipeline_run():
     assert snapshot["embedding"]["model_id"] == "voyage-code-3.5"
     assert snapshot["reviewer"]["model_id"] == "kimi-k2.7-code"
     assert pipeline_run.models_snapshot == snapshot
-    session.flush.assert_awaited_once()
+    session.flush.assert_awaited()
+    assert session.flush.await_count == 2
