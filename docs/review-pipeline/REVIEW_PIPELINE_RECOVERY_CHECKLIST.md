@@ -115,8 +115,8 @@
 - [x] Execution peer review (pass 2 BLOCK: no)
 - [x] `phase-execution` P0 → merged [#92](https://github.com/raimondskrauklis/revy/pull/92) (`be16bc7`) — migration `0031`, recorder, commit graph
 - [ ] Apply migration **`0031`** on staging (human gate before P1 dogfood)
-- [ ] Post-#92 review run on staging — re-run `pipeline_observability_staging_metrics --po-p0-gate` ([memo](./pipeline-observability/PIPELINE_OBSERVABILITY_STAGING_VALIDATION.md))
-- [ ] RG-15 push-during-run dogfood — re-run `generation_lifecycle_staging_metrics --rg15-gate` ([memo](./review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_STAGING_VALIDATION.md))
+- [x] Post-#92 review run on staging — **PASS** [#93](https://github.com/raimondskrauklis/revy/pull/93) dogfood
+- [ ] RG-15 push-during-run overlap on staging — supersede dogfood pending
 - [ ] `phase-execution` P1 — Moonshot / Anthropic judge / Voyage instrumentation ([P1 execution](./pipeline-observability/waves/PIPELINE_OBSERVABILITY_P1_EXECUTION.md))
 
 ---

@@ -1,13 +1,13 @@
 # Pipeline observability (LLM + full review pipeline)
 
-**Status:** **P0 shipped** on `main` ([#92](https://github.com/raimondskrauklis/revy/pull/92), `be16bc7`) — migration `0031`, recorder, commit graph, PO-V3 timeout durability. **Human gate:** apply migration `0031` on staging before P1 dogfood. **Next:** `phase-execution` from [P1](./waves/PIPELINE_OBSERVABILITY_P1_EXECUTION.md).
+**Status:** **P0 shipped** on `main` ([#92](https://github.com/raimondskrauklis/revy/pull/92), `be16bc7`). **P0 behavioral PASS** on staging dogfood [#93](https://github.com/raimondskrauklis/revy/pull/93). **Next:** `phase-execution` from [P1](./waves/PIPELINE_OBSERVABILITY_P1_EXECUTION.md).
 
 | Doc | Purpose |
 |-----|---------|
 | [PIPELINE_OBSERVABILITY_FINDINGS.md](./PIPELINE_OBSERVABILITY_FINDINGS.md) | Baseline — OTel-aligned metric model, gaps, catalog |
 | [PIPELINE_OBSERVABILITY_GENERAL_PLAN.md](./PIPELINE_OBSERVABILITY_GENERAL_PLAN.md) | Phased goals (P0–P5) |
 | [waves/PIPELINE_OBSERVABILITY_EXECUTION.md](./waves/PIPELINE_OBSERVABILITY_EXECUTION.md) | Execution index + LOOP order (P0–P5) |
-| [PIPELINE_OBSERVABILITY_STAGING_VALIDATION.md](./PIPELINE_OBSERVABILITY_STAGING_VALIDATION.md) | P0 schema PASS · behavioral pending |
+| [PIPELINE_OBSERVABILITY_STAGING_VALIDATION.md](./PIPELINE_OBSERVABILITY_STAGING_VALIDATION.md) | P0 behavioral PASS — dogfood [#93](https://github.com/raimondskrauklis/revy/pull/93) |
 | [reviews/architecture-peer-review/](./reviews/architecture-peer-review/README.md) | Architecture peer review — pass 2 (**BLOCK: no**) |
 | [reviews/execution-peer-review/](./reviews/execution-peer-review/README.md) | Execution peer review — pass 2 (**BLOCK: no**) |
 

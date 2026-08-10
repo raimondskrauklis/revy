@@ -18,7 +18,7 @@
 
 | PR | Program | Branch | Status |
 |----|---------|--------|--------|
-| *(open)* | Agent workflow pack E2E | `chore/agent-workflow-e2e-validation` | [#73](https://github.com/raimondskrauklis/revy/pull/73) push 1 |
+| [#93](https://github.com/raimondskrauklis/revy/pull/93) | Post-main #89+#92 dogfood | `chore/post-main-staging-dogfood` | **P0 PASS** · RG-15 overlap pending |
 | [#87](https://github.com/raimondskrauklis/revy/pull/87) | PR summary rollup (post-#85) | `chore/psr-staging-dogfood` | **sign-off PASS** — pushes 1–2 |
 | *(open)* | Finding resolution dogfood | `chore/finding-resolution-staging-dogfood` | P0 pushed — staging validation in progress |
 | [#63](https://github.com/raimondskrauklis/revy/pull/63) | PSA post-#62 deploy | `chore/psa-staging-dogfood` | **sign-off complete** — merged |
@@ -55,13 +55,13 @@
 
 ## Post-main system probe (2026-08-10)
 
-After [#89](https://github.com/raimondskrauklis/revy/pull/89) + [#92](https://github.com/raimondskrauklis/revy/pull/92) on staging:
+Dogfood PR [#93](https://github.com/raimondskrauklis/revy/pull/93) — full cycles post-#92 deploy (`--pr-number 93 --since 2026-08-10T14:23:32Z`):
 
-| Script | `--since` | Sign-off |
-|--------|-----------|----------|
-| `generation_lifecycle_staging_metrics --rg15-gate` | `2026-08-10T11:18:54Z` | health **PASS**; supersede dogfood pending |
-| `pipeline_observability_staging_metrics --po-p0-gate` | `2026-08-10T14:23:32Z` | schema **PASS**; behavioral pending (0 post-deploy runs) |
-| `judge_json_contract_staging_metrics` | `2026-08-10T14:23:32Z` | baseline — 0 runs in window |
+| Track | Verdict | Memo |
+|-------|---------|------|
+| PO P0 behavioral | **PASS** | [POST_MAIN_STAGING_VALIDATION.md](./POST_MAIN_STAGING_VALIDATION.md) |
+| RG-15 health | **PASS** | same |
+| RG-15 supersede overlap | **pending** | push during Revy `in_progress` |
 
 Memos: [pipeline observability](../pipeline-observability/PIPELINE_OBSERVABILITY_STAGING_VALIDATION.md) · [generation lifecycle](../review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_STAGING_VALIDATION.md).
 
