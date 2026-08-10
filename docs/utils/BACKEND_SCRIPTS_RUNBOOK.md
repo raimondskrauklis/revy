@@ -41,7 +41,7 @@ System-wide P0 schema + P4 SLO probes on `revy-staging` (`github_llm_call_attemp
 cd backend
 
 DATABASE_SSL_INSECURE=1 pipenv run sh -c \
-  'python -m scripts.pipeline_observability_staging_metrics --since <deploy-iso> --po-p0-gate --json'
+  'python -m scripts.pipeline_observability_staging_metrics --since <deploy-iso> --pr-number <PR> --require-runs --po-p0-gate --json'
 
 DATABASE_SSL_INSECURE=1 pipenv run sh -c \
   'python -m scripts.pipeline_observability_staging_metrics --since <deploy-iso> --po-gate --json'
@@ -57,7 +57,7 @@ System-wide RG-15 health: review/index job counts, supersede rows, stuck `proces
 cd backend
 
 DATABASE_SSL_INSECURE=1 pipenv run sh -c \
-  'python -m scripts.generation_lifecycle_staging_metrics --since <deploy-iso> --rg15-gate --json'
+  'python -m scripts.generation_lifecycle_staging_metrics --since <deploy-iso> --pr-number <PR> --require-activity --rg15-gate --json'
 ```
 
 See [REVIEW_GENERATION_LIFECYCLE_STAGING_VALIDATION.md](../review-pipeline/review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_STAGING_VALIDATION.md).
