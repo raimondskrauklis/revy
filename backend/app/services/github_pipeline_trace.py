@@ -526,7 +526,6 @@ async def record_index_pipeline_step(
         else None
     )
     step = await _get_index_pipeline_step(session, pipeline_run_id=pipeline_run_id)
-    index_manifest_stats = getattr(job, "index_manifest_stats", None)
 
     if step is None:
         step = await _create_completed_step(

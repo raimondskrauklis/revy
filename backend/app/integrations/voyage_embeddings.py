@@ -238,6 +238,17 @@ async def embed_texts(
                     exc=exc,
                 )
             raise
+        except ServiceUnavailableError as exc:
+            if attempt_id is not None:
+                await fail_attempt(
+                    attempt_id,
+                    context=LlmAttemptFailContext(
+                        failure_class=GitHubReviewRunFailureClass.parse_error,
+                        wait_ms=int((time.monotonic() - attempt_started) * 1000),
+                    ),
+                    exc=exc,
+                )
+            raise
         except Exception as exc:
             if attempt_id is not None:
                 await fail_attempt(

@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, patch
 import httpx
 import pytest
 
+from app.core.exceptions import ServiceUnavailableError
 from app.integrations.voyage_embeddings import VoyageEmbedRecorderContext, embed_texts
 
 
@@ -53,6 +54,40 @@ async def test_embed_texts_writes_index_embed_attempt_row():
     assert context.request_model == "voyage-code-3.5"
     assert context.batch_size == 1
     complete_mock.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_embed_texts_records_parse_error_failure_class_on_invalid_response():
+    pipeline_run_id = uuid.uuid4()
+    index_job_id = uuid.uuid4()
+    recorder = VoyageEmbedRecorderContext(
+        pipeline_run_id=pipeline_run_id,
+        index_job_id=index_job_id,
+        request_model="voyage-code-3.5",
+    )
+    response = httpx.Response(
+        200,
+        json={"data": "not-a-list"},
+        request=httpx.Request("POST", "https://api.voyageai.com/v1/embeddings"),
+    )
+    client = AsyncMock()
+    client.post = AsyncMock(return_value=response)
+
+    with patch("app.integrations.voyage_embeddings.settings") as mock_settings:
+        mock_settings.embeddings_enabled = True
+        mock_settings.voyage_api_key = "test-key"
+        mock_settings.revy_embedding_model = "voyage-code-3.5"
+        mock_settings.revy_embedding_dimensions = 1024
+        with patch("app.integrations.voyage_embeddings.start_attempt", AsyncMock(return_value=uuid.uuid4())):
+            with patch(
+                "app.integrations.voyage_embeddings.fail_attempt",
+                AsyncMock(),
+            ) as fail_mock:
+                with pytest.raises(ServiceUnavailableError):
+                    await embed_texts(client, ["hello"], recorder=recorder)
+
+    fail_context = fail_mock.await_args.kwargs["context"]
+    assert fail_context.failure_class.value == "parse_error"
 
 
 @pytest.mark.asyncio
