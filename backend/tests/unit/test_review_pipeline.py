@@ -115,18 +115,23 @@ async def test_maybe_enqueue_pipeline_creates_index_job():
     session.flush = AsyncMock()
 
     with patch("app.services.review_pipeline.pipeline_prerequisites_met", return_value=True):
-        job_id = await maybe_enqueue_pipeline_for_revision(
-            session,
-            workspace_id=workspace.id,
-            revision_id=revision.id,
-            trigger=GitHubIndexJobTriggerSource.autostart,
-        )
+        with patch(
+            "app.services.review_pipeline.provision_queued_pipeline_github_check",
+            AsyncMock(return_value=99),
+        ) as provision_mock:
+            job_id = await maybe_enqueue_pipeline_for_revision(
+                session,
+                workspace_id=workspace.id,
+                revision_id=revision.id,
+                trigger=GitHubIndexJobTriggerSource.autostart,
+            )
 
     assert job_id is not None or session.add.called
     session.add.assert_called_once()
     added = session.add.call_args.args[0]
     assert added.trigger_source == GitHubIndexJobTriggerSource.autostart
     assert added.index_mode == GitHubIndexMode.diff
+    provision_mock.assert_awaited_once()
 
 
 @pytest.mark.asyncio

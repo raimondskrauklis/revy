@@ -24,6 +24,7 @@ from app.constants.enums import (
     PipelineStepType,
     stored_enum_value,
 )
+from app.constants.github_messages import IN_PROGRESS_CHECK_SUMMARY, QUEUED_CHECK_SUMMARY
 from app.core.config import settings
 from app.core.exceptions import NotFoundError
 from app.core.logging import get_logger
@@ -252,6 +253,136 @@ async def pipeline_has_step(
         .limit(1)
     )
     return step is not None
+
+
+async def _revision_is_pull_request_head(
+    session: AsyncSession,
+    *,
+    revision_id: UUID,
+) -> bool:
+    revision = await session.get(GitHubPullRequestRevisionORM, revision_id)
+    if revision is None:
+        return False
+    pull_request = await session.get(GitHubPullRequestORM, revision.pull_request_id)
+    if pull_request is None:
+        return False
+    return revision.head_sha == pull_request.head_sha
+
+
+async def _pipeline_check_repo_context(
+    session: AsyncSession,
+    *,
+    pipeline_run: GitHubPipelineRunORM,
+) -> tuple[int, str, str, str, int] | None:
+    revision = await session.get(GitHubPullRequestRevisionORM, pipeline_run.revision_id)
+    if revision is None:
+        return None
+    pull_request = await session.get(GitHubPullRequestORM, revision.pull_request_id)
+    if pull_request is None:
+        return None
+    repository = await session.get(GitHubRepositoryORM, pull_request.repository_id)
+    installation = await session.get(GitHubInstallationORM, pull_request.installation_id)
+    if repository is None or installation is None:
+        return None
+    owner, repo_name = repository.full_name.split("/", 1)
+    return (
+        installation.github_installation_id,
+        owner,
+        repo_name,
+        pipeline_run.head_sha,
+        pull_request.number,
+    )
+
+
+async def provision_queued_pipeline_github_check(
+    session: AsyncSession,
+    *,
+    job: GitHubIndexJobORM,
+    head_sha: str,
+) -> int | None:
+    """Create an in-progress GitHub check when a pending index job is queued (before Celery)."""
+    if not settings.github_api_enabled:
+        return None
+
+    pipeline_run = await ensure_pipeline_run_for_index_job(session, job=job, head_sha=head_sha)
+    existing_check_run_id = await resolve_pipeline_github_check_run_id(
+        session,
+        pipeline_run_id=pipeline_run.id,
+    )
+    if existing_check_run_id is not None:
+        return existing_check_run_id
+
+    repo_context = await _pipeline_check_repo_context(session, pipeline_run=pipeline_run)
+    if repo_context is None:
+        return None
+    github_installation_id, owner, repo_name, run_head_sha, github_pr_number = repo_context
+    external_id = github_api.build_check_run_external_id(
+        github_installation_id=github_installation_id,
+        github_pr_number=github_pr_number,
+        head_sha=run_head_sha,
+    )
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            check_run_id = await github_api.create_check_run(
+                client,
+                github_installation_id=github_installation_id,
+                owner=owner,
+                repo=repo_name,
+                head_sha=run_head_sha,
+                external_id=external_id,
+                status="in_progress",
+                summary=QUEUED_CHECK_SUMMARY,
+            )
+    except httpx.HTTPError as exc:
+        logger.warning(
+            "pipeline_github_check_provision_failed",
+            extra={"index_job_id": str(job.id), "error": str(exc)},
+        )
+        return None
+
+    await stash_pipeline_github_check_run_id(
+        session,
+        pipeline_run_id=pipeline_run.id,
+        github_check_run_id=check_run_id,
+    )
+    return check_run_id
+
+
+async def refresh_pipeline_github_check_in_progress(
+    session: AsyncSession,
+    *,
+    pipeline_run_id: UUID,
+    summary: str = IN_PROGRESS_CHECK_SUMMARY,
+) -> None:
+    check_run_id = await resolve_pipeline_github_check_run_id(
+        session,
+        pipeline_run_id=pipeline_run_id,
+    )
+    if check_run_id is None or not settings.github_api_enabled:
+        return
+
+    pipeline_run = await session.get(GitHubPipelineRunORM, pipeline_run_id)
+    if pipeline_run is None:
+        return
+    repo_context = await _pipeline_check_repo_context(session, pipeline_run=pipeline_run)
+    if repo_context is None:
+        return
+    github_installation_id, owner, repo_name, _head_sha, _pr_number = repo_context
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            await github_api.update_check_run_in_progress(
+                client,
+                github_installation_id=github_installation_id,
+                owner=owner,
+                repo=repo_name,
+                check_run_id=check_run_id,
+                summary=summary,
+            )
+    except httpx.HTTPError as exc:
+        logger.warning(
+            "pipeline_github_check_refresh_failed",
+            extra={"pipeline_run_id": str(pipeline_run_id), "error": str(exc)},
+        )
 
 
 async def stash_pipeline_github_check_run_id(
@@ -854,34 +985,41 @@ async def start_pipeline_github_check(
     if not settings.github_api_enabled:
         return None
 
-    revision = await session.get(GitHubPullRequestRevisionORM, pipeline_run.revision_id)
-    if revision is None:
-        return None
-    pull_request = await session.get(GitHubPullRequestORM, revision.pull_request_id)
-    if pull_request is None:
-        return None
-    repository = await session.get(GitHubRepositoryORM, pull_request.repository_id)
-    installation = await session.get(GitHubInstallationORM, pull_request.installation_id)
-    if repository is None or installation is None:
+    existing_check_run_id = await resolve_pipeline_github_check_run_id(
+        session,
+        pipeline_run_id=pipeline_run.id,
+    )
+    if existing_check_run_id is not None:
+        if await _revision_is_pull_request_head(session, revision_id=pipeline_run.revision_id):
+            await refresh_pipeline_github_check_in_progress(
+                session,
+                pipeline_run_id=pipeline_run.id,
+                summary=IN_PROGRESS_CHECK_SUMMARY,
+            )
+            return existing_check_run_id
         return None
 
-    owner, repo_name = repository.full_name.split("/", 1)
+    repo_context = await _pipeline_check_repo_context(session, pipeline_run=pipeline_run)
+    if repo_context is None:
+        return None
+
+    github_installation_id, owner, repo_name, head_sha, github_pr_number = repo_context
     external_id = github_api.build_check_run_external_id(
-        github_installation_id=installation.github_installation_id,
-        github_pr_number=pull_request.number,
-        head_sha=pipeline_run.head_sha,
+        github_installation_id=github_installation_id,
+        github_pr_number=github_pr_number,
+        head_sha=head_sha,
     )
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             return await github_api.create_check_run(
                 client,
-                github_installation_id=installation.github_installation_id,
+                github_installation_id=github_installation_id,
                 owner=owner,
                 repo=repo_name,
-                head_sha=pipeline_run.head_sha,
+                head_sha=head_sha,
                 external_id=external_id,
                 status="in_progress",
-                summary="Revy review in progress…",
+                summary=IN_PROGRESS_CHECK_SUMMARY,
             )
     except httpx.HTTPError as exc:
         logger.warning(
@@ -933,23 +1071,15 @@ async def _finalize_pipeline_github_check(
     pipeline_run = await session.get(GitHubPipelineRunORM, pipeline_run_id)
     if pipeline_run is None:
         return
-    revision = await session.get(GitHubPullRequestRevisionORM, pipeline_run.revision_id)
-    if revision is None:
+    repo_context = await _pipeline_check_repo_context(session, pipeline_run=pipeline_run)
+    if repo_context is None:
         return
-    pull_request = await session.get(GitHubPullRequestORM, revision.pull_request_id)
-    if pull_request is None:
-        return
-    repository = await session.get(GitHubRepositoryORM, pull_request.repository_id)
-    installation = await session.get(GitHubInstallationORM, pull_request.installation_id)
-    if repository is None or installation is None:
-        return
-
-    owner, repo_name = repository.full_name.split("/", 1)
+    github_installation_id, owner, repo_name, _head_sha, _pr_number = repo_context
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             await github_api.update_check_run(
                 client,
-                github_installation_id=installation.github_installation_id,
+                github_installation_id=github_installation_id,
                 owner=owner,
                 repo=repo_name,
                 check_run_id=check_run_id,

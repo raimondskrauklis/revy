@@ -436,6 +436,33 @@ async def create_check_run(
     return check_run_id
 
 
+async def update_check_run_in_progress(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+    owner: str,
+    repo: str,
+    check_run_id: int,
+    summary: str,
+    title: str = "Revy code review",
+    auth_headers: dict[str, str] | None = None,
+) -> None:
+    headers = await _resolve_auth_headers(
+        client,
+        github_installation_id=github_installation_id,
+        auth_headers=auth_headers,
+    )
+    response = await client.patch(
+        f"{GITHUB_API_BASE}/repos/{owner}/{repo}/check-runs/{check_run_id}",
+        headers=headers,
+        json={
+            "status": "in_progress",
+            "output": {"title": title, "summary": summary},
+        },
+    )
+    response.raise_for_status()
+
+
 async def update_check_run(
     client: httpx.AsyncClient,
     *,

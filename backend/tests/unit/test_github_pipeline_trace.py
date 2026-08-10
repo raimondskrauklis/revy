@@ -9,6 +9,7 @@ import pytest
 from app.constants.enums import (
     GitHubAccountType,
     GitHubIndexJobStatus,
+    GitHubIndexJobTriggerSource,
     GitHubIndexMode,
     GitHubPullRequestState,
     GitHubRepositoryStatus,
@@ -34,6 +35,7 @@ from app.services.github_pipeline_trace import (
     finalize_pipeline_github_check_neutral,
     get_pipeline_trace_for_review_run,
     get_resolution_metrics_for_review_run,
+    provision_queued_pipeline_github_check,
     purge_old_pipeline_artifacts,
     record_index_pipeline_step,
     record_reconcile_pipeline_step,
@@ -344,6 +346,139 @@ async def test_start_pipeline_github_check_creates_in_progress_run():
     create_mock.assert_awaited_once()
     assert create_mock.await_args.kwargs["status"] == "in_progress"
     assert "Revy review in progress" in create_mock.await_args.kwargs["summary"]
+
+
+@pytest.mark.asyncio
+async def test_provision_queued_pipeline_github_check_creates_check_for_pending_job():
+    workspace_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    pipeline_run_id = uuid.uuid4()
+
+    job = GitHubIndexJobORM(
+        revision_id=revision_id,
+        workspace_id=workspace_id,
+        status=GitHubIndexJobStatus.pending,
+        trigger_source=GitHubIndexJobTriggerSource.autostart,
+        index_mode=GitHubIndexMode.diff,
+    )
+    job.id = uuid.uuid4()
+
+    pipeline_run = GitHubPipelineRunORM(
+        workspace_id=workspace_id,
+        revision_id=revision_id,
+        head_sha="abc123",
+        index_mode=GitHubIndexMode.diff,
+    )
+    pipeline_run.id = pipeline_run_id
+
+    session = AsyncMock()
+    create_mock = AsyncMock(return_value=88)
+
+    with patch("app.services.github_pipeline_trace.settings") as mock_settings:
+        mock_settings.github_api_enabled = True
+        with patch(
+            "app.services.github_pipeline_trace.ensure_pipeline_run_for_index_job",
+            AsyncMock(return_value=pipeline_run),
+        ):
+            with patch(
+                "app.services.github_pipeline_trace.resolve_pipeline_github_check_run_id",
+                AsyncMock(return_value=None),
+            ):
+                with patch(
+                    "app.services.github_pipeline_trace._pipeline_check_repo_context",
+                    AsyncMock(return_value=(12345, "acme", "demo", "abc123", 7)),
+                ):
+                    with patch(
+                        "app.services.github_pipeline_trace.github_api.create_check_run",
+                        create_mock,
+                    ):
+                        with patch(
+                            "app.services.github_pipeline_trace.stash_pipeline_github_check_run_id",
+                            AsyncMock(),
+                        ) as stash_mock:
+                            check_run_id = await provision_queued_pipeline_github_check(
+                                session,
+                                job=job,
+                                head_sha="abc123",
+                            )
+
+    assert check_run_id == 88
+    create_mock.assert_awaited_once()
+    assert "queued" in create_mock.await_args.kwargs["summary"].lower()
+    stash_mock.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_start_pipeline_github_check_reuses_provisioned_check():
+    pipeline_run = GitHubPipelineRunORM(
+        workspace_id=uuid.uuid4(),
+        revision_id=uuid.uuid4(),
+        head_sha="abc123",
+        index_mode=GitHubIndexMode.diff,
+    )
+    pipeline_run.id = uuid.uuid4()
+    session = AsyncMock()
+
+    with patch("app.services.github_pipeline_trace.settings") as mock_settings:
+        mock_settings.github_api_enabled = True
+        with patch(
+            "app.services.github_pipeline_trace.resolve_pipeline_github_check_run_id",
+            AsyncMock(return_value=55),
+        ):
+            with patch(
+                "app.services.github_pipeline_trace._revision_is_pull_request_head",
+                AsyncMock(return_value=True),
+            ):
+                with patch(
+                    "app.services.github_pipeline_trace.refresh_pipeline_github_check_in_progress",
+                    AsyncMock(),
+                ) as refresh_mock:
+                    with patch(
+                        "app.services.github_pipeline_trace.github_api.create_check_run",
+                        AsyncMock(),
+                    ) as create_mock:
+                        check_run_id = await start_pipeline_github_check(
+                            session,
+                            pipeline_run=pipeline_run,
+                        )
+
+    assert check_run_id == 55
+    create_mock.assert_not_awaited()
+    refresh_mock.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_start_pipeline_github_check_skips_refresh_when_not_head():
+    pipeline_run = GitHubPipelineRunORM(
+        workspace_id=uuid.uuid4(),
+        revision_id=uuid.uuid4(),
+        head_sha="abc123",
+        index_mode=GitHubIndexMode.diff,
+    )
+    pipeline_run.id = uuid.uuid4()
+    session = AsyncMock()
+
+    with patch("app.services.github_pipeline_trace.settings") as mock_settings:
+        mock_settings.github_api_enabled = True
+        with patch(
+            "app.services.github_pipeline_trace.resolve_pipeline_github_check_run_id",
+            AsyncMock(return_value=55),
+        ):
+            with patch(
+                "app.services.github_pipeline_trace._revision_is_pull_request_head",
+                AsyncMock(return_value=False),
+            ):
+                with patch(
+                    "app.services.github_pipeline_trace.refresh_pipeline_github_check_in_progress",
+                    AsyncMock(),
+                ) as refresh_mock:
+                    check_run_id = await start_pipeline_github_check(
+                        session,
+                        pipeline_run=pipeline_run,
+                    )
+
+    assert check_run_id is None
+    refresh_mock.assert_not_awaited()
 
 
 @pytest.mark.asyncio

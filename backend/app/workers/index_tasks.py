@@ -11,7 +11,11 @@ from app.core.logging import get_logger
 from app.models.github_index_job import GitHubIndexJobORM
 from app.models.github_pull_request import GitHubPullRequestRevisionORM
 from app.services.github_generation_lifecycle import is_authoritative_for_pull_request_head
-from app.services.github_indexing import mark_index_job_failed, run_index_job
+from app.services.github_indexing import (
+    _is_superseded_index_job,
+    mark_index_job_failed,
+    run_index_job,
+)
 from app.services.github_pipeline_trace import (
     ensure_pipeline_run_for_index_job,
     finalize_pipeline_github_check_failure,
@@ -53,8 +57,19 @@ def index_pull_request_revision(self, index_job_id: str) -> None:
             pending_job = await session.get(GitHubIndexJobORM, index_job_uuid)
             if pending_job is None:
                 return
+            if _is_superseded_index_job(pending_job):
+                logger.info(
+                    "pipeline_index_skipped_superseded",
+                    extra={"index_job_id": index_job_id},
+                )
+                return
 
             if pending_job.trigger_source in _PIPELINE_TRIGGERS:
+                if pending_job.status not in (
+                    GitHubIndexJobStatus.pending,
+                    GitHubIndexJobStatus.processing,
+                ):
+                    return
                 revision = await session.get(GitHubPullRequestRevisionORM, pending_job.revision_id)
                 if revision is not None and await is_authoritative_for_pull_request_head(
                     session,

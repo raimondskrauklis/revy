@@ -28,6 +28,7 @@ from app.services.github_indexing import index_job_in_progress
 from app.services.github_pipeline_trace import (
     get_pipeline_run_for_index_job,
     link_review_run_to_pipeline,
+    provision_queued_pipeline_github_check,
 )
 from app.services.github_review import create_review_run
 
@@ -201,6 +202,7 @@ async def maybe_enqueue_pipeline_for_revision(
     )
     session.add(job)
     await session.flush()
+    await provision_queued_pipeline_github_check(session, job=job, head_sha=revision.head_sha)
     return job.id
 
 
