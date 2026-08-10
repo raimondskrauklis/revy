@@ -239,29 +239,13 @@ async def embed_texts(
                     exc=exc,
                 )
             raise
-        except httpx.TimeoutException as exc:
-            if attempt_id is not None:
-                await try_fail_attempt(
-                    attempt_id,
-                    context=LlmAttemptFailContext(
-                        failure_class=_embed_attempt_failure_class(exc),
-                        wait_ms=int((time.monotonic() - attempt_started) * 1000),
-                    ),
-                    exc=exc,
-                )
-            raise
-        except ServiceUnavailableError as exc:
-            if attempt_id is not None:
-                await try_fail_attempt(
-                    attempt_id,
-                    context=LlmAttemptFailContext(
-                        failure_class=_embed_attempt_failure_class(exc),
-                        wait_ms=int((time.monotonic() - attempt_started) * 1000),
-                    ),
-                    exc=exc,
-                )
-            raise
-        except (ValueError, RuntimeError, OSError) as exc:
+        except (
+            httpx.TimeoutException,
+            ServiceUnavailableError,
+            ValueError,
+            RuntimeError,
+            OSError,
+        ) as exc:
             if attempt_id is not None:
                 await try_fail_attempt(
                     attempt_id,

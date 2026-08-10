@@ -10,6 +10,7 @@ from uuid import UUID
 
 import httpx
 from sqlalchemy import delete, func, select, update
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import (
@@ -630,7 +631,7 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
                         request_model=captured_embedding_model,
                         output_dimension=captured_embedding_dimensions,
                     )
-            except Exception:
+            except SQLAlchemyError:
                 logger.warning(
                     "pipeline_run_lookup_for_embed_recorder_failed",
                     exc_info=True,
