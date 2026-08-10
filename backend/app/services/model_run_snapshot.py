@@ -7,6 +7,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -77,7 +78,7 @@ def _embedding_from_index(step: StepSnapshotInput) -> dict[str, Any] | None:
     manifest = step.manifest or {}
     if manifest.get("embedding_skipped_reason"):
         return None
-    embed_batches = manifest.get("embed_batches", 0)
+    embed_batches = manifest.get("embed_batches")
     if embed_batches == 0:
         return None
     embedding_model = manifest.get("embedding_model")
@@ -146,10 +147,15 @@ def _attempt_fallback(
 
 
 def _embedding_step_skipped(step: StepSnapshotInput) -> bool:
-    manifest = step.manifest or {}
+    manifest = step.manifest
+    if manifest is None:
+        return False
     if manifest.get("embedding_skipped_reason"):
         return True
-    return manifest.get("embed_batches") == 0
+    embed_batches = manifest.get("embed_batches")
+    if embed_batches is None:
+        return False
+    return embed_batches == 0
 
 
 def build_models_snapshot(
@@ -281,7 +287,7 @@ async def try_persist_models_snapshot(
     try:
         async with session.begin_nested():
             await _write_models_snapshot(session, pipeline_run_id=pipeline_run_id)
-    except Exception:
+    except SQLAlchemyError:
         logger.warning(
             "models_snapshot_persist_failed",
             exc_info=True,
