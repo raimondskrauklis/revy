@@ -19,6 +19,7 @@ from app.services.llm_call_recorder import (
     try_fail_attempt,
     try_start_attempt,
 )
+from app.services.observability_failure import classify_failure_class
 
 logger = get_logger(__name__)
 
@@ -282,6 +283,7 @@ async def _complete_chat(
             await try_fail_attempt(
                 attempt_id,
                 context=LlmAttemptFailContext(
+                    failure_class=classify_failure_class(exc),
                     wait_ms=int((time.monotonic() - attempt_started) * 1000),
                     http_status=http_status,
                 ),
@@ -299,12 +301,23 @@ async def _complete_chat(
                 exc=exc,
             )
         raise
-    except (ValueError, OSError) as exc:
+    except ValueError as exc:
         if attempt_id is not None:
             await try_fail_attempt(
                 attempt_id,
                 context=LlmAttemptFailContext(
                     failure_class=GitHubReviewRunFailureClass.parse_error,
+                    wait_ms=int((time.monotonic() - attempt_started) * 1000),
+                ),
+                exc=exc,
+            )
+        raise
+    except OSError as exc:
+        if attempt_id is not None:
+            await try_fail_attempt(
+                attempt_id,
+                context=LlmAttemptFailContext(
+                    failure_class=classify_failure_class(exc),
                     wait_ms=int((time.monotonic() - attempt_started) * 1000),
                 ),
                 exc=exc,

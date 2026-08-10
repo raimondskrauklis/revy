@@ -89,6 +89,10 @@ def _embed_http_status(exc: BaseException) -> int | None:
 def _embed_attempt_failure_class(
     exc: BaseException,
 ) -> GitHubReviewRunFailureClass | None:
+    if isinstance(exc, httpx.HTTPStatusError) and exc.response is not None:
+        if exc.response.status_code == 429:
+            return GitHubReviewRunFailureClass.rate_limit
+        return GitHubReviewRunFailureClass.provider_error
     if isinstance(exc, httpx.TimeoutException):
         return GitHubReviewRunFailureClass.timeout
     if isinstance(exc, RuntimeError):
@@ -122,16 +126,35 @@ async def _post_embeddings(
     api_key: str,
     body: dict[str, object],
 ) -> httpx.Response:
+    last_exc: BaseException | None = None
     for attempt in range(MAX_EMBED_REQUEST_RETRIES):
-        response = await client.post(
-            VOYAGE_API_URL,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            json=body,
-            timeout=60.0,
-        )
+        try:
+            response = await client.post(
+                VOYAGE_API_URL,
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=body,
+                timeout=60.0,
+            )
+        except httpx.HTTPError as exc:
+            last_exc = exc
+            if attempt >= MAX_EMBED_REQUEST_RETRIES - 1:
+                raise RuntimeError("voyage_embeddings_retry_exhausted") from exc
+            wait_seconds = min(60.0, 2.0**attempt)
+            if isinstance(exc, httpx.HTTPStatusError) and exc.response is not None:
+                wait_seconds = _retry_after_seconds(exc.response, attempt)
+            logger.warning(
+                "voyage_embeddings_request_retry",
+                extra={
+                    "attempt": attempt + 1,
+                    "wait_seconds": wait_seconds,
+                    "model": settings.revy_embedding_model,
+                },
+            )
+            await asyncio.sleep(wait_seconds)
+            continue
         if response.status_code not in RETRYABLE_STATUS_CODES:
             return response
         if attempt >= MAX_EMBED_REQUEST_RETRIES - 1:
@@ -148,7 +171,7 @@ async def _post_embeddings(
             },
         )
         await asyncio.sleep(wait_seconds)
-    raise RuntimeError("voyage_embeddings_retry_exhausted")
+    raise RuntimeError("voyage_embeddings_retry_exhausted") from last_exc
 
 
 def _embedding_request_body(
@@ -255,18 +278,8 @@ async def embed_texts(
                         http_status=response.status_code,
                     ),
                 )
-        except httpx.HTTPStatusError as exc:
-            if attempt_id is not None:
-                await try_fail_attempt(
-                    attempt_id,
-                    context=LlmAttemptFailContext(
-                        wait_ms=int((time.monotonic() - attempt_started) * 1000),
-                        http_status=exc.response.status_code if exc.response is not None else None,
-                    ),
-                    exc=exc,
-                )
-            raise
         except (
+            httpx.HTTPStatusError,
             httpx.TimeoutException,
             ServiceUnavailableError,
             ValueError,

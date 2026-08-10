@@ -142,10 +142,14 @@ async def test_publish_model_on_pipeline_step():
 
 @pytest.mark.asyncio
 async def test_review_model_request_matches_run_model_id():
+    import inspect
+
     from app.constants.enums import LlmCallOperationName, LlmCallStepType
     from app.services.github_review import _call_llm
     from app.services.llm_call_recorder import LlmAttemptStartContext
     from app.services.model_policy import ModelRef
+
+    assert "recorder" in inspect.signature(_call_llm).parameters
 
     model_ref = ModelRef(provider="moonshot", model_id="kimi-k2.7-code")
 
