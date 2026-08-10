@@ -41,6 +41,8 @@ class AttemptSnapshotInput:
     step_type: str
     provider: str | None
     request_model: str | None
+    sequence: int = 0
+    failure_class: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,6 +52,7 @@ class StepSnapshotInput:
     model_provider: str | None
     model_id: str | None
     manifest: dict[str, Any] | None = None
+    sequence: int = 0
 
 
 def _model_entry(
@@ -91,22 +94,45 @@ def _role_entry_from_step(role: str, step: StepSnapshotInput) -> dict[str, Any] 
     return _model_entry(provider=step.model_provider, model_id=step.model_id)
 
 
+def _step_status_rank(status: str) -> int:
+    if status == PipelineStepStatus.completed.value:
+        return 2
+    if status == PipelineStepStatus.failed.value:
+        return 1
+    return 0
+
+
+def _pick_terminal_step(candidates: list[StepSnapshotInput]) -> StepSnapshotInput | None:
+    if not candidates:
+        return None
+    return max(candidates, key=lambda step: (_step_status_rank(step.status), step.sequence))
+
+
+def _pick_terminal_attempt(candidates: list[AttemptSnapshotInput]) -> AttemptSnapshotInput | None:
+    if not candidates:
+        return None
+
+    def _attempt_rank(attempt: AttemptSnapshotInput) -> tuple[int, int]:
+        succeeded = 1 if attempt.failure_class is None else 0
+        return (succeeded, attempt.sequence)
+
+    return max(candidates, key=_attempt_rank)
+
+
 def _attempt_fallback(
     attempts: list[AttemptSnapshotInput],
     *,
     role: str,
 ) -> dict[str, Any] | None:
     attempt_step_type = _ATTEMPT_STEP_BY_ROLE.get(role, role)
-    for attempt in attempts:
-        if attempt.step_type != attempt_step_type:
-            continue
-        entry = _model_entry(
-            provider=attempt.provider,
-            model_id=attempt.request_model,
-        )
-        if entry is not None:
-            return entry
-    return None
+    matching = [attempt for attempt in attempts if attempt.step_type == attempt_step_type]
+    selected = _pick_terminal_attempt(matching)
+    if selected is None:
+        return None
+    return _model_entry(
+        provider=selected.provider,
+        model_id=selected.request_model,
+    )
 
 
 def build_models_snapshot(
@@ -117,19 +143,17 @@ def build_models_snapshot(
     """Build terminal models snapshot from pipeline steps and optional attempt fallbacks."""
     attempt_rows = attempts or []
     snapshot: dict[str, Any] = {}
-    steps_by_type: dict[str, StepSnapshotInput] = {}
+    steps_by_type: dict[str, list[StepSnapshotInput]] = {}
     for step in steps:
         if step.status not in (
             PipelineStepStatus.completed.value,
             PipelineStepStatus.failed.value,
         ):
             continue
-        existing = steps_by_type.get(step.step_type)
-        if existing is None:
-            steps_by_type[step.step_type] = step
+        steps_by_type.setdefault(step.step_type, []).append(step)
 
     for step_type, role in _SNAPSHOT_ROLE_BY_STEP.items():
-        step = steps_by_type.get(step_type.value)
+        step = _pick_terminal_step(steps_by_type.get(step_type.value, []))
         entry: dict[str, Any] | None = None
         if step is not None:
             entry = _role_entry_from_step(role, step)
@@ -150,6 +174,7 @@ def _step_manifest(step: GitHubPipelineStepORM) -> dict[str, Any] | None:
 
 
 def _step_inputs(steps: list[GitHubPipelineStepORM]) -> list[StepSnapshotInput]:
+    ordered = sorted(steps, key=lambda step: step.created_at)
     return [
         StepSnapshotInput(
             step_type=stored_enum_value(step.step_type),
@@ -157,19 +182,27 @@ def _step_inputs(steps: list[GitHubPipelineStepORM]) -> list[StepSnapshotInput]:
             model_provider=step.model_provider,
             model_id=step.model_id,
             manifest=_step_manifest(step),
+            sequence=index,
         )
-        for step in steps
+        for index, step in enumerate(ordered)
     ]
 
 
 def _attempt_inputs(attempts: list[GitHubLlmCallAttemptORM]) -> list[AttemptSnapshotInput]:
+    ordered = sorted(attempts, key=lambda attempt: attempt.started_at)
     return [
         AttemptSnapshotInput(
             step_type=stored_enum_value(attempt.step_type),
             provider=attempt.provider,
             request_model=attempt.request_model,
+            sequence=index,
+            failure_class=(
+                stored_enum_value(attempt.failure_class)
+                if attempt.failure_class is not None
+                else None
+            ),
         )
-        for attempt in attempts
+        for index, attempt in enumerate(ordered)
     ]
 
 
@@ -193,9 +226,9 @@ async def persist_models_snapshot(
 
     attempt_rows = list(
         await session.scalars(
-            select(GitHubLlmCallAttemptORM).where(
-                GitHubLlmCallAttemptORM.pipeline_run_id == pipeline_run_id,
-            )
+            select(GitHubLlmCallAttemptORM)
+            .where(GitHubLlmCallAttemptORM.pipeline_run_id == pipeline_run_id)
+            .order_by(GitHubLlmCallAttemptORM.started_at.asc())
         )
     )
     snapshot = build_models_snapshot(

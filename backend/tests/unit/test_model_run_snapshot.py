@@ -5,6 +5,8 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
+from datetime import UTC, datetime
+
 import pytest
 
 from app.constants.enums import PipelineArtifactKind, PipelineStepStatus, PipelineStepType
@@ -145,6 +147,51 @@ def test_build_models_snapshot_partial_run_only_completed_stages():
     assert "publish" not in snapshot
 
 
+def test_build_models_snapshot_prefers_latest_completed_step():
+    snapshot = build_models_snapshot(
+        [
+            StepSnapshotInput(
+                step_type=PipelineStepType.review.value,
+                status=PipelineStepStatus.failed.value,
+                model_provider="moonshot",
+                model_id="kimi-old",
+                sequence=0,
+            ),
+            StepSnapshotInput(
+                step_type=PipelineStepType.review.value,
+                status=PipelineStepStatus.completed.value,
+                model_provider="moonshot",
+                model_id="kimi-k2.7-code",
+                sequence=1,
+            ),
+        ]
+    )
+    assert snapshot["reviewer"]["model_id"] == "kimi-k2.7-code"
+
+
+def test_build_models_snapshot_attempt_fallback_prefers_successful_latest():
+    snapshot = build_models_snapshot(
+        [],
+        attempts=[
+            AttemptSnapshotInput(
+                step_type="review",
+                provider="moonshot",
+                request_model="kimi-old",
+                sequence=0,
+                failure_class="timeout",
+            ),
+            AttemptSnapshotInput(
+                step_type="review",
+                provider="moonshot",
+                request_model="kimi-k2.7-code",
+                sequence=1,
+                failure_class=None,
+            ),
+        ],
+    )
+    assert snapshot["reviewer"]["model_id"] == "kimi-k2.7-code"
+
+
 @pytest.mark.asyncio
 async def test_persist_models_snapshot_writes_pipeline_run():
     pipeline_run_id = uuid4()
@@ -163,6 +210,7 @@ async def test_persist_models_snapshot_writes_pipeline_run():
         model_provider="voyage",
         model_id="voyage-code-3.5",
         artifacts=[manifest_artifact],
+        created_at=datetime(2026, 8, 10, 12, 0, tzinfo=UTC),
     )
     review_step = MagicMock(
         step_type=PipelineStepType.review,
@@ -170,6 +218,7 @@ async def test_persist_models_snapshot_writes_pipeline_run():
         model_provider="moonshot",
         model_id="kimi-k2.7-code",
         artifacts=[],
+        created_at=datetime(2026, 8, 10, 12, 1, tzinfo=UTC),
     )
     pipeline_run = MagicMock(id=pipeline_run_id, steps=[index_step, review_step], models_snapshot=None)
 
