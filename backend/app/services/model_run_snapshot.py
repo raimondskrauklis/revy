@@ -82,6 +82,8 @@ def _embedding_from_index(step: StepSnapshotInput) -> dict[str, Any] | None:
         return None
     embedding_model = manifest.get("embedding_model")
     if not isinstance(embedding_model, str) or not embedding_model:
+        embedding_model = step.model_id
+    if not isinstance(embedding_model, str) or not embedding_model:
         return None
     provider = manifest.get("embedding_provider") or step.model_provider
     model_id = embedding_model
