@@ -80,6 +80,37 @@ async def test_judge_pipeline_step_stores_model_fields():
 
 
 @pytest.mark.asyncio
+async def test_publish_model_fields_only_when_moonshot_output_used():
+    from app.services.github_publish_formatter import (
+        PublishFormatContext,
+        build_pr_review_comment_with_model,
+    )
+
+    ctx = PublishFormatContext(
+        pull_request_id=uuid.uuid4(),
+        pull_request_number=42,
+        head_sha="abc",
+        revision_number=1,
+        groups=[],
+        pipeline_run_id=uuid.uuid4(),
+        review_run_id=uuid.uuid4(),
+    )
+
+    with patch("app.services.github_publish_formatter.settings") as mock_settings:
+        mock_settings.reviewer_llm_enabled.return_value = True
+        mock_settings.revy_revision_timeout_standard_seconds = 60
+        mock_settings.revy_moonshot_model_for_profile.return_value = "kimi-k2.7-code"
+        with patch(
+            "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
+            AsyncMock(side_effect=OSError("offline")),
+        ):
+            _, provider, model_id = await build_pr_review_comment_with_model(ctx)
+
+    assert provider is None
+    assert model_id is None
+
+
+@pytest.mark.asyncio
 async def test_publish_model_on_pipeline_step():
     pipeline_run_id = uuid.uuid4()
     job = GitHubPublishJobORM(

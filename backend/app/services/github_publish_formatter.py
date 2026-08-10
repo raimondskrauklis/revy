@@ -1697,7 +1697,7 @@ async def build_pr_review_comment_with_model(
                     "raw_prefix": raw.strip()[:200],
                 },
             )
-            return fallback, *_publish_model_fields()
+            return fallback, None, None
         if not _issue_comment_meets_product_bar(text, ctx):
             logger.warning(
                 "github_publish_formatter_llm_thin_markdown",
@@ -1706,7 +1706,7 @@ async def build_pr_review_comment_with_model(
                     "raw_prefix": text.strip()[:200],
                 },
             )
-            return fallback, *_publish_model_fields()
+            return fallback, None, None
         text = splice_deterministic_findings_tables(text, ctx)
         text = splice_deterministic_pr_summary_block(text, ctx)
         text = append_review_metadata_footer(text, ctx)
@@ -1721,7 +1721,7 @@ async def build_pr_review_comment_with_model(
             extra={"pull_request_id": str(ctx.pull_request_id), "error": str(exc)},
         )
 
-    return fallback, *_publish_model_fields()
+    return fallback, None, None
 
 
 async def build_pr_review_comment(ctx: PublishFormatContext) -> str:
