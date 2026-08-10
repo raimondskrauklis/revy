@@ -9,7 +9,8 @@ from __future__ import annotations
 import httpx
 
 # Align with Voyage/GitHub/LLM provider guidance: rate limits and server errors only.
-RETRYABLE_HTTP_STATUS_CODES = frozenset({408, 429, 500, 502, 503, 504})
+# 520-524: Cloudflare-origin gateway errors (e.g. Moonshot api.moonshot.ai).
+RETRYABLE_HTTP_STATUS_CODES = frozenset({408, 429, 500, 502, 503, 504, 520, 521, 522, 523, 524})
 
 
 class WorkerRetryableError(Exception):

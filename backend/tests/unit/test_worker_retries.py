@@ -15,8 +15,20 @@ from app.core.worker_retries import (
 def test_is_retryable_http_status():
     assert is_retryable_http_status(429)
     assert is_retryable_http_status(503)
+    assert is_retryable_http_status(520)
+    assert is_retryable_http_status(524)
     assert not is_retryable_http_status(400)
     assert not is_retryable_http_status(422)
+
+
+def test_classify_transient_error_http_520_cloudflare_is_retryable():
+    response = httpx.Response(
+        520,
+        request=httpx.Request("POST", "https://api.moonshot.ai/v1/chat/completions"),
+    )
+    exc = httpx.HTTPStatusError("Server error '520 '", request=response.request, response=response)
+    result = classify_transient_error(exc)
+    assert isinstance(result, WorkerRetryableError)
 
 
 def test_classify_transient_error_attribute_error_is_permanent():
