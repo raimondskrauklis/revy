@@ -143,6 +143,13 @@ def _attempt_fallback(
     )
 
 
+def _embedding_step_skipped(step: StepSnapshotInput) -> bool:
+    manifest = step.manifest or {}
+    if manifest.get("embedding_skipped_reason"):
+        return True
+    return manifest.get("embed_batches") == 0
+
+
 def build_models_snapshot(
     steps: list[StepSnapshotInput],
     *,
@@ -163,9 +170,12 @@ def build_models_snapshot(
     for step_type, role in _SNAPSHOT_ROLE_BY_STEP.items():
         step = _pick_terminal_step(steps_by_type.get(step_type.value, []))
         entry: dict[str, Any] | None = None
+        skip_attempt_fallback = False
         if step is not None:
             entry = _role_entry_from_step(role, step)
-        if entry is None:
+            if role == "embedding" and entry is None and _embedding_step_skipped(step):
+                skip_attempt_fallback = True
+        if entry is None and not skip_attempt_fallback:
             entry = _attempt_fallback(attempt_rows, role=role)
         if entry is not None:
             snapshot[role] = entry

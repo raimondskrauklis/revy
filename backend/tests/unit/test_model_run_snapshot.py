@@ -109,6 +109,31 @@ def test_build_models_snapshot_reuse_with_stray_embedding_model_omits_embedding(
     assert "embedding" not in snapshot
 
 
+def test_build_models_snapshot_skipped_embedding_ignores_attempt_fallback():
+    snapshot = build_models_snapshot(
+        [
+            StepSnapshotInput(
+                step_type=PipelineStepType.index.value,
+                status=PipelineStepStatus.completed.value,
+                model_provider=None,
+                model_id=None,
+                manifest={
+                    "embed_batches": 0,
+                    "embedding_skipped_reason": "reused_chunks_only",
+                },
+            ),
+        ],
+        attempts=[
+            AttemptSnapshotInput(
+                step_type="index_embed",
+                provider="voyage",
+                request_model="voyage-code-3.5",
+            ),
+        ],
+    )
+    assert "embedding" not in snapshot
+
+
 def test_build_models_snapshot_attempt_fallback_for_embedding():
     snapshot = build_models_snapshot(
         [
