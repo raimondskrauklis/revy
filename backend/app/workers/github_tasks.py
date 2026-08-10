@@ -1,11 +1,17 @@
 # backend/app/workers/github_tasks.py
-"""GitHub webhook Celery tasks — github_events queue."""
+"""GitHub webhook Celery tasks — github_events queue.
+
+Synchronize autostart contract: ``apply_resolution_for_synchronize`` runs pairing
+for the webhook revision, then enqueues the pending index job (or schedules
+coalesced autostart). The review pipeline does not start until pairing finishes.
+"""
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from celery.exceptions import Retry
+from sqlalchemy import select
 
 from app.constants.enums import GitHubIndexJobTriggerSource
 from app.core.config import settings
@@ -48,6 +54,51 @@ async def _maybe_enqueue_autostart_pipeline_for_revision(
         workspace_id=workspace_id,
         revision_id=revision_id,
         trigger=GitHubIndexJobTriggerSource.autostart,
+    )
+
+
+def _coalesce_autostart_task_id(*, workspace_id: str, revision_id: str) -> str:
+    return f"coalesce-autostart-{workspace_id}-{revision_id}"
+
+
+def _resolution_synchronize_task_id(*, revision_id: str) -> str:
+    return f"resolution-synchronize-{revision_id}"
+
+
+def _schedule_coalesced_autostart(
+    *,
+    revision_id: str,
+    workspace_id: str,
+    schedule_at: str,
+) -> None:
+    deadline = datetime.fromisoformat(schedule_at)
+    remaining_seconds = max(0, int((deadline - datetime.now(UTC)).total_seconds()))
+    schedule_autostart_pipeline_for_revision.apply_async(
+        kwargs={
+            "revision_id": revision_id,
+            "workspace_id": workspace_id,
+        },
+        countdown=remaining_seconds,
+        task_id=_coalesce_autostart_task_id(workspace_id=workspace_id, revision_id=revision_id),
+    )
+
+
+async def _head_revision_id_for_pull_request(
+    session,
+    *,
+    pull_request_id: UUID,
+) -> UUID | None:
+    pull_request = await session.get(GitHubPullRequestORM, pull_request_id)
+    if pull_request is None:
+        return None
+    return await session.scalar(
+        select(GitHubPullRequestRevisionORM.id)
+        .where(
+            GitHubPullRequestRevisionORM.pull_request_id == pull_request_id,
+            GitHubPullRequestRevisionORM.head_sha == pull_request.head_sha,
+        )
+        .order_by(GitHubPullRequestRevisionORM.revision_number.desc())
+        .limit(1)
     )
 
 
@@ -173,15 +224,52 @@ def apply_resolution_for_synchronize(
         and coalesce_workspace_id is not None
         and coalesce_schedule_at is not None
     ):
-        deadline = datetime.fromisoformat(coalesce_schedule_at)
-        remaining_seconds = max(0, int((deadline - datetime.now(UTC)).total_seconds()))
-        schedule_autostart_pipeline_for_revision.apply_async(
-            kwargs={
-                "revision_id": revision_id,
-                "workspace_id": coalesce_workspace_id,
-            },
-            countdown=remaining_seconds,
+        _schedule_coalesced_autostart(
+            revision_id=revision_id,
+            workspace_id=coalesce_workspace_id,
+            schedule_at=coalesce_schedule_at,
         )
+    elif (
+        outcome == "skipped_stale"
+        and coalesce_workspace_id is not None
+        and coalesce_schedule_at is not None
+    ):
+        async def _handoff_coalesce_to_head() -> str | None:
+            async with get_db_context() as session:
+                stale_revision = await session.get(GitHubPullRequestRevisionORM, UUID(revision_id))
+                if stale_revision is None:
+                    return None
+                head_revision_id = await _head_revision_id_for_pull_request(
+                    session,
+                    pull_request_id=stale_revision.pull_request_id,
+                )
+                if head_revision_id is None or head_revision_id == stale_revision.id:
+                    return None
+                if not await is_authoritative_for_pull_request_head(
+                    session,
+                    revision_id=head_revision_id,
+                ):
+                    return None
+                return str(head_revision_id)
+
+        head_revision_id = run_worker_async(_handoff_coalesce_to_head())
+        if head_revision_id is not None:
+            logger.info(
+                "resolution_synchronize_coalesce_handoff",
+                extra={
+                    "stale_revision_id": revision_id,
+                    "head_revision_id": head_revision_id,
+                },
+            )
+            apply_resolution_for_synchronize.apply_async(
+                kwargs={
+                    "revision_id": head_revision_id,
+                    "index_job_id": None,
+                    "coalesce_workspace_id": coalesce_workspace_id,
+                    "coalesce_schedule_at": coalesce_schedule_at,
+                },
+                task_id=_resolution_synchronize_task_id(revision_id=head_revision_id),
+            )
     elif outcome in {"skipped_stale", "skipped_permanent"} and follow_up_index_job_id is not None:
         try:
             run_worker_async(

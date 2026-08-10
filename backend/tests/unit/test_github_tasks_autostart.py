@@ -382,6 +382,49 @@ def test_apply_resolution_for_synchronize_schedules_coalesced_autostart_after_re
         "workspace_id": str(workspace_id),
     }
     assert schedule_mock.call_args.kwargs["countdown"] <= 5
+    assert schedule_mock.call_args.kwargs["task_id"] == github_tasks._coalesce_autostart_task_id(
+        workspace_id=str(workspace_id),
+        revision_id=str(revision_id),
+    )
+
+
+def test_apply_resolution_for_synchronize_handoffs_coalesce_on_stale_skip():
+    stale_revision_id = uuid.uuid4()
+    head_revision_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    stale_revision = MagicMock()
+    stale_revision.id = stale_revision_id
+    stale_revision.pull_request_id = pull_request_id
+    session = AsyncMock()
+    session.get = AsyncMock(return_value=stale_revision)
+    session.scalar = AsyncMock(return_value=head_revision_id)
+    schedule_at = (datetime.now(UTC) + timedelta(seconds=5)).isoformat()
+
+    with patch("app.workers.github_tasks.get_db_context", return_value=_db_context(session)):
+        with patch(
+            "app.workers.github_tasks.is_authoritative_for_pull_request_head",
+            AsyncMock(side_effect=[False, True]),
+        ):
+            with patch(
+                "app.workers.github_tasks.apply_resolution_for_synchronize.apply_async",
+            ) as resolution_apply_mock:
+                github_tasks.apply_resolution_for_synchronize.run(
+                    str(stale_revision_id),
+                    coalesce_workspace_id=str(workspace_id),
+                    coalesce_schedule_at=schedule_at,
+                )
+
+    resolution_apply_mock.assert_called_once()
+    assert resolution_apply_mock.call_args.kwargs["kwargs"] == {
+        "revision_id": str(head_revision_id),
+        "index_job_id": None,
+        "coalesce_workspace_id": str(workspace_id),
+        "coalesce_schedule_at": schedule_at,
+    }
+    assert resolution_apply_mock.call_args.kwargs["task_id"] == (
+        github_tasks._resolution_synchronize_task_id(revision_id=str(head_revision_id))
+    )
 
 
 def test_process_github_event_opened_bypasses_coalesce():
