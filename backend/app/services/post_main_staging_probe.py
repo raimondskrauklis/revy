@@ -1,11 +1,11 @@
 # backend/app/services/post_main_staging_probe.py
-"""Post-main staging dogfood probe — autostart marker for #89 + #92 + #94 validation.
+"""Post-main staging dogfood probe — autostart marker for MRC post-#96 validation.
 
-Safe import hook only; no intentional defects. Push 4 after #94 deploy:
-queued GitHub check UX + overlap supersede protocol.
+Safe import hook only; no intentional defects. Push 1 after #96 deploy:
+model-run-capture embedding identity + attempt-row observability.
 """
 
-POST_MAIN_PROBE_MARKER = "post-main-dogfood-v5b-revy-overlap"
+POST_MAIN_PROBE_MARKER = "post-main-dogfood-v6-mrc-model-capture"
 
 
 def post_main_probe_value() -> str:
