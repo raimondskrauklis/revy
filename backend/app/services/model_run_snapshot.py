@@ -260,7 +260,8 @@ async def try_persist_models_snapshot(
 ) -> None:
     """Best-effort snapshot write — must not block terminal pipeline hooks."""
     try:
-        await persist_models_snapshot(session, pipeline_run_id=pipeline_run_id)
+        async with session.begin_nested():
+            await persist_models_snapshot(session, pipeline_run_id=pipeline_run_id)
     except Exception:
         logger.warning(
             "models_snapshot_persist_failed",

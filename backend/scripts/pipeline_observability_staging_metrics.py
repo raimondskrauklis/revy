@@ -12,6 +12,7 @@ import asyncpg
 from scripts.staging_metrics_common import (
     StagingScope,
     database_name,
+    model_breakdown_sql,
     parse_since,
     review_run_pr_join,
     scope_query_args,
@@ -105,38 +106,6 @@ GROUP BY 1 ORDER BY n DESC;
 """
 
 
-def _model_breakdown_sql(scope: StagingScope) -> str:
-    if scope.pr_scoped:
-        return """
-SELECT a.step_type,
-       coalesce(a.provider, '(null)') AS provider,
-       coalesce(a.request_model, '(null)') AS request_model,
-       count(*)::int AS n
-FROM github_llm_call_attempts a
-LEFT JOIN github_pipeline_runs pr ON pr.id = a.pipeline_run_id
-LEFT JOIN github_review_runs rr ON rr.id = a.review_run_id
-LEFT JOIN github_index_jobs ij ON ij.id = a.index_job_id
-JOIN github_pull_request_revisions rev
-  ON rev.id = coalesce(pr.revision_id, rr.revision_id, ij.revision_id)
-JOIN github_pull_requests gp ON gp.id = rev.pull_request_id
-JOIN github_repositories repo ON repo.id = gp.repository_id
-WHERE repo.full_name = $1 AND gp.number = $2
-  AND ($3::timestamptz IS NULL OR a.started_at >= $3::timestamptz)
-GROUP BY 1, 2, 3
-ORDER BY n DESC, a.step_type, provider, request_model;
-"""
-    return """
-SELECT step_type,
-       coalesce(provider, '(null)') AS provider,
-       coalesce(request_model, '(null)') AS request_model,
-       count(*)::int AS n
-FROM github_llm_call_attempts
-WHERE ($1::timestamptz IS NULL OR started_at >= $1::timestamptz)
-GROUP BY 1, 2, 3
-ORDER BY n DESC, step_type, provider, request_model;
-"""
-
-
 def _evaluate_po_p0_gate(metrics: dict[str, Any], *, require_runs: bool) -> dict[str, Any]:
     checks: list[dict[str, str]] = []
 
@@ -227,7 +196,7 @@ async def _fetch_metrics(scope: StagingScope) -> dict[str, Any]:
         review_row = await conn.fetchrow(_review_runs_sql(scope), *args)
         attempts_row = await conn.fetchrow(_attempts_sql(scope), *args)
         taxonomy_rows = await conn.fetch(_taxonomy_sql(scope), *args)
-        breakdown_rows = await conn.fetch(_model_breakdown_sql(scope), *args)
+        breakdown_rows = await conn.fetch(model_breakdown_sql(scope), *args)
     finally:
         await conn.close()
 
