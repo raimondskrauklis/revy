@@ -4,16 +4,20 @@ description: >-
   Peer-review execution plan files one phase at a time (P0, P1, …) against the
   codebase, findings, and general plan. Reports gaps after each file; no edits.
   Use when the user asks to review execution plans, cross-check P0–P8 execution
-  files, or validate a plan folder before phase-execution.
+  files, or validate a plan folder before phase-execution. Chat is SSOT for now;
+  disk artifacts under reviews/execution-peer-review/ are a follow-on (mirror
+  architecture-peer-review).
 ---
 
 # Execution peer review
 
 Read-only review of **per-phase execution files** before `phase-execution`. **Not** a bulk skim — review **one file, report, then next file**.
 
-**Sibling:** `architecture-peer-review` — single plan/spec doc. Use that for findings or general plan only; use **this skill** for the execution file set.
+**Sibling:** `architecture-peer-review` — findings + general plan; artifacts in `<plan-folder>/reviews/architecture-peer-review/`. Use **this skill** for the execution file set.
 
-**Forbidden:** edit any file; fix gaps; run `phase-execution`; create commits.
+**Forbidden:** edit any file (including execution files, plan README, and `reviews/`); fix gaps; run `phase-execution`; create commits.
+
+**Output (v1):** per-file gap tables and final `BLOCK phase-execution` rollup in **chat only**. Do **not** create `reviews/execution-peer-review/` until a follow-on update adds a full disk workflow (same shape as architecture-peer-review). Existing on-disk execution review folders are historical — do not overwrite them in this skill version.
 
 ---
 
