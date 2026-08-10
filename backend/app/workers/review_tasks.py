@@ -115,6 +115,7 @@ def review_pull_request_revision(self, review_run_id: str) -> None:
                     pipeline_run_id=pipeline_run.id,
                     summary=error_message,
                 )
+            await session.commit()
 
     run_with_retryable_failure(
         self,

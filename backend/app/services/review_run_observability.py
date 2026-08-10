@@ -64,3 +64,4 @@ async def persist_review_run_permanent_failure(
             run.failure_stage = failure_stage
         if failure_class is not None:
             run.failure_class = failure_class
+        await session.commit()
