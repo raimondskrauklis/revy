@@ -7,7 +7,7 @@ from app.constants.enums import (
     LlmCallOperationName,
     LlmCallStepType,
 )
-from app.models import Base, GitHubLlmCallAttemptORM, GitHubReviewRunORM
+from app.models import Base, GitHubLlmCallAttemptORM, GitHubPipelineRunORM, GitHubReviewRunORM
 
 
 def test_pipeline_observability_enums():
@@ -37,3 +37,10 @@ def test_review_run_observability_columns():
         "failure_class",
         "trigger_source",
     } <= columns
+
+
+def test_pipeline_run_models_snapshot_column():
+    columns = {column.name for column in inspect(GitHubPipelineRunORM).columns}
+    assert "models_snapshot" in columns
+    column = inspect(GitHubPipelineRunORM).columns["models_snapshot"]
+    assert column.nullable
