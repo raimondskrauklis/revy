@@ -139,7 +139,7 @@ def index_pull_request_revision(self, index_job_id: str) -> None:
                     summary=review_outcome.pipeline_check_summary or "Review was not enqueued",
                 )
 
-    async def _mark_failed(error_message: str) -> None:
+    async def _mark_failed(error_message: str, exc: BaseException | None = None) -> None:
         async with get_db_context() as session:
             await mark_index_job_failed(
                 session,

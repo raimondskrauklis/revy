@@ -152,7 +152,7 @@ def _finalize_publish_failure(
     queue="github_publish",
 )
 def publish_review_run(self, publish_job_id: str) -> None:
-    async def _mark_failed(error_message: str) -> None:
+    async def _mark_failed(error_message: str, exc: BaseException | None = None) -> None:
         async with get_db_context() as session:
             await mark_publish_job_failed(
                 session,

@@ -65,6 +65,7 @@ from app.services.llm_call_recorder import (
     LlmAttemptFailContext,
     LlmAttemptStartContext,
     fail_attempt,
+    next_review_llm_attempt_no,
     start_attempt,
 )
 from app.services.model_policy import ModelRef, resolve_model, review_profile_to_model_role
@@ -1145,6 +1146,13 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> Revie
 
         pipeline_run = await get_pipeline_run_for_review_run(session, review_run_id=run.id)
 
+        llm_attempt_base = 0
+        if pipeline_run is not None:
+            llm_attempt_base = await next_review_llm_attempt_no(
+                review_run_id=run.id,
+                session=session,
+            )
+
         review_duration_ms = 0
         raw_json: str | None = None
         parse_exc: ValueError | None = None
@@ -1167,7 +1175,7 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> Revie
                     index_job_id=None,
                     step_type=LlmCallStepType.review,
                     operation_name=LlmCallOperationName.chat,
-                    attempt_no=attempt,
+                    attempt_no=llm_attempt_base + attempt,
                     provider=model_ref.provider,
                     request_model=model_ref.model_id,
                 )

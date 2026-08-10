@@ -7,7 +7,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import (
     GitHubReviewRunFailureClass,
@@ -118,6 +119,26 @@ async def fail_attempt(
         row.response_preview = preview
         row.response_sha256 = digest
         row.completed_at = datetime.now(UTC)
+
+
+async def next_review_llm_attempt_no(
+    *,
+    review_run_id: UUID,
+    session: AsyncSession | None = None,
+) -> int:
+    async def _next(sess: AsyncSession) -> int:
+        max_attempt = await sess.scalar(
+            select(func.max(GitHubLlmCallAttemptORM.attempt_no)).where(
+                GitHubLlmCallAttemptORM.review_run_id == review_run_id,
+                GitHubLlmCallAttemptORM.step_type == LlmCallStepType.review,
+            )
+        )
+        return int(max_attempt if max_attempt is not None else -1) + 1
+
+    if session is not None:
+        return await _next(session)
+    async with get_db_context() as dedicated_session:
+        return await _next(dedicated_session)
 
 
 async def list_attempts_for_review_run(review_run_id: UUID) -> list[GitHubLlmCallAttemptORM]:

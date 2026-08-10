@@ -82,6 +82,7 @@ async def test_http_timeout_writes_attempt_row_and_checkpoint_survives():
     session.flush = AsyncMock()
     session.execute = _session_execute_mock()
     session.refresh = AsyncMock()
+    session.scalar = AsyncMock(return_value=None)
 
     pipeline_run = MagicMock()
     pipeline_run.id = pipeline_run_id

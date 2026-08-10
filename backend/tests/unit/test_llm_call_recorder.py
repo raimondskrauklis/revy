@@ -18,9 +18,9 @@ from app.services.llm_call_recorder import (
     LlmAttemptStartContext,
     complete_attempt,
     fail_attempt,
+    next_review_llm_attempt_no,
     start_attempt,
 )
-
 
 @pytest.mark.asyncio
 async def test_start_attempt_uses_dedicated_session():
@@ -99,3 +99,31 @@ async def test_complete_attempt_sets_tokens():
         )
     assert row.input_tokens == 10
     assert row.output_tokens == 20
+
+
+@pytest.mark.asyncio
+async def test_next_review_llm_attempt_no_uses_passed_session():
+    review_run_id = uuid.uuid4()
+    session = AsyncMock()
+    session.scalar = AsyncMock(return_value=1)
+
+    attempt_no = await next_review_llm_attempt_no(
+        review_run_id=review_run_id,
+        session=session,
+    )
+    assert attempt_no == 2
+    session.scalar.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_next_review_llm_attempt_no_starts_at_zero_when_no_rows():
+    session = AsyncMock()
+    session.scalar = AsyncMock(return_value=None)
+
+    @asynccontextmanager
+    async def fake_db_context():
+        yield session
+
+    with patch("app.services.llm_call_recorder.get_db_context", fake_db_context):
+        attempt_no = await next_review_llm_attempt_no(review_run_id=uuid.uuid4())
+    assert attempt_no == 0
