@@ -468,6 +468,45 @@ async def finalize_pipeline_github_check_for_index_job(
         summary=summary,
     )
 
+_INDEX_MANIFEST_COUNT_KEYS = ("reused_count", "new_count", "embed_batches")
+_INDEX_EMBEDDING_MANIFEST_KEYS = (
+    "embedding_provider",
+    "embedding_model",
+    "embedding_dimensions",
+)
+_EMBEDDING_SKIPPED_REASON = "reused_chunks_only"
+
+
+def _apply_index_manifest_stats(
+    manifest: dict[str, Any],
+    index_manifest_stats: dict[str, Any],
+    *,
+    step: GitHubPipelineStepORM,
+) -> None:
+    for key in _INDEX_MANIFEST_COUNT_KEYS:
+        if key in index_manifest_stats:
+            manifest[key] = index_manifest_stats[key]
+
+    embed_batches = index_manifest_stats.get("embed_batches", 0)
+    if embed_batches == 0:
+        manifest["embedding_skipped_reason"] = _EMBEDDING_SKIPPED_REASON
+        for key in _INDEX_EMBEDDING_MANIFEST_KEYS:
+            manifest.pop(key, None)
+        step.model_provider = None
+        step.model_id = None
+        return
+
+    manifest.pop("embedding_skipped_reason", None)
+    for key in _INDEX_EMBEDDING_MANIFEST_KEYS:
+        if key in index_manifest_stats:
+            manifest[key] = index_manifest_stats[key]
+    embedding_model = index_manifest_stats.get("embedding_model")
+    if isinstance(embedding_model, str) and embedding_model:
+        provider = index_manifest_stats.get("embedding_provider")
+        step.model_provider = provider if isinstance(provider, str) and provider else "voyage"
+        step.model_id = embedding_model
+
+
 async def record_index_pipeline_step(
     session: AsyncSession,
     *,
@@ -487,6 +526,16 @@ async def record_index_pipeline_step(
         else None
     )
     step = await _get_index_pipeline_step(session, pipeline_run_id=pipeline_run_id)
+    embedding_model_id: str | None = None
+    embedding_provider: str | None = None
+    index_manifest_stats = getattr(job, "index_manifest_stats", None)
+    if isinstance(index_manifest_stats, dict) and index_manifest_stats.get("embed_batches", 0) > 0:
+        model = index_manifest_stats.get("embedding_model")
+        if isinstance(model, str) and model:
+            embedding_model_id = model
+            provider = index_manifest_stats.get("embedding_provider")
+            embedding_provider = provider if isinstance(provider, str) and provider else "voyage"
+
     if step is None:
         step = await _create_completed_step(
             session,
@@ -495,11 +544,19 @@ async def record_index_pipeline_step(
             duration_ms=duration_ms,
             status=status,
             error=error,
+            model_provider=embedding_provider,
+            model_id=embedding_model_id,
         )
     else:
         step.status = status
         step.duration_ms = duration_ms
         step.error = error
+        if embedding_model_id is not None:
+            step.model_provider = embedding_provider
+            step.model_id = embedding_model_id
+        elif isinstance(index_manifest_stats, dict) and index_manifest_stats.get("embed_batches", 0) == 0:
+            step.model_provider = None
+            step.model_id = None
         await session.flush()
 
     manifest_artifact = await _get_step_manifest_artifact(session, step_id=step.id)
@@ -519,9 +576,7 @@ async def record_index_pipeline_step(
     )
     index_manifest_stats = getattr(job, "index_manifest_stats", None)
     if isinstance(index_manifest_stats, dict):
-        for key in ("reused_count", "new_count", "embed_batches"):
-            if key in index_manifest_stats:
-                manifest[key] = index_manifest_stats[key]
+        _apply_index_manifest_stats(manifest, index_manifest_stats, step=step)
     if github_check_run_id is not None:
         manifest["github_check_run_id"] = github_check_run_id
     if manifest_artifact is not None:
@@ -699,6 +754,8 @@ async def record_judge_pipeline_step(
     candidates: list | None = None,
     verification_judged_count: int = 0,
     verification_candidates: list | None = None,
+    model_provider: str | None = None,
+    model_id: str | None = None,
 ) -> None:
     all_artifacts = list(candidates or []) + list(verification_candidates or [])
     input_tokens = sum(item.input_tokens or 0 for item in all_artifacts)
@@ -710,6 +767,8 @@ async def record_judge_pipeline_step(
         duration_ms=duration_ms,
         input_tokens=input_tokens or None,
         output_tokens=output_tokens or None,
+        model_provider=model_provider,
+        model_id=model_id,
     )
 
     def _candidate_payload(item: object) -> dict[str, object]:
@@ -838,6 +897,8 @@ async def record_publish_pipeline_step(
     summary_markdown: str,
     duration_ms: int,
     issue_comment_markdown: str | None = None,
+    model_provider: str | None = None,
+    model_id: str | None = None,
 ) -> None:
     step = await _create_completed_step(
         session,
@@ -852,6 +913,8 @@ async def record_publish_pipeline_step(
         error=(job.error_message or "publish_failed")[:2000]
         if job.status == GitHubPublishJobStatus.failed
         else None,
+        model_provider=model_provider,
+        model_id=model_id,
     )
     await add_step_artifact(
         session,

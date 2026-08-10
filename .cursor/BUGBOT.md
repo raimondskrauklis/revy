@@ -1,12 +1,12 @@
 # Bugbot — review pipeline contract
 
-**Active program:** pipeline-observability — durable LLM attempt rows, commit graph, staging metrics.
+**Active program:** model-run-capture — durable per-run model identity (embeddings, reviewer, judge, publish).
 
-When reviewing **backend** changes for pipeline observability, treat these as authoritative:
+When reviewing **backend** changes for model run capture, treat these as authoritative:
 
-- [PIPELINE_OBSERVABILITY_P0_EXECUTION.md](../docs/review-pipeline/pipeline-observability/waves/PIPELINE_OBSERVABILITY_P0_EXECUTION.md) — P0 LOOP (schema, recorder, checkpoint)
-- [PIPELINE_OBSERVABILITY_FINDINGS.md](../docs/review-pipeline/pipeline-observability/PIPELINE_OBSERVABILITY_FINDINGS.md) — PO-Q1–Q19, commit graph, metric catalog
-- [PIPELINE_OBSERVABILITY_GENERAL_PLAN.md](../docs/review-pipeline/pipeline-observability/PIPELINE_OBSERVABILITY_GENERAL_PLAN.md) — P0–P5 goals
+- [MODEL_RUN_CAPTURE_P0_EXECUTION.md](../docs/models/model-run-capture/waves/MODEL_RUN_CAPTURE_P0_EXECUTION.md) — MRC-P0 LOOP (index manifest + step model)
+- [MODEL_RUN_CAPTURE_FINDINGS.md](../docs/models/model-run-capture/MODEL_RUN_CAPTURE_FINDINGS.md) — MRC-Q1–Q10, target catalog
+- [MODEL_RUN_CAPTURE_GENERAL_PLAN.md](../docs/models/model-run-capture/MODEL_RUN_CAPTURE_GENERAL_PLAN.md) — MRC-P0–P3 goals
 
 **Agent workflow:**
 

@@ -1,22 +1,22 @@
 {
   "files": [
     {
-      "path": "docs/review-pipeline/pipeline-observability/waves/PIPELINE_OBSERVABILITY_P0_EXECUTION.md",
-      "description": "Pipeline observability P0 \u2014 schema, recorder, commit graph",
+      "path": "docs/models/model-run-capture/waves/MODEL_RUN_CAPTURE_P0_EXECUTION.md",
+      "description": "Model run capture MRC-P0 \u2014 index embedding identity",
       "scope": [
         "backend/**"
       ]
     },
     {
-      "path": "docs/review-pipeline/pipeline-observability/PIPELINE_OBSERVABILITY_FINDINGS.md",
-      "description": "Pipeline observability baseline \u2014 PO-Q1\u2013Q19, commit graph",
+      "path": "docs/models/model-run-capture/MODEL_RUN_CAPTURE_FINDINGS.md",
+      "description": "Model run capture baseline \u2014 MRC-Q1\u2013Q10",
       "scope": [
         "backend/**"
       ]
     },
     {
-      "path": "docs/review-pipeline/pipeline-observability/PIPELINE_OBSERVABILITY_GENERAL_PLAN.md",
-      "description": "Pipeline observability general plan \u2014 P0\u2013P5",
+      "path": "docs/models/model-run-capture/MODEL_RUN_CAPTURE_GENERAL_PLAN.md",
+      "description": "Model run capture general plan \u2014 MRC-P0\u2013P3",
       "scope": [
         "backend/**"
       ]
