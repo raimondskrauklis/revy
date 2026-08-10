@@ -620,14 +620,21 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
             # Lazy import: github_pipeline_trace imports ensure_revision_access from this module.
             from app.services.github_pipeline_trace import get_pipeline_run_for_index_job
 
-            pipeline_run = await get_pipeline_run_for_index_job(session, index_job_id=job.id)
             recorder = None
-            if pipeline_run is not None:
-                recorder = VoyageEmbedRecorderContext(
-                    pipeline_run_id=pipeline_run.id,
-                    index_job_id=job.id,
-                    request_model=captured_embedding_model,
-                    output_dimension=captured_embedding_dimensions,
+            try:
+                pipeline_run = await get_pipeline_run_for_index_job(session, index_job_id=job.id)
+                if pipeline_run is not None:
+                    recorder = VoyageEmbedRecorderContext(
+                        pipeline_run_id=pipeline_run.id,
+                        index_job_id=job.id,
+                        request_model=captured_embedding_model,
+                        output_dimension=captured_embedding_dimensions,
+                    )
+            except Exception:
+                logger.warning(
+                    "pipeline_run_lookup_for_embed_recorder_failed",
+                    exc_info=True,
+                    extra={"index_job_id": str(job.id)},
                 )
             async with httpx.AsyncClient(timeout=120.0) as client:
                 embeddings = await embed_texts(
