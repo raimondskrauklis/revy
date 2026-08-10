@@ -526,15 +526,7 @@ async def record_index_pipeline_step(
         else None
     )
     step = await _get_index_pipeline_step(session, pipeline_run_id=pipeline_run_id)
-    embedding_model_id: str | None = None
-    embedding_provider: str | None = None
     index_manifest_stats = getattr(job, "index_manifest_stats", None)
-    if isinstance(index_manifest_stats, dict) and index_manifest_stats.get("embed_batches", 0) > 0:
-        model = index_manifest_stats.get("embedding_model")
-        if isinstance(model, str) and model:
-            embedding_model_id = model
-            provider = index_manifest_stats.get("embedding_provider")
-            embedding_provider = provider if isinstance(provider, str) and provider else "voyage"
 
     if step is None:
         step = await _create_completed_step(
@@ -544,19 +536,11 @@ async def record_index_pipeline_step(
             duration_ms=duration_ms,
             status=status,
             error=error,
-            model_provider=embedding_provider,
-            model_id=embedding_model_id,
         )
     else:
         step.status = status
         step.duration_ms = duration_ms
         step.error = error
-        if embedding_model_id is not None:
-            step.model_provider = embedding_provider
-            step.model_id = embedding_model_id
-        elif isinstance(index_manifest_stats, dict) and index_manifest_stats.get("embed_batches", 0) == 0:
-            step.model_provider = None
-            step.model_id = None
         await session.flush()
 
     manifest_artifact = await _get_step_manifest_artifact(session, step_id=step.id)

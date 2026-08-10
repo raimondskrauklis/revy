@@ -45,6 +45,7 @@ class VoyageEmbedRecorderContext:
     pipeline_run_id: UUID
     index_job_id: UUID
     request_model: str
+    output_dimension: int | None = None
     attempt_no: int = 0
 
 
@@ -142,6 +143,7 @@ async def embed_texts(
     texts: list[str],
     *,
     request_model: str | None = None,
+    output_dimension: int | None = None,
     recorder: VoyageEmbedRecorderContext | None = None,
 ) -> list[list[float]]:
     _require_embeddings_enabled()
@@ -156,6 +158,9 @@ async def embed_texts(
         )
 
     model = request_model or settings.revy_embedding_model
+    dimension = output_dimension
+    if dimension is None and recorder is not None:
+        dimension = recorder.output_dimension
     vectors: list[list[float]] = []
     for batch_index, start in enumerate(range(0, len(texts), BATCH_SIZE)):
         batch = texts[start : start + BATCH_SIZE]
@@ -179,7 +184,12 @@ async def embed_texts(
             response = await _post_embeddings(
                 client,
                 api_key=api_key,
-                body=_embedding_request_body(batch, input_type="document", model=model),
+                body=_embedding_request_body(
+                    batch,
+                    input_type="document",
+                    model=model,
+                    output_dimension=dimension,
+                ),
             )
             _log_voyage_error(response)
             response.raise_for_status()
@@ -217,15 +227,22 @@ async def embed_texts(
                     exc=exc,
                 )
             raise
-        except Exception as exc:
+        except httpx.TimeoutException as exc:
             if attempt_id is not None:
-                failure_class = None
-                if isinstance(exc, httpx.TimeoutException):
-                    failure_class = GitHubReviewRunFailureClass.timeout
                 await fail_attempt(
                     attempt_id,
                     context=LlmAttemptFailContext(
-                        failure_class=failure_class,
+                        failure_class=GitHubReviewRunFailureClass.timeout,
+                        wait_ms=int((time.monotonic() - attempt_started) * 1000),
+                    ),
+                    exc=exc,
+                )
+            raise
+        except Exception as exc:
+            if attempt_id is not None:
+                await fail_attempt(
+                    attempt_id,
+                    context=LlmAttemptFailContext(
                         wait_ms=int((time.monotonic() - attempt_started) * 1000),
                     ),
                     exc=exc,

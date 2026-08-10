@@ -39,6 +39,12 @@ def test_review_run_observability_columns():
     } <= columns
 
 
+def test_llm_call_attempt_batch_size_column():
+    columns = {column.name for column in inspect(GitHubLlmCallAttemptORM).columns}
+    assert "batch_size" in columns
+    assert inspect(GitHubLlmCallAttemptORM).columns["batch_size"].nullable
+
+
 def test_pipeline_run_models_snapshot_column():
     columns = {column.name for column in inspect(GitHubPipelineRunORM).columns}
     assert "models_snapshot" in columns

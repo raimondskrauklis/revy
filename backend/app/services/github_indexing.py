@@ -626,12 +626,14 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
                     pipeline_run_id=pipeline_run.id,
                     index_job_id=job.id,
                     request_model=captured_embedding_model,
+                    output_dimension=captured_embedding_dimensions,
                 )
             async with httpx.AsyncClient(timeout=120.0) as client:
                 embeddings = await embed_texts(
                     client,
                     texts,
                     request_model=captured_embedding_model,
+                    output_dimension=captured_embedding_dimensions,
                     recorder=recorder,
                 )
 

@@ -40,8 +40,8 @@ from app.services.github_pipeline_trace import (
     record_index_pipeline_step,
     record_reconcile_pipeline_step,
     record_review_pipeline_step,
-    stash_pipeline_github_check_run_id,
     start_pipeline_github_check,
+    stash_pipeline_github_check_run_id,
 )
 
 

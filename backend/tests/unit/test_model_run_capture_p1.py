@@ -122,7 +122,10 @@ async def test_review_model_request_matches_run_model_id():
         "app.services.github_review.llm_dispatch.call_review_llm",
         AsyncMock(return_value='{"findings":[]}'),
     ):
-        with patch("app.services.github_review.start_attempt", AsyncMock(return_value=uuid.uuid4())):
+        with patch(
+            "app.services.github_review.start_attempt",
+            AsyncMock(return_value=uuid.uuid4()),
+        ) as start_mock:
             with patch("app.services.github_review.settings") as mock_settings:
                 mock_settings.revy_revision_llm_http_timeout_seconds.return_value = 30.0
                 recorder = LlmAttemptStartContext(
@@ -141,3 +144,5 @@ async def test_review_model_request_matches_run_model_id():
                     prompt="test",
                     recorder=recorder,
                 )
+
+    start_mock.assert_awaited_once_with(recorder)
