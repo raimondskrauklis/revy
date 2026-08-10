@@ -113,7 +113,10 @@ SELECT a.step_type,
        count(*)::int AS n
 FROM github_llm_call_attempts a
 LEFT JOIN github_pipeline_runs pr ON pr.id = a.pipeline_run_id
-JOIN github_pull_request_revisions rev ON rev.id = pr.revision_id
+LEFT JOIN github_review_runs rr ON rr.id = a.review_run_id
+LEFT JOIN github_index_jobs ij ON ij.id = a.index_job_id
+JOIN github_pull_request_revisions rev
+  ON rev.id = coalesce(pr.revision_id, rr.revision_id, ij.revision_id)
 JOIN github_pull_requests gp ON gp.id = rev.pull_request_id
 JOIN github_repositories repo ON repo.id = gp.repository_id
 WHERE repo.full_name = $1 AND gp.number = $2

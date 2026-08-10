@@ -12,7 +12,6 @@ from uuid import UUID
 
 import httpx
 from sqlalchemy import delete, select
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -1098,15 +1097,6 @@ async def _finalize_pipeline_github_check(
 ) -> None:
     if conclusion == "neutral":
         await session.flush()
-    else:
-        try:
-            await session.flush()
-        except SQLAlchemyError:
-            logger.warning(
-                "models_snapshot_pre_flush_skipped",
-                exc_info=True,
-                extra={"pipeline_run_id": str(pipeline_run_id)},
-            )
     await try_persist_models_snapshot(session, pipeline_run_id=pipeline_run_id)
     check_run_id = await resolve_pipeline_github_check_run_id(session, pipeline_run_id=pipeline_run_id)
     if check_run_id is None or not settings.github_api_enabled:
