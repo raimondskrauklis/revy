@@ -1,10 +1,10 @@
 # Review generation lifecycle — staging validation
 
-**Program:** [README.md](./README.md) · **Dogfood:** [POST_MAIN_STAGING_VALIDATION.md](../staging-validation/POST_MAIN_STAGING_VALIDATION.md) ([#93](https://github.com/raimondskrauklis/revy/pull/93))
+**Program:** [README.md](./README.md) · **Dogfood:** [POST_MAIN_STAGING_VALIDATION.md](../staging-validation/POST_MAIN_STAGING_VALIDATION.md)
 
-**Status:** **full-cycle health PASS** on dogfood PR #93 · **RG-15 supersede overlap pending**.
+**Status:** **RG-15 DB supersede PASS** (PR #93 probes, corrected script). **Queued check UX** pending [#94](https://github.com/raimondskrauklis/revy/pull/94) deploy + push 4.
 
-**Metrics script:** `backend/scripts/generation_lifecycle_staging_metrics.py`
+**Metrics script:** `backend/scripts/generation_lifecycle_staging_metrics.py` (ships in #94)
 
 ---
 
@@ -14,6 +14,7 @@
 |--------|---------------|
 | #89 restart hotfix | `2026-08-10T11:18:54Z` |
 | Dogfood window (#92+) | `2026-08-10T14:23:32Z` |
+| #94 check UX | _after merge_ |
 
 ---
 
@@ -21,12 +22,12 @@
 
 | Check | Result | Evidence |
 |-------|--------|----------|
-| Full pipeline cycle | **PASS** | 2 completed review runs + 2 index jobs |
-| Publish `head_sha` parity | **PASS** | both publishes match revision HEAD |
-| Stuck `processing` | **PASS** | 0 orphan rows |
-| Supersede during run | **pending** | 2 sequential revisions; `superseded_jobs=0` |
+| Full pipeline cycle | **PASS** | 3 completed review runs + index jobs |
+| Supersede path (DB) | **PASS** | `superseded_review_runs=2`, `superseded_index_jobs=1` |
+| Stuck `processing` | **PASS** | 0 orphans at probe time |
+| GitHub queued check UX | **pending** | requires #94 on staging + push 4 |
 
-**`--rg15-gate --require-activity`:** **PASS** (supersede_path INCONCLUSIVE).
+**`--rg15-gate --require-activity`:** **PASS** (2026-08-10, script from #94 branch).
 
 ---
 
@@ -34,5 +35,5 @@
 
 | Party | Verdict | Date |
 |-------|---------|------|
-| RG-15 system health (dogfood PR) | **PASS** | 2026-08-10 |
-| RG-15 supersede overlap dogfood | **pending** | push during `in_progress` |
+| RG-15 supersede (DB evidence) | **PASS** | 2026-08-10 |
+| RG-15 queued check UX (GitHub) | **pending** | after #94 deploy |
