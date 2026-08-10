@@ -205,7 +205,8 @@ async def _complete_chat(
             messages=messages,
             json_response=json_response,
         ),
-        timeout=timeout_seconds or settings.revy_revision_timeout_seconds(profile),
+        timeout=timeout_seconds
+        or settings.revy_revision_llm_http_timeout_seconds(profile),
     )
     _log_moonshot_error(response, model=model)
     response.raise_for_status()
