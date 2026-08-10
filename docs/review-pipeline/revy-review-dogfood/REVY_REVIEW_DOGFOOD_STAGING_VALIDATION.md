@@ -4,7 +4,7 @@
 **Case study (symptom evidence only):** TenderPro [PR #130](https://github.com/raimondskrauklis/tender_pro/pull/130) — motivated RR-DG* catalog; **not** the validation venue.  
 **Validation venue:** `raimondskrauklis/revy` staging dogfood [PR #80](https://github.com/raimondskrauklis/revy/pull/80) — **≥10 completed review runs**, DB-backed RR-V gate.  
 **Status:** RR-W1 R1–R4 shipped `deda3c9` · **R5 RR-V sign-off PASS** (DB SSOT; RR-V5 manual pending) · 2026-07-31.  
-**Invalidated:** [#79](https://github.com/raimondskrauklis/revy/pull/79) closed — premature PASS + push during Revy run.
+**Invalidated:** [#79](https://github.com/raimondskrauklis/revy/pull/79) closed — premature PASS + push during Revy run. **Mitigation shipped:** generation lifecycle restart hotfix [PR #89](https://github.com/raimondskrauklis/revy/pull/89) (RG-15) — re-validate after deploy.
 
 ---
 

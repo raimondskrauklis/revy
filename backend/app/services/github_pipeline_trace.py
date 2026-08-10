@@ -97,6 +97,23 @@ async def get_pipeline_run_for_index_job(
     )
 
 
+async def get_pipeline_runs_for_index_jobs(
+    session: AsyncSession,
+    *,
+    index_job_ids: list[UUID],
+) -> dict[UUID, GitHubPipelineRunORM]:
+    if not index_job_ids:
+        return {}
+    rows = await session.scalars(
+        select(GitHubPipelineRunORM).where(GitHubPipelineRunORM.index_job_id.in_(index_job_ids))
+    )
+    return {
+        pipeline_run.index_job_id: pipeline_run
+        for pipeline_run in rows
+        if pipeline_run.index_job_id is not None
+    }
+
+
 async def ensure_pipeline_run_for_index_job(
     session: AsyncSession,
     *,

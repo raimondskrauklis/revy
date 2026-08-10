@@ -2,7 +2,6 @@
 """GitHub PR revision review — R4."""
 from __future__ import annotations
 
-import json
 import re
 import time
 from collections import defaultdict
@@ -968,14 +967,14 @@ def parse_finding_rows(raw_findings: list) -> tuple[list[dict], dict]:
 
 
 async def _call_llm(*, model_ref: ModelRef, profile: str, prompt: str) -> str:
-    timeout = float(settings.revy_revision_timeout_seconds(profile))
-    async with httpx.AsyncClient(timeout=timeout) as client:
+    http_timeout = float(settings.revy_revision_llm_http_timeout_seconds(profile))
+    async with httpx.AsyncClient(timeout=http_timeout) as client:
         return await llm_dispatch.call_review_llm(
             client,
             model_ref=model_ref,
             profile=profile,
             user_prompt=prompt,
-            timeout_seconds=timeout,
+            timeout_seconds=http_timeout,
         )
 
 
@@ -1071,24 +1070,40 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> Revie
         run.model_id = model_ref.model_id
         await session.flush()
 
-        review_started_at = time.monotonic()
-        raw_json = await _call_llm(
-            model_ref=model_ref,
-            profile=_review_profile_str(run.profile),
-            prompt=prompt,
-        )
-        review_duration_ms = int((time.monotonic() - review_started_at) * 1000)
-
-        try:
-            raw_findings = moonshot_review.parse_review_json(raw_json)
-        except (json.JSONDecodeError, ValueError) as exc:
+        review_duration_ms = 0
+        raw_json: str | None = None
+        parse_exc: ValueError | None = None
+        for attempt in range(2):
+            if attempt > 0:
+                logger.warning(
+                    "github_review_json_parse_retry",
+                    extra={
+                        "review_run_id": str(review_run_id),
+                        "attempt": attempt + 1,
+                        "error": str(parse_exc),
+                    },
+                )
+            attempt_started = time.monotonic()
+            raw_json = await _call_llm(
+                model_ref=model_ref,
+                profile=_review_profile_str(run.profile),
+                prompt=prompt,
+            )
+            review_duration_ms += int((time.monotonic() - attempt_started) * 1000)
+            try:
+                raw_findings = moonshot_review.parse_review_json(raw_json)
+                parse_exc = None
+                break
+            except ValueError as exc:
+                parse_exc = exc
+        if parse_exc is not None:
             run.status = GitHubReviewRunStatus.failed
-            run.error_message = str(exc)[:2000]
+            run.error_message = str(parse_exc)[:2000]
             await session.flush()
             return ReviewRunOutcome(
                 run=run,
                 context_pack=context_pack,
-                raw_response=raw_json,
+                raw_response=raw_json or "",
                 parse_report={"parsed_count": 0, "dropped_count": 0, "drop_reasons": {}},
                 retrieve_duration_ms=retrieve_duration_ms,
                 review_duration_ms=review_duration_ms,

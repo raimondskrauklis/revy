@@ -45,7 +45,7 @@ async def test_complete_review_returns_content():
         mock_settings.moonshot_api_key = "test-key"
         mock_settings.revy_moonshot_model_for_profile.return_value = "kimi-k2.7-code"
         mock_settings.revy_moonshot_max_completion_tokens = 32768
-        mock_settings.revy_revision_timeout_seconds.return_value = 60.0
+        mock_settings.revy_revision_llm_http_timeout_seconds.return_value = 60.0
         content = await complete_review(client, profile="standard", user_prompt="review")
 
     assert json.loads(content)["findings"] == []
@@ -79,6 +79,20 @@ def test_parse_review_json_valid():
 def test_parse_review_json_invalid_raises():
     with pytest.raises(ValueError):
         parse_review_json(json.dumps([]))
+
+
+def test_parse_review_json_rejects_non_list_findings():
+    with pytest.raises(ValueError, match="review_json_findings_not_list"):
+        parse_review_json(json.dumps({"findings": {"title": "x"}}))
+
+
+def test_parse_review_json_strips_markdown_fence():
+    raw = """```json
+{"findings": [{"title": "x", "severity": "info", "category": "other", "message": "m"}]}
+```"""
+    findings = parse_review_json(raw)
+    assert len(findings) == 1
+    assert findings[0]["title"] == "x"
 
 
 def test_chat_completion_body_k2_7_code_omits_temperature():
@@ -179,7 +193,7 @@ async def test_complete_issue_comment_markdown_uses_issue_comment_system_prompt(
         mock_settings.moonshot_api_key = "test-key"
         mock_settings.revy_moonshot_model_for_profile.return_value = "kimi-k2.7-code"
         mock_settings.revy_moonshot_max_completion_tokens = 32768
-        mock_settings.revy_revision_timeout_seconds.return_value = 60.0
+        mock_settings.revy_revision_llm_http_timeout_seconds.return_value = 60.0
         await complete_issue_comment_markdown(
             client,
             profile="standard",
@@ -208,7 +222,7 @@ async def test_complete_issue_comment_markdown_returns_markdown_without_json_for
         mock_settings.moonshot_api_key = "test-key"
         mock_settings.revy_moonshot_model_for_profile.return_value = "kimi-k2.7-code"
         mock_settings.revy_moonshot_max_completion_tokens = 32768
-        mock_settings.revy_revision_timeout_seconds.return_value = 60.0
+        mock_settings.revy_revision_llm_http_timeout_seconds.return_value = 60.0
         content = await complete_issue_comment_markdown(
             client,
             profile="standard",

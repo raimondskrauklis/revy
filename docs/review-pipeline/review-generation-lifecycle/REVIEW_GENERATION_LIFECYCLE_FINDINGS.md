@@ -207,7 +207,9 @@ publish:
 
 ```text
 synchronize (head_sha = H2)
-  → mark any in-flight generation for H1 as superseded (skip publish)
+  → mark in-flight review runs + index jobs for older revisions superseded
+  → mark in-flight review runs + index jobs on same HEAD superseded (re-push / @revy review)
+  → schedule resolution pairing async (`apply_resolution_for_synchronize`) — do not block enqueue
   → optionally: coalesce ≤10s if another synchronize before start
   → run pipeline for H2 (DB may complete for H1 — OK)
   → on publish: if pull_request.head_sha != job.head_sha → NO GitHub writes
@@ -238,6 +240,7 @@ synchronize (head_sha = H2)
 | **RG-12** | **Pending publish after supersede** | Job created pending; H2 arrives before task runs — need `run_publish_job` re-check `review_run.status == superseded` | **P1–P2** |
 | **RG-14** | **Issue comment generation-only vs check two-block** | Prior open findings omitted from issue comment when not re-reported; check still lists PR-wide open — triage confusion | **shipped** — [publish-summary-alignment](../publish-summary-alignment/README.md) |
 | **RG-13** | **Judge marks completed when outcomes missing** | `judge_status=completed` despite failed candidates — see §3b | **P5** |
+| **RG-15** | **Supersede omitted index jobs + inline resolution on webhook** | Push during run or `@revy review` while index pending → `pipeline_index_in_progress` or blocked `github_events` worker — no UI run until restart | **shipped** — [PR #89](https://github.com/raimondskrauklis/revy/pull/89) Revy clean 2026-08-10: index supersede, `apply_resolution_for_synchronize`, deferred index enqueue (non-coalesce), event-anchored coalesce, stale coalesce HEAD handoff, Moonshot 520–524 retry |
 
 **Out of scope:** recall/STRUCT, reconcile marks-absent-resolved, human dismiss R7.6, push-frequency policy.
 
@@ -273,7 +276,8 @@ synchronize (head_sha = H2)
 | Same SHA re-publish (`@revy publish`) | Prior `skipped_not_head` job may block | Terminal skip statuses excluded from `find_publish_job_for_head_sha` / allow new publish job |
 | Supersede between publish job create and task run | Stale publish executes | `run_publish_job` re-check `superseded` at task entry (RG-12) |
 | Queued H1 index after H2 supersede | Orphan `in_progress` G10 for H1 | `index_pull_request_revision`: skip G10 when not authoritative (RG-Q11) |
-| `@revy review` while autostart running | Double pipeline | Smart supersede — same PR, latest trigger wins |
+| `@revy review` while autostart running | Double pipeline / dropped enqueue | `supersede_active_generations_for_revision` — review runs **and** index jobs (RG-15) |
+| Push during Revy run | No restart; worker stuck on resolution | `apply_resolution_for_synchronize` Celery task; supersede index jobs; non-coalesce index enqueue after resolution `applied` (RG-15) |
 | Bot webhook during publish | Self-supersede | Exclude bot-originated events from supersede (ccs pattern) |
 | Fix in push A, break in push B | Generation B is truth | Snapshot contract — A’s threads resolved by Option A on B’s publish |
 | Coalesce + manual command | Operator expects immediate | Command path bypasses coalesce |
@@ -291,7 +295,7 @@ synchronize (head_sha = H2)
 | RG-Q5 | Buffer inline vs batch review API? | **locked** | Sequential post in one flush; no mid-loop GitHub persist; batch API defer |
 | RG-Q6 | Relationship to github-surface-hardening | **locked** | Hardening = thread hygiene; this = generation hygiene — complementary |
 | RG-Q7 | Summary channel before inline flush? | **locked** | **No** — full GitHub surface flush at publish end (stricter Greptile bar) |
-| RG-Q8 | Superseded SHA checks? | **locked** | `finalize_pipeline_github_check_neutral` — “Superseded by newer commit” |
+| RG-Q8 | Superseded SHA checks? | **locked** | `finalize_pipeline_github_check_neutral` — “Superseded by newer run” (`SUPERSEDED_CHECK_SUMMARY`) |
 | RG-Q9 | Generation authority model? | **locked** | **`GitHubReviewRunStatus.superseded`** = source of truth; publish job terminal skip statuses; pipeline trace mirrors |
 | RG-Q10 | Judge vs publish when outcome missing? | **locked** | Per-finding: hold **candidates** only; publish **rest**; missing outcome = bug, not silent dismiss |
 | RG-Q11 | Non-authoritative index at task entry? | **locked** | Allow index DB work; **skip G10 start** + **skip review enqueue** when not authoritative |

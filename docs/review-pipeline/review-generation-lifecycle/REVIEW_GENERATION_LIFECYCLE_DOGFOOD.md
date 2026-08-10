@@ -66,7 +66,7 @@ Greptile summary updated through `f055f4a`. Revy issue comment **fixed** from ra
 | **Revy re-review** | Carries prior finding text without re-reading fixed lines | Resolution / diff-aware re-review (RQ5+); or close stale threads manually |
 | **Greptile** | Reads program docs + sequence diagram; high merge confidence when additive | Keep `.greptile/files.json` wired per program |
 | **Revy inline** | ERROR on cross-layer paths (publish + lifecycle) | Good for pre-P2 wiring; expect false positives on already-guarded code |
-| **Lifecycle P2** | Supersede not wired to webhooks yet — dogfood is **format + gates only** | Staging proof after P2 synchronize hook |
+| **Lifecycle P2** | Supersede wired to webhooks on `main` (#54); index-job + deferred resolution hotfix [#89](https://github.com/raimondskrauklis/revy/pull/89) | Staging proof — push during run |
 
 ---
 

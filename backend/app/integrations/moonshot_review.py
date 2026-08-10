@@ -2,13 +2,12 @@
 """Moonshot Kimi review client — R4 (OpenAI-compatible chat completions)."""
 from __future__ import annotations
 
-import json
-
 import httpx
 
 from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError
 from app.core.logging import get_logger
+from app.integrations.judge_llm_errors import parse_llm_json_object
 
 logger = get_logger(__name__)
 
@@ -206,7 +205,8 @@ async def _complete_chat(
             messages=messages,
             json_response=json_response,
         ),
-        timeout=timeout_seconds or settings.revy_revision_timeout_seconds(profile),
+        timeout=timeout_seconds
+        or settings.revy_revision_llm_http_timeout_seconds(profile),
     )
     _log_moonshot_error(response, model=model)
     response.raise_for_status()
@@ -267,7 +267,7 @@ async def complete_issue_comment_markdown(
 
 def parse_review_json(raw: str) -> list[dict]:
     """Parse LLM JSON payload — raises ValueError on invalid shape."""
-    payload = json.loads(raw)
+    payload = parse_llm_json_object(raw)
     if not isinstance(payload, dict):
         raise ValueError("review_json_not_object")
     findings = payload.get("findings")

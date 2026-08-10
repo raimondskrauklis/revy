@@ -94,7 +94,7 @@ flowchart TD
 | Group states | `active` / `superseded` / `resolved` | `enums.py`; reconcile + judge |
 | Peer supersede | Same file+category, different revision → `superseded` | `_mark_superseded_peers` |
 | Judge dismiss → `resolved` | Drops from inline publish set | `github_finding_judge.py:231–232` |
-| `resolution_status` on synchronize | Prior-revision groups only | `apply_resolution_status_for_synchronize` |
+| `resolution_status` on synchronize | Prior-revision groups only | `apply_resolution_status_for_synchronize` (Celery `apply_resolution_for_synchronize` on `synchronize`) |
 | Diff heuristic `addressed` | `patch_touches_line_region` | Any `+`/`−` overlapping line region |
 | G9 prose | “Since last push: N fixed…” | `github_publish_formatter.py:147–157` — **only** if group still `active` |
 | Option A thread resolve | Fingerprint ∉ publishable OR group closed | `_fingerprints_to_resolve_inline_threads` → `_resolve_stale_inline_threads` |
