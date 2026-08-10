@@ -210,6 +210,31 @@ def test_build_models_snapshot_attempt_fallback_prefers_successful_latest():
     assert snapshot["reviewer"]["model_id"] == "kimi-k2.7-code"
 
 
+def test_build_models_snapshot_attempt_fallback_prefers_started_attempt():
+    snapshot = build_models_snapshot(
+        [],
+        attempts=[
+            AttemptSnapshotInput(
+                step_type="review",
+                provider="moonshot",
+                request_model="kimi-stale",
+                sequence=1,
+                failure_class="timeout",
+                started=False,
+            ),
+            AttemptSnapshotInput(
+                step_type="review",
+                provider="moonshot",
+                request_model="kimi-k2.7-code",
+                sequence=0,
+                failure_class="timeout",
+                started=True,
+            ),
+        ],
+    )
+    assert snapshot["reviewer"]["model_id"] == "kimi-k2.7-code"
+
+
 @pytest.mark.asyncio
 async def test_persist_models_snapshot_writes_pipeline_run():
     pipeline_run_id = uuid4()

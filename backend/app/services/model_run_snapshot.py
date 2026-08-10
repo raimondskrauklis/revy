@@ -46,6 +46,7 @@ class AttemptSnapshotInput:
     request_model: str | None
     sequence: int = 0
     failure_class: str | None = None
+    started: bool = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -116,12 +117,14 @@ def _pick_terminal_step(candidates: list[StepSnapshotInput]) -> StepSnapshotInpu
 def _pick_terminal_attempt(candidates: list[AttemptSnapshotInput]) -> AttemptSnapshotInput | None:
     if not candidates:
         return None
+    started = [attempt for attempt in candidates if attempt.started]
+    pool = started if started else candidates
 
     def _attempt_rank(attempt: AttemptSnapshotInput) -> tuple[int, int]:
         succeeded = 1 if attempt.failure_class is None else 0
         return (succeeded, attempt.sequence)
 
-    return max(candidates, key=_attempt_rank)
+    return max(pool, key=_attempt_rank)
 
 
 def _attempt_fallback(
@@ -209,6 +212,7 @@ def _attempt_inputs(attempts: list[GitHubLlmCallAttemptORM]) -> list[AttemptSnap
                 if attempt.failure_class is not None
                 else None
             ),
+            started=attempt.started_at is not None,
         )
         for index, attempt in enumerate(ordered)
     ]
