@@ -53,6 +53,7 @@ class GitHubPipelineRunORM(TimestampedModel):
         ForeignKey("github_publish_jobs.id", ondelete="SET NULL"),
         nullable=True,
     )
+    models_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
     steps: Mapped[list[GitHubPipelineStepORM]] = relationship(
         back_populates="pipeline_run",

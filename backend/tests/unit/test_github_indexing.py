@@ -26,6 +26,14 @@ from app.models.github_repository import GitHubRepositoryORM
 from app.services.github_indexing import create_index_job, list_revision_chunks, run_index_job
 
 
+@pytest.fixture(autouse=True)
+def _index_job_no_pipeline_run(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.github_indexing.get_pipeline_run_for_index_job",
+        AsyncMock(return_value=None),
+    )
+
+
 @pytest.mark.asyncio
 async def test_create_index_job_disabled_embeddings_raises():
     session = AsyncMock()
@@ -492,6 +500,7 @@ async def test_run_index_job_reuses_matching_parent_chunks():
     assert result.index_manifest_stats["reused_count"] == 1
     assert result.index_manifest_stats["new_count"] == 0
     assert result.index_manifest_stats["embed_batches"] == 0
+    assert "embedding_model" not in result.index_manifest_stats
     added_chunk = session.add.call_args.args[0]
     assert added_chunk.content_hash is not None
     assert added_chunk.embedding == [0.1, 0.2]
@@ -528,6 +537,8 @@ async def test_run_index_job_reembeds_when_content_changes():
 
     with patch("app.services.github_indexing.settings") as mock_settings:
         mock_settings.revy_worktrees_path = "/tmp/revy-worktrees"
+        mock_settings.revy_embedding_model = "voyage-code-3.5"
+        mock_settings.revy_embedding_dimensions = 1024
         with patch("app.services.github_indexing._get_parent_revision", AsyncMock(return_value=parent_revision)):
             with patch(
                 "app.services.github_indexing._load_parent_chunks",
@@ -557,6 +568,9 @@ async def test_run_index_job_reembeds_when_content_changes():
     assert result.status == GitHubIndexJobStatus.completed
     embed_mock.assert_awaited_once()
     assert result.index_manifest_stats["new_count"] == 1
+    assert result.index_manifest_stats["embedding_provider"] == "voyage"
+    assert result.index_manifest_stats["embedding_model"] == mock_settings.revy_embedding_model
+    assert result.index_manifest_stats["embedding_dimensions"] == mock_settings.revy_embedding_dimensions
     added_chunk = session.add.call_args.args[0]
     assert added_chunk.embedding == [0.3, 0.4]
 

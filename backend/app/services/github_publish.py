@@ -1235,6 +1235,8 @@ class PublishSurfaceBuild:
     format_ctx: PublishFormatContext | None = None
     publishable_fingerprints: frozenset[str] = frozenset()
     prior_collapsed_fingerprints: frozenset[str] = frozenset()
+    publish_model_provider: str | None = None
+    publish_model_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -1499,6 +1501,7 @@ async def _build_publish_surface(
         session,
         review_run_id=job.review_run_id,
     )
+    pipeline_run = await get_pipeline_run_for_review_run(session, review_run_id=job.review_run_id)
     format_ctx = PublishFormatContext(
         pull_request_id=pull_request.id,
         pull_request_number=pull_request.number,
@@ -1510,6 +1513,8 @@ async def _build_publish_surface(
         resolution_metrics_manifest=resolution_metrics_manifest,
         pr_active_groups=filtered_pr_active,
         ever_inlined_fingerprints=ever_inlined,
+        pipeline_run_id=pipeline_run.id if pipeline_run is not None else None,
+        review_run_id=job.review_run_id,
     )
     formatted = await build_publish_format_result_async(format_ctx)
     summary_json = {
@@ -1621,6 +1626,8 @@ async def _build_publish_surface(
         format_ctx=format_ctx,
         publishable_fingerprints=frozenset(publishable_fingerprints),
         prior_collapsed_fingerprints=frozenset(prior_collapsed),
+        publish_model_provider=formatted.publish_model_provider,
+        publish_model_id=formatted.publish_model_id,
     )
 
 
@@ -2186,6 +2193,8 @@ async def run_publish_job(
                 summary_markdown=flush_result.published_check_summary or build.check_summary,
                 issue_comment_markdown=flush_result.published_issue_comment or build.issue_comment,
                 duration_ms=int((time.monotonic() - started) * 1000),
+                model_provider=build.publish_model_provider,
+                model_id=build.publish_model_id,
             )
         return job
     except (httpx.HTTPError, ServiceUnavailableError) as exc:

@@ -19,7 +19,7 @@ def test_judge_review_run_task_runs():
     with patch("app.workers.judge_tasks.get_db_context", return_value=db_context):
         with patch(
             "app.workers.judge_tasks.run_judge_for_review_run",
-            AsyncMock(return_value=1),
+            AsyncMock(return_value=(1, None)),
         ) as judge_mock:
             judge_tasks.judge_review_run.run(str(review_run_id))
 

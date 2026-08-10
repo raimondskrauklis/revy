@@ -444,16 +444,19 @@ async def _judge_candidates_missing_outcome(
     return False
 
 
-async def record_review_run_judge_status(
+async def record_review_run_judge_status_with_model(
     session: AsyncSession,
     *,
     review_run_id: UUID,
     artifacts_out: list[JudgeCandidateArtifact] | None = None,
-) -> int:
-    """Count escalation candidates, persist judge status, run judge when applicable."""
+) -> tuple[int, ModelRef | None]:
+    """Count escalation candidates, persist judge status, run judge when applicable.
+
+    Returns ``(judged_count, model_ref)`` where ``model_ref`` is set when the judge LLM ran.
+    """
     run, candidates = await _load_judge_candidates(session, review_run_id=review_run_id)
     if run is None:
-        return 0
+        return 0, None
 
     candidate_count = len(candidates)
     run.judge_escalation_candidate_count = candidate_count
@@ -466,7 +469,7 @@ async def record_review_run_judge_status(
         else:
             run.judge_status = GitHubReviewJudgeStatus.not_applicable
         await session.flush()
-        return 0
+        return 0, None
 
     if not settings.judge_llm_enabled():
         if await _review_run_has_judge_outcomes(session, review_run_id=review_run_id):
@@ -474,7 +477,7 @@ async def record_review_run_judge_status(
         else:
             run.judge_status = GitHubReviewJudgeStatus.skipped_disabled
         await session.flush()
-        return 0
+        return 0, None
 
     try:
         model_ref = await resolve_model(session, run.workspace_id, ModelRole.judge)
@@ -488,7 +491,7 @@ async def record_review_run_judge_status(
         else:
             run.judge_status = GitHubReviewJudgeStatus.skipped_unavailable
         await session.flush()
-        return 0
+        return 0, None
 
     revision = await session.get(GitHubPullRequestRevisionORM, run.revision_id)
     engineering_pack = EngineeringContextPack()
@@ -540,6 +543,21 @@ async def record_review_run_judge_status(
     else:
         run.judge_status = GitHubReviewJudgeStatus.completed
     await session.flush()
+    return judged, model_ref
+
+
+async def record_review_run_judge_status(
+    session: AsyncSession,
+    *,
+    review_run_id: UUID,
+    artifacts_out: list[JudgeCandidateArtifact] | None = None,
+) -> int:
+    """Backward-compatible wrapper — returns judged count only."""
+    judged, _model_ref = await record_review_run_judge_status_with_model(
+        session,
+        review_run_id=review_run_id,
+        artifacts_out=artifacts_out,
+    )
     return judged
 
 
@@ -568,6 +586,8 @@ async def finalize_review_run_judge_status(
         await session.flush()
 
 
-async def run_judge_for_review_run(session: AsyncSession, *, review_run_id: UUID) -> int:
-    """Run judge on escalation candidates. Returns outcome count (0 when skipped)."""
-    return await record_review_run_judge_status(session, review_run_id=review_run_id)
+async def run_judge_for_review_run(
+    session: AsyncSession, *, review_run_id: UUID
+) -> tuple[int, ModelRef | None]:
+    """Run judge on escalation candidates. Returns outcome count and model ref when judged."""
+    return await record_review_run_judge_status_with_model(session, review_run_id=review_run_id)

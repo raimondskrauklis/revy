@@ -18,7 +18,7 @@ from app.services.github_finding_head_suppression import suppress_head_contradic
 from app.services.github_finding_judge import (
     JudgeCandidateArtifact,
     finalize_review_run_judge_status,
-    record_review_run_judge_status,
+    record_review_run_judge_status_with_model,
 )
 from app.services.github_finding_reconcile import reconcile_review_run
 from app.services.github_generation_lifecycle import is_review_run_superseded
@@ -68,7 +68,7 @@ def reconcile_review_run_task(self, review_run_id: str) -> None:
 
             judge_artifacts: list[JudgeCandidateArtifact] = []
             judge_started = time.monotonic()
-            judged = await record_review_run_judge_status(
+            judged, judge_model_ref = await record_review_run_judge_status_with_model(
                 session,
                 review_run_id=UUID(review_run_id),
                 artifacts_out=judge_artifacts,
@@ -134,6 +134,8 @@ def reconcile_review_run_task(self, review_run_id: str) -> None:
                     candidates=judge_artifacts,
                     verification_judged_count=verification_result.judged_count,
                     verification_candidates=verification_result.artifacts,
+                    model_provider=judge_model_ref.provider if judge_model_ref is not None else None,
+                    model_id=judge_model_ref.model_id if judge_model_ref is not None else None,
                 )
 
             if review_run is not None and is_review_run_superseded(review_run):

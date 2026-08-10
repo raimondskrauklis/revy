@@ -41,6 +41,7 @@ from app.services.github_pipeline_trace import (
     record_reconcile_pipeline_step,
     record_review_pipeline_step,
     start_pipeline_github_check,
+    stash_pipeline_github_check_run_id,
 )
 
 
@@ -81,6 +82,14 @@ async def test_record_index_pipeline_step_writes_manifest():
         fallback_reason="missing_base_sha",
     )
     job.id = uuid.uuid4()
+    job.index_manifest_stats = {
+        "reused_count": 0,
+        "new_count": 2,
+        "embed_batches": 1,
+        "embedding_provider": "voyage",
+        "embedding_model": "voyage-code-3.5",
+        "embedding_dimensions": 1024,
+    }
 
     session = AsyncMock()
     session.scalar = AsyncMock(return_value=None)
@@ -96,6 +105,106 @@ async def test_record_index_pipeline_step_writes_manifest():
     )
 
     assert session.add.call_count >= 2
+    step = session.add.call_args_list[0].args[0]
+    assert step.model_provider == "voyage"
+    assert step.model_id == "voyage-code-3.5"
+    manifest_artifact = session.add.call_args_list[1].args[0]
+    assert manifest_artifact.content_json["embedding_model"] == "voyage-code-3.5"
+    assert manifest_artifact.content_json["embedding_dimensions"] == 1024
+
+
+@pytest.mark.asyncio
+async def test_record_index_pipeline_step_reused_chunks_omits_embedding_model():
+    pipeline_run_id = uuid.uuid4()
+    job = GitHubIndexJobORM(
+        revision_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        status=GitHubIndexJobStatus.completed,
+        index_mode=GitHubIndexMode.diff,
+        chunk_count=5,
+    )
+    job.id = uuid.uuid4()
+    job.index_manifest_stats = {
+        "reused_count": 5,
+        "new_count": 0,
+        "embed_batches": 0,
+    }
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(return_value=None)
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    await record_index_pipeline_step(
+        session,
+        pipeline_run_id=pipeline_run_id,
+        job=job,
+        duration_ms=500,
+    )
+
+    step = session.add.call_args_list[0].args[0]
+    assert step.model_provider is None
+    assert step.model_id is None
+    manifest_artifact = session.add.call_args_list[1].args[0]
+    assert manifest_artifact.content_json["embedding_skipped_reason"] == "reused_chunks_only"
+    assert "embedding_model" not in manifest_artifact.content_json
+
+
+@pytest.mark.asyncio
+async def test_record_index_pipeline_step_updates_pending_step_model_fields():
+    pipeline_run_id = uuid.uuid4()
+    pending_step = GitHubPipelineStepORM(
+        pipeline_run_id=pipeline_run_id,
+        step_type=PipelineStepType.index,
+        status=PipelineStepStatus.pending,
+        duration_ms=0,
+    )
+    pending_step.id = uuid.uuid4()
+    manifest_artifact = GitHubPipelineArtifactORM(
+        step_id=pending_step.id,
+        kind=PipelineArtifactKind.manifest,
+        content_json={"github_check_run_id": 42},
+    )
+
+    job = GitHubIndexJobORM(
+        revision_id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        status=GitHubIndexJobStatus.completed,
+        index_mode=GitHubIndexMode.diff,
+        chunk_count=3,
+    )
+    job.id = uuid.uuid4()
+    job.index_manifest_stats = {
+        "reused_count": 0,
+        "new_count": 3,
+        "embed_batches": 1,
+        "embedding_provider": "voyage",
+        "embedding_model": "voyage-code-3.5",
+        "embedding_dimensions": 1024,
+    }
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(
+        side_effect=[pending_step, manifest_artifact, pending_step, manifest_artifact],
+    )
+    session.add = MagicMock()
+    session.flush = AsyncMock()
+
+    await stash_pipeline_github_check_run_id(
+        session,
+        pipeline_run_id=pipeline_run_id,
+        github_check_run_id=42,
+    )
+    await record_index_pipeline_step(
+        session,
+        pipeline_run_id=pipeline_run_id,
+        job=job,
+        duration_ms=1200,
+    )
+
+    assert pending_step.model_provider == "voyage"
+    assert pending_step.model_id == "voyage-code-3.5"
+    assert manifest_artifact.content_json["embedding_model"] == "voyage-code-3.5"
 
 
 @pytest.mark.asyncio

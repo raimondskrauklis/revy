@@ -28,7 +28,7 @@ from app.services.github_finding_judge import (
     _judge_failure_log_extra,
     is_judge_candidate,
     judge_candidate_group_sql_predicate,
-    record_review_run_judge_status,
+    record_review_run_judge_status_with_model,
 )
 from app.services.github_finding_reconcile import severity_rank
 from app.services.model_policy import ModelRef
@@ -441,7 +441,7 @@ async def test_run_judge_snippet_first_prompt_size_omits_large_patch():
                     "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
                     AsyncMock(side_effect=_judge_side_effect),
                 ):
-                    await record_review_run_judge_status(
+                    await record_review_run_judge_status_with_model(
                         session,
                         review_run_id=review_run_id,
                         artifacts_out=artifacts,
@@ -510,7 +510,7 @@ async def test_run_judge_skipped_without_api_key():
 
     with patch("app.services.github_finding_judge.settings") as mock_settings:
         mock_settings.judge_llm_enabled.return_value = False
-        count = await record_review_run_judge_status(session, review_run_id=review_run_id)
+        count, _model_ref = await record_review_run_judge_status_with_model(session, review_run_id=review_run_id)
 
     assert count == 0
     assert run.judge_escalation_candidate_count == 1
@@ -565,7 +565,7 @@ async def test_record_judge_status_keeps_completed_when_outcomes_exist_and_judge
 
     with patch("app.services.github_finding_judge.settings") as mock_settings:
         mock_settings.judge_llm_enabled.return_value = False
-        count = await record_review_run_judge_status(session, review_run_id=review_run_id)
+        count, _model_ref = await record_review_run_judge_status_with_model(session, review_run_id=review_run_id)
 
     assert count == 0
     assert run.judge_escalation_candidate_count == 1
@@ -629,7 +629,7 @@ async def test_run_judge_stale_model_policy_returns_zero():
                 )
             ),
         ):
-            count = await record_review_run_judge_status(session, review_run_id=review_run_id)
+            count, _model_ref = await record_review_run_judge_status_with_model(session, review_run_id=review_run_id)
 
     assert count == 0
     assert run.judge_escalation_candidate_count == 1
@@ -700,7 +700,7 @@ async def test_run_judge_dismissed_resolves_group():
                 "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
                 AsyncMock(return_value={"outcome": "dismissed", "notes": "false positive"}),
             ):
-                count = await record_review_run_judge_status(session, review_run_id=review_run_id)
+                count, _model_ref = await record_review_run_judge_status_with_model(session, review_run_id=review_run_id)
 
     assert count == 1
     assert run.judge_status == GitHubReviewJudgeStatus.completed
@@ -778,7 +778,7 @@ async def test_run_judge_bedrock_provider_without_anthropic_key():
                 "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
                 AsyncMock(return_value={"outcome": "upheld", "notes": "valid"}),
             ):
-                count = await record_review_run_judge_status(session, review_run_id=review_run_id)
+                count, _model_ref = await record_review_run_judge_status_with_model(session, review_run_id=review_run_id)
 
     assert count == 1
     assert run.judge_status == GitHubReviewJudgeStatus.completed
@@ -853,7 +853,7 @@ async def test_run_judge_service_unavailable_continues():
                     )
                 ),
             ):
-                count = await record_review_run_judge_status(session, review_run_id=review_run_id)
+                count, _model_ref = await record_review_run_judge_status_with_model(session, review_run_id=review_run_id)
 
     assert count == 0
     assert run.judge_status == GitHubReviewJudgeStatus.skipped_unavailable
@@ -969,7 +969,7 @@ async def test_run_judge_partial_llm_failure_skipped_unavailable():
                     "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
                     AsyncMock(side_effect=_judge_side_effect),
                 ):
-                    judged = await record_review_run_judge_status(
+                    judged, _judge_model_ref = await record_review_run_judge_status_with_model(
                         session,
                         review_run_id=review_run_id,
                     )
@@ -1066,7 +1066,7 @@ async def test_run_judge_parse_failure_captures_artifact():
                         )
                     ),
                 ):
-                    judged = await record_review_run_judge_status(
+                    judged, _judge_model_ref = await record_review_run_judge_status_with_model(
                         session,
                         review_run_id=review_run_id,
                         artifacts_out=artifacts,
@@ -1305,7 +1305,7 @@ async def test_run_judge_fenced_json_persists_outcome():
                     "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
                     AsyncMock(return_value={"outcome": "dismissed", "notes": "ok"}),
                 ):
-                    judged = await record_review_run_judge_status(
+                    judged, _judge_model_ref = await record_review_run_judge_status_with_model(
                         session,
                         review_run_id=review_run_id,
                         artifacts_out=artifacts,
@@ -1336,7 +1336,7 @@ async def test_record_judge_status_keeps_completed_when_no_candidates_but_outcom
     session.scalar = AsyncMock(return_value=uuid.uuid4())
     session.flush = AsyncMock()
 
-    count = await record_review_run_judge_status(session, review_run_id=review_run_id)
+    count, _model_ref = await record_review_run_judge_status_with_model(session, review_run_id=review_run_id)
 
     assert count == 0
     assert run.judge_escalation_candidate_count == 0

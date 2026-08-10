@@ -10,6 +10,7 @@ from uuid import UUID
 
 import httpx
 from sqlalchemy import delete, func, select, update
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import (
@@ -34,7 +35,12 @@ from app.integrations.github_archive import (
     extract_tarball,
     iter_indexable_files,
 )
-from app.integrations.voyage_embeddings import BATCH_SIZE, embed_query, embed_texts
+from app.integrations.voyage_embeddings import (
+    BATCH_SIZE,
+    VoyageEmbedRecorderContext,
+    embed_query,
+    embed_texts,
+)
 from app.models.github_code_chunk import GitHubCodeChunkORM
 from app.models.github_index_job import GitHubIndexJobORM
 from app.models.github_installation import GitHubInstallationORM
@@ -49,6 +55,7 @@ from app.schemas.github_indexing import (
     GitHubCodeChunkResponse,
 )
 from app.services.code_chunking import chunk_file_content
+from app.services.github_pipeline_run_lookup import get_pipeline_run_for_index_job
 
 logger = get_logger(__name__)
 
@@ -323,12 +330,21 @@ def _set_index_manifest_stats(
     reused_count: int,
     new_count: int,
     embed_batches: int,
+    embedding_provider: str | None = None,
+    embedding_model: str | None = None,
+    embedding_dimensions: int | None = None,
 ) -> None:
-    job.index_manifest_stats = {
+    stats: dict[str, int | str] = {
         "reused_count": reused_count,
         "new_count": new_count,
         "embed_batches": embed_batches,
     }
+    if embedding_model is not None:
+        stats["embedding_provider"] = embedding_provider or "voyage"
+        stats["embedding_model"] = embedding_model
+        if embedding_dimensions is not None:
+            stats["embedding_dimensions"] = embedding_dimensions
+    job.index_manifest_stats = stats
 
 
 def _parent_chunk_hash(chunk: GitHubCodeChunkORM) -> str:
@@ -523,6 +539,9 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
         reused_count = 0
         new_count = 0
         embed_batches = 0
+        captured_embedding_provider: str | None = None
+        captured_embedding_model: str | None = None
+        captured_embedding_dimensions: int | None = None
 
         if job.index_incremental and parent_chunks:
             await session.execute(
@@ -597,8 +616,33 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
 
         if chunks_to_embed:
             texts = [item[2] for item in chunks_to_embed]
+            captured_embedding_provider = "voyage"
+            captured_embedding_model = settings.revy_embedding_model
+            captured_embedding_dimensions = settings.revy_embedding_dimensions
+            recorder = None
+            try:
+                pipeline_run = await get_pipeline_run_for_index_job(session, index_job_id=job.id)
+                if pipeline_run is not None:
+                    recorder = VoyageEmbedRecorderContext(
+                        pipeline_run_id=pipeline_run.id,
+                        index_job_id=job.id,
+                        request_model=captured_embedding_model,
+                        output_dimension=captured_embedding_dimensions,
+                    )
+            except SQLAlchemyError:
+                logger.warning(
+                    "pipeline_run_lookup_for_embed_recorder_failed",
+                    exc_info=True,
+                    extra={"index_job_id": str(job.id)},
+                )
             async with httpx.AsyncClient(timeout=120.0) as client:
-                embeddings = await embed_texts(client, texts)
+                embeddings = await embed_texts(
+                    client,
+                    texts,
+                    request_model=captured_embedding_model,
+                    output_dimension=captured_embedding_dimensions,
+                    recorder=recorder,
+                )
 
             if len(embeddings) != len(chunks_to_embed):
                 raise RuntimeError("embedding_count_mismatch")
@@ -645,6 +689,9 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
             reused_count=reused_count,
             new_count=new_count,
             embed_batches=embed_batches,
+            embedding_provider=captured_embedding_provider,
+            embedding_model=captured_embedding_model,
+            embedding_dimensions=captured_embedding_dimensions,
         )
         await session.flush()
         await session.refresh(job)
