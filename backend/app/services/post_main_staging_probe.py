@@ -5,7 +5,7 @@ Safe import hook only; no intentional defects. Used by chore/post-main-staging-d
 to trigger full index → review → publish cycles on revy-staging after deploy.
 """
 
-POST_MAIN_PROBE_MARKER = "post-main-dogfood-v2"
+POST_MAIN_PROBE_MARKER = "post-main-dogfood-interrupt-a"
 
 
 def post_main_probe_value() -> str:
