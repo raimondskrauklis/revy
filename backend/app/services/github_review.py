@@ -17,7 +17,10 @@ from app.constants.enums import (
     FindingCategory,
     FindingSeverity,
     GitHubIndexMode,
+    GitHubReviewRunFailureClass,
     GitHubReviewRunStatus,
+    LlmCallOperationName,
+    LlmCallStepType,
     ReviewProfile,
     stored_enum_value,
 )
@@ -56,8 +59,16 @@ from app.services.github_indexing import (
     index_job_in_progress,
     search_revision_chunks,
 )
+from app.services.github_pipeline_trace import get_pipeline_run_for_review_run
 from app.services.github_suggestion import normalize_end_line, validated_suggestion_for_row
+from app.services.llm_call_recorder import (
+    LlmAttemptFailContext,
+    LlmAttemptStartContext,
+    fail_attempt,
+    start_attempt,
+)
 from app.services.model_policy import ModelRef, resolve_model, review_profile_to_model_role
+from app.services.review_run_observability import commit_review_run_observability_checkpoint
 
 logger = get_logger(__name__)
 
@@ -671,6 +682,7 @@ async def create_review_run(
         workspace_id=workspace_id,
         status=GitHubReviewRunStatus.pending,
         profile=profile,
+        trigger_source=index_job.trigger_source,
     )
     session.add(run)
     await session.flush()
@@ -966,16 +978,48 @@ def parse_finding_rows(raw_findings: list) -> tuple[list[dict], dict]:
     }
 
 
-async def _call_llm(*, model_ref: ModelRef, profile: str, prompt: str) -> str:
+async def _call_llm(
+    *,
+    model_ref: ModelRef,
+    profile: str,
+    prompt: str,
+    recorder: LlmAttemptStartContext | None = None,
+) -> str:
     http_timeout = float(settings.revy_revision_llm_http_timeout_seconds(profile))
-    async with httpx.AsyncClient(timeout=http_timeout) as client:
-        return await llm_dispatch.call_review_llm(
-            client,
-            model_ref=model_ref,
-            profile=profile,
-            user_prompt=prompt,
-            timeout_seconds=http_timeout,
-        )
+    attempt_id = None
+    if recorder is not None:
+        attempt_id = await start_attempt(recorder)
+    started = time.monotonic()
+    try:
+        async with httpx.AsyncClient(timeout=http_timeout) as client:
+            return await llm_dispatch.call_review_llm(
+                client,
+                model_ref=model_ref,
+                profile=profile,
+                user_prompt=prompt,
+                timeout_seconds=http_timeout,
+            )
+    except httpx.TimeoutException as exc:
+        if attempt_id is not None:
+            wait_ms = int((time.monotonic() - started) * 1000)
+            await fail_attempt(
+                attempt_id,
+                context=LlmAttemptFailContext(
+                    failure_class=GitHubReviewRunFailureClass.timeout,
+                    wait_ms=wait_ms,
+                ),
+                exc=exc,
+            )
+        raise
+    except httpx.HTTPError as exc:
+        if attempt_id is not None:
+            wait_ms = int((time.monotonic() - started) * 1000)
+            await fail_attempt(
+                attempt_id,
+                context=LlmAttemptFailContext(wait_ms=wait_ms),
+                exc=exc,
+            )
+        raise
 
 
 async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> ReviewRunOutcome:
@@ -996,15 +1040,23 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> Revie
     )
     if started.rowcount == 0:
         await session.refresh(run)
-        logger.info(
-            "github_review_run_skip_non_pending",
-            extra={"review_run_id": str(review_run_id), "status": str(run.status)},
+        resuming_after_checkpoint = (
+            run.status == GitHubReviewRunStatus.processing and run.context_stats is not None
         )
-        return ReviewRunOutcome(run=run)
+        if not resuming_after_checkpoint:
+            logger.info(
+                "github_review_run_skip_non_pending",
+                extra={"review_run_id": str(review_run_id), "status": str(run.status)},
+            )
+            return ReviewRunOutcome(run=run)
+    else:
+        run.status = GitHubReviewRunStatus.processing
+        run.error_message = None
+        await session.flush()
 
-    run.status = GitHubReviewRunStatus.processing
-    run.error_message = None
-    await session.flush()
+    resuming_after_checkpoint = (
+        run.status == GitHubReviewRunStatus.processing and run.context_stats is not None
+    )
 
     revision = await session.get(GitHubPullRequestRevisionORM, run.revision_id)
     if revision is None:
@@ -1042,33 +1094,56 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> Revie
     review_started_at: float | None = None
 
     try:
-        retrieve_started = time.monotonic()
-        context_pack = await prepare_review_context(
-            session,
-            workspace_id=run.workspace_id,
-            repository_id=repository_id,
-            pull_request_id=pull_request_id,
-            revision=revision,
-            pull_request=pull_request,
-            index_job=index_job,
-        )
-        retrieve_duration_ms = int((time.monotonic() - retrieve_started) * 1000)
-        engineering_pack = context_pack.engineering_context_pack or EngineeringContextPack()
-        run.context_stats = build_context_stats(
-            engineering_pack=engineering_pack,
-            prompt_chars=len(context_pack.prompt),
-            unified_diff_bytes=context_pack.manifest.get("unified_diff_bytes", 0),
-            diff_truncated=context_pack.manifest.get("diff_truncated", False),
-            omitted_files=list(context_pack.manifest.get("omitted_files", [])),
-            diff_max_bytes=context_pack.manifest.get("diff_max_bytes"),
-        )
-        await session.flush()
-        prompt = context_pack.prompt
-        model_role = review_profile_to_model_role(_review_profile_str(run.profile))
-        model_ref = await resolve_model(session, run.workspace_id, model_role)
-        run.provider = model_ref.provider
-        run.model_id = model_ref.model_id
-        await session.flush()
+        if resuming_after_checkpoint:
+            retrieve_duration_ms = int((run.timing_stats or {}).get("retrieve_ms", 0))
+            context_pack = await prepare_review_context(
+                session,
+                workspace_id=run.workspace_id,
+                repository_id=repository_id,
+                pull_request_id=pull_request_id,
+                revision=revision,
+                pull_request=pull_request,
+                index_job=index_job,
+            )
+            prompt = context_pack.prompt
+            model_role = review_profile_to_model_role(_review_profile_str(run.profile))
+            model_ref = await resolve_model(session, run.workspace_id, model_role)
+        else:
+            retrieve_started = time.monotonic()
+            context_pack = await prepare_review_context(
+                session,
+                workspace_id=run.workspace_id,
+                repository_id=repository_id,
+                pull_request_id=pull_request_id,
+                revision=revision,
+                pull_request=pull_request,
+                index_job=index_job,
+            )
+            retrieve_duration_ms = int((time.monotonic() - retrieve_started) * 1000)
+            engineering_pack = context_pack.engineering_context_pack or EngineeringContextPack()
+            run.context_stats = build_context_stats(
+                engineering_pack=engineering_pack,
+                prompt_chars=len(context_pack.prompt),
+                unified_diff_bytes=context_pack.manifest.get("unified_diff_bytes", 0),
+                diff_truncated=context_pack.manifest.get("diff_truncated", False),
+                omitted_files=list(context_pack.manifest.get("omitted_files", [])),
+                diff_max_bytes=context_pack.manifest.get("diff_max_bytes"),
+            )
+            await session.flush()
+            prompt = context_pack.prompt
+            model_role = review_profile_to_model_role(_review_profile_str(run.profile))
+            model_ref = await resolve_model(session, run.workspace_id, model_role)
+            run.provider = model_ref.provider
+            run.model_id = model_ref.model_id
+            await session.flush()
+
+            await commit_review_run_observability_checkpoint(
+                session,
+                run,
+                retrieve_duration_ms=retrieve_duration_ms,
+            )
+
+        pipeline_run = await get_pipeline_run_for_review_run(session, review_run_id=run.id)
 
         review_duration_ms = 0
         raw_json: str | None = None
@@ -1084,10 +1159,23 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> Revie
                     },
                 )
             attempt_started = time.monotonic()
+            recorder = None
+            if pipeline_run is not None:
+                recorder = LlmAttemptStartContext(
+                    pipeline_run_id=pipeline_run.id,
+                    review_run_id=run.id,
+                    index_job_id=None,
+                    step_type=LlmCallStepType.review,
+                    operation_name=LlmCallOperationName.chat,
+                    attempt_no=attempt,
+                    provider=model_ref.provider,
+                    request_model=model_ref.model_id,
+                )
             raw_json = await _call_llm(
                 model_ref=model_ref,
                 profile=_review_profile_str(run.profile),
                 prompt=prompt,
+                recorder=recorder,
             )
             review_duration_ms += int((time.monotonic() - attempt_started) * 1000)
             try:

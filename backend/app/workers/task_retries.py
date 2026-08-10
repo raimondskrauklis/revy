@@ -18,7 +18,7 @@ def run_with_retryable_failure(
     *,
     max_retries: int,
     run: Callable[[], Awaitable[T]],
-    mark_permanent_failure: Callable[[str], Awaitable[None]],
+    mark_permanent_failure: Callable[..., Awaitable[None]],
     log_context: dict[str, object],
     logger: object,
     base_seconds: int = 60,
@@ -41,5 +41,5 @@ def run_with_retryable_failure(
             "pipeline_task_failed",
             extra={**log_context, "error": str(exc), "retries": task.request.retries},
         )
-        run_worker_async(mark_permanent_failure(str(exc)))
+        run_worker_async(mark_permanent_failure(str(exc), exc))
         raise

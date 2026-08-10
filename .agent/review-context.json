@@ -1,21 +1,21 @@
 {
-  "active_program": "pr-summary-rollup",
+  "active_program": "pipeline-observability",
   "programs": [
     {
-      "id": "pr-summary-rollup",
+      "id": "pipeline-observability",
       "scope": ["backend/**"],
       "paths": [
         {
-          "path": "docs/review-pipeline/pr-summary-rollup/waves/PR_SUMMARY_ROLLUP_P4_EXECUTION.md",
-          "description": "PSR P4 execution — lifetime readability scan + details"
+          "path": "docs/review-pipeline/pipeline-observability/waves/PIPELINE_OBSERVABILITY_P0_EXECUTION.md",
+          "description": "Pipeline observability P0 — schema, recorder, commit graph"
         },
         {
-          "path": "docs/review-pipeline/pr-summary-rollup/PR_SUMMARY_ROLLUP_P4_READABILITY_FINDINGS.md",
-          "description": "PSR P4 baseline — PSR-Q11–Q18, splice boundary, #501 dogfood"
+          "path": "docs/review-pipeline/pipeline-observability/PIPELINE_OBSERVABILITY_FINDINGS.md",
+          "description": "Pipeline observability baseline — PO-Q1–Q19, commit graph"
         },
         {
-          "path": "docs/review-pipeline/pr-summary-rollup/PR_SUMMARY_ROLLUP_GENERAL_PLAN.md",
-          "description": "PSR general plan — P0–P4 phases"
+          "path": "docs/review-pipeline/pipeline-observability/PIPELINE_OBSERVABILITY_GENERAL_PLAN.md",
+          "description": "Pipeline observability general plan — P0–P5"
         }
       ]
     }

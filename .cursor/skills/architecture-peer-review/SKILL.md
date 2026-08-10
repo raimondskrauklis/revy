@@ -18,7 +18,7 @@ Read-only review of **one** baseline doc set (findings + general plan, or a stan
 - Create or update files under `<plan-folder>/reviews/architecture-peer-review/`
 - Add or update **one index row/link** in `<plan-folder>/README.md` pointing at `reviews/architecture-peer-review/README.md` (no other plan-folder README edits)
 
-**Sibling:** `execution-peer-review` — execution file set after `create-execution-plan` (mirror layout: `reviews/execution-peer-review/` when that skill writes artifacts).
+**Sibling:** `execution-peer-review` — execution file set after `create-execution-plan` (mirror layout: `reviews/execution-peer-review/`).
 
 ---
 

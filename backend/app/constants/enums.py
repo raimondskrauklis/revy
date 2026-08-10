@@ -258,3 +258,32 @@ class GitHubPublishJobStatus(str, Enum):
     failed = "failed"
     skipped_not_head = "skipped_not_head"
     skipped_superseded = "skipped_superseded"
+
+
+class GitHubReviewRunFailureClass(str, Enum):
+    """github_review_runs.failure_class + github_llm_call_attempts.failure_class."""
+
+    timeout = "timeout"
+    rate_limit = "rate_limit"
+    provider_error = "provider_error"
+    truncated = "truncated"
+    parse_error = "parse_error"
+    context_length = "context_length"
+    celery_soft_limit = "celery_soft_limit"
+    superseded = "superseded"
+
+
+class LlmCallStepType(str, Enum):
+    """github_llm_call_attempts.step_type — pipeline observability."""
+
+    review = "review"
+    judge = "judge"
+    publish = "publish"
+    index_embed = "index_embed"
+
+
+class LlmCallOperationName(str, Enum):
+    """github_llm_call_attempts.operation_name — OTel gen_ai.operation.name."""
+
+    chat = "chat"
+    embeddings = "embeddings"
