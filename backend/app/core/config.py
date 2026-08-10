@@ -178,6 +178,8 @@ class Settings(BaseSettings):
     revy_revision_timeout_standard_seconds: int = 900
     revy_revision_timeout_deep_seconds: int = 1500
     revy_revision_timeout_critical_seconds: int = 1800
+    # HTTP client timeout buffer — finish LLM calls before Celery soft_time_limit fires.
+    revy_revision_celery_timeout_buffer_seconds: int = 60
 
     # Review prompt caps — RCX engineering context (wired in github_review P2)
     revy_diff_max_bytes: int = 524288
@@ -318,6 +320,12 @@ class Settings(BaseSettings):
         if normalized == "critical":
             return self.revy_revision_timeout_critical_seconds
         return self.revy_revision_timeout_standard_seconds
+
+    def revy_revision_llm_http_timeout_seconds(self, profile: str) -> int:
+        """LLM HTTP timeout — strictly below Celery soft_time_limit for the same profile."""
+        task_timeout = self.revy_revision_timeout_seconds(profile)
+        buffer_seconds = max(0, self.revy_revision_celery_timeout_buffer_seconds)
+        return max(60, task_timeout - buffer_seconds)
 
     def revy_moonshot_model_for_profile(self, profile: str) -> str:
         normalized = (profile or self.revy_default_review_profile).strip().lower()

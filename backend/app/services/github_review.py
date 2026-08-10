@@ -968,14 +968,14 @@ def parse_finding_rows(raw_findings: list) -> tuple[list[dict], dict]:
 
 
 async def _call_llm(*, model_ref: ModelRef, profile: str, prompt: str) -> str:
-    timeout = float(settings.revy_revision_timeout_seconds(profile))
-    async with httpx.AsyncClient(timeout=timeout) as client:
+    http_timeout = float(settings.revy_revision_llm_http_timeout_seconds(profile))
+    async with httpx.AsyncClient(timeout=http_timeout) as client:
         return await llm_dispatch.call_review_llm(
             client,
             model_ref=model_ref,
             profile=profile,
             user_prompt=prompt,
-            timeout_seconds=timeout,
+            timeout_seconds=http_timeout,
         )
 
 

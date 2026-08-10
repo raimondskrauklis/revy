@@ -45,7 +45,7 @@ async def test_complete_review_returns_content():
         mock_settings.moonshot_api_key = "test-key"
         mock_settings.revy_moonshot_model_for_profile.return_value = "kimi-k2.7-code"
         mock_settings.revy_moonshot_max_completion_tokens = 32768
-        mock_settings.revy_revision_timeout_seconds.return_value = 60.0
+        mock_settings.revy_revision_llm_http_timeout_seconds.return_value = 60.0
         content = await complete_review(client, profile="standard", user_prompt="review")
 
     assert json.loads(content)["findings"] == []
@@ -193,7 +193,7 @@ async def test_complete_issue_comment_markdown_uses_issue_comment_system_prompt(
         mock_settings.moonshot_api_key = "test-key"
         mock_settings.revy_moonshot_model_for_profile.return_value = "kimi-k2.7-code"
         mock_settings.revy_moonshot_max_completion_tokens = 32768
-        mock_settings.revy_revision_timeout_seconds.return_value = 60.0
+        mock_settings.revy_revision_llm_http_timeout_seconds.return_value = 60.0
         await complete_issue_comment_markdown(
             client,
             profile="standard",
@@ -222,7 +222,7 @@ async def test_complete_issue_comment_markdown_returns_markdown_without_json_for
         mock_settings.moonshot_api_key = "test-key"
         mock_settings.revy_moonshot_model_for_profile.return_value = "kimi-k2.7-code"
         mock_settings.revy_moonshot_max_completion_tokens = 32768
-        mock_settings.revy_revision_timeout_seconds.return_value = 60.0
+        mock_settings.revy_revision_llm_http_timeout_seconds.return_value = 60.0
         content = await complete_issue_comment_markdown(
             client,
             profile="standard",
