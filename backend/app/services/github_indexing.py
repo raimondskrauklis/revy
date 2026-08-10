@@ -617,6 +617,7 @@ async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubI
             captured_embedding_provider = "voyage"
             captured_embedding_model = settings.revy_embedding_model
             captured_embedding_dimensions = settings.revy_embedding_dimensions
+            # Lazy import: github_pipeline_trace imports ensure_revision_access from this module.
             from app.services.github_pipeline_trace import get_pipeline_run_for_index_job
 
             pipeline_run = await get_pipeline_run_for_index_job(session, index_job_id=job.id)

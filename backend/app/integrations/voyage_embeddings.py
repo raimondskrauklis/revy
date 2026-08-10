@@ -249,7 +249,7 @@ async def embed_texts(
                     exc=exc,
                 )
             raise
-        except (ValueError, RuntimeError) as exc:
+        except (ValueError, RuntimeError, OSError) as exc:
             if attempt_id is not None:
                 await try_fail_attempt(
                     attempt_id,

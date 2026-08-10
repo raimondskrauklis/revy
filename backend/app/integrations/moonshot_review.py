@@ -299,6 +299,17 @@ async def _complete_chat(
                 exc=exc,
             )
         raise
+    except (ValueError, OSError) as exc:
+        if attempt_id is not None:
+            await try_fail_attempt(
+                attempt_id,
+                context=LlmAttemptFailContext(
+                    failure_class=GitHubReviewRunFailureClass.parse_error,
+                    wait_ms=int((time.monotonic() - attempt_started) * 1000),
+                ),
+                exc=exc,
+            )
+        raise
 
 
 async def complete_review(
