@@ -1673,7 +1673,7 @@ async def build_pr_review_comment(ctx: PublishFormatContext) -> tuple[str, str |
     def _publish_model_fields() -> tuple[str | None, str | None]:
         if recorder is None:
             return None, None
-        return "moonshot", model_id
+        return recorder.provider, model_id
 
     try:
         async with httpx.AsyncClient(

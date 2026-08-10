@@ -450,7 +450,10 @@ async def record_review_run_judge_status(
     review_run_id: UUID,
     artifacts_out: list[JudgeCandidateArtifact] | None = None,
 ) -> tuple[int, ModelRef | None]:
-    """Count escalation candidates, persist judge status, run judge when applicable."""
+    """Count escalation candidates, persist judge status, run judge when applicable.
+
+    Returns ``(judged_count, model_ref)`` where ``model_ref`` is set when the judge LLM ran.
+    """
     run, candidates = await _load_judge_candidates(session, review_run_id=review_run_id)
     if run is None:
         return 0, None
