@@ -166,3 +166,42 @@ async def test_call_llm_timeout_records_failed_attempt():
     fail_mock.assert_awaited_once()
     fail_context = fail_mock.await_args.kwargs["context"]
     assert fail_context.failure_class == GitHubReviewRunFailureClass.timeout
+
+
+@pytest.mark.asyncio
+async def test_call_llm_http_status_error_records_status():
+    model_ref = ModelRef(provider="moonshot", model_id="kimi-k2.7-code")
+    recorder = LlmAttemptStartContext(
+        pipeline_run_id=uuid.uuid4(),
+        review_run_id=uuid.uuid4(),
+        index_job_id=None,
+        step_type=LlmCallStepType.review,
+        operation_name=LlmCallOperationName.chat,
+        attempt_no=0,
+        provider="moonshot",
+        request_model="kimi-k2.7-code",
+    )
+    request = httpx.Request("POST", "https://api.example.com/v1/chat")
+    response = httpx.Response(429, request=request)
+    status_exc = httpx.HTTPStatusError("rate limited", request=request, response=response)
+
+    with patch(
+        "app.services.github_review.start_attempt",
+        AsyncMock(return_value=uuid.uuid4()),
+    ):
+        with patch("app.services.github_review.fail_attempt", AsyncMock()) as fail_mock:
+            with patch(
+                "app.services.github_review.llm_dispatch.call_review_llm",
+                AsyncMock(side_effect=status_exc),
+            ):
+                with patch("app.services.github_review.settings") as settings_mock:
+                    settings_mock.revy_revision_llm_http_timeout_seconds.return_value = 60
+                    with pytest.raises(httpx.HTTPStatusError):
+                        await github_review._call_llm(
+                            model_ref=model_ref,
+                            profile="standard",
+                            prompt="hello",
+                            recorder=recorder,
+                        )
+    fail_context = fail_mock.await_args.kwargs["context"]
+    assert fail_context.http_status == 429

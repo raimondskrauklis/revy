@@ -683,7 +683,7 @@ async def create_review_run(
         workspace_id=workspace_id,
         status=GitHubReviewRunStatus.pending,
         profile=profile,
-        trigger_source=index_job.trigger_source,
+        trigger_source=index_job.trigger_source if index_job is not None else None,
     )
     session.add(run)
     await session.flush()
@@ -1015,9 +1015,17 @@ async def _call_llm(
     except httpx.HTTPError as exc:
         if attempt_id is not None:
             wait_ms = int((time.monotonic() - started) * 1000)
+            http_status = (
+                exc.response.status_code
+                if isinstance(exc, httpx.HTTPStatusError) and exc.response is not None
+                else None
+            )
             await fail_attempt(
                 attempt_id,
-                context=LlmAttemptFailContext(wait_ms=wait_ms),
+                context=LlmAttemptFailContext(
+                    wait_ms=wait_ms,
+                    http_status=http_status,
+                ),
                 exc=exc,
             )
         raise

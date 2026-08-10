@@ -2,7 +2,6 @@
 """Pipeline observability P0 — LlmCallRecorder."""
 import uuid
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -21,6 +20,7 @@ from app.services.llm_call_recorder import (
     next_review_llm_attempt_no,
     start_attempt,
 )
+
 
 @pytest.mark.asyncio
 async def test_start_attempt_uses_dedicated_session():
