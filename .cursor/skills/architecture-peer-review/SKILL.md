@@ -73,8 +73,10 @@ Older programs may have a single `<TOPIC>_PEER_REVIEW.md` at plan-folder root (e
 ### Pass file naming
 
 - First pass: `pass-01-YYYY-MM-DD.md` (today’s date).
-- Each **full** re-review: **new** file, increment pass (`pass-02-…`). Never overwrite a prior pass file.
-- **Delta** re-review: append `## Delta re-review` to the **latest** pass file **or** create `pass-NN-YYYY-MM-DD-delta.md` if the delta is large. Always **refresh** SSOT gates together: pass file top-level `## Verdict` / **BLOCK**, reviews `README.md` status line, **and** the pass index table columns (`Critical`, `High`, `Block next step`). Do not leave a stale BLOCK: yes anywhere in those surfaces.
+- Each **full** re-review: **new** file, increment pass (`pass-02-…`). **Never overwrite or append to a prior pass file** — each file is an immutable snapshot.
+- **Delta** re-review: always create a **new** file `pass-NN-YYYY-MM-DD-delta.md` (same `NN` as the pass being delta’d, or next unused `NN` if multiple deltas that day). Link prior pass under `## Prior pass`. Put the updated `## Verdict` / **BLOCK**, rollup, and scoped section outcomes in the **new** file only.
+- **Spot** re-review: same as delta — **new** `pass-NN-YYYY-MM-DD-spot.md` (or `-delta.md` if the user called it a delta); never mutate the prior pass file.
+- After any re-review: update reviews `README.md` status line **and** the pass index table columns (`Critical`, `High`, `Block next step`) to point at the **latest** file. Do not leave a stale BLOCK: yes on the index.
 
 ### `README.md` index (update every pass)
 
@@ -147,15 +149,15 @@ Link to pass N-1 if re-review; note what the fix agent was asked to address.
 | Mode | When | What to read | Output |
 |------|------|--------------|--------|
 | **Full** | First review, or user says “full re-review” | Findings + general plan (+ linked specs) | New `pass-NN-…md` |
-| **Delta** | User says “re-review after fixes” | Changed sections + prior pass | Delta section or new delta file |
-| **Spot** | User names one general-plan phase | That `## Pn` block only | Subsection under latest pass |
+| **Delta** | User says “re-review after fixes” | Changed sections + prior pass | New `pass-NN-…-delta.md` (never append to prior) |
+| **Spot** | User names one general-plan phase | That `## Pn` block only | New `pass-NN-…-spot.md` (never append to prior) |
 
 **Delta / spot rules:**
 
-- Re-read prior pass findings for scoped sections; mark each **resolved / open / new**.
+- Re-read prior pass findings for scoped sections; mark each **resolved / open / new** in the **new** file.
 - Do not re-copy unchanged clean sections verbatim — one line `**Pn — no new gaps** (verified unchanged).`
 - If a “fixed” item is still broken, escalate severity.
-- After delta **or** spot: refresh pass `## Verdict` / **BLOCK**, `## Rollup (critical / high)` (and mark resolved/open/new in touched per-section tables), reviews `README.md` status line, and pass index table counts/block column so SSOT matches the latest gate.
+- Put fresh `## Verdict` / **BLOCK** and `## Rollup (critical / high)` in the new file; update reviews `README.md` status line and pass index table to the latest file. Leave prior pass files untouched.
 
 **Iteration loop (typical):**
 
