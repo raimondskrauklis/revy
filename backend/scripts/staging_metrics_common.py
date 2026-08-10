@@ -112,7 +112,7 @@ SELECT a.step_type,
        coalesce(a.request_model, '(null)') AS request_model,
        count(*)::int AS n
 FROM github_llm_call_attempts a
-JOIN github_pipeline_runs pr ON pr.id = a.pipeline_run_id
+LEFT JOIN github_pipeline_runs pr ON pr.id = a.pipeline_run_id
 JOIN github_pull_request_revisions rev ON rev.id = pr.revision_id
 JOIN github_pull_requests gp ON gp.id = rev.pull_request_id
 JOIN github_repositories repo ON repo.id = gp.repository_id

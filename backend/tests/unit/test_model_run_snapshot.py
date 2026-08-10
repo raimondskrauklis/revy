@@ -346,6 +346,19 @@ async def test_persist_models_snapshot_writes_pipeline_run():
 
 
 @pytest.mark.asyncio
+async def test_try_persist_models_snapshot_swallows_type_error():
+    nested = MagicMock()
+    nested.__aenter__ = AsyncMock(return_value=None)
+    nested.__aexit__ = AsyncMock(return_value=None)
+
+    session = AsyncMock()
+    session.begin_nested = MagicMock(return_value=nested)
+    session.scalar = AsyncMock(side_effect=TypeError("unexpected orm state"))
+
+    await try_persist_models_snapshot(session, pipeline_run_id=uuid4())
+
+
+@pytest.mark.asyncio
 async def test_try_persist_models_snapshot_swallows_write_error():
     nested = MagicMock()
     nested.__aenter__ = AsyncMock(return_value=None)
