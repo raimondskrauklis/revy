@@ -1095,8 +1095,7 @@ async def _finalize_pipeline_github_check(
     summary: str,
     conclusion: Literal["failure", "neutral"],
 ) -> None:
-    if conclusion == "neutral":
-        await session.flush()
+    await session.flush()
     await try_persist_models_snapshot(session, pipeline_run_id=pipeline_run_id)
     check_run_id = await resolve_pipeline_github_check_run_id(session, pipeline_run_id=pipeline_run_id)
     if check_run_id is None or not settings.github_api_enabled:
