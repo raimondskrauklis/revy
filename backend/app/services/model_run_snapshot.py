@@ -7,7 +7,6 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -225,7 +224,6 @@ async def persist_models_snapshot(
     pipeline_run_id: UUID,
 ) -> dict[str, Any] | None:
     """Write `github_pipeline_runs.models_snapshot` from completed pipeline steps."""
-    await session.flush()
     return await _write_models_snapshot(session, pipeline_run_id=pipeline_run_id)
 
 
@@ -268,11 +266,10 @@ async def try_persist_models_snapshot(
     pipeline_run_id: UUID,
 ) -> None:
     """Best-effort snapshot write — must not block terminal pipeline hooks."""
-    await session.flush()
     try:
         async with session.begin_nested():
             await _write_models_snapshot(session, pipeline_run_id=pipeline_run_id)
-    except SQLAlchemyError:
+    except Exception:
         logger.warning(
             "models_snapshot_persist_failed",
             exc_info=True,

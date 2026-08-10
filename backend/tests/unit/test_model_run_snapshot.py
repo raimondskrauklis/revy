@@ -277,8 +277,7 @@ async def test_persist_models_snapshot_writes_pipeline_run():
     assert snapshot["embedding"]["model_id"] == "voyage-code-3.5"
     assert snapshot["reviewer"]["model_id"] == "kimi-k2.7-code"
     assert pipeline_run.models_snapshot == snapshot
-    session.flush.assert_awaited()
-    assert session.flush.await_count == 2
+    session.flush.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -288,10 +287,7 @@ async def test_try_persist_models_snapshot_swallows_write_error():
     nested.__aexit__ = AsyncMock(return_value=None)
 
     session = AsyncMock()
-    session.flush = AsyncMock()
     session.begin_nested = MagicMock(return_value=nested)
     session.scalar = AsyncMock(side_effect=SQLAlchemyError("write failed"))
 
     await try_persist_models_snapshot(session, pipeline_run_id=uuid4())
-
-    session.flush.assert_awaited_once()

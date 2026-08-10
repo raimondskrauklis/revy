@@ -906,6 +906,7 @@ async def record_publish_pipeline_step(
             kind=PipelineArtifactKind.manifest,
             content_json=manifest_payload,
         )
+    await session.flush()
     await try_persist_models_snapshot(session, pipeline_run_id=pipeline_run_id)
 
 
