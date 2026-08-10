@@ -26,7 +26,7 @@
 
 | PR | Branch | Status |
 |----|--------|--------|
-| TBD | `chore/mrc-staging-dogfood` | not opened — probe marker `post-main-dogfood-v6-mrc-model-capture` |
+| [#97](https://github.com/raimondskrauklis/revy/pull/97) | `chore/mrc-staging-dogfood` | push 1 open — probe `post-main-dogfood-v6-mrc-model-capture` |
 
 **Protocol:** One `backend/**` touch per push (probe import in `post_main_staging_probe.py`). Push 1 introduces marker; push 2 exercises full index → review → publish with new chunks (embed HTTP required).
 
@@ -36,7 +36,7 @@
 
 | Push | Intent | Status |
 |------|--------|--------|
-| 1 | Introduce probe v6 + autostart | pending |
+| 1 | Introduce probe v6 + autostart | **open** — [#97](https://github.com/raimondskrauklis/revy/pull/97) |
 | 2 | Full pipeline with embed — MRC gate | pending |
 
 ---
