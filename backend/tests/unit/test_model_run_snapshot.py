@@ -2,12 +2,12 @@
 """Model run snapshot builder and terminal writer — MRC-P2."""
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
-from datetime import UTC, datetime
-
 import pytest
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.constants.enums import PipelineArtifactKind, PipelineStepStatus, PipelineStepType
 from app.services.model_run_snapshot import (
@@ -15,6 +15,7 @@ from app.services.model_run_snapshot import (
     StepSnapshotInput,
     build_models_snapshot,
     persist_models_snapshot,
+    try_persist_models_snapshot,
 )
 
 
@@ -278,3 +279,19 @@ async def test_persist_models_snapshot_writes_pipeline_run():
     assert pipeline_run.models_snapshot == snapshot
     session.flush.assert_awaited()
     assert session.flush.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_try_persist_models_snapshot_swallows_write_error():
+    nested = MagicMock()
+    nested.__aenter__ = AsyncMock(return_value=None)
+    nested.__aexit__ = AsyncMock(return_value=None)
+
+    session = AsyncMock()
+    session.flush = AsyncMock()
+    session.begin_nested = MagicMock(return_value=nested)
+    session.scalar = AsyncMock(side_effect=SQLAlchemyError("write failed"))
+
+    await try_persist_models_snapshot(session, pipeline_run_id=uuid4())
+
+    session.flush.assert_awaited_once()
