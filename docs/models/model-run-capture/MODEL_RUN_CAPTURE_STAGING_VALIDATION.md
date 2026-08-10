@@ -104,6 +104,6 @@ DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.generation_lifecycle_stagin
 | PO P0 (parallel) | **PASS** | 2 runs, 4 attempt rows in review-scoped PO query |
 | RG-15 (parallel) | **PASS** | no stuck processing |
 
-**Verdict:** **MRC-P0 + P1 embed sign-off PASS** for #96 on staging. Resume MRC-P2.2 (`build_models_snapshot` + terminal writer) on `main`.
+**Verdict:** **MRC-P0 + P1 embed sign-off PASS** for #96 on staging. MRC-P2.2–P2.4 shipped in follow-up PR — re-run `--mrc-gate` after deploy for `models_snapshot` population.
 
 **Gate note:** `--mrc-gate` exits 1 on judge/publish step checks when judge is skipped or publish uses fallback — treat embed + P0 checks as primary sign-off until gate logic distinguishes skip/fallback paths.

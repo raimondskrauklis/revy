@@ -22,7 +22,7 @@
 |-------|--------|------|--------|
 | MRC-P0 | Index manifest + step embedding identity | [P0](./MODEL_RUN_CAPTURE_P0_EXECUTION.md) | shipped |
 | MRC-P1 | Attempt rows + judge/publish step models | [P1](./MODEL_RUN_CAPTURE_P1_EXECUTION.md) | shipped |
-| MRC-P2 | `models_snapshot` + staging metrics by model | [P2](./MODEL_RUN_CAPTURE_P2_EXECUTION.md) | in progress (P2.1 shipped) |
+| MRC-P2 | `models_snapshot` + staging metrics by model | [P2](./MODEL_RUN_CAPTURE_P2_EXECUTION.md) | shipped (P2.2–P2.4) |
 | MRC-P3 | API exposure + staging sign-off | [P3](./MODEL_RUN_CAPTURE_P3_EXECUTION.md) | pending |
 
 **Staging validation:** [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](../MODEL_RUN_CAPTURE_STAGING_VALIDATION.md) — post-#96 deploy dogfood PR (#96 does not self-validate).

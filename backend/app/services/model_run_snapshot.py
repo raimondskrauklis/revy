@@ -1,0 +1,207 @@
+# backend/app/services/model_run_snapshot.py
+"""Terminal pipeline model snapshot — model-run-capture MRC-P2."""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+from uuid import UUID
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from app.constants.enums import (
+    PipelineArtifactKind,
+    PipelineStepStatus,
+    PipelineStepType,
+    stored_enum_value,
+)
+from app.models.github_llm_call_attempt import GitHubLlmCallAttemptORM
+from app.models.github_pipeline import (
+    GitHubPipelineRunORM,
+    GitHubPipelineStepORM,
+)
+
+_SNAPSHOT_ROLE_BY_STEP: dict[PipelineStepType, str] = {
+    PipelineStepType.index: "embedding",
+    PipelineStepType.review: "reviewer",
+    PipelineStepType.judge: "judge",
+    PipelineStepType.publish: "publish",
+}
+_ATTEMPT_STEP_BY_ROLE: dict[str, str] = {
+    "embedding": "index_embed",
+    "reviewer": "review",
+    "judge": "judge",
+    "publish": "publish",
+}
+
+
+@dataclass(frozen=True, slots=True)
+class AttemptSnapshotInput:
+    step_type: str
+    provider: str | None
+    request_model: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class StepSnapshotInput:
+    step_type: str
+    status: str
+    model_provider: str | None
+    model_id: str | None
+    manifest: dict[str, Any] | None = None
+
+
+def _model_entry(
+    *,
+    provider: str | None,
+    model_id: str | None,
+    dimensions: int | None = None,
+) -> dict[str, Any] | None:
+    if not provider or not model_id:
+        return None
+    entry: dict[str, Any] = {"provider": provider, "model_id": model_id}
+    if dimensions is not None:
+        entry["dimensions"] = dimensions
+    return entry
+
+
+def _embedding_from_index(step: StepSnapshotInput) -> dict[str, Any] | None:
+    manifest = step.manifest or {}
+    if manifest.get("embedding_skipped_reason"):
+        return None
+    embed_batches = manifest.get("embed_batches", 0)
+    embedding_model = manifest.get("embedding_model")
+    if embed_batches == 0 and not embedding_model:
+        return None
+    provider = manifest.get("embedding_provider") or step.model_provider
+    model_id = embedding_model or step.model_id
+    dimensions = manifest.get("embedding_dimensions")
+    parsed_dimensions = dimensions if isinstance(dimensions, int) else None
+    return _model_entry(
+        provider=provider if isinstance(provider, str) else None,
+        model_id=model_id if isinstance(model_id, str) else None,
+        dimensions=parsed_dimensions,
+    )
+
+
+def _role_entry_from_step(role: str, step: StepSnapshotInput) -> dict[str, Any] | None:
+    if role == "embedding":
+        return _embedding_from_index(step)
+    return _model_entry(provider=step.model_provider, model_id=step.model_id)
+
+
+def _attempt_fallback(
+    attempts: list[AttemptSnapshotInput],
+    *,
+    role: str,
+) -> dict[str, Any] | None:
+    attempt_step_type = _ATTEMPT_STEP_BY_ROLE.get(role, role)
+    for attempt in attempts:
+        if attempt.step_type != attempt_step_type:
+            continue
+        entry = _model_entry(
+            provider=attempt.provider,
+            model_id=attempt.request_model,
+        )
+        if entry is not None:
+            return entry
+    return None
+
+
+def build_models_snapshot(
+    steps: list[StepSnapshotInput],
+    *,
+    attempts: list[AttemptSnapshotInput] | None = None,
+) -> dict[str, Any]:
+    """Build terminal models snapshot from pipeline steps and optional attempt fallbacks."""
+    attempt_rows = attempts or []
+    snapshot: dict[str, Any] = {}
+    steps_by_type: dict[str, StepSnapshotInput] = {}
+    for step in steps:
+        if step.status not in (
+            PipelineStepStatus.completed.value,
+            PipelineStepStatus.failed.value,
+        ):
+            continue
+        existing = steps_by_type.get(step.step_type)
+        if existing is None:
+            steps_by_type[step.step_type] = step
+
+    for step_type, role in _SNAPSHOT_ROLE_BY_STEP.items():
+        step = steps_by_type.get(step_type.value)
+        entry: dict[str, Any] | None = None
+        if step is not None:
+            entry = _role_entry_from_step(role, step)
+        if entry is None:
+            entry = _attempt_fallback(attempt_rows, role=role)
+        if entry is not None:
+            snapshot[role] = entry
+    return snapshot
+
+
+def _step_manifest(step: GitHubPipelineStepORM) -> dict[str, Any] | None:
+    for artifact in step.artifacts:
+        if artifact.kind != PipelineArtifactKind.manifest:
+            continue
+        if isinstance(artifact.content_json, dict):
+            return artifact.content_json
+    return None
+
+
+def _step_inputs(steps: list[GitHubPipelineStepORM]) -> list[StepSnapshotInput]:
+    return [
+        StepSnapshotInput(
+            step_type=stored_enum_value(step.step_type),
+            status=stored_enum_value(step.status),
+            model_provider=step.model_provider,
+            model_id=step.model_id,
+            manifest=_step_manifest(step),
+        )
+        for step in steps
+    ]
+
+
+def _attempt_inputs(attempts: list[GitHubLlmCallAttemptORM]) -> list[AttemptSnapshotInput]:
+    return [
+        AttemptSnapshotInput(
+            step_type=stored_enum_value(attempt.step_type),
+            provider=attempt.provider,
+            request_model=attempt.request_model,
+        )
+        for attempt in attempts
+    ]
+
+
+async def persist_models_snapshot(
+    session: AsyncSession,
+    *,
+    pipeline_run_id: UUID,
+) -> dict[str, Any] | None:
+    """Write `github_pipeline_runs.models_snapshot` from completed pipeline steps."""
+    pipeline_run = await session.scalar(
+        select(GitHubPipelineRunORM)
+        .where(GitHubPipelineRunORM.id == pipeline_run_id)
+        .options(
+            selectinload(GitHubPipelineRunORM.steps).selectinload(
+                GitHubPipelineStepORM.artifacts
+            ),
+        )
+    )
+    if pipeline_run is None:
+        return None
+
+    attempt_rows = list(
+        await session.scalars(
+            select(GitHubLlmCallAttemptORM).where(
+                GitHubLlmCallAttemptORM.pipeline_run_id == pipeline_run_id,
+            )
+        )
+    )
+    snapshot = build_models_snapshot(
+        _step_inputs(list(pipeline_run.steps)),
+        attempts=_attempt_inputs(attempt_rows),
+    )
+    pipeline_run.models_snapshot = snapshot or None
+    await session.flush()
+    return snapshot
