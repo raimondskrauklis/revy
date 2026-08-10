@@ -48,7 +48,6 @@ from app.schemas.github_pipeline import (
 from app.services.github_indexing import ensure_revision_access
 from app.services.github_pipeline_run_lookup import (
     get_pipeline_run_for_index_job,
-    get_pipeline_runs_for_index_jobs,
 )
 
 logger = get_logger(__name__)
