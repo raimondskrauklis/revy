@@ -6,3 +6,11 @@ queued GitHub check UX + overlap supersede protocol.
 """
 
 POST_MAIN_PROBE_MARKER = "post-main-dogfood-v4-queued-check"
+
+
+def post_main_probe_value() -> str:
+    return POST_MAIN_PROBE_MARKER
+
+
+def post_main_probe_composed() -> str:
+    return POST_MAIN_PROBE_MARKER
