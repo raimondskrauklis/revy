@@ -48,10 +48,10 @@ async def test_embed_model_parity_manifest_matches_attempt_request_model():
         mock_settings.revy_embedding_model = model
         mock_settings.revy_embedding_dimensions = 1024
         with patch(
-            "app.integrations.voyage_embeddings.start_attempt",
+            "app.integrations.voyage_embeddings.try_start_attempt",
             side_effect=_capture_start,
         ):
-            with patch("app.integrations.voyage_embeddings.complete_attempt", AsyncMock()):
+            with patch("app.integrations.voyage_embeddings.try_complete_attempt", AsyncMock()):
                 await embed_texts(client, ["x"], request_model=model, recorder=recorder)
 
     assert captured_request_model == model

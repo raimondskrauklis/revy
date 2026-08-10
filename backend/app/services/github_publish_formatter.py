@@ -1649,7 +1649,9 @@ def _build_issue_comment_user_prompt(ctx: PublishFormatContext) -> str:
     return prompt
 
 
-async def build_pr_review_comment(ctx: PublishFormatContext) -> tuple[str, str | None, str | None]:
+async def build_pr_review_comment_with_model(
+    ctx: PublishFormatContext,
+) -> tuple[str, str | None, str | None]:
     """Returns markdown and optional publish model provider/id when Moonshot runs."""
     fallback = build_pr_review_comment_fallback(ctx)
     if not settings.reviewer_llm_enabled():
@@ -1722,6 +1724,12 @@ async def build_pr_review_comment(ctx: PublishFormatContext) -> tuple[str, str |
     return fallback, *_publish_model_fields()
 
 
+async def build_pr_review_comment(ctx: PublishFormatContext) -> str:
+    """Backward-compatible wrapper — returns issue comment markdown only."""
+    markdown, _, _ = await build_pr_review_comment_with_model(ctx)
+    return markdown
+
+
 def _build_summary_json(ctx: PublishFormatContext) -> dict:
     verdict = verdict_groups(ctx)
     confidence = compute_publish_confidence(ctx)
@@ -1760,7 +1768,7 @@ def build_publish_format_result(ctx: PublishFormatContext) -> PublishFormatResul
 
 async def build_publish_format_result_async(ctx: PublishFormatContext) -> PublishFormatResult:
     check_summary = build_check_run_summary(ctx)
-    issue_comment, publish_provider, publish_model_id = await build_pr_review_comment(ctx)
+    issue_comment, publish_provider, publish_model_id = await build_pr_review_comment_with_model(ctx)
     summary_json = _build_summary_json(ctx)
     return PublishFormatResult(
         check_summary=check_summary,

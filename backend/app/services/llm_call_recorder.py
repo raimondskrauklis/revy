@@ -16,9 +16,12 @@ from app.constants.enums import (
     LlmCallStepType,
 )
 from app.core.database import get_db_context
+from app.core.logging import get_logger
 from app.models.base import utc_now
 from app.models.github_llm_call_attempt import GitHubLlmCallAttemptORM
 from app.services.observability_failure import classify_failure_class
+
+logger = get_logger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,6 +81,37 @@ async def start_attempt(context: LlmAttemptStartContext) -> UUID:
         session.add(row)
         await session.flush()
         return row.id
+
+
+async def try_start_attempt(context: LlmAttemptStartContext) -> UUID | None:
+    try:
+        return await start_attempt(context)
+    except Exception:
+        logger.warning("llm_attempt_start_failed", exc_info=True)
+        return None
+
+
+async def try_complete_attempt(
+    attempt_id: UUID,
+    *,
+    context: LlmAttemptCompleteContext,
+) -> None:
+    try:
+        await complete_attempt(attempt_id, context=context)
+    except Exception:
+        logger.warning("llm_attempt_complete_failed", exc_info=True)
+
+
+async def try_fail_attempt(
+    attempt_id: UUID,
+    *,
+    context: LlmAttemptFailContext,
+    exc: BaseException | None = None,
+) -> None:
+    try:
+        await fail_attempt(attempt_id, context=context, exc=exc)
+    except Exception:
+        logger.warning("llm_attempt_fail_failed", exc_info=True)
 
 
 async def complete_attempt(

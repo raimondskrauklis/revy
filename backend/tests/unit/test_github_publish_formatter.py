@@ -850,7 +850,7 @@ async def test_build_pr_review_comment_unwraps_json_body_from_moonshot():
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
             AsyncMock(return_value=moonshot_json),
         ):
-            result, _, _ = await build_pr_review_comment(ctx)
+            result = await build_pr_review_comment(ctx)
 
     assert result.startswith("## Revy code review")
     assert not result.startswith("{")
@@ -875,7 +875,7 @@ async def test_build_pr_review_comment_falls_back_when_llm_returns_unparsed_json
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
             AsyncMock(return_value=moonshot_json),
         ):
-            result, _, _ = await build_pr_review_comment(ctx)
+            result = await build_pr_review_comment(ctx)
             expected = build_pr_review_comment_fallback(ctx)
 
     assert result == expected
@@ -1222,7 +1222,7 @@ async def test_build_pr_review_comment_moonshot_success_includes_greptile_sectio
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
             AsyncMock(return_value=moonshot_markdown),
         ):
-            result, _, _ = await build_pr_review_comment(ctx)
+            result = await build_pr_review_comment(ctx)
 
     assert "This revision introduces a warning" in result
     assert format_summary_comment(generation_groups=groups, pr_active_groups=groups) in result
@@ -1254,7 +1254,7 @@ async def test_build_pr_review_comment_thin_moonshot_returns_fallback():
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
             AsyncMock(return_value=thin_markdown),
         ):
-            result, _, _ = await build_pr_review_comment(ctx)
+            result = await build_pr_review_comment(ctx)
             expected = build_pr_review_comment_fallback(ctx)
 
     assert result == expected
@@ -1292,7 +1292,7 @@ async def test_build_pr_review_comment_accepts_lowercase_score_rationale():
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
             AsyncMock(return_value=moonshot_markdown),
         ):
-            result, _, _ = await build_pr_review_comment(ctx)
+            result = await build_pr_review_comment(ctx)
 
     assert "The score is 4 because" in result
     assert format_summary_comment(generation_groups=groups, pr_active_groups=groups) in result
@@ -1329,7 +1329,7 @@ async def test_build_pr_review_comment_accepts_confidence_is_because_rationale()
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
             AsyncMock(return_value=moonshot_markdown),
         ):
-            result, _, _ = await build_pr_review_comment(ctx)
+            result = await build_pr_review_comment(ctx)
 
     assert "Confidence is 4 because" in result
     assert format_summary_comment(generation_groups=groups, pr_active_groups=groups) in result
@@ -1362,7 +1362,7 @@ async def test_build_pr_review_comment_moonshot_missing_pr_block_returns_fallbac
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
             AsyncMock(return_value=legacy_markdown),
         ):
-            result, _, _ = await build_pr_review_comment(ctx)
+            result = await build_pr_review_comment(ctx)
             expected = build_pr_review_comment_fallback(ctx)
 
     assert result == expected
@@ -1384,7 +1384,7 @@ async def test_build_pr_review_comment_moonshot_failure_returns_fallback():
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
             AsyncMock(side_effect=httpx.HTTPError("moonshot down")),
         ):
-            result, _, _ = await build_pr_review_comment(ctx)
+            result = await build_pr_review_comment(ctx)
             expected = build_pr_review_comment_fallback(ctx)
 
     assert result == expected

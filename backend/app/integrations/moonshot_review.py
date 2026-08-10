@@ -15,9 +15,9 @@ from app.services.llm_call_recorder import (
     LlmAttemptCompleteContext,
     LlmAttemptFailContext,
     LlmAttemptStartContext,
-    complete_attempt,
-    fail_attempt,
-    start_attempt,
+    try_complete_attempt,
+    try_fail_attempt,
+    try_start_attempt,
 )
 
 logger = get_logger(__name__)
@@ -208,7 +208,7 @@ async def _complete_chat(
     attempt_id = None
     attempt_started = time.monotonic()
     if recorder is not None:
-        attempt_id = await start_attempt(recorder)
+        attempt_id = await try_start_attempt(recorder)
     try:
         response = await client.post(
             MOONSHOT_API_URL,
@@ -243,7 +243,7 @@ async def _complete_chat(
         content = _extract_message_content(first, model=model)
         if attempt_id is not None:
             usage = data.get("usage") if isinstance(data.get("usage"), dict) else {}
-            await complete_attempt(
+            await try_complete_attempt(
                 attempt_id,
                 context=LlmAttemptCompleteContext(
                     input_tokens=usage.get("prompt_tokens")
@@ -263,7 +263,7 @@ async def _complete_chat(
         return content
     except httpx.TimeoutException as exc:
         if attempt_id is not None:
-            await fail_attempt(
+            await try_fail_attempt(
                 attempt_id,
                 context=LlmAttemptFailContext(
                     failure_class=GitHubReviewRunFailureClass.timeout,
@@ -279,7 +279,7 @@ async def _complete_chat(
                 if isinstance(exc, httpx.HTTPStatusError) and exc.response is not None
                 else None
             )
-            await fail_attempt(
+            await try_fail_attempt(
                 attempt_id,
                 context=LlmAttemptFailContext(
                     wait_ms=int((time.monotonic() - attempt_started) * 1000),
@@ -290,20 +290,10 @@ async def _complete_chat(
         raise
     except ServiceUnavailableError as exc:
         if attempt_id is not None:
-            await fail_attempt(
+            await try_fail_attempt(
                 attempt_id,
                 context=LlmAttemptFailContext(
                     failure_class=GitHubReviewRunFailureClass.parse_error,
-                    wait_ms=int((time.monotonic() - attempt_started) * 1000),
-                ),
-                exc=exc,
-            )
-        raise
-    except Exception as exc:
-        if attempt_id is not None:
-            await fail_attempt(
-                attempt_id,
-                context=LlmAttemptFailContext(
                     wait_ms=int((time.monotonic() - attempt_started) * 1000),
                 ),
                 exc=exc,

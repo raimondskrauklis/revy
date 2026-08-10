@@ -33,11 +33,11 @@ async def test_embed_texts_writes_index_embed_attempt_row():
         mock_settings.revy_embedding_model = "voyage-code-3"
         mock_settings.revy_embedding_dimensions = 1024
         with patch(
-            "app.integrations.voyage_embeddings.start_attempt",
+            "app.integrations.voyage_embeddings.try_start_attempt",
             AsyncMock(return_value=uuid.uuid4()),
         ) as start_mock:
             with patch(
-                "app.integrations.voyage_embeddings.complete_attempt",
+                "app.integrations.voyage_embeddings.try_complete_attempt",
                 AsyncMock(),
             ) as complete_mock:
                 vectors = await embed_texts(
@@ -78,9 +78,9 @@ async def test_embed_texts_records_parse_error_failure_class_on_invalid_response
         mock_settings.voyage_api_key = "test-key"
         mock_settings.revy_embedding_model = "voyage-code-3.5"
         mock_settings.revy_embedding_dimensions = 1024
-        with patch("app.integrations.voyage_embeddings.start_attempt", AsyncMock(return_value=uuid.uuid4())):
+        with patch("app.integrations.voyage_embeddings.try_start_attempt", AsyncMock(return_value=uuid.uuid4())):
             with patch(
-                "app.integrations.voyage_embeddings.fail_attempt",
+                "app.integrations.voyage_embeddings.try_fail_attempt",
                 AsyncMock(),
             ) as fail_mock:
                 with pytest.raises(ServiceUnavailableError):
@@ -113,8 +113,8 @@ async def test_embed_texts_threads_captured_output_dimension():
         mock_settings.voyage_api_key = "test-key"
         mock_settings.revy_embedding_model = "voyage-code-3.5"
         mock_settings.revy_embedding_dimensions = 1024
-        with patch("app.integrations.voyage_embeddings.start_attempt", AsyncMock(return_value=uuid.uuid4())):
-            with patch("app.integrations.voyage_embeddings.complete_attempt", AsyncMock()):
+        with patch("app.integrations.voyage_embeddings.try_start_attempt", AsyncMock(return_value=uuid.uuid4())):
+            with patch("app.integrations.voyage_embeddings.try_complete_attempt", AsyncMock()):
                 await embed_texts(client, ["hello"], recorder=recorder)
 
     body = client.post.await_args.kwargs["json"]
@@ -137,7 +137,7 @@ async def test_embed_texts_skips_recorder_when_none():
         mock_settings.revy_embedding_model = "voyage-code-3"
         mock_settings.revy_embedding_dimensions = 1024
         with patch(
-            "app.integrations.voyage_embeddings.start_attempt",
+            "app.integrations.voyage_embeddings.try_start_attempt",
             AsyncMock(),
         ) as start_mock:
             await embed_texts(client, ["hello"])

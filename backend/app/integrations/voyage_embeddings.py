@@ -21,9 +21,9 @@ from app.services.llm_call_recorder import (
     LlmAttemptCompleteContext,
     LlmAttemptFailContext,
     LlmAttemptStartContext,
-    complete_attempt,
-    fail_attempt,
-    start_attempt,
+    try_complete_attempt,
+    try_fail_attempt,
+    try_start_attempt,
 )
 
 logger = get_logger(__name__)
@@ -167,7 +167,7 @@ async def embed_texts(
         attempt_id = None
         attempt_started = time.monotonic()
         if recorder is not None:
-            attempt_id = await start_attempt(
+            attempt_id = await try_start_attempt(
                 LlmAttemptStartContext(
                     pipeline_run_id=recorder.pipeline_run_id,
                     review_run_id=None,
@@ -209,7 +209,7 @@ async def embed_texts(
                     error_code="embeddings_error",
                 )
             if attempt_id is not None:
-                await complete_attempt(
+                await try_complete_attempt(
                     attempt_id,
                     context=LlmAttemptCompleteContext(
                         wait_ms=int((time.monotonic() - attempt_started) * 1000),
@@ -218,7 +218,7 @@ async def embed_texts(
                 )
         except httpx.HTTPStatusError as exc:
             if attempt_id is not None:
-                await fail_attempt(
+                await try_fail_attempt(
                     attempt_id,
                     context=LlmAttemptFailContext(
                         wait_ms=int((time.monotonic() - attempt_started) * 1000),
@@ -229,7 +229,7 @@ async def embed_texts(
             raise
         except httpx.TimeoutException as exc:
             if attempt_id is not None:
-                await fail_attempt(
+                await try_fail_attempt(
                     attempt_id,
                     context=LlmAttemptFailContext(
                         failure_class=GitHubReviewRunFailureClass.timeout,
@@ -240,7 +240,7 @@ async def embed_texts(
             raise
         except ServiceUnavailableError as exc:
             if attempt_id is not None:
-                await fail_attempt(
+                await try_fail_attempt(
                     attempt_id,
                     context=LlmAttemptFailContext(
                         failure_class=GitHubReviewRunFailureClass.parse_error,
@@ -249,9 +249,9 @@ async def embed_texts(
                     exc=exc,
                 )
             raise
-        except Exception as exc:
+        except (ValueError, RuntimeError) as exc:
             if attempt_id is not None:
-                await fail_attempt(
+                await try_fail_attempt(
                     attempt_id,
                     context=LlmAttemptFailContext(
                         wait_ms=int((time.monotonic() - attempt_started) * 1000),
