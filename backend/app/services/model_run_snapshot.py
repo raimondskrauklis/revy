@@ -287,9 +287,14 @@ async def try_persist_models_snapshot(
     try:
         async with session.begin_nested():
             await _write_models_snapshot(session, pipeline_run_id=pipeline_run_id)
-    except (SQLAlchemyError, TypeError, ValueError, AttributeError):
+    except (SQLAlchemyError, ValueError, TypeError):
         logger.warning(
             "models_snapshot_persist_failed",
             exc_info=True,
+            extra={"pipeline_run_id": str(pipeline_run_id)},
+        )
+    except Exception:
+        logger.exception(
+            "models_snapshot_persist_unexpected",
             extra={"pipeline_run_id": str(pipeline_run_id)},
         )
