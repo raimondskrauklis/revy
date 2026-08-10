@@ -10,7 +10,10 @@ from app.constants.enums import (
     PipelineStepType,
 )
 from app.models.github_publish_job import GitHubPublishJobORM
-from app.services.github_pipeline_trace import record_judge_pipeline_step, record_publish_pipeline_step
+from app.services.github_pipeline_trace import (
+    record_judge_pipeline_step,
+    record_publish_pipeline_step,
+)
 
 
 @pytest.mark.asyncio
