@@ -135,4 +135,4 @@
 
 ## Next step
 
-**`execution-peer-review`** → **`phase-execution`** from [waves/PIPELINE_OBSERVABILITY_P0_EXECUTION.md](./waves/PIPELINE_OBSERVABILITY_P0_EXECUTION.md).
+**`phase-execution`** from [waves/PIPELINE_OBSERVABILITY_P1_EXECUTION.md](./waves/PIPELINE_OBSERVABILITY_P1_EXECUTION.md) (P0 shipped [#92](https://github.com/raimondskrauklis/revy/pull/92)).

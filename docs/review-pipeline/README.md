@@ -77,6 +77,16 @@ docs/review-pipeline/
     waves/
       PUBLISH_SUMMARY_ALIGNMENT_EXECUTION.md
       PUBLISH_SUMMARY_ALIGNMENT_P0_EXECUTION.md … P2
+  pipeline-observability/                ← LLM attempt rows, commit graph, staging metrics (P0–P5)
+    README.md
+    PIPELINE_OBSERVABILITY_FINDINGS.md
+    PIPELINE_OBSERVABILITY_GENERAL_PLAN.md
+    waves/
+      PIPELINE_OBSERVABILITY_EXECUTION.md
+      PIPELINE_OBSERVABILITY_P0_EXECUTION.md … P5
+    reviews/
+      architecture-peer-review/
+      execution-peer-review/
   staging-validation/                    ← operator workflow: dogfood PRs, deploy windows, parallel metrics
     README.md
     STAGING_VALIDATION_FINDINGS.md
@@ -151,6 +161,7 @@ R0 and R1 **shipped before** the full planning ladder was enforced. Recovery ste
 | **R7** | [waves/R7](./waves/REVIEW_PIPELINE_R7_EXECUTION.md) | shipped on `main` ([#29](https://github.com/raimondskrauklis/revy/pull/29)) |
 | **R8** | [waves/R8](./waves/REVIEW_PIPELINE_R8_EXECUTION.md) | shipped on `main` ([#31](https://github.com/raimondskrauklis/revy/pull/31)) |
 | **Review quality** | [review-quality/](./review-quality/README.md) | shipped on `main` ([#50](https://github.com/raimondskrauklis/revy/pull/50)) — tag `review-quality-v1` after human gate |
+| **Pipeline observability** | [pipeline-observability/](./pipeline-observability/README.md) | P0 shipped ([#92](https://github.com/raimondskrauklis/revy/pull/92)); P1–P5 pending |
 
 [waves/README.md](./waves/README.md) — full execution table.
 

@@ -1,5 +1,7 @@
 # Pipeline observability P1 — LLM instrumentation (execution)
 
+**Prerequisite:** P0 shipped on `main` ([#92](https://github.com/raimondskrauklis/revy/pull/92)) — migration `0031` applied on target environment.
+
 Phase **P1** of [PIPELINE_OBSERVABILITY_GENERAL_PLAN.md](../PIPELINE_OBSERVABILITY_GENERAL_PLAN.md). Baseline: findings §Catalog — instrumentation by stage. **P1 only.**
 
 **Goal:** Moonshot (review + publish), Anthropic judge, and pipeline-triggered Voyage embeds write attempt rows with tokens/`finish_reason` and unified `llm_call_*` logs.

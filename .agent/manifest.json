@@ -76,6 +76,22 @@
         "since_flag": "--since",
         "json_flag": "--json",
         "note": "DATABASE_SSL_INSECURE=1 — staging operator only; see docs/utils/BACKEND_SCRIPTS_RUNBOOK.md"
+      },
+      {
+        "id": "pipeline_observability",
+        "command": "cd backend && DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.pipeline_observability_staging_metrics",
+        "since_flag": "--since",
+        "json_flag": "--json",
+        "gate_flag": "--po-p0-gate",
+        "note": "P0 schema gate; add --po-gate for P4 SLO when attempt rows exist"
+      },
+      {
+        "id": "generation_lifecycle",
+        "command": "cd backend && DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.generation_lifecycle_staging_metrics",
+        "since_flag": "--since",
+        "json_flag": "--json",
+        "gate_flag": "--rg15-gate",
+        "note": "RG-15 system health; supersede dogfood still manual"
       }
     ],
     "evidence_runbook": "docs/utils/BACKEND_SCRIPTS_RUNBOOK.md"

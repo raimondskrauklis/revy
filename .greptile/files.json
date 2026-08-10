@@ -1,8 +1,8 @@
 {
   "files": [
     {
-      "path": "docs/review-pipeline/pipeline-observability/waves/PIPELINE_OBSERVABILITY_P0_EXECUTION.md",
-      "description": "Pipeline observability P0 \u2014 schema, recorder, commit graph",
+      "path": "docs/review-pipeline/pipeline-observability/waves/PIPELINE_OBSERVABILITY_P1_EXECUTION.md",
+      "description": "Pipeline observability P1 \u2014 Moonshot, Anthropic judge, Voyage instrumentation",
       "scope": [
         "backend/**"
       ]

@@ -40,6 +40,8 @@
 | Judge JSON contract | [JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](../judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) |
 | Finding resolution | [FINDING_RESOLUTION_STAGING_VALIDATION.md](../finding-resolution/FINDING_RESOLUTION_STAGING_VALIDATION.md) |
 | PR summary rollup | [PR_SUMMARY_ROLLUP_STAGING_VALIDATION.md](../pr-summary-rollup/PR_SUMMARY_ROLLUP_STAGING_VALIDATION.md) |
+| Pipeline observability | [PIPELINE_OBSERVABILITY_STAGING_VALIDATION.md](../pipeline-observability/PIPELINE_OBSERVABILITY_STAGING_VALIDATION.md) |
+| Review generation lifecycle | [REVIEW_GENERATION_LIFECYCLE_STAGING_VALIDATION.md](../review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_STAGING_VALIDATION.md) |
 | Agent workflow pack E2E | [AGENT_WORKFLOW_PACK_E2E_VALIDATION.md](./AGENT_WORKFLOW_PACK_E2E_VALIDATION.md) |
 
 ## Shared tooling
@@ -47,6 +49,20 @@
 | Tool | Path |
 |------|------|
 | Staging metrics + RCX gate | `backend/scripts/judge_json_contract_staging_metrics.py` |
+| Pipeline observability (P0/P4) | `backend/scripts/pipeline_observability_staging_metrics.py` |
+| Generation lifecycle (RG-15) | `backend/scripts/generation_lifecycle_staging_metrics.py` |
 | SSOT / Greptile gate | `backend/scripts/generate_greptile_files_from_review_context.py` + `tests/unit/test_generate_greptile_files.py` |
+
+## Post-main system probe (2026-08-10)
+
+After [#89](https://github.com/raimondskrauklis/revy/pull/89) + [#92](https://github.com/raimondskrauklis/revy/pull/92) on staging:
+
+| Script | `--since` | Sign-off |
+|--------|-----------|----------|
+| `generation_lifecycle_staging_metrics --rg15-gate` | `2026-08-10T11:18:54Z` | health **PASS**; supersede dogfood pending |
+| `pipeline_observability_staging_metrics --po-p0-gate` | `2026-08-10T14:23:32Z` | schema **PASS**; behavioral pending (0 post-deploy runs) |
+| `judge_json_contract_staging_metrics` | `2026-08-10T14:23:32Z` | baseline — 0 runs in window |
+
+Memos: [pipeline observability](../pipeline-observability/PIPELINE_OBSERVABILITY_STAGING_VALIDATION.md) · [generation lifecycle](../review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_STAGING_VALIDATION.md).
 
 **Next step:** merge #63 → [finding-resolution dogfood](../finding-resolution-dogfood/README.md) (one push per agent cycle).

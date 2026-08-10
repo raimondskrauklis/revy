@@ -3,7 +3,7 @@
 **Purpose:** Single handoff for agents when context is limited. Work **top to bottom** on active tracks; mark `[x]` as done.  
 **Rules:** No direct pushes to `main`. One concern per PR. **Peer review = separate agent session** (human-invoked); never self-certified by the implementing agent.
 
-**Last updated:** 2026-07-29 — PSA docs baseline (RG-14); finding-resolution code-complete on PR #57
+**Last updated:** 2026-08-10 — pipeline-observability P0 shipped (#92); generation-lifecycle restart fix merged (#89)
 
 ---
 
@@ -13,7 +13,7 @@
 |------|--------|
 | `main` | R0–R8 + review-quality RQ0–RQ8 shipped |
 | Tags | `review-r0-v1` … `review-r3-v1`; optional `review-r4-v1` … `review-r8-v1`; **`review-quality-v1`** after human gate |
-| Migrations on `main` | `0001`–`0026` (review-quality) |
+| Migrations on `main` | `0001`–`0031` (pipeline-observability P0) |
 | Worker deploy | `deploy.yml` worker `-Q` includes `reconciliation`, `judge`, `github_publish`, `maintenance` |
 | Next | RQ9 hardening (`docs/agent-work`) → staging `0026` + AS2 e2e → tag `review-quality-v1` |
 
@@ -35,7 +35,7 @@
 
 ### Track F — Post-merge ops (staging / prod)
 
-- [ ] `alembic upgrade head` on staging/prod (through **`0026`** on `main`)
+- [ ] `alembic upgrade head` on staging/prod (through **`0031`** on `main`)
 - [ ] GitHub App: **Install App** on target account → register **installation ID** in Revy (pro plan) — see [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) § App ID vs installation ID
 - [ ] PEM: `/mnt/revy_volume/secrets/github-app.pem` readable by container (`chown 1000:deploy`, `chmod 640`); verify with `docker exec -i revy-api python …` in [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) § Verify on droplet (`GET /app: 200`, `token mint: 201`)
 - [ ] Env: `MOONSHOT_API_KEY`, `VOYAGE_API_KEY` (`REVY_EMBEDDING_MODEL=voyage-code-3`, `REVY_EMBEDDING_DIMENSIONS=1024`), `REVY_BOT_LOGIN=<slug>[bot]`; optional `ANTHROPIC_API_KEY` + `REVY_ANTHROPIC_MODEL=claude-sonnet-5`
@@ -71,12 +71,11 @@
 - [ ] Staging smoke § post–review-quality re-run after deploy
 - [ ] Merge `docs/agent-work` → `main` (with doc sync bundle)
 
-### Track J — Generation lifecycle — **shipped** (PR #54 on `main`; restart hotfix PR #89)
+### Track J — Generation lifecycle — **shipped** (PR #54 + restart hotfix #89 on `main`)
 
 - [x] P0–P5 LOOP — HEAD gate, supersede, surface flush, coalesce, judge publish gate, trace fields
 - [x] Merge PR [#54](https://github.com/raimondskrauklis/revy/pull/54) → `main`
-- [x] Revy peer review clean on PR [#89](https://github.com/raimondskrauklis/revy/pull/89) (2026-08-10)
-- [ ] Merge PR [#89](https://github.com/raimondskrauklis/revy/pull/89) — index-job supersede, resolution Celery task, G9-before-pipeline enqueue, event-anchored coalesce, stale coalesce handoff, Moonshot 520–524 retry (RG-15)
+- [x] Merge PR [#89](https://github.com/raimondskrauklis/revy/pull/89) — index-job supersede, resolution Celery task, G9-before-pipeline enqueue, event-anchored coalesce, stale coalesce handoff, Moonshot 520–524 retry (RG-15)
 - [ ] Staging dogfood — push during run + `@revy review` restart ([P2 § P2.7](./review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_P2_EXECUTION.md#p27--post-ship-restart-hotfix-pr-89))
 - [ ] Optional tag `review-generation-lifecycle-v1` on `main`
 
@@ -109,6 +108,16 @@
 - [x] Architecture peer review — gaps incorporated into P0/P1 execution (2026-07-29)
 - [x] `phase-execution` P0–P1 on `feat/publish-summary-alignment`
 - [ ] Staging validation — [PUBLISH_SUMMARY_ALIGNMENT_STAGING_VALIDATION.md](./publish-summary-alignment/PUBLISH_SUMMARY_ALIGNMENT_STAGING_VALIDATION.md) (parallel RCX / judge-json pass 2)
+
+### Track N — Pipeline observability — **P0 shipped** · P1 active
+
+- [x] Findings + general plan + architecture peer review (pass 2 BLOCK: no)
+- [x] Execution peer review (pass 2 BLOCK: no)
+- [x] `phase-execution` P0 → merged [#92](https://github.com/raimondskrauklis/revy/pull/92) (`be16bc7`) — migration `0031`, recorder, commit graph
+- [ ] Apply migration **`0031`** on staging (human gate before P1 dogfood)
+- [ ] Post-#92 review run on staging — re-run `pipeline_observability_staging_metrics --po-p0-gate` ([memo](./pipeline-observability/PIPELINE_OBSERVABILITY_STAGING_VALIDATION.md))
+- [ ] RG-15 push-during-run dogfood — re-run `generation_lifecycle_staging_metrics --rg15-gate` ([memo](./review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_STAGING_VALIDATION.md))
+- [ ] `phase-execution` P1 — Moonshot / Anthropic judge / Voyage instrumentation ([P1 execution](./pipeline-observability/waves/PIPELINE_OBSERVABILITY_P1_EXECUTION.md))
 
 ---
 

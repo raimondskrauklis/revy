@@ -6,8 +6,8 @@
       "scope": ["backend/**"],
       "paths": [
         {
-          "path": "docs/review-pipeline/pipeline-observability/waves/PIPELINE_OBSERVABILITY_P0_EXECUTION.md",
-          "description": "Pipeline observability P0 — schema, recorder, commit graph"
+          "path": "docs/review-pipeline/pipeline-observability/waves/PIPELINE_OBSERVABILITY_P1_EXECUTION.md",
+          "description": "Pipeline observability P1 — Moonshot, Anthropic judge, Voyage instrumentation"
         },
         {
           "path": "docs/review-pipeline/pipeline-observability/PIPELINE_OBSERVABILITY_FINDINGS.md",

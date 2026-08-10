@@ -31,7 +31,36 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
 
 **RCX gate:** Primary source is `github_review_runs.context_stats`; retrieve manifest `engineering_context_injected` is cross-checked. Exit code **1** when any check is `FAIL` (`INCONCLUSIVE` does not fail the gate).
 
-See [REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md](../review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md) and [JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](../review-pipeline/judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md).
+See [JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](../review-pipeline/judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) and [REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md](../review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md).
+
+## Pipeline observability (`pipeline_observability_staging_metrics.py`)
+
+System-wide P0 schema + P4 SLO probes on `revy-staging` (`github_llm_call_attempts`, review-run observability columns).
+
+```bash
+cd backend
+
+DATABASE_SSL_INSECURE=1 pipenv run sh -c \
+  'python -m scripts.pipeline_observability_staging_metrics --since <deploy-iso> --po-p0-gate --json'
+
+DATABASE_SSL_INSECURE=1 pipenv run sh -c \
+  'python -m scripts.pipeline_observability_staging_metrics --since <deploy-iso> --po-gate --json'
+```
+
+**P0 gate:** exit **1** on `FAIL` (`INCONCLUSIVE` does not fail). See [PIPELINE_OBSERVABILITY_STAGING_VALIDATION.md](../review-pipeline/pipeline-observability/PIPELINE_OBSERVABILITY_STAGING_VALIDATION.md).
+
+## Generation lifecycle (`generation_lifecycle_staging_metrics.py`)
+
+System-wide RG-15 health: review/index job counts, supersede rows, stuck `processing` detection.
+
+```bash
+cd backend
+
+DATABASE_SSL_INSECURE=1 pipenv run sh -c \
+  'python -m scripts.generation_lifecycle_staging_metrics --since <deploy-iso> --rg15-gate --json'
+```
+
+See [REVIEW_GENERATION_LIFECYCLE_STAGING_VALIDATION.md](../review-pipeline/review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_STAGING_VALIDATION.md).
 
 ## RR-W1 dogfood gate (`revy_review_dogfood_staging_validation.py`)
 

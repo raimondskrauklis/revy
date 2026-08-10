@@ -97,24 +97,29 @@ invoke_workflow  revy_pr_review  (pipeline_run / review_run)
 | `context_stats` JSONB | migration `0029` | Flushed pre-LLM; **committed only at task end** |
 | HTTP timeout headroom | `config.py`, PR #90 | `revy_revision_llm_http_timeout_seconds` |
 | Retryable HTTP timeout | `worker_retries.py` | `httpx.TimeoutException` → `WorkerRetryableError` |
+| **`github_llm_call_attempts` + recorder** | `llm_call_recorder.py`, migration `0031` | P0 — per-attempt rows; dedicated session commits (PO-Q17) |
+| **Review-run observability columns** | migration `0031`, `github_review_run.py` | `timing_stats`, `token_rollup`, `failure_stage`, `failure_class`, `trigger_source` |
+| **Checkpoint commit after retrieve** | `review_run_observability.py`, `github_review.py` | Boundary #1 — survives HTTP timeout / Celery retry (PO-V3) |
+| **`llm_pricing` skeleton** | `llm_pricing.py` | Static price map — `estimated_usd` computation in P3 |
+| **`trigger_source` on review runs** | `create_review_run` | Copied from completed index job (PO-Q15) |
+| **Attempt purge cascade** | `purge_old_pipeline_artifacts` | FK `pipeline_run_id` ON DELETE CASCADE (P0) |
 | `PipelineStepStatus.processing` | `enums.py` | Exists; writers do not use it yet |
-| `trigger_source` on index jobs | `GitHubIndexJobORM` | Not on review runs today |
 | Pipeline purge O8 | `purge_old_pipeline_artifacts` | Cascades runs → steps/artifacts; 90d retention |
 | Staging scripts | `judge_json_contract_staging_metrics.py`, etc. | Operator SQL; legacy Moonshot CSV script not SSOT |
 
 ### Gaps (genuinely new)
 
-| Gap | Severity | Industry pattern |
-|-----|----------|------------------|
-| No **durable checkpoint** (flush ≠ commit) | **critical** | Mid-task commit before slow LLM |
-| Attempt rows lost on **Celery retry** / soft-kill | **critical** | Per-attempt commit graph |
-| No **Moonshot token persistence** on review/publish | **high** | `gen_ai.usage.*` on every `chat` span |
-| No **`github_llm_call_attempts` table** | **high** | Per-call audit trail |
-| No **live step progress** (`processing` → terminal) | **high** | Abort visibility during long LLM wait |
-| `_mark_failed` skips retrieve/review observability | **high** | `failure_stage` / `failure_class` on permanent fail |
-| No **per-run token/cost rollup** | **high** | Σ(tokens × `llm_pricing`) |
-| No **`llm_pricing` config** | **high** | Blocks `estimated_usd` (P3) |
-| Attempt rows **not in purge cascade** | **high** | FK from `pipeline_run_id`; extend O8 purge |
+| Gap | Severity | Industry pattern | P0 status |
+|-----|----------|------------------|-----------|
+| No **durable checkpoint** (flush ≠ commit) | **critical** | Mid-task commit before slow LLM | **P0 shipped** — boundary #1 |
+| Attempt rows lost on **Celery retry** / soft-kill | **critical** | Per-attempt commit graph | **P0 shipped** — timeout path + `attempt_no` resume |
+| No **Moonshot token persistence** on review/publish | **high** | `gen_ai.usage.*` on every `chat` span | P1 |
+| No **`github_llm_call_attempts` table** | **high** | Per-call audit trail | **P0 shipped** |
+| No **live step progress** (`processing` → terminal) | **high** | Abort visibility during long LLM wait | P2 |
+| `_mark_failed` skips retrieve/review observability | **high** | `failure_stage` / `failure_class` on permanent fail | **P0 shipped** — boundary #6 |
+| No **per-run token/cost rollup** | **high** | Σ(tokens × `llm_pricing`) | P3 |
+| No **`llm_pricing` config** | **high** | Blocks `estimated_usd` (P3) | **P0 skeleton** — rates in P3 |
+| Attempt rows **not in purge cascade** | **high** | FK from `pipeline_run_id`; extend O8 purge | **P0 shipped** |
 | **Voyage** calls invisible | **medium** | `embeddings` attempts; null tokens + batch count (PO-Q11) |
 | No **p95/p99** in metrics scripts | **medium** | SRE percentiles |
 | **Bedrock** instrumentation | **low** | Deferred — separate `bedrock_review.py` path; not used in staging today (PO-Q13) |

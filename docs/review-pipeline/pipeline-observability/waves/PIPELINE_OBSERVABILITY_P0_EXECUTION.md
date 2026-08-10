@@ -1,5 +1,7 @@
 # Pipeline observability P0 — foundations (execution)
 
+**Status:** **shipped** on `main` ([#92](https://github.com/raimondskrauklis/revy/pull/92), `be16bc7`).
+
 Phase **P0** of [PIPELINE_OBSERVABILITY_GENERAL_PLAN.md](../PIPELINE_OBSERVABILITY_GENERAL_PLAN.md). Baseline: [PIPELINE_OBSERVABILITY_FINDINGS.md](../PIPELINE_OBSERVABILITY_FINDINGS.md) §Commit graph, §Metric catalog. **P0 only.**
 
 **Goal:** Schema + `LlmCallRecorder` + durable checkpoint/`_mark_failed` commits survive Celery retries; PO-V3 HTTP-timeout case passes without success-path tokens.
@@ -17,7 +19,7 @@ Phase **P0** of [PIPELINE_OBSERVABILITY_GENERAL_PLAN.md](../PIPELINE_OBSERVABILI
 
 ## PR review context (first commit)
 
-- **SSOT:** `.revy/review-context.json` — `active_program: pipeline-observability`; `programs[]` one entry; scope `backend/**`; three doc paths (P0 execution, findings, general plan).
+- **SSOT:** `.revy/review-context.json` — `active_program: pipeline-observability`; P1 execution path (post-P0 ship).
 - **Greptile:** `cd backend && python -m scripts.generate_greptile_files_from_review_context --write`
 - **Bugbot:** `.cursor/BUGBOT.md` — pipeline-observability program links.
 

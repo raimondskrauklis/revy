@@ -4,7 +4,7 @@
 **General plan:** [PIPELINE_OBSERVABILITY_GENERAL_PLAN.md](../PIPELINE_OBSERVABILITY_GENERAL_PLAN.md)  
 **Architecture peer review:** [pass-02](../reviews/architecture-peer-review/pass-02-2026-08-10.md) — **BLOCK: no**
 
-**Authority:** findings §Commit graph, §Decisions registry (PO-Q1–Q16).
+**Authority:** findings §Commit graph, §Decisions registry (PO-Q1–Q19).
 
 ## Locked decisions (all phases)
 
@@ -22,7 +22,7 @@
 
 | Phase | Focus | File | Status |
 |-------|--------|------|--------|
-| P0 | Schema, recorder, commit graph, pricing, purge | [P0](./PIPELINE_OBSERVABILITY_P0_EXECUTION.md) | pending |
+| P0 | Schema, recorder, commit graph, pricing, purge | [P0](./PIPELINE_OBSERVABILITY_P0_EXECUTION.md) | Done (`be16bc7`, [#92](https://github.com/raimondskrauklis/revy/pull/92)) |
 | P1 | Moonshot, Anthropic judge, Voyage instrumentation | [P1](./PIPELINE_OBSERVABILITY_P1_EXECUTION.md) | pending |
 | P2 | Incremental pipeline trace (`processing` → terminal) | [P2](./PIPELINE_OBSERVABILITY_P2_EXECUTION.md) | pending |
 | P3 | Rollups, `estimated_usd`, API exposure | [P3](./PIPELINE_OBSERVABILITY_P3_EXECUTION.md) | pending |
@@ -31,4 +31,4 @@
 
 **Depends (hard gates):** P1,P2 → P0 · P3 → P1+P2 · P4 → P3 · P5 → P3.
 
-**Next:** `execution-peer-review` → `phase-execution` from P0.
+**Next:** `phase-execution` from [P1](./PIPELINE_OBSERVABILITY_P1_EXECUTION.md). **Human gate:** apply migration `0031` on staging before P1.
