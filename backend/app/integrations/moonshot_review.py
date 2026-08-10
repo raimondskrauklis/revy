@@ -2,12 +2,23 @@
 """Moonshot Kimi review client — R4 (OpenAI-compatible chat completions)."""
 from __future__ import annotations
 
+import time
+
 import httpx
 
+from app.constants.enums import GitHubReviewRunFailureClass
 from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError
 from app.core.logging import get_logger
 from app.integrations.judge_llm_errors import parse_llm_json_object
+from app.services.llm_call_recorder import (
+    LlmAttemptCompleteContext,
+    LlmAttemptFailContext,
+    LlmAttemptStartContext,
+    complete_attempt,
+    fail_attempt,
+    start_attempt,
+)
 
 logger = get_logger(__name__)
 
@@ -179,6 +190,7 @@ async def _complete_chat(
     model_id: str | None = None,
     timeout_seconds: float | None = None,
     json_response: bool = True,
+    recorder: LlmAttemptStartContext | None = None,
 ) -> str:
     _require_moonshot_configured()
     api_key = settings.moonshot_api_key
@@ -193,37 +205,110 @@ async def _complete_chat(
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
     ]
-    response = await client.post(
-        MOONSHOT_API_URL,
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
-        json=_chat_completion_body(
-            model=model,
-            profile=profile,
-            messages=messages,
-            json_response=json_response,
-        ),
-        timeout=timeout_seconds
-        or settings.revy_revision_llm_http_timeout_seconds(profile),
-    )
-    _log_moonshot_error(response, model=model)
-    response.raise_for_status()
-    data = response.json()
-    choices = data.get("choices")
-    if not isinstance(choices, list) or not choices:
-        raise ServiceUnavailableError(
-            message="Moonshot review response invalid",
-            error_code="llm_error",
+    attempt_id = None
+    attempt_started = time.monotonic()
+    if recorder is not None:
+        attempt_id = await start_attempt(recorder)
+    try:
+        response = await client.post(
+            MOONSHOT_API_URL,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json=_chat_completion_body(
+                model=model,
+                profile=profile,
+                messages=messages,
+                json_response=json_response,
+            ),
+            timeout=timeout_seconds
+            or settings.revy_revision_llm_http_timeout_seconds(profile),
         )
-    first = choices[0]
-    if not isinstance(first, dict):
-        raise ServiceUnavailableError(
-            message="Moonshot review response invalid",
-            error_code="llm_error",
-        )
-    return _extract_message_content(first, model=model)
+        _log_moonshot_error(response, model=model)
+        response.raise_for_status()
+        data = response.json()
+        choices = data.get("choices")
+        if not isinstance(choices, list) or not choices:
+            raise ServiceUnavailableError(
+                message="Moonshot review response invalid",
+                error_code="llm_error",
+            )
+        first = choices[0]
+        if not isinstance(first, dict):
+            raise ServiceUnavailableError(
+                message="Moonshot review response invalid",
+                error_code="llm_error",
+            )
+        content = _extract_message_content(first, model=model)
+        if attempt_id is not None:
+            usage = data.get("usage") if isinstance(data.get("usage"), dict) else {}
+            await complete_attempt(
+                attempt_id,
+                context=LlmAttemptCompleteContext(
+                    input_tokens=usage.get("prompt_tokens")
+                    if isinstance(usage.get("prompt_tokens"), int)
+                    else None,
+                    output_tokens=usage.get("completion_tokens")
+                    if isinstance(usage.get("completion_tokens"), int)
+                    else None,
+                    finish_reason=first.get("finish_reason")
+                    if isinstance(first.get("finish_reason"), str)
+                    else None,
+                    wait_ms=int((time.monotonic() - attempt_started) * 1000),
+                    http_status=response.status_code,
+                    response_text=content,
+                ),
+            )
+        return content
+    except httpx.TimeoutException as exc:
+        if attempt_id is not None:
+            await fail_attempt(
+                attempt_id,
+                context=LlmAttemptFailContext(
+                    failure_class=GitHubReviewRunFailureClass.timeout,
+                    wait_ms=int((time.monotonic() - attempt_started) * 1000),
+                ),
+                exc=exc,
+            )
+        raise
+    except httpx.HTTPError as exc:
+        if attempt_id is not None:
+            http_status = (
+                exc.response.status_code
+                if isinstance(exc, httpx.HTTPStatusError) and exc.response is not None
+                else None
+            )
+            await fail_attempt(
+                attempt_id,
+                context=LlmAttemptFailContext(
+                    wait_ms=int((time.monotonic() - attempt_started) * 1000),
+                    http_status=http_status,
+                ),
+                exc=exc,
+            )
+        raise
+    except ServiceUnavailableError as exc:
+        if attempt_id is not None:
+            await fail_attempt(
+                attempt_id,
+                context=LlmAttemptFailContext(
+                    failure_class=GitHubReviewRunFailureClass.parse_error,
+                    wait_ms=int((time.monotonic() - attempt_started) * 1000),
+                ),
+                exc=exc,
+            )
+        raise
+    except Exception as exc:
+        if attempt_id is not None:
+            await fail_attempt(
+                attempt_id,
+                context=LlmAttemptFailContext(
+                    wait_ms=int((time.monotonic() - attempt_started) * 1000),
+                ),
+                exc=exc,
+            )
+        raise
 
 
 async def complete_review(
@@ -252,6 +337,7 @@ async def complete_issue_comment_markdown(
     user_prompt: str,
     model_id: str | None = None,
     timeout_seconds: float | None = None,
+    recorder: LlmAttemptStartContext | None = None,
 ) -> str:
     """Moonshot chat completion for Greptile-shaped PR issue comments — markdown only."""
     return await _complete_chat(
@@ -262,6 +348,7 @@ async def complete_issue_comment_markdown(
         model_id=model_id,
         timeout_seconds=timeout_seconds,
         json_response=False,
+        recorder=recorder,
     )
 
 

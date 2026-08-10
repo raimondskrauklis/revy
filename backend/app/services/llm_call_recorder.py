@@ -31,6 +31,7 @@ class LlmAttemptStartContext:
     attempt_no: int
     provider: str
     request_model: str
+    batch_size: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,6 +72,7 @@ async def start_attempt(context: LlmAttemptStartContext) -> UUID:
             attempt_no=context.attempt_no,
             provider=context.provider,
             request_model=context.request_model,
+            batch_size=context.batch_size,
             started_at=utc_now(),
         )
         session.add(row)

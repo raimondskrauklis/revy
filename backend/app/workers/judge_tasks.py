@@ -27,7 +27,7 @@ logger = get_logger(__name__)
 def judge_review_run(self, review_run_id: str) -> None:
     async def _run() -> None:
         async with get_db_context() as session:
-            judged = await run_judge_for_review_run(session, review_run_id=UUID(review_run_id))
+            judged, _judge_model_ref = await run_judge_for_review_run(session, review_run_id=UUID(review_run_id))
             await session.commit()
             logger.info(
                 "github_judge_complete",

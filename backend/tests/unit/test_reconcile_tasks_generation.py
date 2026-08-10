@@ -33,7 +33,7 @@ def test_reconcile_skips_publish_enqueue_when_run_superseded():
         ):
             with patch(
                 "app.workers.reconcile_tasks.record_review_run_judge_status",
-                AsyncMock(return_value=0),
+                AsyncMock(return_value=(0, None)),
             ):
                 with patch(
                     "app.workers.reconcile_tasks.get_pipeline_run_for_review_run",

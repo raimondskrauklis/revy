@@ -7,7 +7,7 @@ Linear **phase-execution** order. General plan: [`../MODEL_RUN_CAPTURE_GENERAL_P
 | Phase | File | Status |
 |-------|------|--------|
 | MRC-P0 — Index embedding identity | [MODEL_RUN_CAPTURE_P0_EXECUTION.md](./MODEL_RUN_CAPTURE_P0_EXECUTION.md) | shipped |
-| MRC-P1 — Attempt rows + judge/publish step models | [MODEL_RUN_CAPTURE_P1_EXECUTION.md](./MODEL_RUN_CAPTURE_P1_EXECUTION.md) | pending |
+| MRC-P1 — Attempt rows + judge/publish step models | [MODEL_RUN_CAPTURE_P1_EXECUTION.md](./MODEL_RUN_CAPTURE_P1_EXECUTION.md) | shipped |
 | MRC-P2 — `models_snapshot` + staging metrics | [MODEL_RUN_CAPTURE_P2_EXECUTION.md](./MODEL_RUN_CAPTURE_P2_EXECUTION.md) | pending |
 | MRC-P3 — API exposure + staging sign-off | [MODEL_RUN_CAPTURE_P3_EXECUTION.md](./MODEL_RUN_CAPTURE_P3_EXECUTION.md) | pending |
 

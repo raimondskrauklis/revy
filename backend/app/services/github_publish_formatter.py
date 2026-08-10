@@ -28,6 +28,8 @@ from app.constants.enums import (
     FindingSeverity,
     GitHubFindingGroupState,
     GitHubIndexMode,
+    LlmCallOperationName,
+    LlmCallStepType,
     ResolutionMethod,
     ResolutionStatus,
     stored_enum_value,
@@ -37,6 +39,7 @@ from app.core.exceptions import ServiceUnavailableError
 from app.core.logging import get_logger
 from app.integrations import moonshot_review
 from app.models.github_finding_group import GitHubFindingGroupORM
+from app.services.llm_call_recorder import LlmAttemptStartContext
 
 logger = get_logger(__name__)
 
@@ -132,6 +135,8 @@ class PublishFormatContext:
     pr_active_groups: list[GitHubFindingGroupORM] | None = None
     ever_inlined_fingerprints: frozenset[str] | None = None
     pr_resolution_rollup: dict[str, object] | None = None
+    pipeline_run_id: UUID | None = None
+    review_run_id: UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -140,6 +145,8 @@ class PublishFormatResult:
     issue_comment: str
     confidence: int
     summary_json: dict
+    publish_model_provider: str | None = None
+    publish_model_id: str | None = None
 
 
 def verdict_groups(ctx: PublishFormatContext) -> list[GitHubFindingGroupORM]:
@@ -1642,13 +1649,31 @@ def _build_issue_comment_user_prompt(ctx: PublishFormatContext) -> str:
     return prompt
 
 
-async def build_pr_review_comment(ctx: PublishFormatContext) -> str:
-    """Full issue comment via Moonshot when configured; table fallback on failure (G5)."""
+async def build_pr_review_comment(ctx: PublishFormatContext) -> tuple[str, str | None, str | None]:
+    """Returns markdown and optional publish model provider/id when Moonshot runs."""
     fallback = build_pr_review_comment_fallback(ctx)
     if not settings.reviewer_llm_enabled():
-        return fallback
+        return fallback, None, None
 
     prompt = _build_issue_comment_user_prompt(ctx)
+    model_id = settings.revy_moonshot_model_for_profile("standard")
+    recorder = None
+    if ctx.pipeline_run_id is not None and ctx.review_run_id is not None:
+        recorder = LlmAttemptStartContext(
+            pipeline_run_id=ctx.pipeline_run_id,
+            review_run_id=ctx.review_run_id,
+            index_job_id=None,
+            step_type=LlmCallStepType.publish,
+            operation_name=LlmCallOperationName.chat,
+            attempt_no=0,
+            provider="moonshot",
+            request_model=model_id,
+        )
+
+    def _publish_model_fields() -> tuple[str | None, str | None]:
+        if recorder is None:
+            return None, None
+        return "moonshot", model_id
 
     try:
         async with httpx.AsyncClient(
@@ -1658,7 +1683,8 @@ async def build_pr_review_comment(ctx: PublishFormatContext) -> str:
                 client,
                 profile="standard",
                 user_prompt=prompt,
-                model_id=settings.revy_moonshot_model_for_profile("standard"),
+                model_id=model_id,
+                recorder=recorder,
             )
         text = normalize_llm_issue_comment(raw)
         if not text or _looks_like_json_wrapper(text):
@@ -1669,7 +1695,7 @@ async def build_pr_review_comment(ctx: PublishFormatContext) -> str:
                     "raw_prefix": raw.strip()[:200],
                 },
             )
-            return fallback
+            return fallback, *_publish_model_fields()
         if not _issue_comment_meets_product_bar(text, ctx):
             logger.warning(
                 "github_publish_formatter_llm_thin_markdown",
@@ -1678,21 +1704,22 @@ async def build_pr_review_comment(ctx: PublishFormatContext) -> str:
                     "raw_prefix": text.strip()[:200],
                 },
             )
-            return fallback
+            return fallback, *_publish_model_fields()
         text = splice_deterministic_findings_tables(text, ctx)
         text = splice_deterministic_pr_summary_block(text, ctx)
         text = append_review_metadata_footer(text, ctx)
         footer = _index_footer(ctx)
         if footer and footer not in text:
             text = f"{text}\n\n{footer}"
-        return _append_resolution_metrics_block(text, ctx)
+        publish_provider, publish_model = _publish_model_fields()
+        return _append_resolution_metrics_block(text, ctx), publish_provider, publish_model
     except (httpx.HTTPError, ValueError, OSError, ServiceUnavailableError) as exc:
         logger.warning(
             "github_publish_formatter_llm_failed",
             extra={"pull_request_id": str(ctx.pull_request_id), "error": str(exc)},
         )
 
-    return fallback
+    return fallback, *_publish_model_fields()
 
 
 def _build_summary_json(ctx: PublishFormatContext) -> dict:
@@ -1733,11 +1760,13 @@ def build_publish_format_result(ctx: PublishFormatContext) -> PublishFormatResul
 
 async def build_publish_format_result_async(ctx: PublishFormatContext) -> PublishFormatResult:
     check_summary = build_check_run_summary(ctx)
-    issue_comment = await build_pr_review_comment(ctx)
+    issue_comment, publish_provider, publish_model_id = await build_pr_review_comment(ctx)
     summary_json = _build_summary_json(ctx)
     return PublishFormatResult(
         check_summary=check_summary,
         issue_comment=issue_comment,
         confidence=summary_json["confidence"],
         summary_json=summary_json,
+        publish_model_provider=publish_provider,
+        publish_model_id=publish_model_id,
     )

@@ -3,12 +3,28 @@
 from __future__ import annotations
 
 import asyncio
+import time
+from dataclasses import dataclass
+from uuid import UUID
 
 import httpx
 
+from app.constants.enums import (
+    GitHubReviewRunFailureClass,
+    LlmCallOperationName,
+    LlmCallStepType,
+)
 from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError
 from app.core.logging import get_logger
+from app.services.llm_call_recorder import (
+    LlmAttemptCompleteContext,
+    LlmAttemptFailContext,
+    LlmAttemptStartContext,
+    complete_attempt,
+    fail_attempt,
+    start_attempt,
+)
 
 logger = get_logger(__name__)
 
@@ -22,6 +38,14 @@ _FLEXIBLE_DIMENSION_MODEL_PREFIXES = (
     "voyage-3-large",
     "voyage-3.5",
 )
+
+
+@dataclass(frozen=True, slots=True)
+class VoyageEmbedRecorderContext:
+    pipeline_run_id: UUID
+    index_job_id: UUID
+    request_model: str
+    attempt_no: int = 0
 
 
 def _model_supports_output_dimension(model: str) -> bool:
@@ -87,14 +111,21 @@ async def _post_embeddings(
     raise RuntimeError("voyage_embeddings_retry_exhausted")
 
 
-def _embedding_request_body(texts: list[str], *, input_type: str) -> dict[str, object]:
+def _embedding_request_body(
+    texts: list[str],
+    *,
+    input_type: str,
+    model: str,
+    output_dimension: int | None = None,
+) -> dict[str, object]:
     body: dict[str, object] = {
         "input": texts,
-        "model": settings.revy_embedding_model,
+        "model": model,
         "input_type": input_type,
     }
-    if _model_supports_output_dimension(settings.revy_embedding_model):
-        body["output_dimension"] = settings.revy_embedding_dimensions
+    if _model_supports_output_dimension(model):
+        dimension = output_dimension if output_dimension is not None else settings.revy_embedding_dimensions
+        body["output_dimension"] = dimension
     return body
 
 
@@ -109,6 +140,9 @@ def _require_embeddings_enabled() -> None:
 async def embed_texts(
     client: httpx.AsyncClient,
     texts: list[str],
+    *,
+    request_model: str | None = None,
+    recorder: VoyageEmbedRecorderContext | None = None,
 ) -> list[list[float]]:
     _require_embeddings_enabled()
     if not texts:
@@ -121,31 +155,82 @@ async def embed_texts(
             error_code="embeddings_disabled",
         )
 
+    model = request_model or settings.revy_embedding_model
     vectors: list[list[float]] = []
-    for start in range(0, len(texts), BATCH_SIZE):
+    for batch_index, start in enumerate(range(0, len(texts), BATCH_SIZE)):
         batch = texts[start : start + BATCH_SIZE]
-        response = await _post_embeddings(
-            client,
-            api_key=api_key,
-            body=_embedding_request_body(batch, input_type="document"),
-        )
-        _log_voyage_error(response)
-        response.raise_for_status()
-        data = response.json()
-        items = data.get("data")
-        if not isinstance(items, list):
-            raise ServiceUnavailableError(
-                message="Voyage embeddings response invalid",
-                error_code="embeddings_error",
+        attempt_id = None
+        attempt_started = time.monotonic()
+        if recorder is not None:
+            attempt_id = await start_attempt(
+                LlmAttemptStartContext(
+                    pipeline_run_id=recorder.pipeline_run_id,
+                    review_run_id=None,
+                    index_job_id=recorder.index_job_id,
+                    step_type=LlmCallStepType.index_embed,
+                    operation_name=LlmCallOperationName.embeddings,
+                    attempt_no=recorder.attempt_no + batch_index,
+                    provider="voyage",
+                    request_model=model,
+                    batch_size=len(batch),
+                )
             )
-        for item in items:
-            if isinstance(item, dict) and isinstance(item.get("embedding"), list):
-                vectors.append(item["embedding"])
-                continue
-            raise ServiceUnavailableError(
-                message="Voyage embeddings response invalid",
-                error_code="embeddings_error",
+        try:
+            response = await _post_embeddings(
+                client,
+                api_key=api_key,
+                body=_embedding_request_body(batch, input_type="document", model=model),
             )
+            _log_voyage_error(response)
+            response.raise_for_status()
+            data = response.json()
+            items = data.get("data")
+            if not isinstance(items, list):
+                raise ServiceUnavailableError(
+                    message="Voyage embeddings response invalid",
+                    error_code="embeddings_error",
+                )
+            for item in items:
+                if isinstance(item, dict) and isinstance(item.get("embedding"), list):
+                    vectors.append(item["embedding"])
+                    continue
+                raise ServiceUnavailableError(
+                    message="Voyage embeddings response invalid",
+                    error_code="embeddings_error",
+                )
+            if attempt_id is not None:
+                await complete_attempt(
+                    attempt_id,
+                    context=LlmAttemptCompleteContext(
+                        wait_ms=int((time.monotonic() - attempt_started) * 1000),
+                        http_status=response.status_code,
+                    ),
+                )
+        except httpx.HTTPStatusError as exc:
+            if attempt_id is not None:
+                await fail_attempt(
+                    attempt_id,
+                    context=LlmAttemptFailContext(
+                        wait_ms=int((time.monotonic() - attempt_started) * 1000),
+                        http_status=exc.response.status_code if exc.response is not None else None,
+                    ),
+                    exc=exc,
+                )
+            raise
+        except Exception as exc:
+            if attempt_id is not None:
+                failure_class = None
+                if isinstance(exc, httpx.TimeoutException):
+                    failure_class = GitHubReviewRunFailureClass.timeout
+                await fail_attempt(
+                    attempt_id,
+                    context=LlmAttemptFailContext(
+                        failure_class=failure_class,
+                        wait_ms=int((time.monotonic() - attempt_started) * 1000),
+                    ),
+                    exc=exc,
+                )
+            raise
     return vectors
 
 
@@ -158,10 +243,11 @@ async def embed_query(client: httpx.AsyncClient, query: str) -> list[float]:
             error_code="embeddings_disabled",
         )
 
+    model = settings.revy_embedding_model
     response = await _post_embeddings(
         client,
         api_key=api_key,
-        body=_embedding_request_body([query], input_type="query"),
+        body=_embedding_request_body([query], input_type="query", model=model),
     )
     _log_voyage_error(response)
     response.raise_for_status()

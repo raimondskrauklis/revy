@@ -33,7 +33,7 @@ def test_reconcile_review_run_task_runs_worker_order():
             ) as pass2_mock:
                 with patch(
                     "app.workers.reconcile_tasks.record_review_run_judge_status",
-                    AsyncMock(return_value=2),
+                    AsyncMock(return_value=(2, None)),
                 ) as judge_mock:
                     with patch(
                         "app.workers.reconcile_tasks.verify_still_open_escalation_groups",
@@ -116,7 +116,7 @@ def test_reconcile_task_records_resolution_pass_on_pipeline():
             ):
                 with patch(
                     "app.workers.reconcile_tasks.record_review_run_judge_status",
-                    AsyncMock(return_value=0),
+                    AsyncMock(return_value=(0, None)),
                 ):
                     with patch(
                         "app.workers.reconcile_tasks.verify_still_open_escalation_groups",
