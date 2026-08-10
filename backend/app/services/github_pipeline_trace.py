@@ -51,6 +51,11 @@ from app.services.github_pipeline_run_lookup import (
     get_pipeline_runs_for_index_jobs,
 )
 
+__all__ = [
+    "get_pipeline_run_for_index_job",
+    "get_pipeline_runs_for_index_jobs",
+]
+
 logger = get_logger(__name__)
 
 _PROMPT_MAX_BYTES = 512 * 1024
