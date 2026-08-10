@@ -9,8 +9,9 @@ Phase **P4** of [REVIEW_GENERATION_LIFECYCLE_GENERAL_PLAN.md](./REVIEW_GENERATIO
 - **Default `review_coalesce_seconds=0`** — coalesce off; no behavior change until configured.
 - When `review_coalesce_seconds > 0`: only **`pull_request.synchronize` autostart** path debounced; `@revy review` (`GitHubIndexJobTriggerSource.command`) and admin manual index **bypass** coalesce.
 - Revision row created **immediately** on synchronize (`create_revision=True` unchanged).
-- Resolution pairing (`apply_resolution_for_synchronize`) is a **separate** async task — coalesce debounces only `maybe_enqueue_pipeline_for_revision`, not resolution (RG-15).
-- New Celery task `schedule_autostart_pipeline_for_revision` with `apply_async(countdown=review_coalesce_seconds, kwargs={revision_id, token})`.
+- **Resolution first, then autostart (coalesce):** `process_github_event` schedules `apply_resolution_for_synchronize` with `coalesce_schedule_at` (deadline = synchronize time + `review_coalesce_seconds`). After resolution `applied`, the task schedules `schedule_autostart_pipeline_for_revision` with `countdown = max(0, deadline − now)` — compare latency does not extend the coalesce window (RG-15).
+- **Non-coalesce:** resolution task receives `index_job_id`; enqueues index only after resolution `applied` (G9 pairing).
+- New Celery task `schedule_autostart_pipeline_for_revision`: at fire time, if `is_authoritative_for_pull_request_head` → `maybe_enqueue_pipeline_for_revision(..., trigger=autostart)` → `enqueue_index_job`.
 - Token = `revision_id` string; at fire time re-check `is_authoritative_for_pull_request_head` — stale task **no-ops** (v1 cancel mechanism).
 - **v1:** no `celery_task_id` column on revision; no Redis — each synchronize schedules a new delayed task; only the task whose `revision_id` is still authoritative enqueues.
 - Cap enforced in settings validator (P0) — max 10.
@@ -38,7 +39,10 @@ cd backend && pipenv run ruff check app/workers/github_tasks.py app/services/rev
 
 ## P4.2 — Wire synchronize webhook path
 
-**What:** Replace direct `maybe_enqueue_pipeline_for_revision` in `process_github_event` for autostart synchronize with: if `review_coalesce_seconds == 0` → enqueue immediately (current behavior); else `schedule_autostart_pipeline_for_revision.delay(...)`.
+**What:** On `pull_request.synchronize` autostart:
+
+- `review_coalesce_seconds == 0` → create pending index job in webhook handler; schedule `apply_resolution_for_synchronize` with `index_job_id`; resolution task calls `enqueue_index_job` after `applied`.
+- `review_coalesce_seconds > 0` → schedule `apply_resolution_for_synchronize` with `coalesce_workspace_id` + `coalesce_schedule_at` only; autostart enqueue happens inside resolution task after `applied` (not from webhook handler).
 
 **Files:** `backend/app/workers/github_tasks.py`
 
@@ -54,8 +58,8 @@ cd backend && pipenv run pytest tests/unit/test_github_tasks_autostart.py -k "co
 
 **What:** Tests:
 
-1. `review_coalesce_seconds=0` — synchronize enqueues index immediately (mock `maybe_enqueue_pipeline_for_revision` called once).
-2. `review_coalesce_seconds=5` — first sync schedules countdown; second sync within window reschedules; only one pipeline enqueue after authority check.
+1. `review_coalesce_seconds=0` — synchronize creates index job; `enqueue_index_job` deferred to resolution task (not called from webhook handler).
+2. `review_coalesce_seconds=5` — webhook schedules resolution with `coalesce_schedule_at`; resolution task schedules autostart with remaining countdown ≤5 s.
 3. Stale task fires after newer revision — `maybe_enqueue` not called.
 
 **Files:** `backend/tests/unit/test_github_tasks_autostart.py`, `backend/tests/unit/test_github_generation_lifecycle.py`

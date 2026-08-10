@@ -1,6 +1,6 @@
 # Review generation lifecycle
 
-**Status:** P0–P5 **shipped** on `main` ([PR #54](https://github.com/raimondskrauklis/revy/pull/54)). Post-ship restart fix: [PR #89](https://github.com/raimondskrauklis/revy/pull/89) — index-job supersede + deferred resolution pairing on `synchronize`. Dogfood: [REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md](./REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md).
+**Status:** P0–P5 **shipped** on `main` ([PR #54](https://github.com/raimondskrauklis/revy/pull/54)). Post-ship restart fix: [PR #89](https://github.com/raimondskrauklis/revy/pull/89) — **Revy clean** (2026-08-10), pending merge — index-job supersede, deferred resolution pairing (G9 before pipeline), event-anchored coalesce, stale coalesce handoff via HEAD resolution task. Dogfood: [REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md](./REVIEW_GENERATION_LIFECYCLE_DOGFOOD.md).
 
 **North star:** Greptile / Bugbot-class **snapshot semantics** — work targets **latest HEAD**, supersede in-flight generation when a newer commit arrives, **publish to GitHub only after the pass completes** (no spill on check, summary, or inline).
 

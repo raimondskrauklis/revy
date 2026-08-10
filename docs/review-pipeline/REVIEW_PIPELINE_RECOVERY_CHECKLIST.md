@@ -75,7 +75,8 @@
 
 - [x] P0–P5 LOOP — HEAD gate, supersede, surface flush, coalesce, judge publish gate, trace fields
 - [x] Merge PR [#54](https://github.com/raimondskrauklis/revy/pull/54) → `main`
-- [ ] Merge PR [#89](https://github.com/raimondskrauklis/revy/pull/89) — index-job supersede + deferred resolution (RG-15)
+- [x] Revy peer review clean on PR [#89](https://github.com/raimondskrauklis/revy/pull/89) (2026-08-10)
+- [ ] Merge PR [#89](https://github.com/raimondskrauklis/revy/pull/89) — index-job supersede, resolution Celery task, G9-before-pipeline enqueue, event-anchored coalesce, stale coalesce handoff, Moonshot 520–524 retry (RG-15)
 - [ ] Staging dogfood — push during run + `@revy review` restart ([P2 § P2.7](./review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_P2_EXECUTION.md#p27--post-ship-restart-hotfix-pr-89))
 - [ ] Optional tag `review-generation-lifecycle-v1` on `main`
 

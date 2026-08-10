@@ -8,7 +8,7 @@ Phase **P2** of [REVIEW_GENERATION_LIFECYCLE_GENERAL_PLAN.md](./REVIEW_GENERATIO
 
 - On `synchronize` after revision create: `mark_review_runs_superseded_for_pull_request` + `mark_index_jobs_superseded_for_pull_request` + finalize G10 neutral for each superseded in-flight pipeline linked to those review runs **or** index jobs.
 - On same-SHA `synchronize` or `@revy review`: `supersede_active_generations_for_revision` clears in-flight review runs **and** index jobs on the HEAD revision before enqueue.
-- `apply_resolution_status_for_synchronize` runs in Celery task `apply_resolution_for_synchronize` (scheduled from `process_github_event` on `synchronize`) — **not** inline before pipeline enqueue (RG-15).
+- `apply_resolution_status_for_synchronize` runs in Celery task `apply_resolution_for_synchronize` (scheduled from `process_github_event` on `synchronize`) — **not** inline on the webhook worker (RG-15). Non-coalesce: index `enqueue_index_job` deferred until resolution `applied`. Coalesce: autostart scheduled after resolution with event-anchored `coalesce_schedule_at` (see [P4](./REVIEW_GENERATION_LIFECYCLE_P4_EXECUTION.md)).
 - `index_pull_request_revision`: before `start_pipeline_github_check`, if not `is_authoritative_for_pull_request_head` → skip G10 + `ensure_pipeline_run_for_index_job` / stash (index `run_index_job` may still execute — RG-Q11).
 - `prepare_review_after_index`: if not authoritative → return `ReviewAfterIndexOutcome()` without `create_review_run`.
 - `reconcile_tasks.py`: after reconcile, if review run `superseded` → skip `enqueue_publish_for_review_run`.
@@ -118,14 +118,23 @@ cd backend && pipenv run pytest tests/unit/test_github_generation_lifecycle.py t
 
 **Shipped fix ([PR #89](https://github.com/raimondskrauklis/revy/pull/89)):**
 
-- `mark_*_index_jobs_superseded_*` helpers — CAS `pending`/`processing` → `failed` with “Superseded by newer commit”; neutralize linked G10 checks.
-- `supersede_active_generations_for_revision` on every `synchronize` (same-SHA re-push clears in-flight on HEAD).
-- `apply_resolution_for_synchronize` Celery task — scheduled from `process_github_event` immediately after supersede; pipeline enqueue is not blocked.
+- **Index supersede** — `mark_*_index_jobs_superseded_*` CAS `pending`/`processing` → `failed` with shared message `Superseded by newer run` (`app/constants/github_messages.py`); batch G10 neutralize via `finalize_pipeline_checks_for_superseded_index_jobs`.
+- **Same-SHA retrigger** — `supersede_active_generations_for_revision` on every `synchronize` (and before `@revy review` enqueue); `PullRequestWebhookResult.pipeline_retrigger` for same-HEAD `synchronize`.
+- **Deferred resolution pairing** — `apply_resolution_for_synchronize` Celery task (not inline on `github_events` worker):
+  - **Non-coalesce (`review_coalesce_seconds=0`):** webhook creates pending index job; `enqueue_index_job` runs only after resolution `applied` (G9 stamps before pipeline starts).
+  - **Coalesce (`review_coalesce_seconds>0`):** resolution runs immediately; `schedule_autostart_pipeline_for_revision` is scheduled **after** resolution `applied` with `coalesce_schedule_at` anchored to the **synchronize** event (preserves ≤10 s quiet window even when compare is slow).
+- **Authority + cleanup** — resolution task checks `is_authoritative_for_pull_request_head`; on `skipped_stale` / `skipped_permanent` / exhausted retries, pending follow-up index jobs are failed and linked G10 checks finalized (when still `pending`).
+- **Coalesce stale handoff** — when a coalesce resolution task is `skipped_stale`, re-dispatch `apply_resolution_for_synchronize` for PR HEAD (`resolution-synchronize-{revision_id}` task id) so autostart still chains through pairing (never schedule autostart directly from a stale task).
+- **Stable Celery task ids** — `coalesce-autostart-{workspace_id}-{revision_id}` dedupes coalesce timers; `resolution-synchronize-{revision_id}` dedupes HEAD handoff vs duplicate webhooks.
+- **Index worker hardening** — atomic CAS claim `pending`→`processing`; CAS complete `processing`→`completed`; delete orphaned chunks when superseded mid-run.
+- **Moonshot transient errors** — Cloudflare gateway **520–524** added to `RETRYABLE_HTTP_STATUS_CODES` (`worker_retries.py`) so review runs Celery-retry instead of failing on one-off `api.moonshot.ai` 520s.
+
+**Revy:** clean on PR #89 (2026-08-10).
 
 **Deliverable:**
 
 ```bash
-cd backend && pipenv run pytest tests/unit/test_github_generation_lifecycle.py tests/unit/test_github_tasks_autostart.py -k "supersede or synchronize" -q
+cd backend && pipenv run pytest tests/unit/test_github_generation_lifecycle.py tests/unit/test_github_tasks_autostart.py tests/unit/test_github_indexing.py -k "supersede or synchronize or coalesce or resolution" -q
 ```
 
 ---
