@@ -90,6 +90,24 @@ def test_build_models_snapshot_reuse_only_index_omits_embedding():
     assert snapshot["reviewer"]["model_id"] == "kimi-k2.7-code"
 
 
+def test_build_models_snapshot_reuse_with_stray_embedding_model_omits_embedding():
+    snapshot = build_models_snapshot(
+        [
+            StepSnapshotInput(
+                step_type=PipelineStepType.index.value,
+                status=PipelineStepStatus.completed.value,
+                model_provider="voyage",
+                model_id="voyage-code-3.5",
+                manifest={
+                    "embed_batches": 0,
+                    "embedding_model": "voyage-code-3.5",
+                },
+            ),
+        ]
+    )
+    assert "embedding" not in snapshot
+
+
 def test_build_models_snapshot_attempt_fallback_for_embedding():
     snapshot = build_models_snapshot(
         [

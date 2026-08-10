@@ -16,6 +16,7 @@ from app.constants.enums import (
     PipelineStepType,
     stored_enum_value,
 )
+from app.core.logging import get_logger
 from app.models.github_llm_call_attempt import GitHubLlmCallAttemptORM
 from app.models.github_pipeline import (
     GitHubPipelineRunORM,
@@ -34,6 +35,8 @@ _ATTEMPT_STEP_BY_ROLE: dict[str, str] = {
     "judge": "judge",
     "publish": "publish",
 }
+
+logger = get_logger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,9 +77,9 @@ def _embedding_from_index(step: StepSnapshotInput) -> dict[str, Any] | None:
     if manifest.get("embedding_skipped_reason"):
         return None
     embed_batches = manifest.get("embed_batches", 0)
-    embedding_model = manifest.get("embedding_model")
-    if embed_batches == 0 and not embedding_model:
+    if embed_batches == 0:
         return None
+    embedding_model = manifest.get("embedding_model")
     provider = manifest.get("embedding_provider") or step.model_provider
     model_id = embedding_model or step.model_id
     dimensions = manifest.get("embedding_dimensions")
@@ -241,3 +244,19 @@ async def persist_models_snapshot(
     pipeline_run.models_snapshot = snapshot or None
     await session.flush()
     return snapshot
+
+
+async def try_persist_models_snapshot(
+    session: AsyncSession,
+    *,
+    pipeline_run_id: UUID,
+) -> None:
+    """Best-effort snapshot write — must not block terminal pipeline hooks."""
+    try:
+        await persist_models_snapshot(session, pipeline_run_id=pipeline_run_id)
+    except Exception:
+        logger.warning(
+            "models_snapshot_persist_failed",
+            exc_info=True,
+            extra={"pipeline_run_id": str(pipeline_run_id)},
+        )
