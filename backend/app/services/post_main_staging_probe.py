@@ -5,7 +5,7 @@ Safe import hook only; no intentional defects. Push 4 after #94 deploy:
 queued GitHub check UX + overlap supersede protocol.
 """
 
-POST_MAIN_PROBE_MARKER = "post-main-dogfood-v4-queued-check"
+POST_MAIN_PROBE_MARKER = "post-main-dogfood-v5-revy-live"
 
 
 def post_main_probe_value() -> str:
