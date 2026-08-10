@@ -194,7 +194,12 @@ def test_process_github_event_enqueues_pipeline_on_pull_request_synchronize():
                     with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
                         github_tasks.process_github_event.run("d-auto")
 
-    resolution_mock.assert_called_once_with(str(revision_id), index_job_id=str(job_id))
+    resolution_mock.assert_called_once_with(
+        str(revision_id),
+        index_job_id=str(job_id),
+        coalesce_workspace_id=None,
+        coalesce_countdown=None,
+    )
     pipeline_mock.assert_awaited_once()
     assert pipeline_mock.await_args.kwargs["trigger"] == GitHubIndexJobTriggerSource.autostart
     enqueue_mock.assert_not_called()
@@ -231,7 +236,12 @@ def test_process_github_event_enqueues_on_same_sha_synchronize_retrigger():
                     with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
                         github_tasks.process_github_event.run("d-auto")
 
-    resolution_mock.assert_called_once_with(str(revision_id), index_job_id=str(job_id))
+    resolution_mock.assert_called_once_with(
+        str(revision_id),
+        index_job_id=str(job_id),
+        coalesce_workspace_id=None,
+        coalesce_countdown=None,
+    )
     pipeline_mock.assert_awaited_once()
     enqueue_mock.assert_not_called()
 
@@ -315,7 +325,7 @@ def test_process_github_event_synchronize_coalesce_schedules_delayed_autostart()
             ):
                 with patch(
                     "app.workers.github_tasks.apply_resolution_for_synchronize.delay",
-                ):
+                ) as resolution_mock:
                     with patch(
                         "app.workers.github_tasks.maybe_enqueue_pipeline_for_revision",
                         AsyncMock(),
@@ -328,12 +338,50 @@ def test_process_github_event_synchronize_coalesce_schedules_delayed_autostart()
 
     pipeline_mock.assert_not_awaited()
     enqueue_mock.assert_not_called()
-    schedule_mock.assert_called_once()
-    assert schedule_mock.call_args.kwargs["countdown"] == 5
-    assert schedule_mock.call_args.kwargs["kwargs"] == {
-        "revision_id": str(revision_id),
-        "workspace_id": str(workspace_id),
-    }
+    schedule_mock.assert_not_called()
+    resolution_mock.assert_called_once_with(
+        str(revision_id),
+        index_job_id=None,
+        coalesce_workspace_id=str(workspace_id),
+        coalesce_countdown=5,
+    )
+
+
+def test_apply_resolution_for_synchronize_schedules_coalesced_autostart_after_resolution():
+    revision_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    revision = MagicMock()
+    revision.pull_request_id = uuid.uuid4()
+    pull_request = MagicMock()
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[revision, pull_request])
+    session.commit = AsyncMock()
+
+    with patch("app.workers.github_tasks.get_db_context", return_value=_db_context(session)):
+        with patch(
+            "app.workers.github_tasks.is_authoritative_for_pull_request_head",
+            AsyncMock(return_value=True),
+        ):
+            with patch(
+                "app.workers.github_tasks.apply_resolution_status_for_synchronize",
+                AsyncMock(),
+            ):
+                with patch(
+                    "app.workers.github_tasks.schedule_autostart_pipeline_for_revision.apply_async",
+                ) as schedule_mock:
+                    github_tasks.apply_resolution_for_synchronize.run(
+                        str(revision_id),
+                        coalesce_workspace_id=str(workspace_id),
+                        coalesce_countdown=5,
+                    )
+
+    schedule_mock.assert_called_once_with(
+        kwargs={
+            "revision_id": str(revision_id),
+            "workspace_id": str(workspace_id),
+        },
+        countdown=5,
+    )
 
 
 def test_process_github_event_opened_bypasses_coalesce():

@@ -350,6 +350,7 @@ async def _fail_index_job_after_chunk_work(
     if job is None:
         raise NotFoundError("Index job not found")
     if _is_superseded_index_job(job):
+        await _delete_index_job_chunks(session, index_job_id=index_job_id)
         return job
     job.status = GitHubIndexJobStatus.failed
     job.error_message = error_message[:2000]
@@ -386,6 +387,13 @@ async def fail_pending_index_job_for_resolution_error(
     job.status = GitHubIndexJobStatus.failed
     job.error_message = "resolution_pairing_failed"
     await session.flush()
+    from app.services.github_pipeline_trace import finalize_pipeline_github_check_for_index_job
+
+    await finalize_pipeline_github_check_for_index_job(
+        session,
+        index_job_id=index_job_id,
+        summary="Resolution pairing failed",
+    )
 
 
 async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubIndexJobORM:
