@@ -380,20 +380,14 @@ async def fail_pending_index_job_for_resolution_error(
     session: AsyncSession,
     *,
     index_job_id: UUID,
-) -> None:
+) -> bool:
     job = await session.get(GitHubIndexJobORM, index_job_id)
     if job is None or job.status != GitHubIndexJobStatus.pending:
-        return
+        return False
     job.status = GitHubIndexJobStatus.failed
     job.error_message = "resolution_pairing_failed"
     await session.flush()
-    from app.services.github_pipeline_trace import finalize_pipeline_github_check_for_index_job
-
-    await finalize_pipeline_github_check_for_index_job(
-        session,
-        index_job_id=index_job_id,
-        summary="Resolution pairing failed",
-    )
+    return True
 
 
 async def run_index_job(session: AsyncSession, *, index_job_id: UUID) -> GitHubIndexJobORM:

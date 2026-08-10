@@ -1,6 +1,7 @@
 # backend/tests/unit/test_github_tasks_autostart.py
 """GitHub webhook autostart — R8."""
 import uuid
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -198,7 +199,7 @@ def test_process_github_event_enqueues_pipeline_on_pull_request_synchronize():
         str(revision_id),
         index_job_id=str(job_id),
         coalesce_workspace_id=None,
-        coalesce_countdown=None,
+        coalesce_schedule_at=None,
     )
     pipeline_mock.assert_awaited_once()
     assert pipeline_mock.await_args.kwargs["trigger"] == GitHubIndexJobTriggerSource.autostart
@@ -240,7 +241,7 @@ def test_process_github_event_enqueues_on_same_sha_synchronize_retrigger():
         str(revision_id),
         index_job_id=str(job_id),
         coalesce_workspace_id=None,
-        coalesce_countdown=None,
+        coalesce_schedule_at=None,
     )
     pipeline_mock.assert_awaited_once()
     enqueue_mock.assert_not_called()
@@ -339,12 +340,11 @@ def test_process_github_event_synchronize_coalesce_schedules_delayed_autostart()
     pipeline_mock.assert_not_awaited()
     enqueue_mock.assert_not_called()
     schedule_mock.assert_not_called()
-    resolution_mock.assert_called_once_with(
-        str(revision_id),
-        index_job_id=None,
-        coalesce_workspace_id=str(workspace_id),
-        coalesce_countdown=5,
-    )
+    resolution_mock.assert_called_once()
+    call_kwargs = resolution_mock.call_args.kwargs
+    assert call_kwargs["index_job_id"] is None
+    assert call_kwargs["coalesce_workspace_id"] == str(workspace_id)
+    assert call_kwargs["coalesce_schedule_at"] is not None
 
 
 def test_apply_resolution_for_synchronize_schedules_coalesced_autostart_after_resolution():
@@ -356,6 +356,7 @@ def test_apply_resolution_for_synchronize_schedules_coalesced_autostart_after_re
     session = AsyncMock()
     session.get = AsyncMock(side_effect=[revision, pull_request])
     session.commit = AsyncMock()
+    schedule_at = (datetime.now(UTC) + timedelta(seconds=5)).isoformat()
 
     with patch("app.workers.github_tasks.get_db_context", return_value=_db_context(session)):
         with patch(
@@ -372,16 +373,15 @@ def test_apply_resolution_for_synchronize_schedules_coalesced_autostart_after_re
                     github_tasks.apply_resolution_for_synchronize.run(
                         str(revision_id),
                         coalesce_workspace_id=str(workspace_id),
-                        coalesce_countdown=5,
+                        coalesce_schedule_at=schedule_at,
                     )
 
-    schedule_mock.assert_called_once_with(
-        kwargs={
-            "revision_id": str(revision_id),
-            "workspace_id": str(workspace_id),
-        },
-        countdown=5,
-    )
+    schedule_mock.assert_called_once()
+    assert schedule_mock.call_args.kwargs["kwargs"] == {
+        "revision_id": str(revision_id),
+        "workspace_id": str(workspace_id),
+    }
+    assert schedule_mock.call_args.kwargs["countdown"] <= 5
 
 
 def test_process_github_event_opened_bypasses_coalesce():
@@ -507,6 +507,28 @@ def test_apply_resolution_for_synchronize_enqueues_follow_up_index_job():
     enqueue_mock.assert_called_once_with(job_id)
 
 
+def test_apply_resolution_for_synchronize_cleans_up_pending_job_on_skip():
+    revision_id = uuid.uuid4()
+    job_id = uuid.uuid4()
+    session = AsyncMock()
+
+    with patch("app.workers.github_tasks.get_db_context", return_value=_db_context(session)):
+        with patch(
+            "app.workers.github_tasks.is_authoritative_for_pull_request_head",
+            AsyncMock(return_value=False),
+        ):
+            with patch(
+                "app.workers.github_tasks._cleanup_pending_index_job_after_resolution_failure",
+                AsyncMock(),
+            ) as cleanup_mock:
+                github_tasks.apply_resolution_for_synchronize.run(
+                    str(revision_id),
+                    index_job_id=str(job_id),
+                )
+
+    cleanup_mock.assert_awaited_once_with(job_id)
+
+
 def test_apply_resolution_for_synchronize_skips_stale_revision():
     revision_id = uuid.uuid4()
     revision = MagicMock()
@@ -548,10 +570,7 @@ def test_apply_resolution_for_synchronize_skips_retry_on_permanent_not_found():
                 side_effect=AssertionError("retry should not be called"),
             ):
                 with patch("app.workers.github_tasks.enqueue_index_job") as enqueue_mock:
-                    github_tasks.apply_resolution_for_synchronize.run(
-                        str(revision_id),
-                        index_job_id=str(uuid.uuid4()),
-                    )
+                    github_tasks.apply_resolution_for_synchronize.run(str(revision_id))
 
     enqueue_mock.assert_not_called()
 

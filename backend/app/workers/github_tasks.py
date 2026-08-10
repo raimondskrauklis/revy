@@ -2,6 +2,7 @@
 """GitHub webhook Celery tasks — github_events queue."""
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from celery.exceptions import Retry
@@ -21,6 +22,7 @@ from app.services.github_indexing import (
     fail_pending_index_job_for_resolution_error,
 )
 from app.services.github_installations import apply_installation_webhook_event
+from app.services.github_pipeline_trace import finalize_pipeline_github_check_for_index_job
 from app.services.github_pull_requests import (
     apply_issue_comment_webhook_event,
     apply_pull_request_review_webhook_event,
@@ -47,6 +49,21 @@ async def _maybe_enqueue_autostart_pipeline_for_revision(
         revision_id=revision_id,
         trigger=GitHubIndexJobTriggerSource.autostart,
     )
+
+
+async def _cleanup_pending_index_job_after_resolution_failure(index_job_id: UUID) -> None:
+    async with get_db_context() as session:
+        failed = await fail_pending_index_job_for_resolution_error(
+            session,
+            index_job_id=index_job_id,
+        )
+        if not failed:
+            return
+        await finalize_pipeline_github_check_for_index_job(
+            session,
+            index_job_id=index_job_id,
+            summary="Resolution pairing failed",
+        )
 
 
 @celery_app.task(name="app.workers.github_tasks.schedule_autostart_pipeline_for_revision")
@@ -82,7 +99,7 @@ def apply_resolution_for_synchronize(
     revision_id: str,
     index_job_id: str | None = None,
     coalesce_workspace_id: str | None = None,
-    coalesce_countdown: int | None = None,
+    coalesce_schedule_at: str | None = None,
 ) -> None:
     follow_up_index_job_id = UUID(index_job_id) if index_job_id is not None else None
 
@@ -135,30 +152,50 @@ def apply_resolution_for_synchronize(
         fatal_exc = exc
     if fatal_exc is not None:
         if follow_up_index_job_id is not None:
-
-            async def _fail_follow_up() -> None:
-                async with get_db_context() as session:
-                    await fail_pending_index_job_for_resolution_error(
-                        session,
-                        index_job_id=follow_up_index_job_id,
-                    )
-
-            run_worker_async(_fail_follow_up())
+            try:
+                run_worker_async(
+                    _cleanup_pending_index_job_after_resolution_failure(follow_up_index_job_id),
+                )
+            except Exception as cleanup_exc:  # noqa: BLE001
+                logger.error(
+                    "resolution_synchronize_cleanup_failed",
+                    extra={
+                        "revision_id": revision_id,
+                        "index_job_id": str(follow_up_index_job_id),
+                        "error": str(cleanup_exc),
+                    },
+                )
         raise fatal_exc
     if outcome == "applied" and follow_up_index_job_id is not None:
         enqueue_index_job(follow_up_index_job_id)
     elif (
         outcome == "applied"
         and coalesce_workspace_id is not None
-        and coalesce_countdown is not None
+        and coalesce_schedule_at is not None
     ):
+        deadline = datetime.fromisoformat(coalesce_schedule_at)
+        remaining_seconds = max(0, int((deadline - datetime.now(UTC)).total_seconds()))
         schedule_autostart_pipeline_for_revision.apply_async(
             kwargs={
                 "revision_id": revision_id,
                 "workspace_id": coalesce_workspace_id,
             },
-            countdown=coalesce_countdown,
+            countdown=remaining_seconds,
         )
+    elif outcome in {"skipped_stale", "skipped_permanent"} and follow_up_index_job_id is not None:
+        try:
+            run_worker_async(
+                _cleanup_pending_index_job_after_resolution_failure(follow_up_index_job_id),
+            )
+        except Exception as cleanup_exc:  # noqa: BLE001
+            logger.error(
+                "resolution_synchronize_cleanup_failed",
+                extra={
+                    "revision_id": revision_id,
+                    "index_job_id": str(follow_up_index_job_id),
+                    "error": str(cleanup_exc),
+                },
+            )
     elif outcome != "applied":
         logger.info(
             "resolution_synchronize_task_skipped",
@@ -169,7 +206,7 @@ def apply_resolution_for_synchronize(
 @celery_app.task(name="app.workers.github_tasks.process_github_event", bind=True, max_retries=3)
 def process_github_event(self, delivery_id: str) -> None:
     index_job_ids: list[UUID] = []
-    resolution_follow_ups: list[tuple[str, UUID | None, str | None, int | None]] = []
+    resolution_follow_ups: list[tuple[str, UUID | None, str | None, str | None]] = []
 
     async def _run() -> None:
         async with get_db_context() as session:
@@ -204,24 +241,25 @@ def process_github_event(self, delivery_id: str) -> None:
                     if result.action == "synchronize":
                         paired_index_job_id: UUID | None = None
                         coalesce_workspace_id: str | None = None
-                        coalesce_countdown: int | None = None
+                        coalesce_schedule_at: str | None = None
                         if settings.review_coalesce_seconds > 0:
                             coalesce_workspace_id = str(result.workspace_id)
-                            coalesce_countdown = settings.review_coalesce_seconds
+                            coalesce_schedule_at = (
+                                datetime.now(UTC)
+                                + timedelta(seconds=settings.review_coalesce_seconds)
+                            ).isoformat()
                         else:
                             paired_index_job_id = await _maybe_enqueue_autostart_pipeline_for_revision(
                                 session,
                                 workspace_id=result.workspace_id,
                                 revision_id=result.revision_id,
                             )
-                            if paired_index_job_id is not None:
-                                index_job_ids.append(paired_index_job_id)
                         resolution_follow_ups.append(
                             (
                                 str(result.revision_id),
                                 paired_index_job_id,
                                 coalesce_workspace_id,
-                                coalesce_countdown,
+                                coalesce_schedule_at,
                             ),
                         )
                     else:
@@ -287,7 +325,7 @@ def process_github_event(self, delivery_id: str) -> None:
             revision_id,
             follow_up_index_job_id,
             coalesce_workspace_id,
-            coalesce_countdown,
+            coalesce_schedule_at,
         ) in resolution_follow_ups:
             if follow_up_index_job_id is not None:
                 deferred_index_job_ids.add(follow_up_index_job_id)
@@ -297,7 +335,7 @@ def process_github_event(self, delivery_id: str) -> None:
                     str(follow_up_index_job_id) if follow_up_index_job_id is not None else None
                 ),
                 coalesce_workspace_id=coalesce_workspace_id,
-                coalesce_countdown=coalesce_countdown,
+                coalesce_schedule_at=coalesce_schedule_at,
             )
         for job_id in index_job_ids:
             if job_id not in deferred_index_job_ids:
