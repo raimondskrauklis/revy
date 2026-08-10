@@ -9,7 +9,13 @@ from sqlalchemy import ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.constants.enums import GitHubReviewJudgeStatus, GitHubReviewRunStatus, ReviewProfile
+from app.constants.enums import (
+    GitHubIndexJobTriggerSource,
+    GitHubReviewJudgeStatus,
+    GitHubReviewRunFailureClass,
+    GitHubReviewRunStatus,
+    ReviewProfile,
+)
 from app.models.base import TimestampedModel
 
 
@@ -54,3 +60,14 @@ class GitHubReviewRunORM(TimestampedModel):
         server_default=GitHubReviewJudgeStatus.not_applicable.value,
     )
     context_stats: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    timing_stats: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    token_rollup: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    failure_stage: Mapped[str | None] = mapped_column(String(length=32), nullable=True)
+    failure_class: Mapped[GitHubReviewRunFailureClass | None] = mapped_column(
+        String(length=32),
+        nullable=True,
+    )
+    trigger_source: Mapped[GitHubIndexJobTriggerSource | None] = mapped_column(
+        String(length=32),
+        nullable=True,
+    )

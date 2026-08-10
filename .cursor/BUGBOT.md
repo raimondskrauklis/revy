@@ -1,12 +1,12 @@
 # Bugbot — review pipeline contract
 
-**Active program:** pr-summary-rollup — P4 lifetime readability (scan table + `<details>` explain layer).
+**Active program:** pipeline-observability — durable LLM attempt rows, commit graph, staging metrics.
 
-When reviewing **backend** changes for PSR P4, treat these as authoritative:
+When reviewing **backend** changes for pipeline observability, treat these as authoritative:
 
-- [PR_SUMMARY_ROLLUP_P4_EXECUTION.md](../docs/review-pipeline/pr-summary-rollup/waves/PR_SUMMARY_ROLLUP_P4_EXECUTION.md) — P4 LOOP (P4.0 splice → P4.3 Moonshot)
-- [PR_SUMMARY_ROLLUP_P4_READABILITY_FINDINGS.md](../docs/review-pipeline/pr-summary-rollup/PR_SUMMARY_ROLLUP_P4_READABILITY_FINDINGS.md) — PSR-Q11–Q18, reconciliation guards
-- [PR_SUMMARY_ROLLUP_GENERAL_PLAN.md](../docs/review-pipeline/pr-summary-rollup/PR_SUMMARY_ROLLUP_GENERAL_PLAN.md) — P0–P4 goals
+- [PIPELINE_OBSERVABILITY_P0_EXECUTION.md](../docs/review-pipeline/pipeline-observability/waves/PIPELINE_OBSERVABILITY_P0_EXECUTION.md) — P0 LOOP (schema, recorder, checkpoint)
+- [PIPELINE_OBSERVABILITY_FINDINGS.md](../docs/review-pipeline/pipeline-observability/PIPELINE_OBSERVABILITY_FINDINGS.md) — PO-Q1–Q19, commit graph, metric catalog
+- [PIPELINE_OBSERVABILITY_GENERAL_PLAN.md](../docs/review-pipeline/pipeline-observability/PIPELINE_OBSERVABILITY_GENERAL_PLAN.md) — P0–P5 goals
 
 **Agent workflow:**
 

@@ -15,7 +15,8 @@ from app.services.github_pipeline_trace import (
     record_retrieve_pipeline_step,
     record_review_pipeline_step,
 )
-from app.services.github_review import mark_review_run_failed, run_review_run
+from app.services.github_review import run_review_run
+from app.services.review_run_observability import persist_review_run_permanent_failure
 from app.workers.celery_app import celery_app
 from app.workers.task_retries import run_with_retryable_failure
 
@@ -97,13 +98,13 @@ def review_pull_request_revision(self, review_run_id: str) -> None:
             if run.status == GitHubReviewRunStatus.completed:
                 _enqueue_reconcile(review_run_id)
 
-    async def _mark_failed(error_message: str) -> None:
+    async def _mark_failed(error_message: str, exc: BaseException | None = None) -> None:
+        await persist_review_run_permanent_failure(
+            review_run_id=UUID(review_run_id),
+            error_message=error_message,
+            exc=exc,
+        )
         async with get_db_context() as session:
-            await mark_review_run_failed(
-                session,
-                review_run_id=UUID(review_run_id),
-                error_message=error_message,
-            )
             pipeline_run = await get_pipeline_run_for_review_run(
                 session,
                 review_run_id=UUID(review_run_id),

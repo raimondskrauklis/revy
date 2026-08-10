@@ -10,6 +10,7 @@ from app.models.github_finding_group import GitHubFindingGroupORM
 from app.models.github_finding_judge_outcome import GitHubFindingJudgeOutcomeORM
 from app.models.github_index_job import GitHubIndexJobORM
 from app.models.github_installation import GitHubInstallationORM
+from app.models.github_llm_call_attempt import GitHubLlmCallAttemptORM
 from app.models.github_pipeline import (
     GitHubPipelineArtifactORM,
     GitHubPipelineRunORM,
@@ -44,6 +45,7 @@ __all__ = [
     "GitHubFindingORM",
     "GitHubIndexJobORM",
     "GitHubInstallationORM",
+    "GitHubLlmCallAttemptORM",
     "GitHubPipelineArtifactORM",
     "GitHubPipelineRunORM",
     "GitHubPipelineStepORM",
