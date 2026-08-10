@@ -159,7 +159,7 @@ async def _post_embeddings(
             return response
         if attempt >= MAX_EMBED_REQUEST_RETRIES - 1:
             _log_voyage_error(response)
-            return response
+            response.raise_for_status()
         wait_seconds = _retry_after_seconds(response, attempt)
         logger.warning(
             "voyage_embeddings_rate_limited",

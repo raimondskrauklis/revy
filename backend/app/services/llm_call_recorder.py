@@ -8,7 +8,6 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import func, select
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import (
@@ -87,7 +86,7 @@ async def start_attempt(context: LlmAttemptStartContext) -> UUID:
 async def try_start_attempt(context: LlmAttemptStartContext) -> UUID | None:
     try:
         return await start_attempt(context)
-    except SQLAlchemyError:
+    except Exception:
         logger.warning("llm_attempt_start_failed", exc_info=True)
         return None
 
@@ -99,7 +98,7 @@ async def try_complete_attempt(
 ) -> None:
     try:
         await complete_attempt(attempt_id, context=context)
-    except SQLAlchemyError:
+    except Exception:
         logger.warning("llm_attempt_complete_failed", exc_info=True)
 
 
@@ -111,7 +110,7 @@ async def try_fail_attempt(
 ) -> None:
     try:
         await fail_attempt(attempt_id, context=context, exc=exc)
-    except SQLAlchemyError:
+    except Exception:
         logger.warning("llm_attempt_fail_failed", exc_info=True)
 
 
