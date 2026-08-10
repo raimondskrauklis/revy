@@ -380,12 +380,13 @@ async def fail_pending_index_job_for_resolution_error(
     session: AsyncSession,
     *,
     index_job_id: UUID,
+    error_message: str = "resolution_pairing_failed",
 ) -> bool:
     job = await session.get(GitHubIndexJobORM, index_job_id)
     if job is None or job.status != GitHubIndexJobStatus.pending:
         return False
     job.status = GitHubIndexJobStatus.failed
-    job.error_message = "resolution_pairing_failed"
+    job.error_message = error_message
     await session.flush()
     return True
 

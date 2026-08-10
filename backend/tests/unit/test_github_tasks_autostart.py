@@ -463,7 +463,10 @@ def test_apply_resolution_for_synchronize_cleans_up_and_handoffs_coalesce_on_sta
                         coalesce_schedule_at=schedule_at,
                     )
 
-    cleanup_mock.assert_awaited_once_with(job_id)
+    cleanup_mock.assert_awaited_once_with(
+        job_id,
+        error_message="resolution_synchronize_skipped",
+    )
     resolution_apply_mock.assert_called_once()
     assert resolution_apply_mock.call_args.kwargs["kwargs"]["revision_id"] == str(head_revision_id)
 
@@ -666,7 +669,10 @@ def test_apply_resolution_for_synchronize_cleans_up_pending_job_on_skip():
                     index_job_id=str(job_id),
                 )
 
-    cleanup_mock.assert_awaited_once_with(job_id)
+    cleanup_mock.assert_awaited_once_with(
+        job_id,
+        error_message="resolution_synchronize_skipped",
+    )
 
 
 def test_apply_resolution_for_synchronize_skips_stale_revision():

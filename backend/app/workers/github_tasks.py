@@ -102,18 +102,33 @@ async def _head_revision_id_for_pull_request(
     )
 
 
-async def _cleanup_pending_index_job_after_resolution_failure(index_job_id: UUID) -> None:
+_RESOLUTION_CLEANUP_CHECK_SUMMARIES: dict[str, str] = {
+    "resolution_pairing_failed": "Resolution pairing failed",
+    "resolution_synchronize_skipped": "Resolution skipped (stale revision)",
+    "resolution_post_outcome_failed": "Resolution follow-up failed",
+}
+
+
+async def _cleanup_pending_index_job_after_resolution_failure(
+    index_job_id: UUID,
+    *,
+    error_message: str = "resolution_pairing_failed",
+) -> None:
     async with get_db_context() as session:
         failed = await fail_pending_index_job_for_resolution_error(
             session,
             index_job_id=index_job_id,
+            error_message=error_message,
         )
         if not failed:
             return
         await finalize_pipeline_github_check_for_index_job(
             session,
             index_job_id=index_job_id,
-            summary="Resolution pairing failed",
+            summary=_RESOLUTION_CLEANUP_CHECK_SUMMARIES.get(
+                error_message,
+                "Resolution pairing failed",
+            ),
         )
 
 
@@ -261,7 +276,10 @@ def apply_resolution_for_synchronize(
         if outcome in {"skipped_stale", "skipped_permanent"} and follow_up_index_job_id is not None:
             try:
                 run_worker_async(
-                    _cleanup_pending_index_job_after_resolution_failure(follow_up_index_job_id),
+                    _cleanup_pending_index_job_after_resolution_failure(
+                        follow_up_index_job_id,
+                        error_message="resolution_synchronize_skipped",
+                    ),
                 )
             except Exception as cleanup_exc:  # noqa: BLE001
                 logger.error(
@@ -351,7 +369,10 @@ def apply_resolution_for_synchronize(
         if follow_up_index_job_id is not None:
             try:
                 run_worker_async(
-                    _cleanup_pending_index_job_after_resolution_failure(follow_up_index_job_id),
+                    _cleanup_pending_index_job_after_resolution_failure(
+                        follow_up_index_job_id,
+                        error_message="resolution_post_outcome_failed",
+                    ),
                 )
             except Exception as cleanup_exc:  # noqa: BLE001
                 logger.error(

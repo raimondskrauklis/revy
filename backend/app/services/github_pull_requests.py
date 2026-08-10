@@ -479,7 +479,7 @@ async def apply_pull_request_webhook_event(
         await supersede_stale_generations_for_new_revision(
             session,
             pull_request_id=pull_request.id,
-            keep_revision_id=new_revision.id,
+            keep_revision_id=bound_revision.id,
         )
         created_new_revision = (
             pull_request.revision_count == 1
@@ -493,7 +493,7 @@ async def apply_pull_request_webhook_event(
             )
         return PullRequestWebhookResult(
             workspace_id=repository.workspace_id,
-            revision_id=new_revision.id,
+            revision_id=bound_revision.id,
             new_revision=created_new_revision,
             action=action,
             pipeline_retrigger=True,
