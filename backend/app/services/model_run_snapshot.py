@@ -189,7 +189,10 @@ def _step_inputs(steps: list[GitHubPipelineStepORM]) -> list[StepSnapshotInput]:
 
 
 def _attempt_inputs(attempts: list[GitHubLlmCallAttemptORM]) -> list[AttemptSnapshotInput]:
-    ordered = sorted(attempts, key=lambda attempt: attempt.started_at)
+    ordered = sorted(
+        attempts,
+        key=lambda attempt: (attempt.started_at is None, attempt.started_at),
+    )
     return [
         AttemptSnapshotInput(
             step_type=stored_enum_value(attempt.step_type),
