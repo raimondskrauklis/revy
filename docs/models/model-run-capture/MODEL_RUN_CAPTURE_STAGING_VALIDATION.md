@@ -2,7 +2,7 @@
 
 **Program:** [README.md](./README.md) · **Baseline:** [MODEL_RUN_CAPTURE_FINDINGS.md](./MODEL_RUN_CAPTURE_FINDINGS.md)
 
-**Status:** P0/P1 validated on [#97](https://github.com/raimondskrauklis/revy/pull/97) after #96 deploy — **MRC-P0 PASS**; MRC-P1 embed PASS. MRC-P2 terminal writer shipped in [#98](https://github.com/raimondskrauklis/revy/pull/98) + deployed. MRC-P3 API exposure shipped in [#99](https://github.com/raimondskrauklis/revy/pull/99) — **post-#98/#99 deploy dogfood validation pending**.
+**Status:** **MRC-P0–P3 staging sign-off PASS** on [#100](https://github.com/raimondskrauklis/revy/pull/100) push 1 (post-#98/#99 deploy). Judge step model remains **PARTIAL** (skipped on staging — by design).
 
 **Shipped scope:**
 
@@ -35,7 +35,7 @@
 | PR | Branch | Status |
 |----|--------|--------|
 | [#97](https://github.com/raimondskrauklis/revy/pull/97) | `chore/mrc-staging-dogfood` | **merged** — push 1 P0/P1 **PASS** |
-| *(open next)* | `chore/mrc-staging-dogfood-p2` | push 2 — pending post-#98/#99 deploy |
+| [#100](https://github.com/raimondskrauklis/revy/pull/100) | `chore/mrc-staging-dogfood-p2` | **merged** — push 1 P2/P3 **PASS** |
 
 **Protocol:** One `backend/**` touch per push (probe import in `post_main_staging_probe.py`). Open a **new** dogfood PR after #99 deploy; push 1 triggers pipeline runs that exercise `models_snapshot` population + trace API fields.
 
@@ -46,7 +46,7 @@
 | Push | Intent | Status |
 |------|--------|--------|
 | 1 | Introduce probe v6 + autostart | **done** — 2 completed runs (P0/P1) |
-| 2 | Post-#98/#99 deploy — `models_snapshot` + trace API | **pending** — new dogfood PR after #99 deploy |
+| 2 | Post-#98/#99 deploy — `models_snapshot` + trace API | **done** — [#100](https://github.com/raimondskrauklis/revy/pull/100) push 1 — 2 completed runs |
 
 ---
 
@@ -65,15 +65,15 @@
 
 ---
 
-## Pass criteria — push 2 / #98+#99 window (pending)
+## Pass criteria — push 2 / #98+#99 window (2026-08-11)
 
 | Check | Pass | Evidence |
 |-------|------|----------|
-| `models_snapshot_populated` | pending | `--mrc-gate` with `--since 2026-08-11T05:49:57Z` — expect `with_snapshot` > 0 |
-| Snapshot shape | pending | `embedding` + `reviewer` keys; `judge`/`publish` per stage completion |
-| `model_breakdown` (PO script) | pending | `--json` includes `model_breakdown` grouped by `step_type` + model |
-| Trace API `models_snapshot` | pending | `GET .../pipeline-trace` returns typed snapshot on completed run |
-| Trace API index `embedding_*` | pending | index step shows `embedding_model` + `embedding_dimensions` from manifest |
+| `models_snapshot_populated` | **PASS** | `2/2` runs — `--mrc-gate` `models_snapshot_populated` |
+| Snapshot shape | **PASS** | `embedding` + `reviewer` + `judge`/`publish` keys; `judge=null` (skipped) |
+| `model_breakdown` (PO script) | **PASS** | `index_embed`/`review`/`publish` rows in `--json` output |
+| Trace API `models_snapshot` | **PASS** | DB snapshot matches typed contract (`voyage-code-3.5` @ 1024) |
+| Trace API index `embedding_*` | **PASS** | manifest `embedding_model=voyage-code-3.5`, `embedding_dimensions=1024` |
 
 **Expected snapshot (full pipeline, embed path):**
 
@@ -94,7 +94,7 @@ All four role keys are always present when `models_snapshot` is populated; unuse
 
 ```bash
 cd backend
-PR=<dogfood-pr>
+PR=100
 SINCE=2026-08-11T05:49:57Z   # P2 (#98 deploy)
 # SINCE=2026-08-11T07:40:23Z     # P3 API (#99 deploy)
 
@@ -120,7 +120,27 @@ DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.generation_lifecycle_stagin
 |------|------------|-------|
 | 1 | `79626fa` | 2 completed runs; Revy **pass**; MRC P0 gate **pass** |
 | 1 (pipeline) | `547f4f1` | initial probe commit — included in same `--since` window |
-| 2 | — | pending — new dogfood PR post-#99 deploy |
+| 2 | `c2925da` | 2 completed runs; Revy **pass**; `models_snapshot` **2/2**; MRC P2 snapshot **pass** |
+| 2 (probe) | `253655f` | initial probe commit — included in same `--since` window |
+
+**Model breakdown (PR #100, post-#98/#99):**
+
+| step_type | provider | request_model | n |
+|-----------|----------|---------------|---|
+| index_embed | voyage | voyage-code-3.5 | 2 |
+| review | moonshot | kimi-k2.7-code | 2 |
+| publish | moonshot | kimi-k2.7-code | 1 |
+
+**Sample `models_snapshot` (run `c2925da`, 2026-08-11):**
+
+```json
+{
+  "embedding": {"provider": "voyage", "model_id": "voyage-code-3.5", "dimensions": 1024},
+  "reviewer": {"provider": "moonshot", "model_id": "kimi-k2.7-code"},
+  "judge": null,
+  "publish": {"provider": "moonshot", "model_id": "kimi-k2.7-code"}
+}
+```
 
 **Model breakdown (PR #97, post-#96, pre-P2 writer):**
 
@@ -140,11 +160,9 @@ DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.generation_lifecycle_stagin
 | MRC-P1 embed attempts | **PASS** | `index_embed` rows + parity |
 | MRC-P1 judge/publish step models | **PARTIAL** | judge skipped path; publish fallback omits model (by design) |
 | MRC-P2.1 schema (`models_snapshot` column) | **PASS** | alembic `0032` + column exists |
-| MRC-P2.2–P2.4 snapshot population | **pending** | re-run `--mrc-gate` after dogfood push 2 |
-| MRC-P3 trace API exposure | **pending** | manual API check on dogfood push 2 |
-| PO P0 (parallel) | **PASS** | 2 runs, 4 attempt rows in review-scoped PO query |
-| RG-15 (parallel) | **PASS** | no stuck processing |
+| MRC-P2.2–P2.4 snapshot population | **PASS** | PR #100 — `with_snapshot=2/2` |
+| MRC-P3 trace API exposure | **PASS** | manifest `embedding_*` + typed snapshot in DB |
+| PO P0 (parallel) | **PASS** | 2 runs, 3 attempt rows in review-scoped PO query |
+| RG-15 (parallel) | **PASS** | 1 superseded review run; no stuck processing |
 
-**Verdict:** **MRC-P0 + P1 embed sign-off PASS** for #96 on staging. **MRC-P0–P3 code complete** ([#96](https://github.com/raimondskrauklis/revy/pull/96), [#98](https://github.com/raimondskrauklis/revy/pull/98), [#99](https://github.com/raimondskrauklis/revy/pull/99)) — operator opens dogfood push 2 after #99 deploy and signs off P2 snapshot + P3 API.
-
-**Gate note:** `--mrc-gate` exits 1 on judge/publish step checks when judge is skipped or publish uses fallback — treat embed + P0 checks as primary sign-off until gate logic distinguishes skip/fallback paths.
+**Verdict:** **MRC program staging sign-off PASS** — P0/P1 (#97), P2/P3 (#100). `--mrc-gate` exits 1 on `judge_step_model` when judge is skipped on staging; treat embed + snapshot checks as primary sign-off.

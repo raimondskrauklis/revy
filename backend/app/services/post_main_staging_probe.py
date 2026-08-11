@@ -1,11 +1,11 @@
 # backend/app/services/post_main_staging_probe.py
-"""Post-main staging dogfood probe — autostart marker for MRC post-#96 validation.
+"""Post-main staging dogfood probe — autostart marker for MRC post-#98/#99 validation.
 
-Safe import hook only; no intentional defects. Push 1 after #96 deploy:
-model-run-capture embedding identity + attempt-row observability.
+Safe import hook only; no intentional defects. Push 1 after #99 deploy:
+models_snapshot population (P2) + pipeline trace API exposure (P3).
 """
 
-POST_MAIN_PROBE_MARKER = "post-main-dogfood-v6-mrc-model-capture"
+POST_MAIN_PROBE_MARKER = "post-main-dogfood-v7-mrc-snapshot-api"
 
 
 def post_main_probe_value() -> str:
