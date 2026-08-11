@@ -41,6 +41,7 @@ from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullReque
 from app.models.github_repository import GitHubRepositoryORM
 from app.models.github_review_run import GitHubReviewRunORM
 from app.schemas.github_pipeline import (
+    ModelsSnapshotResponse,
     PipelineArtifactResponse,
     PipelineRunResponse,
     PipelineStepResponse,
@@ -962,6 +963,10 @@ def _pipeline_step_response(step: GitHubPipelineStepORM) -> PipelineStepResponse
 def build_pipeline_run_response(pipeline_run: GitHubPipelineRunORM) -> PipelineRunResponse:
     """Map ORM pipeline run to API response — single entry point for all trace endpoints."""
     steps = sorted(pipeline_run.steps, key=lambda item: item.created_at)
+    raw_snapshot = pipeline_run.models_snapshot
+    models_snapshot = (
+        ModelsSnapshotResponse.model_validate(raw_snapshot) if raw_snapshot is not None else None
+    )
     return PipelineRunResponse(
         id=pipeline_run.id,
         workspace_id=pipeline_run.workspace_id,
@@ -971,7 +976,7 @@ def build_pipeline_run_response(pipeline_run: GitHubPipelineRunORM) -> PipelineR
         index_job_id=pipeline_run.index_job_id,
         review_run_id=pipeline_run.review_run_id,
         publish_job_id=pipeline_run.publish_job_id,
-        models_snapshot=pipeline_run.models_snapshot,
+        models_snapshot=models_snapshot,
         created_at=pipeline_run.created_at,
         updated_at=pipeline_run.updated_at,
         steps=[_pipeline_step_response(step) for step in steps],

@@ -14,7 +14,11 @@ from app.constants.enums import (
     PipelineStepType,
 )
 from app.models.github_pipeline import GitHubPipelineArtifactORM, GitHubPipelineStepORM
-from app.schemas.github_pipeline import PipelineRunResponse, PipelineStepResponse
+from app.schemas.github_pipeline import (
+    ModelsSnapshotResponse,
+    PipelineRunResponse,
+    PipelineStepResponse,
+)
 
 
 def test_build_pipeline_run_response_maps_models_snapshot():
@@ -41,7 +45,7 @@ def test_build_pipeline_run_response_maps_models_snapshot():
 
     response = build_pipeline_run_response(pipeline_run)
 
-    assert response.models_snapshot == models_snapshot
+    assert response.models_snapshot == ModelsSnapshotResponse.model_validate(models_snapshot)
 
 
 def test_pipeline_run_response_models_snapshot_round_trip():
@@ -57,7 +61,7 @@ def test_pipeline_run_response_models_snapshot_round_trip():
         revision_id=uuid.uuid4(),
         head_sha="abc123",
         index_mode=GitHubIndexMode.diff,
-        models_snapshot=snapshot,
+        models_snapshot=ModelsSnapshotResponse.model_validate(snapshot),
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
     )
@@ -169,6 +173,6 @@ async def test_get_pipeline_trace_exposes_models_snapshot_and_index_manifest():
             review_run_id=review_run_id,
         )
 
-    assert response.models_snapshot == models_snapshot
+    assert response.models_snapshot == ModelsSnapshotResponse.model_validate(models_snapshot)
     assert response.steps[0].embedding_model == "voyage-code-3.5"
     assert response.steps[0].embedding_dimensions == 1024

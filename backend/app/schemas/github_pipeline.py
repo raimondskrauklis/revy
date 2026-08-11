@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -22,9 +21,22 @@ class PipelineArtifactResponse(BaseModel):
     id: UUID
     kind: PipelineArtifactKind
     content_text: str | None = None
-    content_json: dict[str, Any] | None = None
+    content_json: dict[str, object] | None = None
     content_hash: str | None = None
     created_at: datetime
+
+
+class ModelsSnapshotRoleResponse(BaseModel):
+    provider: str
+    model_id: str
+    dimensions: int | None = None
+
+
+class ModelsSnapshotResponse(BaseModel):
+    embedding: ModelsSnapshotRoleResponse | None = None
+    reviewer: ModelsSnapshotRoleResponse | None = None
+    judge: ModelsSnapshotRoleResponse | None = None
+    publish: ModelsSnapshotRoleResponse | None = None
 
 
 class PipelineStepResponse(BaseModel):
@@ -58,7 +70,7 @@ class PipelineRunResponse(BaseModel):
     index_job_id: UUID | None = None
     review_run_id: UUID | None = None
     publish_job_id: UUID | None = None
-    models_snapshot: dict[str, Any] | None = None
+    models_snapshot: ModelsSnapshotResponse | None = None
     created_at: datetime
     updated_at: datetime
     steps: list[PipelineStepResponse] = Field(default_factory=list)
