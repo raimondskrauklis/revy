@@ -42,7 +42,7 @@
 | Judge JSON contract | [JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](../judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) |
 | Finding resolution | [FINDING_RESOLUTION_STAGING_VALIDATION.md](../finding-resolution/FINDING_RESOLUTION_STAGING_VALIDATION.md) |
 | PR summary rollup | [PR_SUMMARY_ROLLUP_STAGING_VALIDATION.md](../pr-summary-rollup/PR_SUMMARY_ROLLUP_STAGING_VALIDATION.md) |
-| Model run capture | [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](../models/model-run-capture/MODEL_RUN_CAPTURE_STAGING_VALIDATION.md) |
+| Model run capture | [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](../models/model-run-capture/MODEL_RUN_CAPTURE_STAGING_VALIDATION.md) — P0/P1 PASS (#97); P2 snapshot pending #98 deploy |
 | Agent workflow pack E2E | [AGENT_WORKFLOW_PACK_E2E_VALIDATION.md](./AGENT_WORKFLOW_PACK_E2E_VALIDATION.md) |
 
 ## Shared tooling

@@ -11,6 +11,6 @@ Durable **which model ran** audit trail for embeddings, reviewer, judge, and pub
 | [reviews/architecture-peer-review/](./reviews/architecture-peer-review/README.md) | Architecture peer review — pass index |
 | [reviews/execution-peer-review/](./reviews/execution-peer-review/README.md) | Execution peer review — pass index |
 
-**Program status (2026-08-11):** MRC-P0–P2 **shipped** ([#96](https://github.com/raimondskrauklis/revy/pull/96) + [#98](https://github.com/raimondskrauklis/revy/pull/98)); MRC-P3 API exposure **pending**. Post-#98 deploy: re-run `--mrc-gate` for `models_snapshot_populated` — see staging validation memo.
+**Program status (2026-08-11):** MRC-P0–P3 **shipped** ([#96](https://github.com/raimondskrauklis/revy/pull/96), [#98](https://github.com/raimondskrauklis/revy/pull/98), P3 API on `feat/mrc-p3-api-exposure`). Post-#98 deploy: re-run `--mrc-gate` for `models_snapshot_populated`.
 
 **Related:** [MODEL_POLICY_FINDINGS.md](../MODEL_POLICY_FINDINGS.md) (which model to use) · [voyage-embeddings/](../voyage-embeddings/) (embedding upgrades) · [pipeline-observability](../../review-pipeline/pipeline-observability/) (tokens, latency, failures — sibling program).
