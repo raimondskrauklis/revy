@@ -35,7 +35,7 @@
 | PR | Branch | Status |
 |----|--------|--------|
 | [#97](https://github.com/raimondskrauklis/revy/pull/97) | `chore/mrc-staging-dogfood` | **merged** — push 1 P0/P1 **PASS** |
-| *(open next)* | `chore/mrc-staging-dogfood-p2` | push 2 — pending post-#98/#99 deploy |
+| [#100](https://github.com/raimondskrauklis/revy/pull/100) | `chore/mrc-staging-dogfood-p2` | push 1 — P2 snapshot + P3 API validation in progress |
 
 **Protocol:** One `backend/**` touch per push (probe import in `post_main_staging_probe.py`). Open a **new** dogfood PR after #99 deploy; push 1 triggers pipeline runs that exercise `models_snapshot` population + trace API fields.
 
@@ -46,7 +46,7 @@
 | Push | Intent | Status |
 |------|--------|--------|
 | 1 | Introduce probe v6 + autostart | **done** — 2 completed runs (P0/P1) |
-| 2 | Post-#98/#99 deploy — `models_snapshot` + trace API | **pending** — new dogfood PR after #99 deploy |
+| 2 | Post-#98/#99 deploy — `models_snapshot` + trace API | **in progress** — [#100](https://github.com/raimondskrauklis/revy/pull/100) push 1 |
 
 ---
 
@@ -94,7 +94,7 @@ All four role keys are always present when `models_snapshot` is populated; unuse
 
 ```bash
 cd backend
-PR=<dogfood-pr>
+PR=100
 SINCE=2026-08-11T05:49:57Z   # P2 (#98 deploy)
 # SINCE=2026-08-11T07:40:23Z     # P3 API (#99 deploy)
 
