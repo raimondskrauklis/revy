@@ -2,7 +2,7 @@
 
 **Purpose:** Dogfood PR on `revy-staging` after [#89](https://github.com/raimondskrauklis/revy/pull/89) and [#92](https://github.com/raimondskrauklis/revy/pull/92) — **full index → review → publish cycles** on the validation PR, not idle system-wide windows.
 
-**Dogfood PR #93:** closed. **#94** merged + deployed. **Push 4:** [#95](https://github.com/raimondskrauklis/revy/pull/95) (closed). **#96** merged + deployed — MRC P0/P1 validation: [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](../models/model-run-capture/MODEL_RUN_CAPTURE_STAGING_VALIDATION.md). **#98** MRC-P2 terminal writer — pending merge/deploy.
+**Dogfood PR #93:** closed. **#94** merged + deployed. **Push 4:** [#95](https://github.com/raimondskrauklis/revy/pull/95) (closed). **#96** merged + deployed — MRC P0/P1 validation: [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](../models/model-run-capture/MODEL_RUN_CAPTURE_STAGING_VALIDATION.md). **#98** MRC-P2 merged + deployed (`2026-08-11T05:49:57Z`). **#99** MRC-P3 API exposure merged + deployed (`2026-08-11T07:40:23Z`).
 
 ---
 
@@ -14,7 +14,8 @@
 | **#92 pipeline observability P0** | `2026-08-10T14:23:32Z` | PO P0 dogfood window — migration `0031` |
 | **#94 RG-15 check UX** | `2026-08-10T15:28:53Z` | Queued GitHub check + probe scripts |
 | **#96 model-run-capture** | `2026-08-10T19:35:30Z` | **MRC P0/P1 dogfood window** — migration `0032` |
-| **#98 MRC-P2** | *(fill after merge deploy)* | Terminal `models_snapshot` writer |
+| **#98 MRC-P2** | `2026-08-11T05:49:57Z` | Terminal `models_snapshot` writer |
+| **#99 MRC-P3** | `2026-08-11T07:40:23Z` | Pipeline trace API exposure |
 
 **Rule:** PO/RG-15 probes on closed #93/#95 use `--since 2026-08-10T14:23:32Z`. MRC probes use `--since 2026-08-10T19:35:30Z` on the **post-#96 dogfood PR** (not #96 — merged code cannot self-validate).
 
@@ -45,7 +46,7 @@
 | MRC P0 `--mrc-p0-gate` | **PASS** | alembic `0032`; `2/2` embed manifest + step model |
 | MRC P1 embed | **PASS** | `2` `index_embed` rows; parity `2/0` |
 | MRC P1 judge/publish steps | **PARTIAL** | judge `0/2` (skipped); publish `1/2` (fallback path) |
-| MRC P2 `models_snapshot` | **pending** | #98 not deployed — re-run after merge |
+| MRC P2 `models_snapshot` | **pending** | #98 deployed — re-run on new dogfood PR with `--since 2026-08-11T05:49:57Z` |
 | PO P0 `--po-p0-gate` | **PASS** | 2 runs; 4 attempt rows |
 | RG-15 `--rg15-gate` | **PASS** | no stuck processing |
 
@@ -94,6 +95,6 @@ DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.generation_lifecycle_stagin
 | RG-15 queued check UX | **PASS** (initial) | #95 push 4 post-#94 deploy; 2 runs, 1 superseded |
 | PO P4 SLO (`--po-gate`) | **INCONCLUSIVE** | `wait_ms` null on success path until P1 |
 
-**Next:** merge [#98](https://github.com/raimondskrauklis/revy/pull/98) → capture deploy ISO → push 2 on [#97](https://github.com/raimondskrauklis/revy/pull/97) → sign off `models_snapshot_populated`. Then MRC-P3 API exposure.
+**Next:** wait for #99 deploy → open `chore/mrc-staging-dogfood-p2` dogfood PR → sign off `models_snapshot_populated` + trace API fields. MRC program code complete.
 
 **Related:** [model-run-capture validation](../models/model-run-capture/MODEL_RUN_CAPTURE_STAGING_VALIDATION.md) · [pipeline observability](../pipeline-observability/PIPELINE_OBSERVABILITY_STAGING_VALIDATION.md) · [generation lifecycle](../review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_STAGING_VALIDATION.md)

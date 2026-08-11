@@ -35,19 +35,20 @@ See [REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md](../review-pipeline/review
 
 ## Model run capture (`model_run_capture_staging_metrics.py`)
 
-MRC-P0/P1/P2 staging gates — index manifest embedding model, `index_embed` attempt rows, judge/publish step model fields, `models_snapshot` population. Post-#96 deploy boundary: `2026-08-10T19:35:30Z`. Post-#98 deploy: use new `--since` after merge (see [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](../models/model-run-capture/MODEL_RUN_CAPTURE_STAGING_VALIDATION.md)).
+MRC-P0/P1/P2/P3 staging gates — index manifest embedding model, `index_embed` attempt rows, judge/publish step model fields, `models_snapshot` population. Post-#96 deploy boundary: `2026-08-10T19:35:30Z`. Post-#98 deploy: `2026-08-11T05:49:57Z` (see [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](../models/model-run-capture/MODEL_RUN_CAPTURE_STAGING_VALIDATION.md)).
 
 ```bash
 cd backend
 PR=<dogfood-pr-number>
 SINCE=2026-08-10T19:35:30Z   # P0/P1 (#96)
-# SINCE=<#98-deploy-iso>    # P2 snapshot population
+SINCE=2026-08-11T05:49:57Z   # P2 snapshot population (#98)
+SINCE=2026-08-11T07:40:23Z   # P3 trace API (#99)
 
 DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.model_run_capture_staging_metrics \
   --since $SINCE --pr-number $PR --require-runs --mrc-gate --json
 ```
 
-**MRC gate:** Exit code **1** when any check is `FAIL` (`INCONCLUSIVE` does not fail). `models_snapshot_populated` is **INCONCLUSIVE** until #98 deploy; **PASS** when completed runs have non-null `models_snapshot`.
+**MRC gate:** Exit code **1** when any check is `FAIL` (`INCONCLUSIVE` does not fail). `models_snapshot_populated` is **INCONCLUSIVE** until #98 deploy; **PASS** when completed runs have non-null `models_snapshot` after `--since 2026-08-11T05:49:57Z`.
 
 See [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](../models/model-run-capture/MODEL_RUN_CAPTURE_STAGING_VALIDATION.md).
 

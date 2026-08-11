@@ -9,7 +9,7 @@ Linear **phase-execution** order. General plan: [`../MODEL_RUN_CAPTURE_GENERAL_P
 | MRC-P0 — Index embedding identity | [MODEL_RUN_CAPTURE_P0_EXECUTION.md](./MODEL_RUN_CAPTURE_P0_EXECUTION.md) | shipped ([#96](https://github.com/raimondskrauklis/revy/pull/96)) |
 | MRC-P1 — Attempt rows + judge/publish step models | [MODEL_RUN_CAPTURE_P1_EXECUTION.md](./MODEL_RUN_CAPTURE_P1_EXECUTION.md) | shipped ([#96](https://github.com/raimondskrauklis/revy/pull/96)) |
 | MRC-P2 — `models_snapshot` + staging metrics | [MODEL_RUN_CAPTURE_P2_EXECUTION.md](./MODEL_RUN_CAPTURE_P2_EXECUTION.md) | shipped ([#98](https://github.com/raimondskrauklis/revy/pull/98)) |
-| MRC-P3 — API exposure + staging sign-off | [MODEL_RUN_CAPTURE_P3_EXECUTION.md](./MODEL_RUN_CAPTURE_P3_EXECUTION.md) | shipped |
+| MRC-P3 — API exposure + staging sign-off | [MODEL_RUN_CAPTURE_P3_EXECUTION.md](./MODEL_RUN_CAPTURE_P3_EXECUTION.md) | shipped ([#99](https://github.com/raimondskrauklis/revy/pull/99)) |
 
 **LOOP order:** MRC-P0 → MRC-P1 → MRC-P2 → MRC-P3 (strict).
 

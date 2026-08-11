@@ -2,7 +2,7 @@
 
 **Program:** [README.md](./README.md) · **Baseline:** [MODEL_RUN_CAPTURE_FINDINGS.md](./MODEL_RUN_CAPTURE_FINDINGS.md)
 
-**Status:** P0/P1 validated on [#97](https://github.com/raimondskrauklis/revy/pull/97) after #96 deploy — **MRC-P0 PASS**; MRC-P1 embed PASS. MRC-P2 terminal writer shipped in [#98](https://github.com/raimondskrauklis/revy/pull/98) — **post-#98 deploy validation pending**.
+**Status:** P0/P1 validated on [#97](https://github.com/raimondskrauklis/revy/pull/97) after #96 deploy — **MRC-P0 PASS**; MRC-P1 embed PASS. MRC-P2 terminal writer shipped in [#98](https://github.com/raimondskrauklis/revy/pull/98) + deployed. MRC-P3 API exposure shipped in [#99](https://github.com/raimondskrauklis/revy/pull/99) — **post-#98/#99 deploy dogfood validation pending**.
 
 **Shipped scope:**
 
@@ -10,6 +10,7 @@
 |----|--------|
 | [#96](https://github.com/raimondskrauklis/revy/pull/96) | MRC-P0 (index embedding identity), MRC-P1 (attempt rows + judge/publish step models), MRC-P2.1 (`models_snapshot` column) |
 | [#98](https://github.com/raimondskrauklis/revy/pull/98) | MRC-P2.2–P2.4 (`build_models_snapshot`, terminal writer hooks, `model_breakdown` staging metrics) |
+| [#99](https://github.com/raimondskrauklis/revy/pull/99) | MRC-P3 (`PipelineRunResponse.models_snapshot`, index step `embedding_*` manifest fields, typed schemas) |
 
 **Validation rule:** Merged code cannot self-validate on its own PR. Use a **dogfood PR opened after deploy** with `--since` at deploy completion — pre-deploy runs are excluded.
 
@@ -20,7 +21,8 @@
 | Deploy | `--since` ISO | Role |
 |--------|---------------|------|
 | **#96 model-run-capture** | `2026-08-10T19:35:30Z` | **P0/P1 dogfood window** — migration `0032` + index/attempt capture |
-| **#98 MRC-P2** | *(fill after merge deploy)* | **P2 dogfood window** — terminal `models_snapshot` writer |
+| **#98 MRC-P2** | `2026-08-11T05:49:57Z` | **P2 dogfood window** — terminal `models_snapshot` writer |
+| **#99 MRC-P3** | `2026-08-11T07:40:23Z` | **P3 dogfood window** — pipeline trace API exposure |
 
 **Rule:** Use deploy job completion time (`gh run list --branch main`), not merge time. Run probe scripts from **`main`** (metrics scripts live on main); scope with `--pr-number` on the dogfood PR opened **after** deploy.
 
@@ -32,9 +34,10 @@
 
 | PR | Branch | Status |
 |----|--------|--------|
-| [#97](https://github.com/raimondskrauklis/revy/pull/97) | `chore/mrc-staging-dogfood` | push 1 — P0/P1 **PASS**; push 2 — pending post-#98 deploy |
+| [#97](https://github.com/raimondskrauklis/revy/pull/97) | `chore/mrc-staging-dogfood` | **merged** — push 1 P0/P1 **PASS** |
+| *(open next)* | `chore/mrc-staging-dogfood-p2` | push 2 — pending post-#98/#99 deploy |
 
-**Protocol:** One `backend/**` touch per push (probe import in `post_main_staging_probe.py`). After #98 deploy, push 2 (or a new empty commit) triggers pipeline runs that exercise `models_snapshot` population.
+**Protocol:** One `backend/**` touch per push (probe import in `post_main_staging_probe.py`). Open a **new** dogfood PR after #99 deploy; push 1 triggers pipeline runs that exercise `models_snapshot` population + trace API fields.
 
 ---
 
@@ -43,7 +46,7 @@
 | Push | Intent | Status |
 |------|--------|--------|
 | 1 | Introduce probe v6 + autostart | **done** — 2 completed runs (P0/P1) |
-| 2 | Post-#98 deploy — `models_snapshot` population | **pending** — after #98 merge + deploy |
+| 2 | Post-#98/#99 deploy — `models_snapshot` + trace API | **pending** — new dogfood PR after #99 deploy |
 
 ---
 
@@ -62,13 +65,15 @@
 
 ---
 
-## Pass criteria — push 2 / #98 window (pending)
+## Pass criteria — push 2 / #98+#99 window (pending)
 
 | Check | Pass | Evidence |
 |-------|------|----------|
-| `models_snapshot_populated` | pending | `--mrc-gate` — expect `with_snapshot` > 0 on completed runs |
+| `models_snapshot_populated` | pending | `--mrc-gate` with `--since 2026-08-11T05:49:57Z` — expect `with_snapshot` > 0 |
 | Snapshot shape | pending | `embedding` + `reviewer` keys; `judge`/`publish` per stage completion |
 | `model_breakdown` (PO script) | pending | `--json` includes `model_breakdown` grouped by `step_type` + model |
+| Trace API `models_snapshot` | pending | `GET .../pipeline-trace` returns typed snapshot on completed run |
+| Trace API index `embedding_*` | pending | index step shows `embedding_model` + `embedding_dimensions` from manifest |
 
 **Expected snapshot (full pipeline, embed path):**
 
@@ -89,9 +94,9 @@ All four role keys are always present when `models_snapshot` is populated; unuse
 
 ```bash
 cd backend
-PR=97
-SINCE=2026-08-10T19:35:30Z   # P0/P1 (#96 window)
-# SINCE=<#98-deploy-iso>     # P2 — after #98 merge deploy
+PR=<dogfood-pr>
+SINCE=2026-08-11T05:49:57Z   # P2 (#98 deploy)
+# SINCE=2026-08-11T07:40:23Z     # P3 API (#99 deploy)
 
 DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.model_run_capture_staging_metrics \
   --since $SINCE --pr-number $PR --require-runs --mrc-gate --json
@@ -103,7 +108,9 @@ DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.generation_lifecycle_stagin
   --since $SINCE --pr-number $PR --require-activity --rg15-gate --json
 ```
 
-**P2 gate:** `models_snapshot_populated` is **INCONCLUSIVE** when `with_snapshot=0` and writer not deployed; **PASS** when completed runs show non-null `models_snapshot` after #98 deploy.
+**P2 gate:** `models_snapshot_populated` is **INCONCLUSIVE** when `with_snapshot=0` and writer not deployed; **PASS** when completed runs show non-null `models_snapshot` after #98 deploy (`--since 2026-08-11T05:49:57Z`).
+
+**P3 gate (manual):** Call pipeline trace API on a completed dogfood run; confirm `models_snapshot.embedding.model_id` matches staging `REVY_EMBEDDING_MODEL` and index step exposes manifest `embedding_*` fields.
 
 ---
 
@@ -113,7 +120,7 @@ DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.generation_lifecycle_stagin
 |------|------------|-------|
 | 1 | `79626fa` | 2 completed runs; Revy **pass**; MRC P0 gate **pass** |
 | 1 (pipeline) | `547f4f1` | initial probe commit — included in same `--since` window |
-| 2 | — | pending post-#98 deploy |
+| 2 | — | pending — new dogfood PR post-#99 deploy |
 
 **Model breakdown (PR #97, post-#96, pre-P2 writer):**
 
@@ -133,10 +140,11 @@ DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.generation_lifecycle_stagin
 | MRC-P1 embed attempts | **PASS** | `index_embed` rows + parity |
 | MRC-P1 judge/publish step models | **PARTIAL** | judge skipped path; publish fallback omits model (by design) |
 | MRC-P2.1 schema (`models_snapshot` column) | **PASS** | alembic `0032` + column exists |
-| MRC-P2.2–P2.4 snapshot population | **pending** | [#98](https://github.com/raimondskrauklis/revy/pull/98) — re-run after deploy |
+| MRC-P2.2–P2.4 snapshot population | **pending** | re-run `--mrc-gate` after dogfood push 2 |
+| MRC-P3 trace API exposure | **pending** | manual API check on dogfood push 2 |
 | PO P0 (parallel) | **PASS** | 2 runs, 4 attempt rows in review-scoped PO query |
 | RG-15 (parallel) | **PASS** | no stuck processing |
 
-**Verdict:** **MRC-P0 + P1 embed sign-off PASS** for #96 on staging. **MRC-P2 code complete** in #98 — operator fills #98 deploy ISO, runs push 2 on #97, and signs off `models_snapshot_populated`.
+**Verdict:** **MRC-P0 + P1 embed sign-off PASS** for #96 on staging. **MRC-P0–P3 code complete** ([#96](https://github.com/raimondskrauklis/revy/pull/96), [#98](https://github.com/raimondskrauklis/revy/pull/98), [#99](https://github.com/raimondskrauklis/revy/pull/99)) — operator opens dogfood push 2 after #99 deploy and signs off P2 snapshot + P3 API.
 
 **Gate note:** `--mrc-gate` exits 1 on judge/publish step checks when judge is skipped or publish uses fallback — treat embed + P0 checks as primary sign-off until gate logic distinguishes skip/fallback paths.
