@@ -939,6 +939,45 @@ async def record_publish_pipeline_step(
     await try_persist_models_snapshot(session, pipeline_run_id=pipeline_run_id)
 
 
+def _pipeline_step_response(step: GitHubPipelineStepORM) -> PipelineStepResponse:
+    return PipelineStepResponse(
+        id=step.id,
+        step_type=step.step_type,
+        status=step.status,
+        duration_ms=step.duration_ms,
+        model_provider=step.model_provider,
+        model_id=step.model_id,
+        input_tokens=step.input_tokens,
+        output_tokens=step.output_tokens,
+        error=step.error,
+        **_index_embedding_manifest_fields(step),
+        created_at=step.created_at,
+        updated_at=step.updated_at,
+        artifacts=[
+            PipelineArtifactResponse.model_validate(artifact) for artifact in step.artifacts
+        ],
+    )
+
+
+def build_pipeline_run_response(pipeline_run: GitHubPipelineRunORM) -> PipelineRunResponse:
+    """Map ORM pipeline run to API response — single entry point for all trace endpoints."""
+    steps = sorted(pipeline_run.steps, key=lambda item: item.created_at)
+    return PipelineRunResponse(
+        id=pipeline_run.id,
+        workspace_id=pipeline_run.workspace_id,
+        revision_id=pipeline_run.revision_id,
+        head_sha=pipeline_run.head_sha,
+        index_mode=pipeline_run.index_mode,
+        index_job_id=pipeline_run.index_job_id,
+        review_run_id=pipeline_run.review_run_id,
+        publish_job_id=pipeline_run.publish_job_id,
+        models_snapshot=pipeline_run.models_snapshot,
+        created_at=pipeline_run.created_at,
+        updated_at=pipeline_run.updated_at,
+        steps=[_pipeline_step_response(step) for step in steps],
+    )
+
+
 async def get_pipeline_trace_for_review_run(
     session: AsyncSession,
     *,
@@ -972,40 +1011,7 @@ async def get_pipeline_trace_for_review_run(
     if pipeline_run is None:
         raise NotFoundError("Pipeline trace not found")
 
-    steps = sorted(pipeline_run.steps, key=lambda item: item.created_at)
-    return PipelineRunResponse(
-        id=pipeline_run.id,
-        workspace_id=pipeline_run.workspace_id,
-        revision_id=pipeline_run.revision_id,
-        head_sha=pipeline_run.head_sha,
-        index_mode=pipeline_run.index_mode,
-        index_job_id=pipeline_run.index_job_id,
-        review_run_id=pipeline_run.review_run_id,
-        publish_job_id=pipeline_run.publish_job_id,
-        models_snapshot=pipeline_run.models_snapshot,
-        created_at=pipeline_run.created_at,
-        updated_at=pipeline_run.updated_at,
-        steps=[
-            PipelineStepResponse(
-                id=step.id,
-                step_type=step.step_type,
-                status=step.status,
-                duration_ms=step.duration_ms,
-                model_provider=step.model_provider,
-                model_id=step.model_id,
-                input_tokens=step.input_tokens,
-                output_tokens=step.output_tokens,
-                error=step.error,
-                **_index_embedding_manifest_fields(step),
-                created_at=step.created_at,
-                updated_at=step.updated_at,
-                artifacts=[
-                    PipelineArtifactResponse.model_validate(artifact) for artifact in step.artifacts
-                ],
-            )
-            for step in steps
-        ],
-    )
+    return build_pipeline_run_response(pipeline_run)
 
 
 async def resolve_pipeline_github_check_run_id(

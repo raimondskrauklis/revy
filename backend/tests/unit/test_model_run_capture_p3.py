@@ -17,6 +17,33 @@ from app.models.github_pipeline import GitHubPipelineArtifactORM, GitHubPipeline
 from app.schemas.github_pipeline import PipelineRunResponse, PipelineStepResponse
 
 
+def test_build_pipeline_run_response_maps_models_snapshot():
+    from app.models.github_pipeline import GitHubPipelineRunORM
+    from app.services.github_pipeline_trace import build_pipeline_run_response
+
+    models_snapshot = {
+        "embedding": {"provider": "voyage", "model_id": "voyage-code-3.5"},
+        "reviewer": None,
+        "judge": None,
+        "publish": None,
+    }
+    pipeline_run = GitHubPipelineRunORM(
+        workspace_id=uuid.uuid4(),
+        revision_id=uuid.uuid4(),
+        head_sha="abc",
+        index_mode=GitHubIndexMode.diff,
+    )
+    pipeline_run.id = uuid.uuid4()
+    pipeline_run.models_snapshot = models_snapshot
+    pipeline_run.created_at = datetime.now(UTC)
+    pipeline_run.updated_at = datetime.now(UTC)
+    pipeline_run.steps = []
+
+    response = build_pipeline_run_response(pipeline_run)
+
+    assert response.models_snapshot == models_snapshot
+
+
 def test_pipeline_run_response_models_snapshot_round_trip():
     snapshot = {
         "embedding": {"provider": "voyage", "model_id": "voyage-code-3.5", "dimensions": 1024},
