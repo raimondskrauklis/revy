@@ -39,6 +39,9 @@ class PipelineStepResponse(BaseModel):
     input_tokens: int | None = None
     output_tokens: int | None = None
     error: str | None = None
+    embedding_model: str | None = None
+    embedding_dimensions: int | None = None
+    embedding_skipped_reason: str | None = None
     created_at: datetime
     updated_at: datetime
     artifacts: list[PipelineArtifactResponse] = Field(default_factory=list)
@@ -55,6 +58,7 @@ class PipelineRunResponse(BaseModel):
     index_job_id: UUID | None = None
     review_run_id: UUID | None = None
     publish_job_id: UUID | None = None
+    models_snapshot: dict[str, Any] | None = None
     created_at: datetime
     updated_at: datetime
     steps: list[PipelineStepResponse] = Field(default_factory=list)

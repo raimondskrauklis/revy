@@ -460,6 +460,35 @@ _INDEX_EMBEDDING_MANIFEST_KEYS = (
 _EMBEDDING_SKIPPED_REASON = "reused_chunks_only"
 
 
+def _step_manifest_content(step: GitHubPipelineStepORM) -> dict[str, Any] | None:
+    for artifact in step.artifacts:
+        if artifact.kind != PipelineArtifactKind.manifest:
+            continue
+        if isinstance(artifact.content_json, dict):
+            return artifact.content_json
+    return None
+
+
+def _index_embedding_manifest_fields(step: GitHubPipelineStepORM) -> dict[str, Any]:
+    if step.step_type != PipelineStepType.index:
+        return {}
+    manifest = _step_manifest_content(step) or {}
+    dimensions = manifest.get("embedding_dimensions")
+    return {
+        "embedding_model": (
+            manifest.get("embedding_model")
+            if isinstance(manifest.get("embedding_model"), str)
+            else None
+        ),
+        "embedding_dimensions": dimensions if isinstance(dimensions, int) else None,
+        "embedding_skipped_reason": (
+            manifest.get("embedding_skipped_reason")
+            if isinstance(manifest.get("embedding_skipped_reason"), str)
+            else None
+        ),
+    }
+
+
 def _apply_index_manifest_stats(
     manifest: dict[str, Any],
     index_manifest_stats: dict[str, Any],
@@ -953,6 +982,7 @@ async def get_pipeline_trace_for_review_run(
         index_job_id=pipeline_run.index_job_id,
         review_run_id=pipeline_run.review_run_id,
         publish_job_id=pipeline_run.publish_job_id,
+        models_snapshot=pipeline_run.models_snapshot,
         created_at=pipeline_run.created_at,
         updated_at=pipeline_run.updated_at,
         steps=[
@@ -966,6 +996,7 @@ async def get_pipeline_trace_for_review_run(
                 input_tokens=step.input_tokens,
                 output_tokens=step.output_tokens,
                 error=step.error,
+                **_index_embedding_manifest_fields(step),
                 created_at=step.created_at,
                 updated_at=step.updated_at,
                 artifacts=[

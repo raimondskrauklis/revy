@@ -6,6 +6,8 @@ Phase **MRC-P3** of [`MODEL_RUN_CAPTURE_GENERAL_PLAN.md`](../MODEL_RUN_CAPTURE_G
 
 **Goal:** Pipeline trace API exposes `models_snapshot` and index manifest embedding fields; staging sign-off criteria documented.
 
+**Status:** **shipped** — `PipelineRunResponse.models_snapshot` + index step `embedding_*` manifest fields.
+
 ## Decisions locked for MRC-P3
 
 - `PipelineRunResponse` gains optional `models_snapshot` JSONB field.
