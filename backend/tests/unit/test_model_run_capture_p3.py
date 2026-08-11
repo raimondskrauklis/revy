@@ -86,6 +86,29 @@ def test_pipeline_step_response_index_embedding_fields():
     assert dumped["embedding_skipped_reason"] is None
 
 
+def test_index_embedding_manifest_fields_rejects_bool_dimensions():
+    from app.models.github_pipeline import GitHubPipelineStepORM
+    from app.services.github_pipeline_trace import _index_embedding_manifest_fields
+
+    step = GitHubPipelineStepORM(
+        pipeline_run_id=uuid.uuid4(),
+        step_type=PipelineStepType.index,
+        status=PipelineStepStatus.completed,
+    )
+    step.id = uuid.uuid4()
+    step.artifacts = [
+        GitHubPipelineArtifactORM(
+            step_id=step.id,
+            kind=PipelineArtifactKind.manifest,
+            content_json={"embedding_dimensions": True},
+        )
+    ]
+
+    fields = _index_embedding_manifest_fields(step)
+
+    assert fields["embedding_dimensions"] is None
+
+
 @pytest.mark.asyncio
 async def test_get_pipeline_trace_exposes_models_snapshot_and_index_manifest():
     from unittest.mock import AsyncMock, patch
@@ -176,3 +199,25 @@ async def test_get_pipeline_trace_exposes_models_snapshot_and_index_manifest():
     assert response.models_snapshot == ModelsSnapshotResponse.model_validate(models_snapshot)
     assert response.steps[0].embedding_model == "voyage-code-3.5"
     assert response.steps[0].embedding_dimensions == 1024
+
+
+@pytest.mark.asyncio
+async def test_build_pipeline_run_response_invalid_snapshot_returns_none():
+    from app.models.github_pipeline import GitHubPipelineRunORM
+    from app.services.github_pipeline_trace import build_pipeline_run_response
+
+    pipeline_run = GitHubPipelineRunORM(
+        workspace_id=uuid.uuid4(),
+        revision_id=uuid.uuid4(),
+        head_sha="abc",
+        index_mode=GitHubIndexMode.diff,
+    )
+    pipeline_run.id = uuid.uuid4()
+    pipeline_run.models_snapshot = {"embedding": "not-a-role-object"}
+    pipeline_run.created_at = datetime.now(UTC)
+    pipeline_run.updated_at = datetime.now(UTC)
+    pipeline_run.steps = []
+
+    response = build_pipeline_run_response(pipeline_run)
+
+    assert response.models_snapshot is None

@@ -11,6 +11,7 @@ from typing import Any, Literal
 from uuid import UUID
 
 import httpx
+from pydantic import ValidationError
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -481,7 +482,7 @@ def _index_embedding_manifest_fields(step: GitHubPipelineStepORM) -> dict[str, A
             if isinstance(manifest.get("embedding_model"), str)
             else None
         ),
-        "embedding_dimensions": dimensions if isinstance(dimensions, int) else None,
+        "embedding_dimensions": dimensions if type(dimensions) is int else None,
         "embedding_skipped_reason": (
             manifest.get("embedding_skipped_reason")
             if isinstance(manifest.get("embedding_skipped_reason"), str)
@@ -961,12 +962,19 @@ def _pipeline_step_response(step: GitHubPipelineStepORM) -> PipelineStepResponse
 
 
 def build_pipeline_run_response(pipeline_run: GitHubPipelineRunORM) -> PipelineRunResponse:
-    """Map ORM pipeline run to API response — single entry point for all trace endpoints."""
+    """Map ORM pipeline run to API response — use for every trace endpoint."""
     steps = sorted(pipeline_run.steps, key=lambda item: item.created_at)
     raw_snapshot = pipeline_run.models_snapshot
-    models_snapshot = (
-        ModelsSnapshotResponse.model_validate(raw_snapshot) if raw_snapshot is not None else None
-    )
+    models_snapshot: ModelsSnapshotResponse | None = None
+    if raw_snapshot is not None:
+        try:
+            models_snapshot = ModelsSnapshotResponse.model_validate(raw_snapshot)
+        except ValidationError:
+            logger.warning(
+                "pipeline_models_snapshot_invalid",
+                exc_info=True,
+                extra={"pipeline_run_id": str(pipeline_run.id)},
+            )
     return PipelineRunResponse(
         id=pipeline_run.id,
         workspace_id=pipeline_run.workspace_id,

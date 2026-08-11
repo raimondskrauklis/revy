@@ -40,8 +40,6 @@ class ModelsSnapshotResponse(BaseModel):
 
 
 class PipelineStepResponse(BaseModel):
-    model_config = {"from_attributes": True}
-
     id: UUID
     step_type: PipelineStepType
     status: PipelineStepStatus
