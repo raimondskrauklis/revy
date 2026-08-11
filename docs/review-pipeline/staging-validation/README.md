@@ -18,7 +18,7 @@
 
 | PR | Program | Branch | Status |
 |----|---------|--------|--------|
-| *(open)* | Model run capture (post-#96) | `chore/mrc-staging-dogfood` | [#97](https://github.com/raimondskrauklis/revy/pull/97) — **MRC-P0 PASS** push 1 |
+| *(open)* | Model run capture (post-#96) | `chore/mrc-staging-dogfood` | [#97](https://github.com/raimondskrauklis/revy/pull/97) — **P0/P1 PASS**; P2 pending #98 deploy |
 | *(open)* | Agent workflow pack E2E | `chore/agent-workflow-e2e-validation` | [#73](https://github.com/raimondskrauklis/revy/pull/73) push 1 |
 | [#87](https://github.com/raimondskrauklis/revy/pull/87) | PR summary rollup (post-#85) | `chore/psr-staging-dogfood` | **sign-off PASS** — pushes 1–2 |
 | *(open)* | Finding resolution dogfood | `chore/finding-resolution-staging-dogfood` | P0 pushed — staging validation in progress |
@@ -28,7 +28,7 @@
 
 | Program | Branch | Findings |
 |---------|--------|----------|
-| Model run capture (post-#96) | `chore/mrc-staging-dogfood` | [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](../models/model-run-capture/MODEL_RUN_CAPTURE_STAGING_VALIDATION.md) |
+| Model run capture (post-#96 / #98) | `chore/mrc-staging-dogfood` | [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](../models/model-run-capture/MODEL_RUN_CAPTURE_STAGING_VALIDATION.md) |
 | PR summary rollup (post-#85 deploy) | `chore/psr-staging-dogfood` | **done** — [#87](https://github.com/raimondskrauklis/revy/pull/87) PASS |
 | Finding resolution dogfood | `chore/finding-resolution-staging-dogfood` | [FINDING_RESOLUTION_DOGFOOD_FINDINGS.md](../finding-resolution-dogfood/FINDING_RESOLUTION_DOGFOOD_FINDINGS.md) |
 | Moonshot formatter signature | `chore/moonshot-formatter-signature` | MR-DG1 in same doc |

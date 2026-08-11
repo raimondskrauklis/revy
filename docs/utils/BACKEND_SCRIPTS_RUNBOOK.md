@@ -35,24 +35,25 @@ See [REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md](../review-pipeline/review
 
 ## Model run capture (`model_run_capture_staging_metrics.py`)
 
-MRC-P0/P1 staging gates — index manifest embedding model, `index_embed` attempt rows, judge/publish step model fields. Post-#96 deploy boundary: `2026-08-10T19:35:30Z`.
+MRC-P0/P1/P2 staging gates — index manifest embedding model, `index_embed` attempt rows, judge/publish step model fields, `models_snapshot` population. Post-#96 deploy boundary: `2026-08-10T19:35:30Z`. Post-#98 deploy: use new `--since` after merge (see [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](../models/model-run-capture/MODEL_RUN_CAPTURE_STAGING_VALIDATION.md)).
 
 ```bash
 cd backend
 PR=<dogfood-pr-number>
-SINCE=2026-08-10T19:35:30Z
+SINCE=2026-08-10T19:35:30Z   # P0/P1 (#96)
+# SINCE=<#98-deploy-iso>    # P2 snapshot population
 
 DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.model_run_capture_staging_metrics \
   --since $SINCE --pr-number $PR --require-runs --mrc-gate --json
 ```
 
-**MRC gate:** Exit code **1** when any check is `FAIL` (`INCONCLUSIVE` does not fail). `models_snapshot` population is `INCONCLUSIVE` until MRC-P2.2 ships.
+**MRC gate:** Exit code **1** when any check is `FAIL` (`INCONCLUSIVE` does not fail). `models_snapshot_populated` is **INCONCLUSIVE** until #98 deploy; **PASS** when completed runs have non-null `models_snapshot`.
 
 See [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](../models/model-run-capture/MODEL_RUN_CAPTURE_STAGING_VALIDATION.md).
 
 ## Pipeline observability (`pipeline_observability_staging_metrics.py`)
 
-PO P0 schema + attempt row probes. Expects alembic `0032` after #96 deploy.
+PO P0 schema + attempt row probes. Expects alembic `0032` after #96 deploy. JSON output includes `model_breakdown` (MRC-P2.4) when `--json` is set.
 
 ```bash
 cd backend

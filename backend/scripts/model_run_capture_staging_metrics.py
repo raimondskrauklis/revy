@@ -1,5 +1,5 @@
 # backend/scripts/model_run_capture_staging_metrics.py
-"""Staging metrics for model-run-capture (MRC-P0/P1 + P2.1 schema)."""
+"""Staging metrics for model-run-capture (MRC-P0/P1/P2)."""
 from __future__ import annotations
 
 import argparse

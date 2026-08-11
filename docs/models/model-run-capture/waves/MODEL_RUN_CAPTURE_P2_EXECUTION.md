@@ -6,6 +6,8 @@ Phase **MRC-P2** of [`MODEL_RUN_CAPTURE_GENERAL_PLAN.md`](../MODEL_RUN_CAPTURE_G
 
 **Goal:** `github_pipeline_runs.models_snapshot` JSONB summarizes embedding, reviewer, judge, publish models; staging script groups by `step_type` + model.
 
+**Status:** **shipped** ([#98](https://github.com/raimondskrauklis/revy/pull/98)) — P2.1 in #96; P2.2–P2.4 in #98. Post-deploy staging sign-off: [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](../MODEL_RUN_CAPTURE_STAGING_VALIDATION.md).
+
 ## Decisions locked for MRC-P2
 
 - Snapshot shape: `{ "embedding": {provider, model_id, dimensions?}, "reviewer": {...}, "judge": {...}, "publish": {...} }` — null keys when stage did not run.
@@ -52,14 +54,14 @@ cd backend && pipenv run pytest tests/unit/test_model_run_snapshot.py -q
 
 ## MRC-P2.3 — Terminal snapshot writer hooks
 
-**What:** Add `persist_models_snapshot(session, *, pipeline_run_id)` that calls `build_models_snapshot` and writes `github_pipeline_runs.models_snapshot`. Hook in **two places** only (avoids missing a worker path):
+**What:** Add `persist_models_snapshot(session, *, pipeline_run_id)` and best-effort `try_persist_models_snapshot` (nested savepoint; must not block terminal hooks). Hook in **two places** only (avoids missing a worker path):
 
-1. **Success:** end of `record_publish_pipeline_step` (or immediately after in `run_publish_job` when `pipeline_run_id` known) — judge step already exists from `reconcile_tasks`; publish is last stage.
-2. **Terminal check finalize (failure + neutral + partial):** inside `_finalize_pipeline_github_check` in `github_pipeline_trace.py` — covers `finalize_pipeline_github_check_failure`, `finalize_pipeline_github_check_neutral`, and wrappers `finalize_pipeline_github_check_for_index_job`, `finalize_pipeline_github_check_for_review_run`, `finalize_pipeline_github_check_for_publish_job` (call sites in `index_tasks.py`, `review_tasks.py`, `publish_tasks.py`, `reconcile_tasks.py`, `github_publish.py`).
+1. **Success:** end of `record_publish_pipeline_step` — `session.flush()` then `try_persist_models_snapshot` (publish is last stage; judge step already exists from `reconcile_tasks`).
+2. **Terminal check finalize (failure + neutral + partial):** start of `_finalize_pipeline_github_check` — `session.flush()` then `try_persist_models_snapshot` — covers `finalize_pipeline_github_check_failure`, `finalize_pipeline_github_check_neutral`, and wrappers `finalize_pipeline_github_check_for_index_job`, `finalize_pipeline_github_check_for_review_run`, `finalize_pipeline_github_check_for_publish_job` (call sites in `index_tasks.py`, `review_tasks.py`, `publish_tasks.py`, `reconcile_tasks.py`, `github_publish.py`).
 
-Do **not** write snapshot in `reconcile_tasks` on success (publish is async). Partial runs include only stages with completed steps / manifest data.
+Do **not** write snapshot in `reconcile_tasks` on success (publish is async). Partial runs include only stages with completed steps / manifest data. Reuse-only index (`embed_batches=0` or `embedding_skipped_reason`) omits `embedding` and does not fall back to `index_embed` attempts.
 
-**Files:** `backend/app/services/model_run_snapshot.py`, `backend/app/services/github_pipeline_trace.py`, `backend/app/services/github_publish.py`, `backend/tests/unit/test_model_run_snapshot.py`
+**Files:** `backend/app/services/model_run_snapshot.py`, `backend/app/services/github_pipeline_trace.py`, `backend/tests/unit/test_model_run_snapshot.py`
 
 **Deliverable:**
 
@@ -71,9 +73,9 @@ cd backend && pipenv run pytest tests/unit/test_model_run_snapshot.py -k "termin
 
 ## MRC-P2.4 — Staging metrics model breakdown
 
-**What:** Extend `pipeline_observability_staging_metrics.py` with query `GROUP BY step_type, provider, request_model`; include in `--json` output as `model_breakdown`.
+**What:** Extend `pipeline_observability_staging_metrics.py` with query `GROUP BY step_type, provider, request_model`; include in `--json` output as `model_breakdown`. Shared SQL in `staging_metrics_common.model_breakdown_sql` (PR-scoped revision via `coalesce(pipeline_run, review_run, index_job)`).
 
-**Files:** `backend/scripts/pipeline_observability_staging_metrics.py`, `backend/tests/unit/test_pipeline_observability_staging_metrics.py` (add if missing)
+**Files:** `backend/scripts/pipeline_observability_staging_metrics.py`, `backend/scripts/staging_metrics_common.py`, `backend/tests/unit/test_pipeline_observability_staging_metrics.py` (add if missing)
 
 **Deliverable:**
 

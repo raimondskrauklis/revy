@@ -79,4 +79,4 @@
 
 ## Next step
 
-**`execution-peer-review`** on `waves/` → then **`phase-execution`** from [waves/MODEL_RUN_CAPTURE_P0_EXECUTION.md](./waves/MODEL_RUN_CAPTURE_P0_EXECUTION.md).
+**`phase-execution`** from [waves/MODEL_RUN_CAPTURE_P3_EXECUTION.md](./waves/MODEL_RUN_CAPTURE_P3_EXECUTION.md) (MRC-P0–P2 shipped: [#96](https://github.com/raimondskrauklis/revy/pull/96), [#98](https://github.com/raimondskrauklis/revy/pull/98)).

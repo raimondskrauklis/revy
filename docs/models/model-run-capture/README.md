@@ -7,8 +7,10 @@ Durable **which model ran** audit trail for embeddings, reviewer, judge, and pub
 | [MODEL_RUN_CAPTURE_FINDINGS.md](./MODEL_RUN_CAPTURE_FINDINGS.md) | Baseline — current capture gaps, target catalog |
 | [MODEL_RUN_CAPTURE_GENERAL_PLAN.md](./MODEL_RUN_CAPTURE_GENERAL_PLAN.md) | Phased plan — MRC-P0–P3 |
 | [waves/README.md](./waves/README.md) | Execution index — phase-execution LOOP order |
-| [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](./MODEL_RUN_CAPTURE_STAGING_VALIDATION.md) | Staging sign-off — embedding identity + attempt rows (#96) |
+| [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](./MODEL_RUN_CAPTURE_STAGING_VALIDATION.md) | Staging sign-off — P0/P1 (#96) + P2 snapshot (#98) |
 | [reviews/architecture-peer-review/](./reviews/architecture-peer-review/README.md) | Architecture peer review — pass index |
 | [reviews/execution-peer-review/](./reviews/execution-peer-review/README.md) | Execution peer review — pass index |
+
+**Program status (2026-08-11):** MRC-P0–P2 **shipped** ([#96](https://github.com/raimondskrauklis/revy/pull/96) + [#98](https://github.com/raimondskrauklis/revy/pull/98)); MRC-P3 API exposure **pending**. Post-#98 deploy: re-run `--mrc-gate` for `models_snapshot_populated` — see staging validation memo.
 
 **Related:** [MODEL_POLICY_FINDINGS.md](../MODEL_POLICY_FINDINGS.md) (which model to use) · [voyage-embeddings/](../voyage-embeddings/) (embedding upgrades) · [pipeline-observability](../../review-pipeline/pipeline-observability/) (tokens, latency, failures — sibling program).
