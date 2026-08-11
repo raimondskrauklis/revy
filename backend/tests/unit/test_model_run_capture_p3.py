@@ -86,6 +86,24 @@ def test_pipeline_step_response_index_embedding_fields():
     assert dumped["embedding_skipped_reason"] is None
 
 
+def test_pipeline_step_response_from_orm_defaults_embedding_fields():
+    step = GitHubPipelineStepORM(
+        pipeline_run_id=uuid.uuid4(),
+        step_type=PipelineStepType.review,
+        status=PipelineStepStatus.completed,
+    )
+    step.id = uuid.uuid4()
+    step.created_at = datetime.now(UTC)
+    step.updated_at = datetime.now(UTC)
+    step.artifacts = []
+
+    response = PipelineStepResponse.model_validate(step)
+
+    assert response.embedding_model is None
+    assert response.embedding_dimensions is None
+    assert response.embedding_skipped_reason is None
+
+
 def test_index_embedding_manifest_fields_rejects_bool_dimensions():
     from app.models.github_pipeline import GitHubPipelineStepORM
     from app.services.github_pipeline_trace import _index_embedding_manifest_fields
