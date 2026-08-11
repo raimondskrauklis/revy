@@ -11,6 +11,6 @@ Durable **which model ran** audit trail for embeddings, reviewer, judge, and pub
 | [reviews/architecture-peer-review/](./reviews/architecture-peer-review/README.md) | Architecture peer review — pass index |
 | [reviews/execution-peer-review/](./reviews/execution-peer-review/README.md) | Execution peer review — pass index |
 
-**Program status (2026-08-11):** MRC-P0–P3 **shipped** ([#96](https://github.com/raimondskrauklis/revy/pull/96), [#98](https://github.com/raimondskrauklis/revy/pull/98), [#99](https://github.com/raimondskrauklis/revy/pull/99)). **Staging sign-off pending:** dogfood push 2 after #99 deploy — `models_snapshot_populated` + trace API fields.
+**Program status (2026-08-11):** MRC-P0–P3 **shipped + staging sign-off PASS** ([#96](https://github.com/raimondskrauklis/revy/pull/96), [#98](https://github.com/raimondskrauklis/revy/pull/98), [#99](https://github.com/raimondskrauklis/revy/pull/99), dogfood [#97](https://github.com/raimondskrauklis/revy/pull/97) + [#100](https://github.com/raimondskrauklis/revy/pull/100)).
 
 **Related:** [MODEL_POLICY_FINDINGS.md](../MODEL_POLICY_FINDINGS.md) (which model to use) · [voyage-embeddings/](../voyage-embeddings/) (embedding upgrades) · [pipeline-observability](../../review-pipeline/pipeline-observability/) (tokens, latency, failures — sibling program).

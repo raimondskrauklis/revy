@@ -81,4 +81,4 @@
 
 **Program code complete** — MRC-P0–P3 shipped ([#96](https://github.com/raimondskrauklis/revy/pull/96), [#98](https://github.com/raimondskrauklis/revy/pull/98), [#99](https://github.com/raimondskrauklis/revy/pull/99)).
 
-**Operator:** open dogfood push 2 on `chore/mrc-staging-dogfood-p2` after #99 deploy; sign off per [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](./MODEL_RUN_CAPTURE_STAGING_VALIDATION.md).
+**Operator:** staging sign-off complete — see [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](./MODEL_RUN_CAPTURE_STAGING_VALIDATION.md).

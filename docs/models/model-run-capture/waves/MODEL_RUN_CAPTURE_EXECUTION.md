@@ -25,6 +25,6 @@
 | MRC-P2 | `models_snapshot` + staging metrics by model | [P2](./MODEL_RUN_CAPTURE_P2_EXECUTION.md) | shipped ([#98](https://github.com/raimondskrauklis/revy/pull/98)) |
 | MRC-P3 | API exposure + staging sign-off | [P3](./MODEL_RUN_CAPTURE_P3_EXECUTION.md) | shipped ([#99](https://github.com/raimondskrauklis/revy/pull/99)) |
 
-**Staging validation:** [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](../MODEL_RUN_CAPTURE_STAGING_VALIDATION.md) — P0/P1 signed off on #97; P2/P3 dogfood push 2 pending post-#99 deploy.
+**Staging validation:** [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](../MODEL_RUN_CAPTURE_STAGING_VALIDATION.md) — **sign-off PASS** (#97 P0/P1, #100 P2/P3).
 
-**Next:** operator dogfood push 2 (`chore/mrc-staging-dogfood-p2`) + `--mrc-gate` sign-off for `models_snapshot_populated` + trace API check.
+**Next:** none — MRC program complete.

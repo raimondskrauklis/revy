@@ -63,6 +63,33 @@ DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.model_run_capture_staging_m
 
 ---
 
+## Probe results (PR #100 — post-#98/#99 deploy, 2026-08-11)
+
+**Dogfood PR:** [#100](https://github.com/raimondskrauklis/revy/pull/100) · `--since 2026-08-11T05:49:57Z` · `head_sha` `c2925da`
+
+| Gate | Result | Detail |
+|------|--------|--------|
+| MRC P0 `--mrc-gate` | **PASS** | alembic `0032`; `2/2` embed manifest + step model |
+| MRC P1 embed | **PASS** | `2` `index_embed` rows; parity `2/0` |
+| MRC P1 judge/publish steps | **PARTIAL** | judge `0/1` (skipped); publish `1/1` |
+| MRC P2 `models_snapshot` | **PASS** | `with_snapshot=2/2` |
+| MRC P3 trace API | **PASS** | snapshot + manifest `embedding_*` in DB |
+| PO P0 `--po-p0-gate` | **PASS** | 2 runs; 3 attempt rows |
+| RG-15 `--rg15-gate` | **PASS** | 1 superseded review run; no stuck processing |
+
+```bash
+cd backend
+PR=100
+SINCE=2026-08-11T05:49:57Z
+
+DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.model_run_capture_staging_metrics \
+  --since $SINCE --pr-number $PR --require-runs --mrc-gate --json
+```
+
+**Related:** [model-run-capture validation](../models/model-run-capture/MODEL_RUN_CAPTURE_STAGING_VALIDATION.md)
+
+---
+
 ## Probe results (staging DB — PR #93, script from #94 branch)
 
 **2026-08-10** — local run against staging (no deploy needed for probe SQL fix):
@@ -95,6 +122,6 @@ DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.generation_lifecycle_stagin
 | RG-15 queued check UX | **PASS** (initial) | #95 push 4 post-#94 deploy; 2 runs, 1 superseded |
 | PO P4 SLO (`--po-gate`) | **INCONCLUSIVE** | `wait_ms` null on success path until P1 |
 
-**Next:** wait for #99 deploy → open `chore/mrc-staging-dogfood-p2` dogfood PR → sign off `models_snapshot_populated` + trace API fields. MRC program code complete.
+**Next:** MRC program **complete** — staging sign-off PASS on [#100](https://github.com/raimondskrauklis/revy/pull/100).
 
 **Related:** [model-run-capture validation](../models/model-run-capture/MODEL_RUN_CAPTURE_STAGING_VALIDATION.md) · [pipeline observability](../pipeline-observability/PIPELINE_OBSERVABILITY_STAGING_VALIDATION.md) · [generation lifecycle](../review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_STAGING_VALIDATION.md)
