@@ -24,6 +24,7 @@ from app.models.github_pipeline import (
     GitHubPipelineStepORM,
 )
 
+_SNAPSHOT_ROLES: tuple[str, ...] = ("embedding", "reviewer", "judge", "publish")
 _SNAPSHOT_ROLE_BY_STEP: dict[PipelineStepType, str] = {
     PipelineStepType.index: "embedding",
     PipelineStepType.review: "reviewer",
@@ -165,7 +166,7 @@ def build_models_snapshot(
 ) -> dict[str, Any]:
     """Build terminal models snapshot from pipeline steps and optional attempt fallbacks."""
     attempt_rows = attempts or []
-    snapshot: dict[str, Any] = {}
+    snapshot: dict[str, Any] = {role: None for role in _SNAPSHOT_ROLES}
     steps_by_type: dict[str, list[StepSnapshotInput]] = {}
     for step in steps:
         if step.status not in (
@@ -185,8 +186,7 @@ def build_models_snapshot(
                 skip_attempt_fallback = True
         if entry is None and not skip_attempt_fallback:
             entry = _attempt_fallback(attempt_rows, role=role)
-        if entry is not None:
-            snapshot[role] = entry
+        snapshot[role] = entry
     return snapshot
 
 
@@ -273,7 +273,9 @@ async def _write_models_snapshot(
         _step_inputs(list(pipeline_run.steps)),
         attempts=_attempt_inputs(attempt_rows),
     )
-    pipeline_run.models_snapshot = snapshot or None
+    pipeline_run.models_snapshot = (
+        snapshot if any(value is not None for value in snapshot.values()) else None
+    )
     await session.flush()
     return snapshot
 
@@ -284,6 +286,13 @@ async def try_persist_models_snapshot(
     pipeline_run_id: UUID,
 ) -> None:
     """Best-effort snapshot write — must not block terminal pipeline hooks."""
+    existing = await session.scalar(
+        select(GitHubPipelineRunORM.models_snapshot).where(
+            GitHubPipelineRunORM.id == pipeline_run_id
+        )
+    )
+    if existing is not None:
+        return
     try:
         async with session.begin_nested():
             await _write_models_snapshot(session, pipeline_run_id=pipeline_run_id)

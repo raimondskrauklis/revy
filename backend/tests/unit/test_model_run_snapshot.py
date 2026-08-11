@@ -87,8 +87,10 @@ def test_build_models_snapshot_reuse_only_index_omits_embedding():
             ),
         ]
     )
-    assert "embedding" not in snapshot
+    assert snapshot["embedding"] is None
     assert snapshot["reviewer"]["model_id"] == "kimi-k2.7-code"
+    assert snapshot["judge"] is None
+    assert snapshot["publish"] is None
 
 
 def test_build_models_snapshot_reuse_with_stray_embedding_model_omits_embedding():
@@ -106,7 +108,8 @@ def test_build_models_snapshot_reuse_with_stray_embedding_model_omits_embedding(
             ),
         ]
     )
-    assert "embedding" not in snapshot
+    assert snapshot["embedding"] is None
+    assert snapshot["reviewer"] is None
 
 
 def test_build_models_snapshot_missing_manifest_uses_attempt_fallback():
@@ -171,7 +174,8 @@ def test_build_models_snapshot_skipped_embedding_ignores_attempt_fallback():
             ),
         ],
     )
-    assert "embedding" not in snapshot
+    assert snapshot["embedding"] is None
+    assert snapshot["reviewer"] is None
 
 
 def test_build_models_snapshot_attempt_fallback_for_embedding():
@@ -226,9 +230,10 @@ def test_build_models_snapshot_partial_run_only_completed_stages():
             ),
         ]
     )
-    assert "embedding" in snapshot
+    assert snapshot["embedding"]["model_id"] == "voyage-code-3.5"
     assert snapshot["reviewer"]["model_id"] == "kimi-k2.7-code"
-    assert "publish" not in snapshot
+    assert snapshot["publish"] is None
+    assert snapshot["judge"] is None
 
 
 def test_build_models_snapshot_prefers_latest_completed_step():
@@ -346,6 +351,17 @@ async def test_persist_models_snapshot_writes_pipeline_run():
 
 
 @pytest.mark.asyncio
+async def test_try_persist_models_snapshot_skips_when_snapshot_exists():
+    pipeline_run_id = uuid4()
+    session = AsyncMock()
+    session.scalar = AsyncMock(return_value={"embedding": {"provider": "voyage", "model_id": "x"}})
+
+    await try_persist_models_snapshot(session, pipeline_run_id=pipeline_run_id)
+
+    session.begin_nested.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_try_persist_models_snapshot_swallows_type_error():
     nested = MagicMock()
     nested.__aenter__ = AsyncMock(return_value=None)
@@ -353,7 +369,7 @@ async def test_try_persist_models_snapshot_swallows_type_error():
 
     session = AsyncMock()
     session.begin_nested = MagicMock(return_value=nested)
-    session.scalar = AsyncMock(side_effect=TypeError("unexpected orm state"))
+    session.scalar = AsyncMock(side_effect=[None, TypeError("unexpected orm state")])
 
     await try_persist_models_snapshot(session, pipeline_run_id=uuid4())
 
@@ -366,6 +382,8 @@ async def test_try_persist_models_snapshot_swallows_write_error():
 
     session = AsyncMock()
     session.begin_nested = MagicMock(return_value=nested)
-    session.scalar = AsyncMock(side_effect=SQLAlchemyError("write failed"))
+    session.scalar = AsyncMock(
+        side_effect=[None, SQLAlchemyError("write failed")],
+    )
 
     await try_persist_models_snapshot(session, pipeline_run_id=uuid4())

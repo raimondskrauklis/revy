@@ -81,7 +81,7 @@
 }
 ```
 
-Reuse-only index runs omit `embedding`. Judge key omitted when judge skipped.
+All four role keys are always present when `models_snapshot` is populated; unused stages are `null`. Reuse-only index runs set `embedding` to `null`.
 
 ---
 
