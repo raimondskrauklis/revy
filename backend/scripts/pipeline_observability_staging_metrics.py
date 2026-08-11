@@ -12,6 +12,7 @@ import asyncpg
 from scripts.staging_metrics_common import (
     StagingScope,
     database_name,
+    model_breakdown_sql,
     parse_since,
     review_run_pr_join,
     scope_query_args,
@@ -195,6 +196,7 @@ async def _fetch_metrics(scope: StagingScope) -> dict[str, Any]:
         review_row = await conn.fetchrow(_review_runs_sql(scope), *args)
         attempts_row = await conn.fetchrow(_attempts_sql(scope), *args)
         taxonomy_rows = await conn.fetch(_taxonomy_sql(scope), *args)
+        breakdown_rows = await conn.fetch(model_breakdown_sql(scope), *args)
     finally:
         await conn.close()
 
@@ -208,6 +210,7 @@ async def _fetch_metrics(scope: StagingScope) -> dict[str, Any]:
         "review_runs": dict(review_row) if review_row else {},
         "attempts": dict(attempts_row) if attempts_row else {},
         "failure_taxonomy": [dict(row) for row in taxonomy_rows],
+        "model_breakdown": [dict(row) for row in breakdown_rows],
     }
 
 

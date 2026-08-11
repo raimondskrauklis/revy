@@ -22,9 +22,9 @@
 |-------|--------|------|--------|
 | MRC-P0 | Index manifest + step embedding identity | [P0](./MODEL_RUN_CAPTURE_P0_EXECUTION.md) | shipped |
 | MRC-P1 | Attempt rows + judge/publish step models | [P1](./MODEL_RUN_CAPTURE_P1_EXECUTION.md) | shipped |
-| MRC-P2 | `models_snapshot` + staging metrics by model | [P2](./MODEL_RUN_CAPTURE_P2_EXECUTION.md) | in progress (P2.1 shipped) |
+| MRC-P2 | `models_snapshot` + staging metrics by model | [P2](./MODEL_RUN_CAPTURE_P2_EXECUTION.md) | shipped ([#98](https://github.com/raimondskrauklis/revy/pull/98)) |
 | MRC-P3 | API exposure + staging sign-off | [P3](./MODEL_RUN_CAPTURE_P3_EXECUTION.md) | pending |
 
-**Staging validation:** [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](../MODEL_RUN_CAPTURE_STAGING_VALIDATION.md) — post-#96 deploy dogfood PR (#96 does not self-validate).
+**Staging validation:** [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](../MODEL_RUN_CAPTURE_STAGING_VALIDATION.md) — P0/P1 signed off on #97; P2 post-#98 deploy pending.
 
-**Next:** resume `phase-execution` from [MODEL_RUN_CAPTURE_P2_EXECUTION.md](./MODEL_RUN_CAPTURE_P2_EXECUTION.md) P2.2 after staging sign-off.
+**Next:** `phase-execution` from [MODEL_RUN_CAPTURE_P3_EXECUTION.md](./MODEL_RUN_CAPTURE_P3_EXECUTION.md).

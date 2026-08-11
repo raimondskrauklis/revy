@@ -1,5 +1,5 @@
 # backend/scripts/model_run_capture_staging_metrics.py
-"""Staging metrics for model-run-capture (MRC-P0/P1 + P2.1 schema)."""
+"""Staging metrics for model-run-capture (MRC-P0/P1/P2)."""
 from __future__ import annotations
 
 import argparse
@@ -12,6 +12,7 @@ import asyncpg
 from scripts.staging_metrics_common import (
     StagingScope,
     database_name,
+    model_breakdown_sql,
     parse_since,
     pipeline_run_pr_join,
     scope_query_args,
@@ -196,37 +197,6 @@ WHERE {where};
 """
 
 
-def _model_breakdown_sql(scope: StagingScope) -> str:
-    if scope.pr_scoped:
-        return """
-SELECT a.step_type,
-       coalesce(a.provider, '(null)') AS provider,
-       coalesce(a.request_model, '(null)') AS request_model,
-       count(*)::int AS n
-FROM github_llm_call_attempts a
-LEFT JOIN github_review_runs rr ON rr.id = a.review_run_id
-LEFT JOIN github_index_jobs ij ON ij.id = a.index_job_id
-JOIN github_pull_request_revisions rev
-  ON rev.id = coalesce(rr.revision_id, ij.revision_id)
-JOIN github_pull_requests gp ON gp.id = rev.pull_request_id
-JOIN github_repositories repo ON repo.id = gp.repository_id
-WHERE repo.full_name = $1 AND gp.number = $2
-  AND ($3::timestamptz IS NULL OR a.started_at >= $3::timestamptz)
-GROUP BY 1, 2, 3
-ORDER BY n DESC, a.step_type, provider, request_model;
-"""
-    return """
-SELECT step_type,
-       coalesce(provider, '(null)') AS provider,
-       coalesce(request_model, '(null)') AS request_model,
-       count(*)::int AS n
-FROM github_llm_call_attempts
-WHERE ($1::timestamptz IS NULL OR started_at >= $1::timestamptz)
-GROUP BY 1, 2, 3
-ORDER BY n DESC, step_type, provider, request_model;
-"""
-
-
 def _evaluate_mrc_p0_gate(metrics: dict[str, Any], *, require_runs: bool) -> dict[str, Any]:
     checks: list[dict[str, str]] = []
 
@@ -358,7 +328,7 @@ async def _fetch_metrics(scope: StagingScope) -> dict[str, Any]:
         parity_row = await conn.fetchrow(_embed_model_parity_sql(scope), *args)
         step_rows = await conn.fetch(_step_models_sql(scope), *args)
         snapshot_row = await conn.fetchrow(_models_snapshot_sql(scope), *args)
-        breakdown_rows = await conn.fetch(_model_breakdown_sql(scope), *args)
+        breakdown_rows = await conn.fetch(model_breakdown_sql(scope), *args)
     finally:
         await conn.close()
 

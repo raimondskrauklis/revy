@@ -4,6 +4,7 @@ from scripts.pipeline_observability_staging_metrics import (
     _evaluate_po_gate,
     _evaluate_po_p0_gate,
 )
+from scripts.staging_metrics_common import StagingScope, model_breakdown_sql
 
 
 def _metrics(
@@ -58,3 +59,31 @@ def test_po_p0_gate_inconclusive_no_runs():
 def test_po_gate_passes_with_attempts():
     gate = _evaluate_po_gate(_metrics())
     assert gate["passed"] is True
+
+
+def test_model_breakdown_sql_pr_scoped_uses_revision_coalesce():
+    sql = model_breakdown_sql(
+        StagingScope(repo_full_name="owner/repo", pr_number=97, since=None)
+    )
+    assert "coalesce(pr.revision_id, rr.revision_id, ij.revision_id)" in sql
+    assert "model_breakdown" not in sql
+
+
+def test_model_breakdown_sql_global_aggregates_attempts():
+    sql = model_breakdown_sql(StagingScope())
+    assert "FROM github_llm_call_attempts" in sql
+    assert "GROUP BY 1, 2, 3" in sql
+    assert "coalesce(pr.revision_id" not in sql
+
+
+def test_metrics_json_includes_model_breakdown_shape():
+    metrics = _metrics()
+    metrics["model_breakdown"] = [
+        {
+            "step_type": "review",
+            "provider": "moonshot",
+            "request_model": "kimi-k2.7-code",
+            "n": 2,
+        }
+    ]
+    assert metrics["model_breakdown"][0]["step_type"] == "review"

@@ -353,26 +353,30 @@ async def test_finalize_pipeline_github_check_neutral_updates_check():
     )
 
     with patch(
-        "app.services.github_pipeline_trace.resolve_pipeline_github_check_run_id",
-        AsyncMock(return_value=42),
+        "app.services.github_pipeline_trace.try_persist_models_snapshot",
+        AsyncMock(),
     ):
-        with patch("app.services.github_pipeline_trace.settings") as mock_settings:
-            mock_settings.github_api_enabled = True
-            with patch(
-                "app.services.github_pipeline_trace.github_api.update_check_run",
-                AsyncMock(),
-            ) as update_mock:
-                with patch("app.services.github_pipeline_trace.httpx.AsyncClient") as client_mock:
-                    client = AsyncMock()
-                    client.__aenter__ = AsyncMock(return_value=client)
-                    client.__aexit__ = AsyncMock(return_value=None)
-                    client_mock.return_value = client
+        with patch(
+            "app.services.github_pipeline_trace.resolve_pipeline_github_check_run_id",
+            AsyncMock(return_value=42),
+        ):
+            with patch("app.services.github_pipeline_trace.settings") as mock_settings:
+                mock_settings.github_api_enabled = True
+                with patch(
+                    "app.services.github_pipeline_trace.github_api.update_check_run",
+                    AsyncMock(),
+                ) as update_mock:
+                    with patch("app.services.github_pipeline_trace.httpx.AsyncClient") as client_mock:
+                        client = AsyncMock()
+                        client.__aenter__ = AsyncMock(return_value=client)
+                        client.__aexit__ = AsyncMock(return_value=None)
+                        client_mock.return_value = client
 
-                    await finalize_pipeline_github_check_neutral(
-                        session,
-                        pipeline_run_id=pipeline_run_id,
-                        summary="Review skipped — pull request is draft or not open",
-                    )
+                        await finalize_pipeline_github_check_neutral(
+                            session,
+                            pipeline_run_id=pipeline_run_id,
+                            summary="Review skipped — pull request is draft or not open",
+                        )
 
     update_mock.assert_awaited_once()
     assert update_mock.await_args.kwargs["conclusion"] == "neutral"
@@ -886,14 +890,18 @@ async def test_record_publish_pipeline_step_rollup_pass():
     session.add = MagicMock()
     session.flush = AsyncMock()
 
-    await record_publish_pipeline_step(
-        session,
-        pipeline_run_id=pipeline_run_id,
-        job=job,
-        summary_markdown="check",
-        issue_comment_markdown="issue",
-        duration_ms=10,
-    )
+    with patch(
+        "app.services.github_pipeline_trace.try_persist_models_snapshot",
+        AsyncMock(),
+    ):
+        await record_publish_pipeline_step(
+            session,
+            pipeline_run_id=pipeline_run_id,
+            job=job,
+            summary_markdown="check",
+            issue_comment_markdown="issue",
+            duration_ms=10,
+        )
 
     manifest_artifact = next(
         call.args[0]

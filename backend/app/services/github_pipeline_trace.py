@@ -50,6 +50,7 @@ from app.services.github_pipeline_run_lookup import (
     get_pipeline_run_for_index_job,
     get_pipeline_runs_for_index_jobs,
 )
+from app.services.model_run_snapshot import try_persist_models_snapshot
 
 __all__ = [
     "get_pipeline_run_for_index_job",
@@ -905,6 +906,8 @@ async def record_publish_pipeline_step(
             kind=PipelineArtifactKind.manifest,
             content_json=manifest_payload,
         )
+    await session.flush()
+    await try_persist_models_snapshot(session, pipeline_run_id=pipeline_run_id)
 
 
 async def get_pipeline_trace_for_review_run(
@@ -1092,6 +1095,8 @@ async def _finalize_pipeline_github_check(
     summary: str,
     conclusion: Literal["failure", "neutral"],
 ) -> None:
+    await session.flush()
+    await try_persist_models_snapshot(session, pipeline_run_id=pipeline_run_id)
     check_run_id = await resolve_pipeline_github_check_run_id(session, pipeline_run_id=pipeline_run_id)
     if check_run_id is None or not settings.github_api_enabled:
         return
