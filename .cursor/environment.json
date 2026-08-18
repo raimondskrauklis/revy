@@ -1,0 +1,16 @@
+{
+  "name": "Revy dev",
+  "install": "bash .cursor/scripts/install.sh",
+  "start": "bash .cursor/scripts/start.sh",
+  "terminals": [
+    {
+      "name": "api",
+      "command": "cd backend && PATH=\"$HOME/.local/bin:$PATH\" pipenv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
+    },
+    {
+      "name": "web",
+      "command": "cd frontend && npm run dev -- --host 0.0.0.0 --port 5173"
+    }
+  ],
+  "ports": [8000, 5173]
+}
