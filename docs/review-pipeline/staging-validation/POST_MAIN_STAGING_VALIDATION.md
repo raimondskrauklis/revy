@@ -125,3 +125,85 @@ DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.generation_lifecycle_stagin
 **Next:** MRC program **complete** — staging sign-off PASS on [#100](https://github.com/raimondskrauklis/revy/pull/100).
 
 **Related:** [model-run-capture validation](../models/model-run-capture/MODEL_RUN_CAPTURE_STAGING_VALIDATION.md) · [pipeline observability](../pipeline-observability/PIPELINE_OBSERVABILITY_STAGING_VALIDATION.md) · [generation lifecycle](../review-generation-lifecycle/REVIEW_GENERATION_LIFECYCLE_STAGING_VALIDATION.md)
+
+---
+
+## Production window (2026-08-21 operator snapshot)
+
+**Database:** `revy-staging` via `PRODUCTION_DATABASE_URL` (same DO cluster as `revy-dev` / `revy-test`). Cluster has **no** `revy` production database — live review traffic is this staging DB.
+
+**Queried:** 2026-08-21T18:43Z · alembic `2026_08_10_1300_0032_github_pipeline_runs_models_snapshot` · tenant `Raimonds Krauklis` · GitHub App `raimondskrauklis`.
+
+**Windows:** `--since 2026-08-07T00:00:00Z` (two-week lookback) and `--since 2026-08-11T07:40:23Z` (post-#99 deploy, fair MRC).
+
+### Fleet
+
+| Metric | All-time | Since 2026-08-07 |
+|--------|----------|------------------|
+| Review runs | 760 (first 2026-07-27, last 2026-08-20) | 411 |
+| Completed / failed / superseded | 661 / 62 / 31 | 351 / 37 / 22 |
+| PRs / revisions | 128 / 768 | — |
+| Findings / groups | 1759 / 1756 | 893 findings |
+| Publish jobs | 659 (619 completed, 38 `skipped_not_head`, 1 failed) | 336 completed in window |
+| Code chunks | 252,534 | — |
+| Repos | `revy` 62 PRs, `kp-platform` 34, `tender_pro` 32, `v2-kp_platform` 0 | kp-platform 252 runs, revy 159 |
+
+Week of 2026-08-17 is quiet (18 runs vs 200–280 in prior weeks). Last completed run: 2026-08-20T19:34Z (`revy` #102).
+
+### Gate results (system-wide, not dogfood-PR-scoped)
+
+| Gate | Window | Verdict | Evidence |
+|------|--------|---------|----------|
+| PO P0 `--po-p0-gate` | Aug 7 | **PASS** | alembic `0032`; attempts table; `timing_stats`/`trigger_source`/`retrieve_ms` 215/411; 606 attempt rows |
+| PO P4 `--po-gate` | Aug 7 | **PARTIAL** | Gate script PASSes (`review_wait_p95` set) but `wait_ms` is populated on **18/233** review attempts only — those 18 sit at ~840s (timeout path). Success-path wait still mostly null. Taxonomy: 587 success, 17 timeout, 1 rate_limit, 1 provider_error |
+| RG-15 `--rg15-gate` | Aug 7 | **FAIL** | supersede path PASS (22 review + 2 index); **1 stuck `processing` run** `019fef5a-…` on `revy` #98 (`c630845`, retrieve, updated 2026-08-11T05:45Z — leftover, not current traffic). 5 `pending` rows from 2026-07-27–30 are older leftovers |
+| MRC P0 `--mrc-gate` | post-#99 | **PASS** | embed manifest + step model **147/147**; reuse-null 12/12; false-reuse 0 |
+| MRC P1 | post-#99 | **PARTIAL** | embed attempts 177/177 + parity 147/0; `models_snapshot` 155/159; judge step model **59/141**; publish **138/141** |
+| RCX `--rcx-gate` | Aug 7 | **FAIL** | inject 124/351 + bytes p50 19014; **diff truncated 15.4%** (54/351, target &lt;5%); **omitted `.md` 54 runs** (target 0). Prompt p50/p95 **168,910 / 522,446** |
+| Judge persistence | Aug 7 | **FAIL** vs ≥95% | 141 candidates, 88 with outcome (**62.4%**); 53 `parse_error=Anthropic response invalid`; 0 retries. Candidate runs: 211, outcomes 160, skipped_unavailable 82 |
+
+```bash
+cd backend
+SINCE_2W=2026-08-07T00:00:00Z
+SINCE_MRC=2026-08-11T07:40:23Z
+
+DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.pipeline_observability_staging_metrics \
+  --since $SINCE_2W --po-p0-gate --po-gate --json
+
+DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.generation_lifecycle_staging_metrics \
+  --since $SINCE_2W --rg15-gate --json
+
+DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.model_run_capture_staging_metrics \
+  --since $SINCE_MRC --mrc-gate --json
+
+DATABASE_SSL_INSECURE=1 pipenv run python -m scripts.judge_json_contract_staging_metrics \
+  --since $SINCE_2W --rcx-gate --json
+```
+
+### Models in the window
+
+| Signal | Value |
+|--------|-------|
+| Review / publish | `moonshot` / `kimi-k2.7-code` (389 review runs since Aug 7) |
+| Embed through 2026-08-15 | `voyage-code-3.5` (170 index_embed attempts) |
+| Embed from 2026-08-16 | **`voyage-code-4`** (34 attempts — live on staging worker) |
+
+### Finding resolution (live, not dogfood-PR protocol)
+
+| State / method | n |
+|----------------|---|
+| groups `resolved` | 566 |
+| `judge_dismissed` + `absent_and_addressed` | 395 |
+| `addressed` + `absent_and_addressed` | 65 |
+| `judge_dismissed` + `judge_dismissed` | 43 |
+| publish `resolution.addressed` sum (Aug 7+) | 265 across 170 jobs |
+| `denominator_active_prior` jobs | 247 (sum 627) |
+
+Does **not** close finding-resolution dogfood sign-off (that memo still needs the dedicated PR protocol). Shows Pass 1–2 style closure is happening on `kp-platform` / `revy` traffic.
+
+### Operator notes
+
+1. Stale `processing` on #98 (`019fef5a`) should be marked failed/superseded or the system-wide RG-15 gate will keep failing.
+2. Judge RTU parse failures are still the dominant miss — persistence 62.4% vs 95% target; retries still 0.
+3. RCX dogfood PASS (2-run, 2026-07-29) does **not** hold on two weeks of real PRs — truncation and omitted `.md` are back.
+4. `voyage-code-4` has been the embed model since 2026-08-16 — relevant to [VOYAGE_CODE_4_FINDINGS.md](../../models/voyage-embeddings/VOYAGE_CODE_4_FINDINGS.md).

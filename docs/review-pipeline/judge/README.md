@@ -13,6 +13,7 @@
 | [JUDGE_TRANSPORT_RELIABILITY_FINDINGS.md](./JUDGE_TRANSPORT_RELIABILITY_FINDINGS.md) | RTU/direct transport, fallback, worker logging (2026-07-31) |
 | [JUDGE_TRANSPORT_RELIABILITY_GENERAL_PLAN.md](./JUDGE_TRANSPORT_RELIABILITY_GENERAL_PLAN.md) | T0–T3 transport hardening program |
 | [waves/JUDGE_TRANSPORT_RELIABILITY_EXECUTION.md](./waves/JUDGE_TRANSPORT_RELIABILITY_EXECUTION.md) | Transport reliability LOOP index (T0–T3) |
+| Thinking-blocks (next) | [judge-thinking-blocks](../judge-thinking-blocks/README.md) — RTU thinking-first extract |
 | [JUDGE_INPUT_QUALITY_GENERAL_PLAN.md](./JUDGE_INPUT_QUALITY_GENERAL_PLAN.md) | P0–P5 program phases (general — no execution steps) |
 | [waves/JUDGE_INPUT_QUALITY_EXECUTION.md](./waves/JUDGE_INPUT_QUALITY_EXECUTION.md) | LOOP index + P0–P5 execution files |
 

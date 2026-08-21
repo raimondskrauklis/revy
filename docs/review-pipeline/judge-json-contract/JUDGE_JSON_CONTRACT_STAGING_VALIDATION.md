@@ -13,7 +13,7 @@
 | Item | Value |
 |------|-------|
 | Merged to `main` | `9a7b5cb` (#58, 2026-07-29) |
-| Staging alembic | `2026_07_29_1200_0029_review_context_stats` (post-#60) |
+| Staging alembic | `2026_08_10_1300_0032_github_pipeline_runs_models_snapshot` (queried 2026-08-21) |
 | Judge-json-contract on staging worker | **deployed** (#58 on `main`) — post-#60 dogfood pending judge escalation run |
 
 **Operator:** deploy `main` to staging, trigger dogfood PR with escalation finding, re-run metrics script.
@@ -30,7 +30,7 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c 'python -m scripts.judge_json_contract_
 
 | Check | Required | Result | Date |
 |-------|----------|--------|------|
-| P3 staging outcome persistence ≥95% | If yes → P4 doc-only skip | **pending deploy** | — |
+| P3 staging outcome persistence ≥95% | If yes → P4 doc-only skip | **FAIL** — 62.4% (2026-08-21 two-week window) | 2026-08-21 |
 
 ---
 
@@ -59,22 +59,22 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c 'python -m scripts.judge_json_contract_
 
 **Queried:** 2026-07-29 · `revy-staging`
 
-| Metric | Baseline | Target | After deploy |
+| Metric | Baseline | Target | After deploy (2026-08-21, `--since 2026-08-07`) |
 |--------|----------|--------|--------------|
-| Judge candidates → valid `outcome` in manifest | **21.1%** (4/19) | ≥95% | pending |
-| Judge runs → any `github_finding_judge_outcomes` row | **35%** (7/20) | ≥95% | pending |
-| Judge `user_prompt` p50 | **1,083** chars | ≤2k (snippet tier) | pending |
-| `file_patch_chars` p50 | **0** (snippet tier when present) | null when snippet | pending |
-| Manifest `parse_error` populated on failure | **0** (pre-G1 deploy) | all parse fails | pending |
-| RG-6 `judge_candidate_unpublished_missing_outcome` | frequent on parse fail | rare | pending |
+| Judge candidates → valid `outcome` in manifest | **21.1%** (4/19) | ≥95% | **62.4%** (88/141) — **FAIL** |
+| Judge runs → any `github_finding_judge_outcomes` row | **35%** (7/20) | ≥95% | **75.8%** (160/211 candidate runs) — **FAIL** |
+| Judge `user_prompt` p50 | **1,083** chars | ≤2k (snippet tier) | **1,938** (under 2k) |
+| `file_patch_chars` p50 | **0** (snippet tier when present) | null when snippet | **0** |
+| Manifest `parse_error` populated on failure | **0** (pre-G1 deploy) | all parse fails | **53** parse errors (all `Anthropic response invalid`) |
+| RG-6 `judge_candidate_unpublished_missing_outcome` | frequent on parse fail | rare | still present — 53 missing-outcome candidates in window |
 
 ### Post-deploy (fill after dogfood run)
 
 | Metric | Value | Date | Notes |
 |--------|-------|------|-------|
-| Outcome persistence % | — | — | 0 judge candidates in post-#60 window |
-| `user_prompt` p50 | — | — | |
-| `retry_count` > 0 on recoveries | — | — | |
+| Outcome persistence % | **62.4%** (88/141) | 2026-08-21 | `--since 2026-08-07`; target ≥95% — **FAIL**. Latest miss `01a020aa-…` (revy #102, 2026-08-20) |
+| `user_prompt` p50 | **1,938** | 2026-08-21 | snippet tier still under 2k |
+| `retry_count` > 0 on recoveries | **0** | 2026-08-21 | P4 retry not firing on `Anthropic response invalid` |
 | Sample `review_run_id` (RCX) | `019facbd-d7a7-775e-9380-3ef48ca87e68` | 2026-07-29 | PR #61 latest; inject ✓ |
 
 ---
@@ -103,4 +103,5 @@ See [FINDING_RESOLUTION_TECHNICAL_FINDINGS.md](../finding-resolution/FINDING_RES
 
 | Role | Date | Outcome persistence % | Notes |
 |------|------|----------------------|-------|
-| Operator | — | — | pending deploy + dogfood PR |
+| Operator | 2026-07-29 | n/a | post-#60 dogfood: 0 judge candidates |
+| Operator | 2026-08-21 | **62.4%** | two-week live window — **FAIL** vs ≥95%; 53 `Anthropic response invalid`, 0 retries. See [POST_MAIN production window](../staging-validation/POST_MAIN_STAGING_VALIDATION.md) |

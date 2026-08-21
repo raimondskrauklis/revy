@@ -9,6 +9,7 @@
 | Doc | Purpose |
 |-----|---------|
 | [STAGING_VALIDATION_FINDINGS.md](./STAGING_VALIDATION_FINDINGS.md) | Baseline — gaps, SV-Q registry, deploy-window rules, parallel-track model |
+| [LIVE_TRAFFIC_FINDINGS.md](./LIVE_TRAFFIC_FINDINGS.md) | 2026-08-21 — two weeks of `revy-staging` fleet facts (judge / attempts / embeddings / RCX) |
 | [TEMPLATE_STAGING_VALIDATION.md](./TEMPLATE_STAGING_VALIDATION.md) | Stub for new per-program `*_STAGING_VALIDATION.md` memos |
 | [TEMPLATE_VALIDATION_INDEX.md](./TEMPLATE_VALIDATION_INDEX.md) | Optional index stub (this README is the live index on Revy) |
 | *(later)* `STAGING_VALIDATION_GENERAL_PLAN.md` | Phased rollout (script extensions, memo templates, CI hooks) |
@@ -41,6 +42,7 @@
 | Publish summary alignment | [PUBLISH_SUMMARY_ALIGNMENT_STAGING_VALIDATION.md](../publish-summary-alignment/PUBLISH_SUMMARY_ALIGNMENT_STAGING_VALIDATION.md) |
 | Review engineering context | [REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md](../review-engineering-context/REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md) |
 | Judge JSON contract | [JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](../judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) |
+| Judge thinking-blocks | [judge-thinking-blocks/README.md](../judge-thinking-blocks/README.md) — P0–P3 plan (extract thinking-first) |
 | Finding resolution | [FINDING_RESOLUTION_STAGING_VALIDATION.md](../finding-resolution/FINDING_RESOLUTION_STAGING_VALIDATION.md) |
 | PR summary rollup | [PR_SUMMARY_ROLLUP_STAGING_VALIDATION.md](../pr-summary-rollup/PR_SUMMARY_ROLLUP_STAGING_VALIDATION.md) |
 | Model run capture | [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](../models/model-run-capture/MODEL_RUN_CAPTURE_STAGING_VALIDATION.md) — **sign-off PASS** (#97 P0/P1, #100 P2/P3) |
@@ -55,5 +57,7 @@
 | Pipeline observability gate | `backend/scripts/pipeline_observability_staging_metrics.py` |
 | Generation lifecycle gate | `backend/scripts/generation_lifecycle_staging_metrics.py` |
 | SSOT / Greptile gate | `backend/scripts/generate_greptile_files_from_review_context.py` + `tests/unit/test_generate_greptile_files.py` |
+
+**Production snapshot (2026-08-21):** `revy-staging` has 760 review runs (411 since 2026-08-07) across `revy` + `kp-platform`. Gates: [POST_MAIN production window](./POST_MAIN_STAGING_VALIDATION.md). **Why:** [LIVE_TRAFFIC_FINDINGS.md](./LIVE_TRAFFIC_FINDINGS.md) (judge thinking-first parse, open review attempts, mixed `voyage-code-4` index, `kp-platform` RCX truncation).
 
 **Next step:** merge #63 → [finding-resolution dogfood](../finding-resolution-dogfood/README.md) (one push per agent cycle).
