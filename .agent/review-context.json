@@ -1,21 +1,21 @@
 {
-  "active_program": "model-run-capture",
+  "active_program": "judge-thinking-blocks",
   "programs": [
     {
-      "id": "model-run-capture",
+      "id": "judge-thinking-blocks",
       "scope": ["backend/**"],
       "paths": [
         {
-          "path": "docs/models/model-run-capture/waves/MODEL_RUN_CAPTURE_P0_EXECUTION.md",
-          "description": "Model run capture MRC-P0 — index embedding identity"
+          "path": "docs/review-pipeline/judge-thinking-blocks/waves/JUDGE_THINKING_BLOCKS_P0_EXECUTION.md",
+          "description": "Judge thinking-blocks P0 — content-block extract"
         },
         {
-          "path": "docs/models/model-run-capture/MODEL_RUN_CAPTURE_FINDINGS.md",
-          "description": "Model run capture baseline — MRC-Q1–Q10"
+          "path": "docs/review-pipeline/judge-thinking-blocks/JUDGE_THINKING_BLOCKS_FINDINGS.md",
+          "description": "Judge thinking-blocks baseline — JTB-D1–D9"
         },
         {
-          "path": "docs/models/model-run-capture/MODEL_RUN_CAPTURE_GENERAL_PLAN.md",
-          "description": "Model run capture general plan — MRC-P0–P3"
+          "path": "docs/review-pipeline/judge-thinking-blocks/JUDGE_THINKING_BLOCKS_GENERAL_PLAN.md",
+          "description": "Judge thinking-blocks general plan — P0–P3"
         }
       ]
     }

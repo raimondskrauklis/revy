@@ -1,22 +1,22 @@
 {
   "files": [
     {
-      "path": "docs/models/model-run-capture/waves/MODEL_RUN_CAPTURE_P0_EXECUTION.md",
-      "description": "Model run capture MRC-P0 \u2014 index embedding identity",
+      "path": "docs/review-pipeline/judge-thinking-blocks/waves/JUDGE_THINKING_BLOCKS_P0_EXECUTION.md",
+      "description": "Judge thinking-blocks P0 \u2014 content-block extract",
       "scope": [
         "backend/**"
       ]
     },
     {
-      "path": "docs/models/model-run-capture/MODEL_RUN_CAPTURE_FINDINGS.md",
-      "description": "Model run capture baseline \u2014 MRC-Q1\u2013Q10",
+      "path": "docs/review-pipeline/judge-thinking-blocks/JUDGE_THINKING_BLOCKS_FINDINGS.md",
+      "description": "Judge thinking-blocks baseline \u2014 JTB-D1\u2013D9",
       "scope": [
         "backend/**"
       ]
     },
     {
-      "path": "docs/models/model-run-capture/MODEL_RUN_CAPTURE_GENERAL_PLAN.md",
-      "description": "Model run capture general plan \u2014 MRC-P0\u2013P3",
+      "path": "docs/review-pipeline/judge-thinking-blocks/JUDGE_THINKING_BLOCKS_GENERAL_PLAN.md",
+      "description": "Judge thinking-blocks general plan \u2014 P0\u2013P3",
       "scope": [
         "backend/**"
       ]

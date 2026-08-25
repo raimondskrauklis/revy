@@ -205,6 +205,9 @@ def _response_preview(data: object) -> str:
     return truncate_judge_response_text(text)
 
 
+_SKIP_CONTENT_BLOCK_TYPES = frozenset({"thinking", "redacted_thinking"})
+
+
 def _extract_message_text(data: dict) -> str:
     content_blocks = data.get("content")
     if not isinstance(content_blocks, list) or not content_blocks:
@@ -213,21 +216,18 @@ def _extract_message_text(data: dict) -> str:
             error_code="llm_error",
             details={"response_body_preview": _response_preview(data)},
         )
-    first = content_blocks[0]
-    if not isinstance(first, dict):
-        raise ServiceUnavailableError(
-            message="Anthropic response invalid",
-            error_code="llm_error",
-            details={"response_body_preview": _response_preview(data)},
-        )
-    text = first.get("text")
-    if not isinstance(text, str) or not text.strip():
-        raise ServiceUnavailableError(
-            message="Anthropic response invalid",
-            error_code="llm_error",
-            details={"response_body_preview": _response_preview(data)},
-        )
-    return text
+    texts: list[str] = []
+    for block in content_blocks:
+        if not isinstance(block, dict):
+            continue
+        if block.get("type") in _SKIP_CONTENT_BLOCK_TYPES:
+            continue
+        text = block.get("text")
+        if isinstance(text, str) and text.strip():
+            texts.append(text)
+    if texts:
+        return "".join(texts)
+    return ""
 
 
 def _parse_messages_response_json(response: httpx.Response) -> dict[str, Any]:
@@ -365,7 +365,14 @@ async def _post_anthropic_messages(
             message="Anthropic response invalid",
             error_code="llm_error",
         )
-    return _extract_message_text(data)
+    text = _extract_message_text(data)
+    if text == "":
+        raise ServiceUnavailableError(
+            message="Anthropic response invalid",
+            error_code="llm_error",
+            details={"response_body_preview": _response_preview(data)},
+        )
+    return text
 
 
 async def _post_with_profile_fallback(

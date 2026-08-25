@@ -9,6 +9,7 @@ import pytest
 from app.core.exceptions import ServiceUnavailableError
 from app.integrations import anthropic_review
 from app.integrations.anthropic_review import complete_review, parse_review_json
+from app.integrations.judge_llm_errors import JudgeParseError
 
 
 @pytest.mark.asyncio
@@ -75,6 +76,31 @@ async def test_complete_review_returns_content():
         content = await complete_review(client, user_prompt="review")
 
     assert json.loads(content)["findings"] == []
+
+
+@pytest.mark.asyncio
+async def test_complete_review_thinking_only_raises_service_unavailable():
+    payload = {
+        "content": [
+            {"type": "thinking", "thinking": "", "signature": "sig-review"},
+        ]
+    }
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = payload
+    client = AsyncMock(spec=httpx.AsyncClient)
+    client.post = AsyncMock(return_value=response)
+
+    with patch("app.integrations.anthropic_review.settings") as mock_settings:
+        mock_settings.anthropic_direct_enabled = True
+        mock_settings.anthropic_api_key = "test-key"
+        mock_settings.revy_anthropic_model = "claude-sonnet-5"
+        mock_settings.revy_revision_timeout_standard_seconds = 30
+        with pytest.raises(ServiceUnavailableError) as exc_info:
+            await complete_review(client, user_prompt="review")
+
+    assert exc_info.value.message == "Anthropic response invalid"
+    assert exc_info.value.error_code == "llm_error"
 
 
 def test_parse_review_json_empty_findings():
@@ -366,6 +392,67 @@ def test_extract_message_text_empty_content_includes_preview():
     preview = exc_info.value.details.get("response_body_preview")
     assert isinstance(preview, str)
     assert "msg_empty" in preview
+
+
+def test_extract_message_text_legacy_content_zero_text():
+    payload = {"content": [{"text": '{"outcome":"dismissed"}'}]}
+    assert anthropic_review._extract_message_text(payload) == '{"outcome":"dismissed"}'
+
+
+def test_extract_message_text_thinking_first_text_later():
+    assistant = '{"outcome":"upheld","notes":"ok"}'
+    payload = {
+        "content": [
+            {"type": "thinking", "thinking": "", "signature": "sig-live"},
+            {"type": "text", "text": assistant},
+        ]
+    }
+    assert anthropic_review._extract_message_text(payload) == assistant
+
+
+def test_extract_message_text_thinking_only_returns_empty_string():
+    payload = {
+        "content": [
+            {"type": "thinking", "thinking": "", "signature": "sig-only"},
+        ]
+    }
+    assert anthropic_review._extract_message_text(payload) == ""
+
+
+def test_extract_message_text_thinking_only_does_not_raise_judge_parse_error():
+    payload = {
+        "content": [
+            {"type": "thinking", "thinking": "", "signature": "sig-only"},
+        ]
+    }
+    try:
+        result = anthropic_review._extract_message_text(payload)
+    except JudgeParseError as exc:
+        pytest.fail(f"helper raised JudgeParseError: {exc}")
+    assert result == ""
+
+
+def test_extract_message_text_concatenates_multiple_text_blocks():
+    payload = {
+        "content": [
+            {"type": "thinking", "thinking": "hidden", "signature": "sig"},
+            {"type": "text", "text": '{"outcome":'},
+            {"type": "redacted_thinking", "data": "x"},
+            {"type": "text", "text": '"upheld"}'},
+        ]
+    }
+    assert anthropic_review._extract_message_text(payload) == '{"outcome":"upheld"}'
+
+
+def test_extract_message_text_skips_non_dict_and_blank_text():
+    payload = {
+        "content": [
+            "not-a-block",
+            {"type": "text", "text": "   "},
+            {"type": "text", "text": "kept"},
+        ]
+    }
+    assert anthropic_review._extract_message_text(payload) == "kept"
 
 
 def test_judge_raw_response_with_usage_attaches_transport_tokens():

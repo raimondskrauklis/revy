@@ -1,12 +1,12 @@
 # Bugbot — review pipeline contract
 
-**Active program:** model-run-capture — durable per-run model identity (embeddings, reviewer, judge, publish).
+**Active program:** judge-thinking-blocks — RTU thinking-first Messages extract.
 
-When reviewing **backend** changes for model run capture, treat these as authoritative:
+When reviewing **backend** changes for judge thinking-blocks, treat these as authoritative:
 
-- [MODEL_RUN_CAPTURE_P0_EXECUTION.md](../docs/models/model-run-capture/waves/MODEL_RUN_CAPTURE_P0_EXECUTION.md) — MRC-P0 LOOP (index manifest + step model)
-- [MODEL_RUN_CAPTURE_FINDINGS.md](../docs/models/model-run-capture/MODEL_RUN_CAPTURE_FINDINGS.md) — MRC-Q1–Q10, target catalog
-- [MODEL_RUN_CAPTURE_GENERAL_PLAN.md](../docs/models/model-run-capture/MODEL_RUN_CAPTURE_GENERAL_PLAN.md) — MRC-P0–P3 goals
+- [JUDGE_THINKING_BLOCKS_P0_EXECUTION.md](../docs/review-pipeline/judge-thinking-blocks/waves/JUDGE_THINKING_BLOCKS_P0_EXECUTION.md) — P0 LOOP (content-block extract)
+- [JUDGE_THINKING_BLOCKS_FINDINGS.md](../docs/review-pipeline/judge-thinking-blocks/JUDGE_THINKING_BLOCKS_FINDINGS.md) — JTB-D1–D9
+- [JUDGE_THINKING_BLOCKS_GENERAL_PLAN.md](../docs/review-pipeline/judge-thinking-blocks/JUDGE_THINKING_BLOCKS_GENERAL_PLAN.md) — P0–P3 goals
 
 **Agent workflow:**
 
