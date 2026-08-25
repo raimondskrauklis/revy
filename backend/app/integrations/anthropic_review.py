@@ -208,6 +208,20 @@ def _response_preview(data: object) -> str:
 _SKIP_CONTENT_BLOCK_TYPES = frozenset({"thinking", "redacted_thinking"})
 
 
+def _content_block_types(data: dict) -> list[str]:
+    content_blocks = data.get("content")
+    if not isinstance(content_blocks, list):
+        return []
+    types: list[str] = []
+    for block in content_blocks:
+        if not isinstance(block, dict):
+            types.append("non_dict")
+            continue
+        block_type = block.get("type")
+        types.append(block_type if isinstance(block_type, str) else "unknown")
+    return types
+
+
 def _extract_message_text(data: dict) -> str:
     content_blocks = data.get("content")
     if not isinstance(content_blocks, list) or not content_blocks:
@@ -316,6 +330,20 @@ async def _post_judge_anthropic_messages(
         usage_fields = _extract_usage_fields(data)
         text = _extract_message_text(data)
         duration_ms = int((time.perf_counter() - started) * 1000)
+        if text == "":
+            transport_fields = {
+                **transport_base,
+                "duration_ms": duration_ms,
+                "response_chars": 0,
+                "parse_error": "judge_empty_text",
+                "content_block_types": _content_block_types(data),
+                **usage_fields,
+            }
+            _set_judge_transport_context(transport_fields)
+            raise JudgeParseError(
+                "judge_empty_text",
+                response_text=_response_preview(data),
+            )
         transport_fields = {
             **transport_base,
             "duration_ms": duration_ms,
