@@ -42,7 +42,7 @@
 | Publish summary alignment | [PUBLISH_SUMMARY_ALIGNMENT_STAGING_VALIDATION.md](../publish-summary-alignment/PUBLISH_SUMMARY_ALIGNMENT_STAGING_VALIDATION.md) |
 | Review engineering context | [REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md](../review-engineering-context/REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md) |
 | Judge JSON contract | [JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](../judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) |
-| Judge thinking-blocks | [judge-thinking-blocks/README.md](../judge-thinking-blocks/README.md) — P0–P3 plan (extract thinking-first) |
+| Judge thinking-blocks | [JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md](../judge-thinking-blocks/JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md) — P0–P2 on #103; human gate pending |
 | Finding resolution | [FINDING_RESOLUTION_STAGING_VALIDATION.md](../finding-resolution/FINDING_RESOLUTION_STAGING_VALIDATION.md) |
 | PR summary rollup | [PR_SUMMARY_ROLLUP_STAGING_VALIDATION.md](../pr-summary-rollup/PR_SUMMARY_ROLLUP_STAGING_VALIDATION.md) |
 | Model run capture | [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](../models/model-run-capture/MODEL_RUN_CAPTURE_STAGING_VALIDATION.md) — **sign-off PASS** (#97 P0/P1, #100 P2/P3) |

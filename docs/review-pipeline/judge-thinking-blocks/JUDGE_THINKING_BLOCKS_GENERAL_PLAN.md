@@ -81,4 +81,4 @@ Pass-01 architecture review blockers (D2/D4 raise-site, P3 94.3% ceiling) are lo
 
 **JTB-Q5:** thinking-only (8/53) may still fail after one retry — P3 records the rate; do not add retries or a second model without a new findings pass.
 
-**Next step:** **`execution-peer-review`** on `docs/review-pipeline/judge-thinking-blocks/waves/` (P0–P3), then **`phase-execution`** from P0. Live token `judge_json_invalid`; additive code `judge_empty_text` only.
+**Next step:** human gate — fill [JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md](./JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md) after P0–P2 is on the staging worker. Live token `judge_json_invalid`; additive `judge_empty_text` only.

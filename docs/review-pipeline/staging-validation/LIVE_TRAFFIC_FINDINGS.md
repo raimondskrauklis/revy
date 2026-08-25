@@ -102,7 +102,7 @@ Stored preview (truncated): `content: [{"type": "thinking", "thinking": "", "sig
 
 **Do not:** relax RG-6; spray extra retries on `ServiceUnavailableError` without extracting text first.
 
-**Program:** [judge-thinking-blocks](../judge-thinking-blocks/README.md) — findings + general plan 2026-08-21.
+**Program:** [judge-thinking-blocks](../judge-thinking-blocks/README.md) — P0–P2 shipped on [#103](https://github.com/raimondskrauklis/revy/pull/103); staging sign-off: [JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md](../judge-thinking-blocks/JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md).
 
 ---
 

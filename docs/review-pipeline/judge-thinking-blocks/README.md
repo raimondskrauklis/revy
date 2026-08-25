@@ -1,6 +1,6 @@
 # Judge thinking-blocks — program index
 
-**Status:** execution files + execution-peer-review pass 1 (2026-08-23) — **BLOCK phase-execution: no.** Next: `phase-execution` from P0. D6 locked: live `judge_json_invalid` stays; additive `judge_empty_text` only.  
+**Status:** P0–P2 **code-complete** on `fix/judge-parse` ([#103](https://github.com/raimondskrauklis/revy/pull/103)). P3 memo stubbed — **human gate pending** ([validation memo](./JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md)). D6: live `judge_json_invalid` stays; additive `judge_empty_text` only.  
 **Problem:** RTU `claude-sonnet-5` returns thinking-first Messages `content`; Revy reads only `content[0].text` and records `Anthropic response invalid`. 45/53 live misses already had a later `text` block.
 
 **Not in scope:** Moonshot review JSON; RG-6 withhold; Voyage embeddings; RCX truncation; review-attempt `wait_ms` (LT-2).
@@ -10,6 +10,7 @@
 | [JUDGE_THINKING_BLOCKS_FINDINGS.md](./JUDGE_THINKING_BLOCKS_FINDINGS.md) | Baseline — live-window evidence, adapter gap, locked decisions |
 | [JUDGE_THINKING_BLOCKS_GENERAL_PLAN.md](./JUDGE_THINKING_BLOCKS_GENERAL_PLAN.md) | P0–P3 phases (general — no execution steps) |
 | [waves/JUDGE_THINKING_BLOCKS_EXECUTION.md](./waves/JUDGE_THINKING_BLOCKS_EXECUTION.md) | LOOP index |
+| [JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md](./JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md) | Operator staging gate (P3 human sign-off) |
 | [Architecture peer review](./reviews/architecture-peer-review/README.md) | Pass index — findings + general plan vs codebase |
 | [Execution peer review](./reviews/execution-peer-review/README.md) | Pass index — P0–P3 waves vs codebase |
 
@@ -36,11 +37,11 @@
 
 | Phase | Focus | File | Status |
 |-------|--------|------|--------|
-| P0 | Content-block extract + review `""`→SUE | [P0](./waves/JUDGE_THINKING_BLOCKS_P0_EXECUTION.md) | done |
-| P1 | Judge wrap `judge_empty_text` + transport extra | [P1](./waves/JUDGE_THINKING_BLOCKS_P1_EXECUTION.md) | done |
-| P2 | Distinct codes; D8 INFO; metrics grouping | [P2](./waves/JUDGE_THINKING_BLOCKS_P2_EXECUTION.md) | done |
-| P3 | Staging validation + split evidence + doc sync | [P3](./waves/JUDGE_THINKING_BLOCKS_P3_EXECUTION.md) | pending |
+| P0 | Content-block extract + review `""`→SUE | [P0](./waves/JUDGE_THINKING_BLOCKS_P0_EXECUTION.md) | done (`0fc5b45`) |
+| P1 | Judge wrap `judge_empty_text` + transport extra | [P1](./waves/JUDGE_THINKING_BLOCKS_P1_EXECUTION.md) | done (`bf480d7`) |
+| P2 | Distinct codes; D8 INFO; metrics grouping | [P2](./waves/JUDGE_THINKING_BLOCKS_P2_EXECUTION.md) | done (`d9fd997`) |
+| P3 | Staging validation + split evidence + doc sync | [P3](./waves/JUDGE_THINKING_BLOCKS_P3_EXECUTION.md) | code-complete — human gate pending |
 
 P0 and P1 ship as **two commits, one PR**. Do not merge P0 without P1.
 
-**Next:** [execution-peer-review pass 1](./reviews/execution-peer-review/pass-01-2026-08-23.md) — **BLOCK phase-execution: no.** Then `phase-execution` from P0.
+**Next:** deploy P0–P2 to staging → fill [validation memo](./JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md) (human gate).

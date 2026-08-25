@@ -117,7 +117,7 @@ Sample body (truncated): `content: [{"type": "thinking", "thinking": "", "signat
 | JTB-Q2 | Retry thinking-first as transport error? | **locked** | No — extract first; empty-text → `JudgeParseError` at **judge wrap only** (D4) |
 | JTB-Q3 | Fork extract for judge only? | **locked** | No — shared helper (D2); wrap is judge-only, extract is not |
 | JTB-Q4 | Relax RG-6 while persistence is 62%? | **locked** | No (D7) |
-| JTB-Q5 | Will retry recover thinking-only (8)? | **open (calibration)** | Measure after P1 on staging |
+| JTB-Q5 | Will retry recover thinking-only (8)? | **open (calibration)** | Measure after P0–P2 on staging worker — [validation memo](./JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md) |
 | JTB-Q6 | Raise `JudgeParseError` from `_extract_message_text`? | **locked** | No — D2/D4 raise-site ([pass-01](./reviews/architecture-peer-review/pass-01-2026-08-22.md)) |
 | JTB-Q7 | Empty `content: []` → `judge_empty_text` or SUE? | **locked** | SUE (D5); 0 live |
 | JTB-Q8 | Strip `signature` from manifest `raw_response_text`? | **locked** | No — D8: INFO never dumps it; manifest truncated dump stays |
