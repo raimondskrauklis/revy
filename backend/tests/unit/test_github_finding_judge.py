@@ -25,6 +25,7 @@ from app.models.github_review_run import GitHubReviewRunORM
 from app.services.github_compare_patches import CompareReviewContext
 from app.services.github_finding_judge import (
     _build_judge_prompt,
+    _judge_failure_artifact,
     _judge_failure_log_extra,
     is_judge_candidate,
     judge_candidate_group_sql_predicate,
@@ -215,6 +216,62 @@ def test_judge_failure_log_extra_includes_invalid_response_preview():
     assert extra["raw_response_text"] == "not-json {"
     assert extra["error"] == "Anthropic response invalid"
     assert extra["parse_error"] == "Anthropic response invalid"
+
+
+def test_judge_failure_artifact_codes_are_distinct():
+    from app.integrations.judge_llm_errors import JudgeParseError
+
+    group_id = uuid.uuid4()
+    empty = _judge_failure_artifact(
+        group_id=group_id,
+        evidence_snippet=None,
+        user_prompt="judge",
+        file_patch_chars=None,
+        exc=JudgeParseError("judge_empty_text", response_text="thinking-only"),
+    )
+    invalid = _judge_failure_artifact(
+        group_id=group_id,
+        evidence_snippet=None,
+        user_prompt="judge",
+        file_patch_chars=None,
+        exc=JudgeParseError("judge_json_invalid", response_text="not-json"),
+    )
+    http_exc = ServiceUnavailableError(
+        message="Anthropic response invalid",
+        error_code="llm_error",
+        details={"response_body_preview": "[]"},
+    )
+    transport = _judge_failure_artifact(
+        group_id=group_id,
+        evidence_snippet=None,
+        user_prompt="judge",
+        file_patch_chars=None,
+        exc=http_exc,
+    )
+    assert empty.parse_error == "judge_empty_text"
+    assert invalid.parse_error == "judge_json_invalid"
+    assert transport.parse_error == "Anthropic response invalid"
+    assert len({empty.parse_error, invalid.parse_error, transport.parse_error}) == 3
+
+
+def test_judge_failure_log_extra_includes_content_block_types():
+    from app.integrations import anthropic_review
+    from app.integrations.judge_llm_errors import JudgeParseError
+
+    anthropic_review._set_judge_transport_context(
+        {
+            "profile": "gateway",
+            "parse_error": "judge_empty_text",
+            "content_block_types": ["thinking"],
+        }
+    )
+    extra = _judge_failure_log_extra(
+        uuid.uuid4(),
+        JudgeParseError("judge_empty_text", response_text="thinking-only"),
+    )
+    assert extra["parse_error"] == "judge_empty_text"
+    assert extra["content_block_types"] == ["thinking"]
+    assert "signature" not in extra
 
 
 def test_build_judge_prompt_includes_engineering_locks():

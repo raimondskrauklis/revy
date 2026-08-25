@@ -1,5 +1,10 @@
 # backend/scripts/judge_json_contract_staging_metrics.py
-"""Staging metrics for judge-json-contract P5 and review-context validation."""
+"""Staging metrics for judge-json-contract P5 and review-context validation.
+
+Groups judge manifest failures by any `parse_error` (including additive
+`judge_empty_text` and live `judge_json_invalid`). Do not filter on a
+hardcoded old transport string.
+"""
 from __future__ import annotations
 
 import argparse

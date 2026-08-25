@@ -409,6 +409,39 @@ async def test_judge_finding_thinking_only_raises_judge_empty_text():
 
 
 @pytest.mark.asyncio
+async def test_judge_empty_text_info_logs_do_not_include_signature(caplog):
+    payload = {
+        "content": [
+            {"type": "thinking", "thinking": "", "signature": "sig-must-not-log"},
+        ]
+    }
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = payload
+    client = AsyncMock(spec=httpx.AsyncClient)
+    client.post = AsyncMock(return_value=response)
+
+    with patch("app.integrations.anthropic_review.settings") as mock_settings:
+        mock_settings.anthropic_gateway_enabled = True
+        mock_settings.anthropic_gateway_messages_url = "https://llm.ai.rtu.lv/v1/messages"
+        mock_settings.anthropic_auth_token = "rtu-token"
+        mock_settings.effective_anthropic_gateway_judge_model = "azure_ai/claude-opus-5"
+        mock_settings.anthropic_direct_enabled = False
+        mock_settings.revy_judge_structured_output = False
+        mock_settings.revy_revision_timeout_standard_seconds = 30
+        with caplog.at_level("INFO"):
+            with pytest.raises(JudgeParseError):
+                await anthropic_review.judge_finding(client, user_prompt="judge this")
+
+    for record in caplog.records:
+        extra = getattr(record, "__dict__", {})
+        assert extra.get("signature") is None
+        assert "sig-must-not-log" not in record.getMessage()
+        dumped = " ".join(f"{k}={v}" for k, v in extra.items() if k != "msg")
+        assert "sig-must-not-log" not in dumped
+
+
+@pytest.mark.asyncio
 async def test_judge_finding_falls_back_when_gateway_returns_thinking_only():
     gateway_response = MagicMock()
     gateway_response.raise_for_status = MagicMock()

@@ -12,7 +12,7 @@
 |-------|--------|------|--------|
 | P0 | Content-block extract + review `""`→SUE | [P0](./JUDGE_THINKING_BLOCKS_P0_EXECUTION.md) | done |
 | P1 | Judge wrap `judge_empty_text` + transport extra | [P1](./JUDGE_THINKING_BLOCKS_P1_EXECUTION.md) | done |
-| P2 | Distinct codes; D8 INFO; metrics grouping | [P2](./JUDGE_THINKING_BLOCKS_P2_EXECUTION.md) | pending |
+| P2 | Distinct codes; D8 INFO; metrics grouping | [P2](./JUDGE_THINKING_BLOCKS_P2_EXECUTION.md) | done |
 | P3 | Staging validation + split evidence + doc sync | [P3](./JUDGE_THINKING_BLOCKS_P3_EXECUTION.md) | pending |
 
 **Locked tokens:** additive `judge_empty_text` only; live JSON-invalid stays **`judge_json_invalid`**. Do not rename.
