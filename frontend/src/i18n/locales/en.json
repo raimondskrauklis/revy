@@ -180,8 +180,7 @@
       }
     },
     "security": {
-      "body": "Password, multi-factor authentication, and active sessions are managed in your Keycloak account console.",
-      "openAccount": "Open account console"
+      "body": "Password, multi-factor authentication, and session management will be available in Revy later. Contact your workspace admin if you need to change how you sign in."
     },
     "appearance": {
       "body": "Choose how the app looks on this device. Theme preference is stored locally in your browser.",
@@ -202,7 +201,6 @@
       "modelsBody": "Override platform defaults per pipeline role. Choose Platform default to inherit environment configuration.",
       "modelsSaveSuccess": "Model policy saved",
       "platformDefault": "Platform default",
-      "sameProviderWarning": "Reviewer and judge currently use the same provider family. Cross-family review is recommended for higher-quality escalation.",
       "roles": {
         "reviewer_standard": "Reviewer — standard profile",
         "reviewer_deep": "Reviewer — deep profile",
@@ -607,7 +605,13 @@
       "number": "#",
       "title": "Title",
       "headSha": "Head SHA",
-      "revisions": "Revisions"
+      "revisions": "Revisions",
+      "status": "Status",
+      "state": {
+        "open": "Open",
+        "closed": "Closed",
+        "merged": "Merged"
+      }
     },
     "groupState": {
       "active": "Active",
@@ -682,6 +686,7 @@
     "mergeReadiness": {
       "notPublished": "Not published to GitHub",
       "success": "Ready to merge",
+      "successClosed": "No blocking findings",
       "neutral": "Review notes",
       "failure": "Blocking findings"
     },

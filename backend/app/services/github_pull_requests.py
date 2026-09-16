@@ -136,6 +136,8 @@ def _extract_pr_fields(pull_request: dict[str, Any]) -> dict[str, Any] | None:
         "html_url": html_url if isinstance(html_url, str) else None,
         "body": body,
         "is_draft": pull_request.get("draft") is True,
+        "merged": pr_state == GitHubPullRequestState.closed
+        and pull_request.get("merged") is True,
     }
 
 
@@ -345,6 +347,7 @@ async def _upsert_pull_request(
     existing.html_url = fields["html_url"]
     existing.number = fields["number"]
     existing.is_draft = fields["is_draft"]
+    existing.merged = fields["merged"]
     existing.body = fields.get("body")
 
     if create_revision:
@@ -528,6 +531,7 @@ async def apply_pull_request_webhook_event(
         existing.title = fields["title"]
         existing.html_url = fields["html_url"]
         existing.is_draft = fields["is_draft"]
+        existing.merged = fields["merged"]
         existing.body = fields.get("body")
         await session.flush()
 

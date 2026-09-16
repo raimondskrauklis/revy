@@ -5,6 +5,7 @@ import type { MergeConclusion } from '@/features/reviewer/types';
 interface MergeReadinessBadgeProps {
   conclusion: MergeConclusion | null;
   published: boolean;
+  prOpen?: boolean;
 }
 
 const BADGE_CLASS: Record<MergeConclusion, string> = {
@@ -13,7 +14,11 @@ const BADGE_CLASS: Record<MergeConclusion, string> = {
   failure: 'bg-[color:var(--app-danger-subtle)] text-[color:var(--app-danger)]',
 };
 
-export function MergeReadinessBadge({ conclusion, published }: MergeReadinessBadgeProps) {
+export function MergeReadinessBadge({
+  conclusion,
+  published,
+  prOpen = true,
+}: MergeReadinessBadgeProps) {
   const { t } = useTranslation();
 
   if (!published) {
@@ -35,7 +40,11 @@ export function MergeReadinessBadge({ conclusion, published }: MergeReadinessBad
         BADGE_CLASS[conclusion],
       ].join(' ')}
     >
-      {t(`reviewer.mergeReadiness.${conclusion}`)}
+      {t(
+        conclusion === 'success' && !prOpen
+          ? 'reviewer.mergeReadiness.successClosed'
+          : `reviewer.mergeReadiness.${conclusion}`,
+      )}
     </span>
   );
 }

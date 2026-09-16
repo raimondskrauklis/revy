@@ -65,7 +65,7 @@ docs/review-pipeline/
     waves/
       JUDGE_JSON_CONTRACT_EXECUTION.md
       JUDGE_JSON_CONTRACT_P0_EXECUTION.md … P5
-  judge-thinking-blocks/                 ← RTU thinking-first extract (P0–P2 on #103; staging human gate)
+  judge-thinking-blocks/                 ← RTU thinking-first extract — **closed** (P0–P3 #103; S0–S4)
     README.md
     JUDGE_THINKING_BLOCKS_FINDINGS.md
     JUDGE_THINKING_BLOCKS_GENERAL_PLAN.md

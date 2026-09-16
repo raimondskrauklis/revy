@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { PullRequestStateBadge } from '@/features/reviewer/components/PullRequestStateBadge';
 import { usePullRequests } from '@/features/reviewer/hooks';
 import { mapApiError } from '@/shared/errors';
 import { showDomainErrorToast } from '@/shared/errors/toasts';
@@ -44,6 +45,7 @@ export function PullRequestListPage() {
           <tr>
             <th className="px-3 py-2 font-medium">{t('reviewer.pullRequests.number')}</th>
             <th className="px-3 py-2 font-medium">{t('reviewer.pullRequests.title')}</th>
+            <th className="px-3 py-2 font-medium">{t('reviewer.pullRequests.status')}</th>
             <th className="px-3 py-2 font-medium">{t('reviewer.pullRequests.headSha')}</th>
             <th className="px-3 py-2 font-medium">{t('reviewer.pullRequests.revisions')}</th>
           </tr>
@@ -60,6 +62,9 @@ export function PullRequestListPage() {
                 </Link>
               </td>
               <td className="px-3 py-2 text-[color:var(--app-text-strong)]">{pullRequest.title}</td>
+              <td className="px-3 py-2">
+                <PullRequestStateBadge pullRequest={pullRequest} />
+              </td>
               <td className="px-3 py-2 font-mono text-xs text-[color:var(--app-text-muted)]">
                 {pullRequest.head_sha.slice(0, 7)}
               </td>

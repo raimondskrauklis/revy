@@ -13,7 +13,7 @@
 | [JUDGE_TRANSPORT_RELIABILITY_FINDINGS.md](./JUDGE_TRANSPORT_RELIABILITY_FINDINGS.md) | RTU/direct transport, fallback, worker logging (2026-07-31) |
 | [JUDGE_TRANSPORT_RELIABILITY_GENERAL_PLAN.md](./JUDGE_TRANSPORT_RELIABILITY_GENERAL_PLAN.md) | T0–T3 transport hardening program |
 | [waves/JUDGE_TRANSPORT_RELIABILITY_EXECUTION.md](./waves/JUDGE_TRANSPORT_RELIABILITY_EXECUTION.md) | Transport reliability LOOP index (T0–T3) |
-| Thinking-blocks | [judge-thinking-blocks](../judge-thinking-blocks/README.md) — P0–P2 extract+wrap on #103; [staging memo](../judge-thinking-blocks/JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md) human gate pending |
+| Thinking-blocks | [judge-thinking-blocks](../judge-thinking-blocks/README.md) — **closed**; [staging memo](../judge-thinking-blocks/JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md) S0–S4 PASS |
 | [JUDGE_INPUT_QUALITY_GENERAL_PLAN.md](./JUDGE_INPUT_QUALITY_GENERAL_PLAN.md) | P0–P5 program phases (general — no execution steps) |
 | [waves/JUDGE_INPUT_QUALITY_EXECUTION.md](./waves/JUDGE_INPUT_QUALITY_EXECUTION.md) | LOOP index + P0–P5 execution files |
 
