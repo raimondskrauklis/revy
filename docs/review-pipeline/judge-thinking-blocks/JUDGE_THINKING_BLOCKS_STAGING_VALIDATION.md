@@ -2,7 +2,7 @@
 
 **Program:** [README.md](./README.md) · **Baseline:** [JUDGE_THINKING_BLOCKS_FINDINGS.md](./JUDGE_THINKING_BLOCKS_FINDINGS.md)
 
-**Status:** S0–S2 **PASS** on [#106](https://github.com/raimondskrauklis/revy/pull/106). S3 hunk-fix **PARTIAL**; S3b file-delete **in flight** (expect `absent_and_addressed` via `file_path_deleted_in_compare`). S4 blocked — no Deep/Critical in `/reviewer` UI; admin `POST …/review` needs Keycloak.
+**Status:** S0–S2 **PASS**. S3 **PASS** on [#106](https://github.com/raimondskrauklis/revy/pull/106) `fb28cd3` — probe/test files deleted; both security groups `resolved`/`addressed`/`absent_and_addressed`. Hunk-only S3 stayed **PARTIAL** (verification **upheld**). S4 blocked — no Deep/Critical in `/reviewer`; admin `POST …/review` needs Keycloak.
 
 ---
 
@@ -22,7 +22,7 @@
 
 | PR | Branch | Status |
 |----|--------|--------|
-| [#106](https://github.com/raimondskrauklis/revy/pull/106) | `chore/jtb-rtu-staging-dogfood` | **open** — GitHub display-clean at `a761f74`; S4 not started |
+| [#106](https://github.com/raimondskrauklis/revy/pull/106) | `chore/jtb-rtu-staging-dogfood` | **open** — S3 **PASS** at `fb28cd3`; S4 not started |
 
 ---
 
@@ -37,7 +37,7 @@
 | 5 | S3 — remove `shell=True` | **done** — display-clean, DB verification **upheld** (`a538d4d`) |
 | 6 | S3 follow-up — drop stale README instruction | **done** — Revy **pass**, 0 open tables (`a761f74`) |
 | 7 | Record push 6 evidence | **done** (`0c69a56`) |
-| 8 | S3b — delete probe + test files | **in flight** |
+| 8 | S3b — delete probe + test files | **done** — both groups `addressed`/`absent_and_addressed` (`fb28cd3`) |
 
 ---
 
@@ -63,7 +63,7 @@ Reconcile then runs discovery judge (`record_review_run_judge_status_with_model`
 | S0 | Clean probe, 0 findings | embed voyage-4; reviewer+publish rtu kimi; judge skip | **PASS** push 2 |
 | S1 | Command injection in `jtb_rtu_judge_probe.py` | + discovery judge rtu opus-5 `/v1/messages` | **PASS** push 3 |
 | S2 | Leave defect (no hunk fix) | verification judge on still-open group | **PASS** push 4 |
-| S3 | Remove invocation / fix | closure without cutting judge | **PARTIAL** push 5; S3b file-delete push 8 |
+| S3 | Remove invocation / fix | closure without cutting judge | **PASS** push 8 (file delete); hunk-only was **PARTIAL** |
 | S4 | Deep/critical profile | reviewer `azure_ai/claude-fable-5-1` | not started — needs Deep/Critical from app, not autostart |
 
 ---
@@ -216,6 +216,20 @@ S3 did **not** get `addressed`/`resolved` on the security groups — verificatio
 
 Push-delta for the probe files was empty on this docs-only revision, so verification re-judged the prior titles against no hunk and **upheld** again. That is why DB `still_open` outlives GitHub display-clean.
 
+### Push 8 — S3b delete probe files (`fb28cd3`, 2026-09-16)
+
+| Field | Value |
+|-------|-------|
+| `head_sha` | `fb28cd3` |
+| Revy check | **pass** `2026-09-16T15:13:03Z`–`15:14:49Z` (1m46s) |
+| Probe group | `resolved` / `addressed` / `absent_and_addressed` |
+| Test group | `resolved` / `addressed` / `absent_and_addressed` |
+| This generation | 1 discovery candidate on the validation memo (`critical`/`security`, title said fixture not yet deleted) — judge **dismissed** |
+| Snapshot | reviewer+publish `rtu` kimi; judge `rtu` / `azure_ai/claude-opus-5` |
+| GitHub | raised 4, resolved 4, display open 0 (path removed 2, judge dismissed 1, addressed 1) |
+
+Hunk-only S3 did **not** close DB groups. File delete did, via `file_path_deleted_in_compare`. The superseded original injection title remains `still_open` on a non-active group.
+
 ### Historical baseline (pre-#103 worker — not this pass)
 
 | Metric | Baseline (2026-08-21) | `--since 2026-08-07T00:00:00Z` (2026-09-16) |
@@ -243,8 +257,8 @@ Push-delta for the probe files was empty on this docs-only revision, so verifica
 |----|--------|---------|
 | A | Virtual key on origin | **done** — push 2 |
 | D | S1 command-injection probe so discovery judge hits `POST /v1/messages` | **done** — 2× 200, 2 outcomes `modified` |
-| E | S2 verification judge (leave probe), then S3 remove it | S2 **PASS**; S3 **PARTIAL** (GitHub clean; verification upheld) |
-| F | S4 deep/critical fable-5-1 via app review button | **blocked** — autostart is standard only; needs Deep/Critical in the app |
+| E | S2 verification judge (leave probe), then S3 remove it | S2 **PASS**; hunk S3 **PARTIAL**; file-delete S3b **PASS** |
+| F | S4 deep/critical fable-5-1 via app review button | **blocked** — `/reviewer` has no Deep/Critical control; admin `POST …/review` needs Keycloak SSO |
 
 ---
 

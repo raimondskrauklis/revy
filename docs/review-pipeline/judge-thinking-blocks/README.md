@@ -1,6 +1,6 @@
 # Judge thinking-blocks — program index
 
-**Status:** P0–P3 **merged** [#103](https://github.com/raimondskrauklis/revy/pull/103). Dogfood [#106](https://github.com/raimondskrauklis/revy/pull/106): RTU reviewer/publish/judge **PASS**; S3 display-clean with verification-upheld leftover groups ([validation memo](./JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md)). D6: live `judge_json_invalid` stays; additive `judge_empty_text` only.  
+**Status:** P0–P3 **merged** [#103](https://github.com/raimondskrauklis/revy/pull/103). Dogfood [#106](https://github.com/raimondskrauklis/revy/pull/106): RTU reviewer/publish/judge **PASS**; S3 **PASS** after file delete (`fb28cd3`). D6: live `judge_json_invalid` stays; additive `judge_empty_text` only.  
 **Problem:** RTU `claude-sonnet-5` returns thinking-first Messages `content`; Revy reads only `content[0].text` and records `Anthropic response invalid`. 45/53 live misses already had a later `text` block.
 
 **Not in scope:** Moonshot review JSON; RG-6 withhold; Voyage embeddings; RCX truncation; review-attempt `wait_ms` (LT-2).
@@ -44,4 +44,4 @@
 
 P0 and P1 already shipped together on [#103](https://github.com/raimondskrauklis/revy/pull/103).
 
-**Next:** S3b delete probe files (expect `file_path_deleted_in_compare` → `addressed`). S4 deep/critical is admin `POST …/review` only — `/reviewer` has no Deep button; `@revy review` is standard.
+**Next:** S4 deep/critical `azure_ai/claude-fable-5-1` — admin `POST …/review` with `profile=deep` (no `/reviewer` button; `@revy review` is standard).
