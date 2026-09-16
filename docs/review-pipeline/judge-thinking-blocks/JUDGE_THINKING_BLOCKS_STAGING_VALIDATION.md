@@ -2,7 +2,7 @@
 
 **Program:** [README.md](./README.md) · **Baseline:** [JUDGE_THINKING_BLOCKS_FINDINGS.md](./JUDGE_THINKING_BLOCKS_FINDINGS.md)
 
-**Status:** S0–S2 **PASS** on [#106](https://github.com/raimondskrauklis/revy/pull/106). S3 **PARTIAL** (`a538d4d` + follow-up `a761f74`): GitHub tables are clean (0 open, 1 addressed INFO); two security groups stay `active`/`still_open` because verification **upheld**. Live RTU path (kimi + opus-5) is proven. S4 not started.
+**Status:** S0–S2 **PASS** on [#106](https://github.com/raimondskrauklis/revy/pull/106). S3 hunk-fix **PARTIAL**; S3b file-delete **in flight** (expect `absent_and_addressed` via `file_path_deleted_in_compare`). S4 blocked — no Deep/Critical in `/reviewer` UI; admin `POST …/review` needs Keycloak.
 
 ---
 
@@ -36,6 +36,8 @@
 | 4 | S2 — docs-only, leave probe hunks | **done** — verification `upheld` (`9843a7e`) |
 | 5 | S3 — remove `shell=True` | **done** — display-clean, DB verification **upheld** (`a538d4d`) |
 | 6 | S3 follow-up — drop stale README instruction | **done** — Revy **pass**, 0 open tables (`a761f74`) |
+| 7 | Record push 6 evidence | **done** (`0c69a56`) |
+| 8 | S3b — delete probe + test files | **in flight** |
 
 ---
 
@@ -61,7 +63,7 @@ Reconcile then runs discovery judge (`record_review_run_judge_status_with_model`
 | S0 | Clean probe, 0 findings | embed voyage-4; reviewer+publish rtu kimi; judge skip | **PASS** push 2 |
 | S1 | Command injection in `jtb_rtu_judge_probe.py` | + discovery judge rtu opus-5 `/v1/messages` | **PASS** push 3 |
 | S2 | Leave defect (no hunk fix) | verification judge on still-open group | **PASS** push 4 |
-| S3 | Remove invocation / fix | closure without cutting judge | **PARTIAL** push 5 |
+| S3 | Remove invocation / fix | closure without cutting judge | **PARTIAL** push 5; S3b file-delete push 8 |
 | S4 | Deep/critical profile | reviewer `azure_ai/claude-fable-5-1` | not started — needs Deep/Critical from app, not autostart |
 
 ---

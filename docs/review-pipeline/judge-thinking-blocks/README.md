@@ -44,4 +44,4 @@
 
 P0 and P1 already shipped together on [#103](https://github.com/raimondskrauklis/revy/pull/103).
 
-**Next:** S4 deep/critical `azure_ai/claude-fable-5-1` is app-triggered (autostart is standard only).
+**Next:** S3b delete probe files (expect `file_path_deleted_in_compare` → `addressed`). S4 deep/critical is admin `POST …/review` only — `/reviewer` has no Deep button; `@revy review` is standard.
