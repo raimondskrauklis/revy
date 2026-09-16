@@ -2,7 +2,7 @@
 
 **Program:** [README.md](./README.md) · **Baseline:** [JUDGE_THINKING_BLOCKS_FINDINGS.md](./JUDGE_THINKING_BLOCKS_FINDINGS.md)
 
-**Status:** S0–S2 **PASS**. S3 **PASS** on [#106](https://github.com/raimondskrauklis/revy/pull/106) `fb28cd3` — probe/test files deleted; both security groups `resolved`/`addressed`/`absent_and_addressed`. Hunk-only S3 stayed **PARTIAL** (verification **upheld**). S4 blocked — no Deep/Critical in `/reviewer`; admin `POST …/review` needs Keycloak.
+**Status:** S0–S4 **PASS**. Program **closed**. S3 **PASS** on [#106](https://github.com/raimondskrauklis/revy/pull/106) `fb28cd3`. S4 **PASS** on [#108](https://github.com/raimondskrauklis/revy/pull/108) after [#107](https://github.com/raimondskrauklis/revy/pull/107) deploy — Deep `azure_ai/claude-fable-5-1` completed (no `temperature` 400). Do **not** merge #108 (live `shell=True` probe).
 
 ---
 
@@ -13,6 +13,7 @@
 | Baseline (pre-extract) | `2026-08-07T00:00:00Z` | Historical persistence only — **not** this sign-off |
 | **#103 RTU + thinking-blocks** | `2026-09-16T14:01:00Z` | Image on staging — [Actions 35104976266](https://github.com/raimondskrauklis/revy/actions/runs/35104976266) |
 | **RTU virtual key + worker recreate** | `2026-09-16T14:26:13Z` | **Push 2** — first completed run after 401 |
+| **#107 Deep/Critical + Claude temperature omit** | `2026-09-16T17:06:08Z` | Image on staging — [Actions 35125621842](https://github.com/raimondskrauklis/revy/actions/runs/35125621842) |
 
 **Rule:** Use deploy job completion time, not merge time. See [staging-validation README](../staging-validation/README.md). Pre-deploy #103 reviews are excluded.
 
@@ -22,7 +23,8 @@
 
 | PR | Branch | Status |
 |----|--------|--------|
-| [#106](https://github.com/raimondskrauklis/revy/pull/106) | `chore/jtb-rtu-staging-dogfood` | **open** — S3 **PASS** at `fb28cd3`; S4 not started |
+| [#106](https://github.com/raimondskrauklis/revy/pull/106) | `chore/jtb-rtu-staging-dogfood` | **merged** — S0–S3 |
+| [#108](https://github.com/raimondskrauklis/revy/pull/108) | `chore/jtb-fable-deep-dogfood` | **close without merge** — S4 Deep PASS at `cdc945d`; live probe |
 
 ---
 
@@ -38,6 +40,7 @@
 | 6 | S3 follow-up — drop stale README instruction | **done** — Revy **pass**, 0 open tables (`a761f74`) |
 | 7 | Record push 6 evidence | **done** (`0c69a56`) |
 | 8 | S3b — delete probe + test files | **done** — both groups `addressed`/`absent_and_addressed` (`fb28cd3`) |
+| 9 | S4 — Deep `profile=deep` after #107 | **done** — Fable completed, judge completed (`cdc945d` / run `01a0ab5e-8074`) |
 
 ---
 
@@ -50,7 +53,8 @@
 | `error` or `critical` (any category) | **yes** |
 | `security` and severity ≥ `warning` | **yes** |
 | `warning`/`info` + bug/maintainability/other | **no** |
-| Autostart PR profile | **standard** only (`enqueue_review_run` in `index_tasks.py`) — deep/critical `azure_ai/claude-fable-5-1` is **not** this dogfood path |
+| Autostart PR profile | **standard** only (`enqueue_review_run` in `index_tasks.py`) |
+| Deep/Critical | Admin `/reviewer` buttons (#107) → `POST …/review` `profile=deep\|critical` — S4 dogfood |
 
 Reconcile then runs discovery judge (`record_review_run_judge_status_with_model`) and verification judge (`verify_still_open_escalation_groups`) on still-open escalation groups.
 
@@ -64,7 +68,7 @@ Reconcile then runs discovery judge (`record_review_run_judge_status_with_model`
 | S1 | Command injection in `jtb_rtu_judge_probe.py` | + discovery judge rtu opus-5 `/v1/messages` | **PASS** push 3 |
 | S2 | Leave defect (no hunk fix) | verification judge on still-open group | **PASS** push 4 |
 | S3 | Remove invocation / fix | closure without cutting judge | **PASS** push 8 (file delete); hunk-only was **PARTIAL** |
-| S4 | Deep/critical profile | reviewer `azure_ai/claude-fable-5-1` | not started — needs Deep/Critical from app, not autostart |
+| S4 | Deep/critical profile | reviewer `azure_ai/claude-fable-5-1` chat/completions **without** `temperature` | **PASS** — #107 deploy + #108 Deep runs `01a0ab5b-8ae5` and `01a0ab5e-8074` completed; critical/security injection on probe |
 
 ---
 
@@ -230,6 +234,23 @@ Push-delta for the probe files was empty on this docs-only revision, so verifica
 
 Hunk-only S3 did **not** close DB groups. File delete did, via `file_path_deleted_in_compare`. The superseded original injection title remains `still_open` on a non-active group.
 
+### Push 9 — S4 Deep Fable (`cdc945d`, 2026-09-16)
+
+| Field | Value |
+|-------|-------|
+| Branch | `chore/jtb-fable-deep-dogfood` ([#108](https://github.com/raimondskrauklis/revy/pull/108)) — **close without merge** |
+| `head_sha` | `cdc945d` |
+| Probe | `jtb_fable_deep_probe.py` live `shell=True` (`jtb-fable-deep-dogfood`) |
+| Deploy | #107 `c5d7f94` on staging `2026-09-16T17:06:08Z` |
+| Deep run (agent) | `01a0ab5b-8ae5-77d0-9047-200e89a95941` `completed` ~17:54 |
+| Deep run (UI) | `01a0ab5e-8074-7e3c-8718-9f60fcf0e791` `completed` 17:58:11–17:58:52 (~41s) |
+| Celery | `review_pull_request_revision[de5b3b60-108c-4bb9-a997-41917ff45d93]` |
+| Reviewer | `rtu` Deep profile — no `temperature` 400 after #107 omit |
+| Judge | `completed`; `judge_escalation_candidate_count=1` |
+| Findings | critical security shell injection `jtb_fable_deep_probe.py:15`; warning maintainability on probe in production package |
+
+Worker log the operator pasted ends at Voyage embeddings; the review run still completed ~41s later. Pre-#107 Deep was `400` (`claude-fable-5-1` rejects `temperature=0.2`).
+
 ### Historical baseline (pre-#103 worker — not this pass)
 
 | Metric | Baseline (2026-08-21) | `--since 2026-08-07T00:00:00Z` (2026-09-16) |
@@ -258,7 +279,7 @@ Hunk-only S3 did **not** close DB groups. File delete did, via `file_path_delete
 | A | Virtual key on origin | **done** — push 2 |
 | D | S1 command-injection probe so discovery judge hits `POST /v1/messages` | **done** — 2× 200, 2 outcomes `modified` |
 | E | S2 verification judge (leave probe), then S3 remove it | S2 **PASS**; hunk S3 **PARTIAL**; file-delete S3b **PASS** |
-| F | S4 deep/critical fable-5-1 via app review button | **blocked** — `/reviewer` has no Deep/Critical control; admin `POST …/review` needs Keycloak SSO |
+| F | S4 deep/critical fable-5-1 via app review button | **done** — #107 Deep UI + omit Claude temperature; #108 Deep completed twice |
 
 ---
 
@@ -268,5 +289,7 @@ Hunk-only S3 did **not** close DB groups. File delete did, via `file_path_delete
 |-------|--------|----------|
 | RTU reviewer + publish live path | **PASS** | Push 2 snapshot + worker 200s + Revy pass on `f6f8a34` |
 | RTU judge opus-5 HTTP | **PASS** | Push 3: `POST …/v1/messages` 200 × 2; snapshot `judge={rtu, azure_ai/claude-opus-5}`; `judge_status=completed`; 2 discovery outcomes |
-| Staging PASS (≥95% **or** classified residual) | **INCONCLUSIVE** | No post-deploy judge candidates; D9 ceiling still noted |
+| Deep Fable `profile=deep` | **PASS** | #107 deploy; #108 Deep runs completed; no temperature 400 |
+| Staging PASS (≥95% **or** classified residual) | **INCONCLUSIVE** | Post-#103 window: live judge works; historical extract ceiling still D9 94.3%; JTB-Q5 retry not observed (`retry_count=0`) |
 | Do not reopen JSON-contract for 0.7pt | locked (D7/D9) | findings |
+| Program | **closed** | Product on `main` via #103 + #107. Do not merge #108. |
