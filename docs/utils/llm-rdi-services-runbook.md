@@ -100,23 +100,80 @@ nano ~/rtu-proxy/config.yaml
 
 Contents:
 
+Use `litellm_proxy/` as the LiteLLM provider prefix. RTU is itself a LiteLLM
+gateway; its team allow-list is the **full** model id (`azure_ai/claude-opus-5`,
+not `claude-opus-5`). Prefixes `azure_ai/` and `anthropic/` make *this* proxy
+strip the RTU id and the upstream returns `team_model_access_denied`.
+
+`gpt-5.5` is the exception on RTU — no `azure_ai/` prefix. Azure serves it as
+`gpt-5.5-2026-04-24` (GPT-5.5). That is **not** GPT-5.6 Sol / Terra / Luna;
+those ids are not on this team.
+
 ```yaml
 model_list:
   - model_name: rtu-opus-5
     litellm_params:
-      model: anthropic/azure_ai/claude-opus-5
+      model: litellm_proxy/azure_ai/claude-opus-5
+      api_base: https://llm.ai.rtu.lv
+      api_key: os.environ/RTU_AUTH_TOKEN
+
+  - model_name: rtu-opus-4-6
+    litellm_params:
+      model: litellm_proxy/azure_ai/claude-opus-4-6
       api_base: https://llm.ai.rtu.lv
       api_key: os.environ/RTU_AUTH_TOKEN
 
   - model_name: rtu-sonnet-5
     litellm_params:
-      model: anthropic/azure_ai/claude-sonnet-5
+      model: litellm_proxy/azure_ai/claude-sonnet-5
+      api_base: https://llm.ai.rtu.lv
+      api_key: os.environ/RTU_AUTH_TOKEN
+
+  - model_name: rtu-sonnet-4-6
+    litellm_params:
+      model: litellm_proxy/azure_ai/claude-sonnet-4-6
       api_base: https://llm.ai.rtu.lv
       api_key: os.environ/RTU_AUTH_TOKEN
 
   - model_name: rtu-fable-5
     litellm_params:
-      model: anthropic/azure_ai/claude-fable-5
+      model: litellm_proxy/azure_ai/claude-fable-5
+      api_base: https://llm.ai.rtu.lv
+      api_key: os.environ/RTU_AUTH_TOKEN
+
+  - model_name: rtu-fable-5-1
+    litellm_params:
+      model: litellm_proxy/azure_ai/claude-fable-5-1
+      api_base: https://llm.ai.rtu.lv
+      api_key: os.environ/RTU_AUTH_TOKEN
+
+  - model_name: rtu-kimi-k2-6
+    litellm_params:
+      model: litellm_proxy/azure_ai/kimi-k2.6
+      api_base: https://llm.ai.rtu.lv
+      api_key: os.environ/RTU_AUTH_TOKEN
+
+  - model_name: rtu-kimi-k2-7-code
+    litellm_params:
+      model: litellm_proxy/azure_ai/kimi-k2.7-code
+      api_base: https://llm.ai.rtu.lv
+      api_key: os.environ/RTU_AUTH_TOKEN
+
+  - model_name: rtu-deepseek-v4-flash
+    litellm_params:
+      model: litellm_proxy/azure_ai/deepseek-v4-flash
+      api_base: https://llm.ai.rtu.lv
+      api_key: os.environ/RTU_AUTH_TOKEN
+
+  - model_name: rtu-deepseek-v4-pro
+    litellm_params:
+      model: litellm_proxy/azure_ai/deepseek-v4-pro
+      api_base: https://llm.ai.rtu.lv
+      api_key: os.environ/RTU_AUTH_TOKEN
+
+  - model_name: rtu-gpt-5-5
+    litellm_params:
+      model: litellm_proxy/gpt-5.5
       api_base: https://llm.ai.rtu.lv
       api_key: os.environ/RTU_AUTH_TOKEN
 
@@ -405,8 +462,12 @@ Expected: only `443` shows up.
 2. Under **API Keys**:
    - Enable **OpenAI API Key**, paste in `PROXY_MASTER_KEY`
    - Enable **Override OpenAI Base URL** → `https://llm.rdi.services/v1`
-3. Under **Models**, **Add Model** for each of `rtu-opus-5`, `rtu-sonnet-5`, `rtu-fable-5`, and
-   toggle them on.
+3. Under **Models**, **Add Model** for each `rtu-*` alias (do **not** add the raw
+   `azure_ai/...` RTU ids — Cursor would send those through and this proxy would
+   strip the prefix). Current aliases:
+   `rtu-opus-5`, `rtu-opus-4-6`, `rtu-sonnet-5`, `rtu-sonnet-4-6`, `rtu-fable-5`,
+   `rtu-fable-5-1`, `rtu-kimi-k2-6`, `rtu-kimi-k2-7-code`, `rtu-deepseek-v4-flash`,
+   `rtu-deepseek-v4-pro`, `rtu-gpt-5-5`. Toggle the ones you want on.
 4. If Anthropic BYOK is also enabled in Cursor, turn it off to avoid conflicts.
 5. Select one of the `rtu-*` models from the model picker in a chat.
 
@@ -516,3 +577,10 @@ sudo systemctl cat rtu-proxy | grep youruser
 ```
 
 If anything prints, fix that line, then `sudo systemctl daemon-reload && sudo systemctl restart rtu-proxy`.
+
+**`team not allowed to access model` / `Tried to access deepseek-v4-pro` (or `claude-fable-5-1`,
+`kimi-k2.7-code`).** RTU's allow-list is the full id (`azure_ai/deepseek-v4-pro`). If
+`litellm_params.model` is `azure_ai/...` or `anthropic/azure_ai/...`, this proxy treats
+`azure_ai` as *its* provider, strips it, and the upstream 403s. Use
+`litellm_proxy/azure_ai/<name>` (and `litellm_proxy/gpt-5.5` for GPT). In Cursor, add the
+`rtu-*` aliases only — not `azure_ai/deepseek-v4-pro`.

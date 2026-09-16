@@ -844,7 +844,7 @@ async def test_build_pr_review_comment_unwraps_json_body_from_moonshot():
     with patch("app.services.github_publish_formatter.settings") as mock_settings:
         mock_settings.reviewer_llm_enabled.return_value = True
         mock_settings.revy_revision_timeout_standard_seconds = 60
-        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.revy_reviewer_model_for_profile.return_value = "model"
         mock_settings.app_public_url = "https://app.revy.dev"
         with patch(
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
@@ -869,7 +869,7 @@ async def test_build_pr_review_comment_falls_back_when_llm_returns_unparsed_json
     with patch("app.services.github_publish_formatter.settings") as mock_settings:
         mock_settings.reviewer_llm_enabled.return_value = True
         mock_settings.revy_revision_timeout_standard_seconds = 60
-        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.revy_reviewer_model_for_profile.return_value = "model"
         mock_settings.app_public_url = "https://app.revy.dev"
         with patch(
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
@@ -1216,7 +1216,7 @@ async def test_build_pr_review_comment_moonshot_success_includes_greptile_sectio
     with patch("app.services.github_publish_formatter.settings") as mock_settings:
         mock_settings.reviewer_llm_enabled.return_value = True
         mock_settings.revy_revision_timeout_standard_seconds = 60
-        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.revy_reviewer_model_for_profile.return_value = "model"
         mock_settings.app_public_url = "https://app.revy.dev"
         with patch(
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
@@ -1248,7 +1248,7 @@ async def test_build_pr_review_comment_thin_moonshot_returns_fallback():
     with patch("app.services.github_publish_formatter.settings") as mock_settings:
         mock_settings.reviewer_llm_enabled.return_value = True
         mock_settings.revy_revision_timeout_standard_seconds = 60
-        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.revy_reviewer_model_for_profile.return_value = "model"
         mock_settings.app_public_url = "https://app.revy.dev"
         with patch(
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
@@ -1286,7 +1286,7 @@ async def test_build_pr_review_comment_accepts_lowercase_score_rationale():
     with patch("app.services.github_publish_formatter.settings") as mock_settings:
         mock_settings.reviewer_llm_enabled.return_value = True
         mock_settings.revy_revision_timeout_standard_seconds = 60
-        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.revy_reviewer_model_for_profile.return_value = "model"
         mock_settings.app_public_url = "https://app.revy.dev"
         with patch(
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
@@ -1323,7 +1323,7 @@ async def test_build_pr_review_comment_accepts_confidence_is_because_rationale()
     with patch("app.services.github_publish_formatter.settings") as mock_settings:
         mock_settings.reviewer_llm_enabled.return_value = True
         mock_settings.revy_revision_timeout_standard_seconds = 60
-        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.revy_reviewer_model_for_profile.return_value = "model"
         mock_settings.app_public_url = "https://app.revy.dev"
         with patch(
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
@@ -1356,7 +1356,7 @@ async def test_build_pr_review_comment_moonshot_missing_pr_block_returns_fallbac
     with patch("app.services.github_publish_formatter.settings") as mock_settings:
         mock_settings.reviewer_llm_enabled.return_value = True
         mock_settings.revy_revision_timeout_standard_seconds = 60
-        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.revy_reviewer_model_for_profile.return_value = "model"
         mock_settings.app_public_url = "https://app.revy.dev"
         with patch(
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
@@ -1378,7 +1378,7 @@ async def test_build_pr_review_comment_moonshot_failure_returns_fallback():
     with patch("app.services.github_publish_formatter.settings") as mock_settings:
         mock_settings.reviewer_llm_enabled.return_value = True
         mock_settings.revy_revision_timeout_standard_seconds = 60
-        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.revy_reviewer_model_for_profile.return_value = "model"
         mock_settings.app_public_url = "https://app.revy.dev"
         with patch(
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",

@@ -4,6 +4,8 @@ Baseline for **multi-provider model configuration** (Moonshot, Anthropic, Voyage
 
 **Date:** 2026-07-26 · **Implementation:** M0–M3 shipped on `feat/model-policy-m0` (PR #35).
 
+**Live defaults (2026-09-16):** `REVY_REVIEWER_PROVIDER=rtu` and `REVY_JUDGE_PROVIDER=rtu` — reviewer standard `azure_ai/kimi-k2.7-code`, deep/critical `azure_ai/claude-fable-5-1`, judge `azure_ai/claude-opus-5`. Moonshot.ai / direct Anthropic / Bedrock remain in code for switch-back.
+
 ---
 
 ## 1. What we have today
@@ -72,10 +74,10 @@ Use consistent names in UI, DB, and docs:
 | Role | Stage | Today | Notes |
 |------|-------|-------|-------|
 | `embedding` | R3 index | Voyage `voyage-code-3` | Dim locked to DB column (`vector(1024)`) |
-| `reviewer_standard` | R4 | Moonshot `kimi-k2.7-code` | Default profile |
-| `reviewer_deep` | R4 | Moonshot `kimi-k3` | Deep profile |
-| `reviewer_critical` | R4 | Moonshot `kimi-k3` | Critical profile |
-| `judge` | R5 | Anthropic `claude-sonnet-5` | Escalation only; max 10/run |
+| `reviewer_standard` | R4 | RTU `azure_ai/kimi-k2.7-code` | Default profile |
+| `reviewer_deep` | R4 | RTU `azure_ai/claude-fable-5-1` | Deep profile (`kimi-k3` not on RTU) |
+| `reviewer_critical` | R4 | RTU `azure_ai/claude-fable-5-1` | Critical profile |
+| `judge` | R5 | RTU `azure_ai/claude-opus-5` | Escalation only; max 10/run |
 | `jury` | — | — | **Future** — see §6 |
 
 **UI copy:** “Reviewer” = generator; “Judge” = second opinion on high-severity findings; “Jury” reserved for multi-model consensus (not shipped).

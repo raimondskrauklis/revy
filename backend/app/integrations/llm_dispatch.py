@@ -5,6 +5,7 @@ from __future__ import annotations
 import httpx
 
 from app.constants.model_registry import SUPPORTED_JUDGE_PROVIDERS
+from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError
 from app.integrations import anthropic_review, bedrock_review, moonshot_review
 from app.services.model_policy import ModelRef
@@ -26,13 +27,20 @@ async def call_review_llm(
             model_id=model_ref.model_id,
             timeout_seconds=timeout_seconds,
         )
-    if provider == "moonshot":
+    if provider in {"moonshot", "rtu"}:
+        api_url = None
+        api_key = None
+        if provider == "rtu":
+            api_url = settings.rtu_chat_completions_url
+            api_key = settings.effective_rtu_api_key
         return await moonshot_review.complete_review(
             client,
             profile=profile,
             user_prompt=user_prompt,
             model_id=model_ref.model_id,
             timeout_seconds=timeout_seconds,
+            api_url=api_url,
+            api_key=api_key,
         )
     if provider == "bedrock":
         return await bedrock_review.complete_review(
@@ -57,6 +65,16 @@ async def call_judge_llm(
         raise ServiceUnavailableError(
             message=f"Judge provider is not supported: {provider}",
             error_code="llm_disabled",
+        )
+    if provider == "rtu":
+        return await anthropic_review.judge_finding(
+            client,
+            user_prompt=user_prompt,
+            model_id=model_ref.model_id,
+            timeout_seconds=timeout_seconds,
+            system_prompt=system_prompt,
+            messages_url=settings.rtu_messages_url,
+            api_key=settings.effective_rtu_api_key,
         )
     if provider == "anthropic":
         return await anthropic_review.judge_finding(

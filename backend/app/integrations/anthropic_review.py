@@ -104,7 +104,7 @@ REVIEW_SYSTEM_PROMPT = (
 
 JUDGE_SYSTEM_PROMPT = (
     "You are a verification judge for automated code review, not the primary reviewer. "
-    "You receive ONE finding already produced by Moonshot (Kimi). Decide whether that "
+    "You receive ONE finding already produced by the primary reviewer. Decide whether that "
     "specific finding is supported by the code evidence provided. "
     "Do NOT search for additional bugs or perform a full PR review. "
     "Do NOT uphold findings based on style or issues outside the cited claim. "
@@ -171,14 +171,10 @@ def _gateway_profile(fallback_model_id: str) -> _AnthropicProfile | None:
 
 def _judge_profiles(model_id: str | None) -> list[_AnthropicProfile]:
     resolved_model = model_id or settings.revy_anthropic_model
-    profiles: list[_AnthropicProfile] = []
-    gateway = _gateway_profile(resolved_model)
-    if gateway is not None:
-        profiles.append(gateway)
     direct = _direct_profile(resolved_model)
-    if direct is not None:
-        profiles.append(direct)
-    return profiles
+    if direct is None:
+        return []
+    return [direct]
 
 
 def _require_anthropic_direct_enabled() -> None:
@@ -190,11 +186,7 @@ def _require_anthropic_direct_enabled() -> None:
 
 
 def _require_judge_anthropic_enabled() -> None:
-    if not settings.anthropic_gateway_enabled and not settings.anthropic_direct_enabled:
-        raise ServiceUnavailableError(
-            message="Anthropic judge API is not configured",
-            error_code="llm_disabled",
-        )
+    _require_anthropic_direct_enabled()
 
 
 def _response_preview(data: object) -> str:
@@ -603,10 +595,28 @@ async def judge_finding(
     model_id: str | None = None,
     timeout_seconds: float | None = None,
     system_prompt: str | None = None,
+    messages_url: str | None = None,
+    api_key: str | None = None,
 ) -> dict:
-    _require_judge_anthropic_enabled()
     _set_judge_transport_context({})
-    profiles = _judge_profiles(model_id)
+    if messages_url:
+        key = (api_key or "").strip()
+        if not key:
+            raise ServiceUnavailableError(
+                message="Judge LLM API is not configured",
+                error_code="llm_disabled",
+            )
+        profiles = [
+            _AnthropicProfile(
+                messages_url=messages_url.strip(),
+                auth_headers={"Authorization": f"Bearer {key}"},
+                model_id=model_id or settings.revy_rtu_model_judge,
+                label="rtu",
+            )
+        ]
+    else:
+        _require_judge_anthropic_enabled()
+        profiles = _judge_profiles(model_id)
     return await _post_judge_with_profile_fallback(
         client,
         profiles,

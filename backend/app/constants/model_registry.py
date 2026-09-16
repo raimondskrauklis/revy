@@ -6,8 +6,8 @@ from dataclasses import dataclass
 
 from app.constants.model_policy import ModelRole
 
-SUPPORTED_LLM_PROVIDERS = frozenset({"moonshot", "anthropic", "bedrock"})
-SUPPORTED_JUDGE_PROVIDERS = frozenset({"anthropic", "bedrock"})
+SUPPORTED_LLM_PROVIDERS = frozenset({"moonshot", "rtu", "anthropic", "bedrock"})
+SUPPORTED_JUDGE_PROVIDERS = frozenset({"rtu", "anthropic", "bedrock"})
 
 
 def normalize_provider_slug(provider: str) -> str:
@@ -22,27 +22,40 @@ class ModelCatalogEntry:
     display_name: str
 
 
-# Platform defaults when env vars are unset — keep in sync with config.py defaults.
-PLATFORM_MODEL_DEFAULTS: dict[ModelRole, ModelCatalogEntry] = {
-    ModelRole.reviewer_standard: ModelCatalogEntry(
+MOONSHOT_REVIEWER_CATALOG: tuple[ModelCatalogEntry, ...] = (
+    ModelCatalogEntry(
         provider="moonshot",
         model_id="kimi-k2.7-code",
         display_name="Kimi K2.7 Code",
     ),
-    ModelRole.reviewer_deep: ModelCatalogEntry(
+    ModelCatalogEntry(
         provider="moonshot",
         model_id="kimi-k3",
         display_name="Kimi K3",
+    ),
+)
+
+# Platform defaults when env vars are unset — keep in sync with config.py defaults.
+PLATFORM_MODEL_DEFAULTS: dict[ModelRole, ModelCatalogEntry] = {
+    ModelRole.reviewer_standard: ModelCatalogEntry(
+        provider="rtu",
+        model_id="azure_ai/kimi-k2.7-code",
+        display_name="Kimi K2.7 Code (RTU)",
+    ),
+    ModelRole.reviewer_deep: ModelCatalogEntry(
+        provider="rtu",
+        model_id="azure_ai/claude-fable-5-1",
+        display_name="Claude Fable 5.1 (RTU)",
     ),
     ModelRole.reviewer_critical: ModelCatalogEntry(
-        provider="moonshot",
-        model_id="kimi-k3",
-        display_name="Kimi K3",
+        provider="rtu",
+        model_id="azure_ai/claude-fable-5-1",
+        display_name="Claude Fable 5.1 (RTU)",
     ),
     ModelRole.judge: ModelCatalogEntry(
-        provider="anthropic",
-        model_id="claude-sonnet-5",
-        display_name="Claude Sonnet",
+        provider="rtu",
+        model_id="azure_ai/claude-opus-5",
+        display_name="Claude Opus 5 (RTU)",
     ),
 }
 
@@ -64,13 +77,7 @@ def catalog_entries() -> list[ModelCatalogEntry]:
     """Deduped catalog list for future workspace policy API."""
     seen: set[tuple[str, str]] = set()
     entries: list[ModelCatalogEntry] = []
-    for entry in PLATFORM_MODEL_DEFAULTS.values():
-        key = (entry.provider, entry.model_id)
-        if key in seen:
-            continue
-        seen.add(key)
-        entries.append(entry)
-    for entry in BEDROCK_CATALOG_EXAMPLES:
+    for entry in (*PLATFORM_MODEL_DEFAULTS.values(), *MOONSHOT_REVIEWER_CATALOG, *BEDROCK_CATALOG_EXAMPLES):
         key = (entry.provider, entry.model_id)
         if key in seen:
             continue

@@ -77,25 +77,21 @@ _K2_THINKING_MODEL_PREFIXES = (
 )
 
 
-def _require_moonshot_configured() -> None:
-    if not settings.moonshot_api_key or not settings.moonshot_api_key.strip():
-        raise ServiceUnavailableError(
-            message="LLM API is not configured",
-            error_code="llm_disabled",
-        )
-
-
 def _normalized_model_id(model_id: str) -> str:
     return model_id.strip()
 
 
+def _model_basename(model: str) -> str:
+    return model.strip().lower().rsplit("/", 1)[-1]
+
+
 def _uses_k2_thinking_params(model: str) -> bool:
-    normalized = model.strip().lower()
-    return any(normalized.startswith(prefix) for prefix in _K2_THINKING_MODEL_PREFIXES)
+    basename = _model_basename(model)
+    return any(basename.startswith(prefix) for prefix in _K2_THINKING_MODEL_PREFIXES)
 
 
 def _uses_k3_params(model: str) -> bool:
-    return model.strip().lower().startswith("kimi-k3")
+    return _model_basename(model).startswith("kimi-k3")
 
 
 def _reasoning_effort_for_profile(profile: str) -> str:
@@ -109,6 +105,13 @@ def _reasoning_effort_for_profile(profile: str) -> str:
 
 def _max_completion_tokens() -> int:
     return settings.revy_moonshot_max_completion_tokens
+
+
+def _chat_completions_url() -> str:
+    configured = getattr(settings, "moonshot_chat_completions_url", None)
+    if isinstance(configured, str) and configured.strip():
+        return configured.strip()
+    return MOONSHOT_API_URL
 
 
 def _chat_completion_body(
@@ -192,16 +195,24 @@ async def _complete_chat(
     timeout_seconds: float | None = None,
     json_response: bool = True,
     recorder: LlmAttemptStartContext | None = None,
+    api_url: str | None = None,
+    api_key: str | None = None,
 ) -> str:
-    _require_moonshot_configured()
-    api_key = settings.moonshot_api_key
-    if not api_key:
+    key = (api_key or settings.moonshot_api_key or "").strip()
+    if not key:
         raise ServiceUnavailableError(
             message="LLM API is not configured",
             error_code="llm_disabled",
         )
 
-    model = _normalized_model_id(model_id or settings.revy_moonshot_model_for_profile(profile))
+    if model_id and model_id.strip():
+        resolved_model = model_id
+    elif api_url:
+        resolved_model = settings.revy_rtu_model_for_profile(profile)
+    else:
+        resolved_model = settings.revy_moonshot_model_for_profile(profile)
+    model = _normalized_model_id(resolved_model)
+    url = (api_url or "").strip() or _chat_completions_url()
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
@@ -212,9 +223,9 @@ async def _complete_chat(
         attempt_id = await try_start_attempt(recorder)
     try:
         response = await client.post(
-            MOONSHOT_API_URL,
+            url,
             headers={
-                "Authorization": f"Bearer {api_key}",
+                "Authorization": f"Bearer {key}",
                 "Content-Type": "application/json",
             },
             json=_chat_completion_body(
@@ -332,6 +343,8 @@ async def complete_review(
     user_prompt: str,
     model_id: str | None = None,
     timeout_seconds: float | None = None,
+    api_url: str | None = None,
+    api_key: str | None = None,
 ) -> str:
     return await _complete_chat(
         client,
@@ -341,6 +354,8 @@ async def complete_review(
         model_id=model_id,
         timeout_seconds=timeout_seconds,
         json_response=True,
+        api_url=api_url,
+        api_key=api_key,
     )
 
 
@@ -352,8 +367,10 @@ async def complete_issue_comment_markdown(
     model_id: str | None = None,
     timeout_seconds: float | None = None,
     recorder: LlmAttemptStartContext | None = None,
+    api_url: str | None = None,
+    api_key: str | None = None,
 ) -> str:
-    """Moonshot chat completion for Greptile-shaped PR issue comments — markdown only."""
+    """OpenAI-compatible chat completion for Greptile-shaped PR issue comments — markdown only."""
     return await _complete_chat(
         client,
         profile=profile,
@@ -363,6 +380,8 @@ async def complete_issue_comment_markdown(
         timeout_seconds=timeout_seconds,
         json_response=False,
         recorder=recorder,
+        api_url=api_url,
+        api_key=api_key,
     )
 
 

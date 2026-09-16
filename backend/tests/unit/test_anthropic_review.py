@@ -11,6 +11,17 @@ from app.integrations import anthropic_review
 from app.integrations.anthropic_review import complete_review, parse_review_json
 from app.integrations.judge_llm_errors import JudgeParseError
 
+_RTU_MESSAGES_URL = "https://llm.ai.rtu.lv/v1/messages"
+
+
+def _rtu_judge_kwargs(**extra):
+    return {
+        "messages_url": _RTU_MESSAGES_URL,
+        "api_key": "rtu-key",
+        "model_id": "azure_ai/claude-opus-5",
+        **extra,
+    }
+
 
 @pytest.mark.asyncio
 async def test_complete_review_disabled_raises():
@@ -23,40 +34,29 @@ async def test_complete_review_disabled_raises():
 
 
 @pytest.mark.asyncio
-async def test_judge_finding_falls_back_to_direct_when_gateway_fails():
-    gateway_response = MagicMock()
-    gateway_response.raise_for_status = MagicMock(side_effect=httpx.HTTPStatusError(
-        "gateway down",
-        request=MagicMock(),
-        response=MagicMock(status_code=503),
-    ))
-    direct_response = MagicMock()
-    direct_response.raise_for_status = MagicMock()
-    direct_response.json.return_value = {
+async def test_judge_finding_rtu_uses_bearer_messages_url():
+    payload = {
         "content": [{"text": json.dumps({"outcome": "upheld", "notes": "ok"})}]
     }
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = payload
     client = AsyncMock(spec=httpx.AsyncClient)
-    client.post = AsyncMock(side_effect=[gateway_response, direct_response])
+    client.post = AsyncMock(return_value=response)
 
     with patch("app.integrations.anthropic_review.settings") as mock_settings:
-        mock_settings.anthropic_gateway_enabled = True
-        mock_settings.anthropic_gateway_messages_url = "https://llm.ai.rtu.lv/v1/messages"
-        mock_settings.anthropic_auth_token = "rtu-token"
-        mock_settings.effective_anthropic_gateway_judge_model = "azure_ai/claude-opus-5"
-        mock_settings.anthropic_direct_enabled = True
-        mock_settings.anthropic_api_key = "direct-key"
-        mock_settings.revy_anthropic_model = "claude-sonnet-5"
         mock_settings.revy_revision_timeout_standard_seconds = 30
-        result = await anthropic_review.judge_finding(client, user_prompt="judge this")
+        mock_settings.anthropic_api_key = "direct-key"
+        result = await anthropic_review.judge_finding(
+            client,
+            user_prompt="judge this",
+            **_rtu_judge_kwargs(),
+        )
 
     assert result["outcome"] == "upheld"
-    assert client.post.await_count == 2
-    gateway_call = client.post.await_args_list[0]
-    direct_call = client.post.await_args_list[1]
-    assert gateway_call.args[0] == "https://llm.ai.rtu.lv/v1/messages"
-    assert "Bearer" in gateway_call.kwargs["headers"]["Authorization"]
-    assert direct_call.args[0] == anthropic_review.ANTHROPIC_DIRECT_MESSAGES_URL
-    assert direct_call.kwargs["headers"]["x-api-key"] == "direct-key"
+    assert client.post.await_count == 1
+    assert client.post.await_args.args[0] == _RTU_MESSAGES_URL
+    assert client.post.await_args.kwargs["headers"]["Authorization"] == "Bearer rtu-key"
 
 
 @pytest.mark.asyncio
@@ -260,14 +260,13 @@ async def test_judge_finding_parses_fenced_json_body():
     client.post = AsyncMock(return_value=response)
 
     with patch("app.integrations.anthropic_review.settings") as mock_settings:
-        mock_settings.anthropic_gateway_enabled = True
-        mock_settings.anthropic_gateway_messages_url = "https://llm.ai.rtu.lv/v1/messages"
-        mock_settings.anthropic_auth_token = "rtu-token"
-        mock_settings.effective_anthropic_gateway_judge_model = "azure_ai/claude-opus-5"
-        mock_settings.anthropic_direct_enabled = False
         mock_settings.revy_judge_structured_output = False
         mock_settings.revy_revision_timeout_standard_seconds = 30
-        result = await anthropic_review.judge_finding(client, user_prompt="judge this")
+        result = await anthropic_review.judge_finding(
+            client,
+            user_prompt="judge this",
+            **_rtu_judge_kwargs(),
+        )
 
     assert result["outcome"] == "dismissed"
 
@@ -360,15 +359,14 @@ async def test_judge_finding_raises_judge_parse_error_on_invalid_json():
     client.post = AsyncMock(return_value=response)
 
     with patch("app.integrations.anthropic_review.settings") as mock_settings:
-        mock_settings.anthropic_gateway_enabled = True
-        mock_settings.anthropic_gateway_messages_url = "https://llm.ai.rtu.lv/v1/messages"
-        mock_settings.anthropic_auth_token = "rtu-token"
-        mock_settings.effective_anthropic_gateway_judge_model = "azure_ai/claude-opus-5"
-        mock_settings.anthropic_direct_enabled = False
         mock_settings.revy_judge_structured_output = False
         mock_settings.revy_revision_timeout_standard_seconds = 30
         with pytest.raises(JudgeParseError) as exc_info:
-            await anthropic_review.judge_finding(client, user_prompt="judge this")
+            await anthropic_review.judge_finding(
+                client,
+                user_prompt="judge this",
+                **_rtu_judge_kwargs(),
+            )
 
     assert exc_info.value.code == "judge_json_invalid"
     assert "```not valid json```" in exc_info.value.response_text
@@ -391,15 +389,14 @@ async def test_judge_finding_thinking_only_raises_judge_empty_text():
     client.post = AsyncMock(return_value=response)
 
     with patch("app.integrations.anthropic_review.settings") as mock_settings:
-        mock_settings.anthropic_gateway_enabled = True
-        mock_settings.anthropic_gateway_messages_url = "https://llm.ai.rtu.lv/v1/messages"
-        mock_settings.anthropic_auth_token = "rtu-token"
-        mock_settings.effective_anthropic_gateway_judge_model = "azure_ai/claude-opus-5"
-        mock_settings.anthropic_direct_enabled = False
         mock_settings.revy_judge_structured_output = False
         mock_settings.revy_revision_timeout_standard_seconds = 30
         with pytest.raises(JudgeParseError) as exc_info:
-            await anthropic_review.judge_finding(client, user_prompt="judge this")
+            await anthropic_review.judge_finding(
+                client,
+                user_prompt="judge this",
+                **_rtu_judge_kwargs(),
+            )
 
     assert exc_info.value.code == "judge_empty_text"
     transport = anthropic_review.get_judge_transport_log_fields()
@@ -422,16 +419,15 @@ async def test_judge_empty_text_info_logs_do_not_include_signature(caplog):
     client.post = AsyncMock(return_value=response)
 
     with patch("app.integrations.anthropic_review.settings") as mock_settings:
-        mock_settings.anthropic_gateway_enabled = True
-        mock_settings.anthropic_gateway_messages_url = "https://llm.ai.rtu.lv/v1/messages"
-        mock_settings.anthropic_auth_token = "rtu-token"
-        mock_settings.effective_anthropic_gateway_judge_model = "azure_ai/claude-opus-5"
-        mock_settings.anthropic_direct_enabled = False
         mock_settings.revy_judge_structured_output = False
         mock_settings.revy_revision_timeout_standard_seconds = 30
         with caplog.at_level("INFO"):
             with pytest.raises(JudgeParseError):
-                await anthropic_review.judge_finding(client, user_prompt="judge this")
+                await anthropic_review.judge_finding(
+                    client,
+                    user_prompt="judge this",
+                    **_rtu_judge_kwargs(),
+                )
 
     for record in caplog.records:
         extra = getattr(record, "__dict__", {})
@@ -439,37 +435,6 @@ async def test_judge_empty_text_info_logs_do_not_include_signature(caplog):
         assert "sig-must-not-log" not in record.getMessage()
         dumped = " ".join(f"{k}={v}" for k, v in extra.items() if k != "msg")
         assert "sig-must-not-log" not in dumped
-
-
-@pytest.mark.asyncio
-async def test_judge_finding_falls_back_when_gateway_returns_thinking_only():
-    gateway_response = MagicMock()
-    gateway_response.raise_for_status = MagicMock()
-    gateway_response.json.return_value = {
-        "content": [{"type": "thinking", "thinking": "", "signature": "sig"}]
-    }
-    direct_response = MagicMock()
-    direct_response.raise_for_status = MagicMock()
-    direct_response.json.return_value = {
-        "content": [{"text": json.dumps({"outcome": "upheld", "notes": "ok"})}]
-    }
-    client = AsyncMock(spec=httpx.AsyncClient)
-    client.post = AsyncMock(side_effect=[gateway_response, direct_response])
-
-    with patch("app.integrations.anthropic_review.settings") as mock_settings:
-        mock_settings.anthropic_gateway_enabled = True
-        mock_settings.anthropic_gateway_messages_url = "https://llm.ai.rtu.lv/v1/messages"
-        mock_settings.anthropic_auth_token = "rtu-token"
-        mock_settings.effective_anthropic_gateway_judge_model = "azure_ai/claude-opus-5"
-        mock_settings.anthropic_direct_enabled = True
-        mock_settings.anthropic_api_key = "direct-key"
-        mock_settings.revy_anthropic_model = "claude-sonnet-5"
-        mock_settings.revy_judge_structured_output = False
-        mock_settings.revy_revision_timeout_standard_seconds = 30
-        result = await anthropic_review.judge_finding(client, user_prompt="judge this")
-
-    assert result["outcome"] == "upheld"
-    assert client.post.await_count == 2
 
 
 def test_extract_usage_fields_reads_token_counts():
@@ -601,128 +566,7 @@ async def test_judge_llm_request_started_and_completed_logged(caplog):
 
 
 @pytest.mark.asyncio
-async def test_judge_llm_profile_fallback_logged(caplog):
-    gateway_response = MagicMock()
-    gateway_response.raise_for_status = MagicMock(
-        side_effect=httpx.HTTPStatusError(
-            "gateway down",
-            request=MagicMock(),
-            response=MagicMock(status_code=503),
-        )
-    )
-    direct_response = MagicMock()
-    direct_response.raise_for_status = MagicMock()
-    direct_response.json.return_value = {
-        "content": [{"text": json.dumps({"outcome": "upheld", "notes": "ok"})}]
-    }
-    client = AsyncMock(spec=httpx.AsyncClient)
-    client.post = AsyncMock(side_effect=[gateway_response, direct_response])
-
-    with patch("app.integrations.anthropic_review.settings") as mock_settings:
-        mock_settings.anthropic_gateway_enabled = True
-        mock_settings.anthropic_gateway_messages_url = "https://llm.ai.rtu.lv/v1/messages"
-        mock_settings.anthropic_auth_token = "rtu-token"
-        mock_settings.effective_anthropic_gateway_judge_model = "azure_ai/claude-opus-5"
-        mock_settings.anthropic_direct_enabled = True
-        mock_settings.anthropic_api_key = "direct-key"
-        mock_settings.revy_anthropic_model = "claude-sonnet-5"
-        mock_settings.revy_revision_timeout_standard_seconds = 30
-        with caplog.at_level("WARNING"):
-            await anthropic_review.judge_finding(client, user_prompt="judge this")
-
-    assert "judge_llm_profile_fallback" in [record.message for record in caplog.records]
-
-
-@pytest.mark.asyncio
-async def test_gateway_empty_body_fallback_to_direct():
-    gateway_response = MagicMock()
-    gateway_response.raise_for_status = MagicMock()
-    gateway_response.json.return_value = {"content": []}
-    direct_response = MagicMock()
-    direct_response.raise_for_status = MagicMock()
-    direct_response.json.return_value = {
-        "content": [{"text": json.dumps({"outcome": "dismissed", "notes": "ok"})}]
-    }
-    client = AsyncMock(spec=httpx.AsyncClient)
-    client.post = AsyncMock(side_effect=[gateway_response, direct_response])
-
-    with patch("app.integrations.anthropic_review.settings") as mock_settings:
-        mock_settings.anthropic_gateway_enabled = True
-        mock_settings.anthropic_gateway_messages_url = "https://llm.ai.rtu.lv/v1/messages"
-        mock_settings.anthropic_auth_token = "rtu-token"
-        mock_settings.effective_anthropic_gateway_judge_model = "azure_ai/claude-opus-5"
-        mock_settings.anthropic_direct_enabled = True
-        mock_settings.anthropic_api_key = "direct-key"
-        mock_settings.revy_anthropic_model = "claude-sonnet-5"
-        mock_settings.revy_judge_structured_output = False
-        mock_settings.revy_revision_timeout_standard_seconds = 30
-        result = await anthropic_review.judge_finding(client, user_prompt="judge this")
-
-    assert result["outcome"] == "dismissed"
-    assert client.post.await_count == 2
-
-
-@pytest.mark.asyncio
-async def test_gateway_parse_fallback_to_direct():
-    gateway_response = MagicMock()
-    gateway_response.raise_for_status = MagicMock()
-    gateway_response.json.return_value = {
-        "content": [{"text": "```not valid json```"}]
-    }
-    direct_response = MagicMock()
-    direct_response.raise_for_status = MagicMock()
-    direct_response.json.return_value = {
-        "content": [{"text": json.dumps({"outcome": "upheld", "notes": "ok"})}]
-    }
-    client = AsyncMock(spec=httpx.AsyncClient)
-    client.post = AsyncMock(side_effect=[gateway_response, direct_response])
-
-    with patch("app.integrations.anthropic_review.settings") as mock_settings:
-        mock_settings.anthropic_gateway_enabled = True
-        mock_settings.anthropic_gateway_messages_url = "https://llm.ai.rtu.lv/v1/messages"
-        mock_settings.anthropic_auth_token = "rtu-token"
-        mock_settings.effective_anthropic_gateway_judge_model = "azure_ai/claude-opus-5"
-        mock_settings.anthropic_direct_enabled = True
-        mock_settings.anthropic_api_key = "direct-key"
-        mock_settings.revy_anthropic_model = "claude-sonnet-5"
-        mock_settings.revy_judge_structured_output = False
-        mock_settings.revy_revision_timeout_standard_seconds = 30
-        result = await anthropic_review.judge_finding(client, user_prompt="judge this")
-
-    assert result["outcome"] == "upheld"
-    assert client.post.await_count == 2
-
-
-@pytest.mark.asyncio
-async def test_gateway_non_json_body_fallback_to_direct():
-    gateway_response = MagicMock()
-    gateway_response.raise_for_status = MagicMock()
-    gateway_response.text = "not-json {"
-    direct_response = MagicMock()
-    direct_response.raise_for_status = MagicMock()
-    direct_response.json.return_value = {
-        "content": [{"text": json.dumps({"outcome": "dismissed", "notes": "ok"})}]
-    }
-    client = AsyncMock(spec=httpx.AsyncClient)
-    client.post = AsyncMock(side_effect=[gateway_response, direct_response])
-
-    with patch("app.integrations.anthropic_review.settings") as mock_settings:
-        mock_settings.anthropic_gateway_enabled = True
-        mock_settings.anthropic_gateway_messages_url = "https://llm.ai.rtu.lv/v1/messages"
-        mock_settings.anthropic_auth_token = "rtu-token"
-        mock_settings.effective_anthropic_gateway_judge_model = "azure_ai/claude-opus-5"
-        mock_settings.anthropic_direct_enabled = True
-        mock_settings.anthropic_api_key = "direct-key"
-        mock_settings.revy_anthropic_model = "claude-sonnet-5"
-        mock_settings.revy_judge_structured_output = False
-        mock_settings.revy_revision_timeout_standard_seconds = 30
-        result = await anthropic_review.judge_finding(client, user_prompt="judge this")
-
-    assert result["outcome"] == "dismissed"
-    assert client.post.await_count == 2
-
-
-def test_parse_messages_response_json_preserves_body_preview():
+async def test_parse_messages_response_json_preserves_body_preview():
     response = MagicMock()
     response.json.side_effect = json.JSONDecodeError("bad", "doc", 0)
     response.text = "<html>gateway error</html>"

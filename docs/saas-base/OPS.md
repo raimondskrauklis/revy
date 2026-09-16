@@ -56,8 +56,9 @@ One-time per environment — see [DEV_BOOTSTRAP.md](../starter-pack/DEV_BOOTSTRA
 |-----|---------|
 | `GITHUB_APP_ID` + `GITHUB_APP_PRIVATE_KEY_PATH` | GitHub App API (indexing, sync, checks, publish) — see [GITHUB_APP_SETUP.md](../utils/GITHUB_APP_SETUP.md) § App JWT |
 | `VOYAGE_API_KEY` | R3 embeddings — `REVY_EMBEDDING_MODEL=voyage-code-3`, `REVY_EMBEDDING_DIMENSIONS=1024` |
-| `MOONSHOT_API_KEY` | R4 primary reviewer (`kimi-k2.7-code` / `kimi-k3` by profile) |
-| `ANTHROPIC_API_KEY` | R5 judge (optional); `REVY_ANTHROPIC_MODEL=claude-sonnet-5` |
+| `RTU_API_BASE` + `RTU_API_KEY` | R4 reviewer (`/v1/chat/completions`) and R5 judge (`/v1/messages`) on RTU (`REVY_REVIEWER_PROVIDER=rtu`, `REVY_JUDGE_PROVIDER=rtu`) |
+| `MOONSHOT_API_BASE` + `MOONSHOT_API_KEY` | Unused while reviewer is `rtu`; real Moonshot.ai keys for switch-back |
+| `ANTHROPIC_API_KEY` | Unused while judge is `rtu`; real Anthropic for switch-back (`REVY_JUDGE_PROVIDER=anthropic`) |
 
 Example: `deploy/env-examples/backend.env.production.example`.
 
