@@ -2,7 +2,7 @@
 
 **Program:** [README.md](./README.md) · **Baseline:** [JUDGE_THINKING_BLOCKS_FINDINGS.md](./JUDGE_THINKING_BLOCKS_FINDINGS.md)
 
-**Status:** S2 **PASS** on [#106](https://github.com/raimondskrauklis/revy/pull/106) `9843a7e` — verification judge `upheld` still-open test finding; discovery on remaining probe. **S3 in flight** — remove `shell=True`.
+**Status:** S0–S2 **PASS** on [#106](https://github.com/raimondskrauklis/revy/pull/106). S3 **PARTIAL** (`a538d4d`): reviewer stopped emitting security; GitHub tables hide those threads; DB groups stay `active`/`still_open` because verification **upheld**. Live RTU path (kimi + opus-5) is proven.
 
 ---
 
@@ -34,7 +34,7 @@
 | 2 | Re-run after `RTU_API_KEY` = RTU virtual key (`RTU_AUTH_TOKEN`) | **done** — review + publish **200** (`f6f8a34`) |
 | 3 | S1 — `jtb_rtu_judge_probe` command injection (live `shell=True` call) | **done** — judge **completed** (`b51c4c8`) |
 | 4 | S2 — docs-only, leave probe hunks | **done** — verification `upheld` (`9843a7e`) |
-| 5 | S3 — remove `shell=True` | pending |
+| 5 | S3 — remove `shell=True` | **done** — display-clean, DB verification **upheld** (`a538d4d`) |
 
 ---
 
@@ -60,7 +60,7 @@ Reconcile then runs discovery judge (`record_review_run_judge_status_with_model`
 | S0 | Clean probe, 0 findings | embed voyage-4; reviewer+publish rtu kimi; judge skip | **PASS** push 2 |
 | S1 | Command injection in `jtb_rtu_judge_probe.py` | + discovery judge rtu opus-5 `/v1/messages` | **PASS** push 3 |
 | S2 | Leave defect (no hunk fix) | verification judge on still-open group | **PASS** push 4 |
-| S3 | Remove invocation / fix | closure without cutting judge | **pending** push 5 |
+| S3 | Remove invocation / fix | closure without cutting judge | **PARTIAL** push 5 |
 | S4 | Deep/critical profile | reviewer `azure_ai/claude-fable-5-1` | not started — needs Deep/Critical from app, not autostart |
 
 ---
@@ -186,6 +186,19 @@ Do **not** “fix” `shell=True` until S3 — those Revy threads are the S1 fix
 | Verification | unit-test group `upheld`; `resolution_status=still_open`; `state=active` |
 | Judge | snapshot `rtu` / `azure_ai/claude-opus-5`; `judge_status=completed` |
 
+### Push 5 — S3 remove injection (`a538d4d`, 2026-09-16)
+
+| Field | Value |
+|-------|-------|
+| `head_sha` | `a538d4d` |
+| This generation | `info`/`maintainability` on program README only (not judge-eligible) |
+| Discovery judge | `not_applicable`, 0 candidates |
+| Verification | 2× `upheld` (probe + test groups remain `active`/`still_open`) |
+| GitHub tables | security rows hidden; 1 INFO still open |
+| Snapshot | reviewer+publish `rtu` kimi; `judge=null` (no discovery candidates) |
+
+S3 did **not** get `addressed`/`resolved` on the security groups — verification judged the still-open claims as still valid after the hunk edit. Display hygiene still improved.
+
 ### Historical baseline (pre-#103 worker — not this pass)
 
 | Metric | Baseline (2026-08-21) | `--since 2026-08-07T00:00:00Z` (2026-09-16) |
@@ -213,7 +226,7 @@ Do **not** “fix” `shell=True` until S3 — those Revy threads are the S1 fix
 |----|--------|---------|
 | A | Virtual key on origin | **done** — push 2 |
 | D | S1 command-injection probe so discovery judge hits `POST /v1/messages` | **done** — 2× 200, 2 outcomes `modified` |
-| E | S2 verification judge (leave probe), then S3 remove it | S2 **done**; S3 this push |
+| E | S2 verification judge (leave probe), then S3 remove it | S2 **PASS**; S3 **PARTIAL** (verification upheld) |
 | F | S4 deep/critical fable-5-1 via app review button | after S2; autostart cannot hit it |
 
 ---

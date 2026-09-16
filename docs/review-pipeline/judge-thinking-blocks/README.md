@@ -1,6 +1,6 @@
 # Judge thinking-blocks — program index
 
-**Status:** P0–P3 **merged** [#103](https://github.com/raimondskrauklis/revy/pull/103). RTU reviewer+publish **PASS** on dogfood [#106](https://github.com/raimondskrauklis/revy/pull/106) push 2; judge skipped; extract gate still INCONCLUSIVE ([validation memo](./JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md)). D6: live `judge_json_invalid` stays; additive `judge_empty_text` only.  
+**Status:** P0–P3 **merged** [#103](https://github.com/raimondskrauklis/revy/pull/103). Dogfood [#106](https://github.com/raimondskrauklis/revy/pull/106): RTU reviewer/publish/judge **PASS**; S3 display-clean with verification-upheld leftover groups ([validation memo](./JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md)). D6: live `judge_json_invalid` stays; additive `judge_empty_text` only.  
 **Problem:** RTU `claude-sonnet-5` returns thinking-first Messages `content`; Revy reads only `content[0].text` and records `Anthropic response invalid`. 45/53 live misses already had a later `text` block.
 
 **Not in scope:** Moonshot review JSON; RG-6 withhold; Voyage embeddings; RCX truncation; review-attempt `wait_ms` (LT-2).
@@ -40,8 +40,8 @@
 | P0 | Content-block extract + review `""`→SUE | [P0](./waves/JUDGE_THINKING_BLOCKS_P0_EXECUTION.md) | done (`0fc5b45`) |
 | P1 | Judge wrap `judge_empty_text` + transport extra | [P1](./waves/JUDGE_THINKING_BLOCKS_P1_EXECUTION.md) | done (`bf480d7`) |
 | P2 | Distinct codes; D8 INFO; metrics grouping | [P2](./waves/JUDGE_THINKING_BLOCKS_P2_EXECUTION.md) | done (`d9fd997`) |
-| P3 | Staging validation + split evidence + doc sync | [P3](./waves/JUDGE_THINKING_BLOCKS_P3_EXECUTION.md) | code-complete — human gate pending |
+| P3 | Staging validation + split evidence + doc sync | [P3](./waves/JUDGE_THINKING_BLOCKS_P3_EXECUTION.md) | shipped on #103; dogfood [#106](https://github.com/raimondskrauklis/revy/pull/106) |
 
-P0 and P1 ship as **two commits, one PR**. Do not merge P0 without P1.
+P0 and P1 already shipped together on [#103](https://github.com/raimondskrauklis/revy/pull/103).
 
-**Next:** S2 verification (leave probe on [#106](https://github.com/raimondskrauklis/revy/pull/106)); S3 remove it; S4 deep/critical is app-triggered.
+**Next:** S4 deep/critical `azure_ai/claude-fable-5-1` is app-triggered (autostart is standard only).
