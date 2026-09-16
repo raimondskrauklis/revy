@@ -8,6 +8,7 @@ import { dismissFindingGroup } from '@/features/reviewer/api';
 import { FindingRow } from '@/features/reviewer/components/FindingRow';
 import { JudgeSkippedBadge } from '@/features/reviewer/components/JudgeSkippedBadge';
 import { MergeReadinessBadge } from '@/features/reviewer/components/MergeReadinessBadge';
+import { ReviewTriggerBar } from '@/features/reviewer/components/ReviewTriggerBar';
 import {
   reviewerQueryKeys,
   usePublishJob,
@@ -55,8 +56,8 @@ export function PullRequestDetailPage() {
   const { data: pullRequest } = usePullRequest(workspaceId, repoId, prId);
 
   const revisionId = useMemo(
-    () => pickLatestRevisionId(reconciledFindings),
-    [reconciledFindings],
+    () => pullRequest?.latest_revision_id ?? pickLatestRevisionId(reconciledFindings),
+    [pullRequest?.latest_revision_id, reconciledFindings],
   );
 
   const { data: reviewRun, error: reviewRunError } = useReviewRun(
@@ -72,6 +73,9 @@ export function PullRequestDetailPage() {
     prId,
     revisionId,
   );
+
+  const reviewInFlight =
+    reviewRun?.status === 'pending' || reviewRun?.status === 'processing';
 
   const mergeConclusion = useMemo(
     () => deriveMergeConclusion(reconciledFindings),
@@ -117,6 +121,7 @@ export function PullRequestDetailPage() {
             {t('reviewer.reviewRun.status', {
               status: t(`reviewer.reviewRun.${reviewRun.status}`),
             })}
+            {` · ${t(`reviewer.reviewRun.profiles.${reviewRun.profile}`)}`}
           </span>
         ) : (
           <span className="text-sm text-[color:var(--app-text-muted)]">
@@ -129,6 +134,15 @@ export function PullRequestDetailPage() {
               status: t(`reviewer.publish.${publishJob.status}`),
             })}
           </span>
+        ) : null}
+        {canDismiss && revisionId ? (
+          <ReviewTriggerBar
+            workspaceId={workspaceId}
+            repositoryId={repoId}
+            pullRequestId={prId}
+            revisionId={revisionId}
+            reviewInFlight={reviewInFlight}
+          />
         ) : null}
       </div>
 

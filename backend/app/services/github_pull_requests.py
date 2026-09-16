@@ -719,6 +719,12 @@ async def get_github_pull_request(
     )
     if pull_request is None:
         raise NotFoundError("Pull request not found")
+    pull_request.latest_revision_id = await session.scalar(
+        select(GitHubPullRequestRevisionORM.id)
+        .where(GitHubPullRequestRevisionORM.pull_request_id == pull_request.id)
+        .order_by(GitHubPullRequestRevisionORM.revision_number.desc())
+        .limit(1)
+    )
     return pull_request
 
 

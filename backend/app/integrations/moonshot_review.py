@@ -94,6 +94,11 @@ def _uses_k3_params(model: str) -> bool:
     return _model_basename(model).startswith("kimi-k3")
 
 
+def _uses_claude_chat_params(model: str) -> bool:
+    # RTU LiteLLM rejects temperature != 1 for Claude (fable / sonnet / opus).
+    return _model_basename(model).startswith("claude-")
+
+
 def _reasoning_effort_for_profile(profile: str) -> str:
     normalized = (profile or "standard").strip().lower()
     if normalized == "critical":
@@ -134,6 +139,9 @@ def _chat_completion_body(
     if _uses_k2_thinking_params(model):
         # K2 thinking: reasoning_content + content share budget; API default ~1024 when omitted.
         body["max_completion_tokens"] = _max_completion_tokens()
+        return body
+    if _uses_claude_chat_params(model):
+        # RTU: "does not support temperature=0.2. Only temperature=1 is supported."
         return body
     body["temperature"] = 0.2
     return body
