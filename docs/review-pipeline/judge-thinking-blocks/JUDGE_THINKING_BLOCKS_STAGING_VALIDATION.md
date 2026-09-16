@@ -2,7 +2,7 @@
 
 **Program:** [README.md](./README.md) · **Baseline:** [JUDGE_THINKING_BLOCKS_FINDINGS.md](./JUDGE_THINKING_BLOCKS_FINDINGS.md)
 
-**Status:** S0–S2 **PASS** on [#106](https://github.com/raimondskrauklis/revy/pull/106). S3 **PARTIAL** (`a538d4d`): reviewer stopped emitting security; GitHub tables hide those threads; DB groups stay `active`/`still_open` because verification **upheld**. Live RTU path (kimi + opus-5) is proven.
+**Status:** S0–S2 **PASS** on [#106](https://github.com/raimondskrauklis/revy/pull/106). S3 **PARTIAL** (`a538d4d` + follow-up `a761f74`): GitHub tables are clean (0 open, 1 addressed INFO); two security groups stay `active`/`still_open` because verification **upheld**. Live RTU path (kimi + opus-5) is proven. S4 not started.
 
 ---
 
@@ -22,7 +22,7 @@
 
 | PR | Branch | Status |
 |----|--------|--------|
-| [#106](https://github.com/raimondskrauklis/revy/pull/106) | `chore/jtb-rtu-staging-dogfood` | **open** — S1 `b51c4c8` judge **completed** |
+| [#106](https://github.com/raimondskrauklis/revy/pull/106) | `chore/jtb-rtu-staging-dogfood` | **open** — GitHub display-clean at `a761f74`; S4 not started |
 
 ---
 
@@ -35,6 +35,7 @@
 | 3 | S1 — `jtb_rtu_judge_probe` command injection (live `shell=True` call) | **done** — judge **completed** (`b51c4c8`) |
 | 4 | S2 — docs-only, leave probe hunks | **done** — verification `upheld` (`9843a7e`) |
 | 5 | S3 — remove `shell=True` | **done** — display-clean, DB verification **upheld** (`a538d4d`) |
+| 6 | S3 follow-up — drop stale README instruction | **done** — Revy **pass**, 0 open tables (`a761f74`) |
 
 ---
 
@@ -199,6 +200,20 @@ Do **not** “fix” `shell=True` until S3 — those Revy threads are the S1 fix
 
 S3 did **not** get `addressed`/`resolved` on the security groups — verification judged the still-open claims as still valid after the hunk edit. Display hygiene still improved.
 
+### Push 6 — S3 follow-up (`a761f74`, 2026-09-16)
+
+| Field | Value |
+|-------|-------|
+| `head_sha` | `a761f74` |
+| Revy check | **pass** `2026-09-16T14:58:56Z`–`15:00:28Z` (1m32s) |
+| This generation | 0 publishable findings |
+| INFO README group | `resolved` / `addressed` |
+| Verification | 2× `upheld` opus-5 (same two security groups still `active`/`still_open`) |
+| GitHub | Ready to merge; raised 3, resolved 1, display open 0, hidden 2 (collapsed threads) |
+| Snapshot | reviewer+publish `rtu` kimi; `judge=null` (no discovery candidates); verification still ran |
+
+Push-delta for the probe files was empty on this docs-only revision, so verification re-judged the prior titles against no hunk and **upheld** again. That is why DB `still_open` outlives GitHub display-clean.
+
 ### Historical baseline (pre-#103 worker — not this pass)
 
 | Metric | Baseline (2026-08-21) | `--since 2026-08-07T00:00:00Z` (2026-09-16) |
@@ -226,8 +241,8 @@ S3 did **not** get `addressed`/`resolved` on the security groups — verificatio
 |----|--------|---------|
 | A | Virtual key on origin | **done** — push 2 |
 | D | S1 command-injection probe so discovery judge hits `POST /v1/messages` | **done** — 2× 200, 2 outcomes `modified` |
-| E | S2 verification judge (leave probe), then S3 remove it | S2 **PASS**; S3 **PARTIAL** (verification upheld) |
-| F | S4 deep/critical fable-5-1 via app review button | after S2; autostart cannot hit it |
+| E | S2 verification judge (leave probe), then S3 remove it | S2 **PASS**; S3 **PARTIAL** (GitHub clean; verification upheld) |
+| F | S4 deep/critical fable-5-1 via app review button | **blocked** — autostart is standard only; needs Deep/Critical in the app |
 
 ---
 
