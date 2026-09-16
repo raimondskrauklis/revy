@@ -180,8 +180,7 @@
       }
     },
     "security": {
-      "body": "Paroli, divfaktoru autentifikāciju un aktīvās sesijas pārvalda Keycloak konta konsolē.",
-      "openAccount": "Atvērt konta konsoli"
+      "body": "Parole, daudzfaktoru autentifikācija un sesiju pārvaldība Revy būs pieejama vēlāk. Ja nepieciešams mainīt pierakstīšanos, sazinieties ar darbvietas administratoru."
     },
     "appearance": {
       "body": "Izvēlieties, kā lietotne izskatās šajā ierīcē. Tēmas iestatījums tiek saglabāts lokāli pārlūkā.",
@@ -202,7 +201,6 @@
       "modelsBody": "Pārrakstiet platformas noklusējumus katram lomai. Izvēlieties Platformas noklusējums, lai mantotu vides konfigurāciju.",
       "modelsSaveSuccess": "Modeļu politika saglabāta",
       "platformDefault": "Platformas noklusējums",
-      "sameProviderWarning": "Pārskatītājs un tiesnesis pašlaik izmanto vienu pakalpojumu sniedzēju. Ieteicams izmantot dažādus sniedzējus kvalitatīvākai eskalācijai.",
       "roles": {
         "reviewer_standard": "Pārskatītājs — standarta profils",
         "reviewer_deep": "Pārskatītājs — dziļais profils",
@@ -607,7 +605,13 @@
       "number": "#",
       "title": "Nosaukums",
       "headSha": "Head SHA",
-      "revisions": "Revīzijas"
+      "revisions": "Revīzijas",
+      "status": "Statuss",
+      "state": {
+        "open": "Atvērts",
+        "closed": "Slēgts",
+        "merged": "Sapludināts"
+      }
     },
     "groupState": {
       "active": "Aktīvs",
@@ -682,6 +686,7 @@
     "mergeReadiness": {
       "notPublished": "Nav publicēts GitHub",
       "success": "Gatavs sapludināšanai",
+      "successClosed": "Nav bloķējošu atradumu",
       "neutral": "Recenzijas piezīmes",
       "failure": "Bloķējoši atradumi"
     },

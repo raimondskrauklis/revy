@@ -682,6 +682,77 @@ async def test_apply_pull_request_converted_to_draft_updates_flag():
 
 
 @pytest.mark.asyncio
+async def test_apply_pull_request_closed_persists_merged():
+    installation = _installation()
+    repository = _repository(installation)
+    existing = GitHubPullRequestORM(
+        repository_id=repository.id,
+        workspace_id=repository.workspace_id,
+        installation_id=repository.installation_id,
+        github_pull_request_id=_PR_GITHUB_ID,
+        number=7,
+        title="Add feature",
+        state=GitHubPullRequestState.open,
+        head_sha="abc123",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=1,
+        is_draft=False,
+        merged=False,
+    )
+    existing.id = uuid.uuid4()
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[installation, repository, existing])
+    session.flush = AsyncMock()
+
+    payload = _pull_request_payload(action="closed")
+    payload["pull_request"]["state"] = "closed"
+    payload["pull_request"]["merged"] = True
+
+    result = await apply_pull_request_webhook_event(session, payload)
+
+    assert result is None
+    assert existing.state == GitHubPullRequestState.closed
+    assert existing.merged is True
+
+
+@pytest.mark.asyncio
+async def test_apply_pull_request_closed_without_merge_stays_unmerged():
+    installation = _installation()
+    repository = _repository(installation)
+    existing = GitHubPullRequestORM(
+        repository_id=repository.id,
+        workspace_id=repository.workspace_id,
+        installation_id=repository.installation_id,
+        github_pull_request_id=_PR_GITHUB_ID,
+        number=7,
+        title="Add feature",
+        state=GitHubPullRequestState.open,
+        head_sha="abc123",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=1,
+        is_draft=False,
+        merged=False,
+    )
+    existing.id = uuid.uuid4()
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[installation, repository, existing])
+    session.flush = AsyncMock()
+
+    payload = _pull_request_payload(action="closed")
+    payload["pull_request"]["state"] = "closed"
+    payload["pull_request"]["merged"] = False
+
+    await apply_pull_request_webhook_event(session, payload)
+
+    assert existing.state == GitHubPullRequestState.closed
+    assert existing.merged is False
+
+
+@pytest.mark.asyncio
 async def test_synchronize_returns_existing_revision_when_head_sha_row_exists():
     installation = _installation()
     repository = _repository(installation)

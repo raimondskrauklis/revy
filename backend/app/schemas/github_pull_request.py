@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from app.constants.enums import GitHubPullRequestState
 
@@ -21,6 +21,7 @@ class GitHubPullRequestResponse(BaseModel):
     number: int
     title: str
     state: GitHubPullRequestState
+    merged: bool = False
     head_sha: str
     head_ref: str
     base_ref: str
@@ -29,3 +30,8 @@ class GitHubPullRequestResponse(BaseModel):
     latest_revision_id: UUID | None = None
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("merged", mode="before")
+    @classmethod
+    def coerce_merged(cls, value: object) -> bool:
+        return value is True

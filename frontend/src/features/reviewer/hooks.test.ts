@@ -20,6 +20,7 @@ function makePullRequest(id: string): GitHubPullRequest {
     html_url: null,
     revision_count: 1,
     latest_revision_id: null,
+    merged: false,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
   };

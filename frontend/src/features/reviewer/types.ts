@@ -1,6 +1,8 @@
 // frontend/src/features/reviewer/types.ts
 export type PullRequestState = 'open' | 'closed';
 
+export type PullRequestLifecycle = PullRequestState | 'merged';
+
 export type ReviewRunStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 export type ReviewProfile = 'standard' | 'deep' | 'critical';
@@ -63,6 +65,7 @@ export interface GitHubPullRequest {
   number: number;
   title: string;
   state: PullRequestState;
+  merged: boolean;
   head_sha: string;
   head_ref: string;
   base_ref: string;

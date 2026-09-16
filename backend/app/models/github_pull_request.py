@@ -52,6 +52,12 @@ class GitHubPullRequestORM(TimestampedModel):
         default=False,
         server_default="false",
     )
+    merged: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
     pr_resolution_rollup: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
 

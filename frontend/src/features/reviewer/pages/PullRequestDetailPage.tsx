@@ -8,6 +8,7 @@ import { dismissFindingGroup } from '@/features/reviewer/api';
 import { FindingRow } from '@/features/reviewer/components/FindingRow';
 import { JudgeSkippedBadge } from '@/features/reviewer/components/JudgeSkippedBadge';
 import { MergeReadinessBadge } from '@/features/reviewer/components/MergeReadinessBadge';
+import { PullRequestStateBadge } from '@/features/reviewer/components/PullRequestStateBadge';
 import { ReviewTriggerBar } from '@/features/reviewer/components/ReviewTriggerBar';
 import {
   reviewerQueryKeys,
@@ -115,7 +116,12 @@ export function PullRequestDetailPage() {
             {t('reviewer.viewOnGitHub')}
           </a>
         ) : null}
-        <MergeReadinessBadge conclusion={mergeConclusion} published={published} />
+        {pullRequest ? <PullRequestStateBadge pullRequest={pullRequest} /> : null}
+        <MergeReadinessBadge
+          conclusion={mergeConclusion}
+          published={published}
+          prOpen={pullRequest?.state !== 'closed'}
+        />
         {reviewRun?.status === 'completed' &&
         (reviewRun.judge_status === 'skipped_disabled' ||
           reviewRun.judge_status === 'skipped_unavailable') ? (

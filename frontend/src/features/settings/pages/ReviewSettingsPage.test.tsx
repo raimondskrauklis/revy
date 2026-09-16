@@ -42,10 +42,10 @@ describe('ReviewSettingsPage', () => {
     vi.mocked(fetchModelPolicy).mockResolvedValue({
       overrides: {},
       effective: {
-        reviewer_standard: { provider: 'moonshot', model_id: 'kimi-k2.7-code' },
-        reviewer_deep: { provider: 'moonshot', model_id: 'kimi-k3' },
-        reviewer_critical: { provider: 'moonshot', model_id: 'kimi-k3' },
-        judge: { provider: 'anthropic', model_id: 'claude-sonnet-4-20250514' },
+        reviewer_standard: { provider: 'rtu', model_id: 'azure_ai/kimi-k2.7-code' },
+        reviewer_deep: { provider: 'rtu', model_id: 'azure_ai/claude-fable-5-1' },
+        reviewer_critical: { provider: 'rtu', model_id: 'azure_ai/claude-fable-5-1' },
+        judge: { provider: 'rtu', model_id: 'azure_ai/claude-opus-5' },
       },
     });
     vi.mocked(fetchModelCatalog).mockResolvedValue({
@@ -81,5 +81,7 @@ describe('ReviewSettingsPage', () => {
     expect(screen.getByText(/automated reviews/i)).toBeInTheDocument();
     expect(screen.getByText(/models/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
+    expect(screen.queryByText(/same provider family/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/cross-family review/i)).not.toBeInTheDocument();
   });
 });

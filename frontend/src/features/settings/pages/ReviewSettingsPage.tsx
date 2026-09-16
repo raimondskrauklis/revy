@@ -1,5 +1,5 @@
 // frontend/src/features/settings/pages/ReviewSettingsPage.tsx
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   QuietSelect,
@@ -85,14 +85,6 @@ export function ReviewSettingsPage() {
   }, [modelPolicy.data]);
 
   const catalogByRole = modelCatalog.data?.roles ?? {};
-
-  const sameProviderWarning = useMemo(() => {
-    const effective = modelPolicy.data?.effective;
-    if (!effective) return false;
-    const reviewerProvider = effective.reviewer_standard?.provider;
-    const judgeProvider = effective.judge?.provider;
-    return Boolean(reviewerProvider && judgeProvider && reviewerProvider === judgeProvider);
-  }, [modelPolicy.data?.effective]);
 
   async function handleAutostartToggle(enabled: boolean) {
     if (!workspaceId) return;
@@ -185,11 +177,6 @@ export function ReviewSettingsPage() {
           <p className="text-sm text-[color:var(--app-text-muted)]">
             {t('settings.review.modelsBody')}
           </p>
-          {sameProviderWarning ? (
-            <p className="text-sm text-[color:var(--app-warning)]">
-              {t('settings.review.sameProviderWarning')}
-            </p>
-          ) : null}
         </div>
 
         {MODEL_ROLES.map((role) => (
