@@ -213,8 +213,8 @@ Historical babysit detail: [REVIEW_PIPELINE_MERGE_CHECKLIST.md](./REVIEW_PIPELIN
 |----------|--------|
 | Trigger permission | `admin_users` |
 | Concurrent runs | `409 review_in_progress` |
-| Prerequisites | Completed index job + `VOYAGE_API_KEY` + `github_api_enabled` + `MOONSHOT_API_KEY` |
-| Primary LLM | Moonshot Kimi — `kimi-k2.7-code` (Standard), `kimi-k3` (Deep/Critical) |
+| Prerequisites | Completed index job + `VOYAGE_API_KEY` + `github_api_enabled` + `RTU_API_KEY` |
+| Primary LLM | RTU — `azure_ai/kimi-k2.7-code` (Standard), `azure_ai/claude-fable-5-1` (Deep/Critical); judge `azure_ai/claude-opus-5` |
 | Finding scope (R4) | Actionable logic/security/behavior — not style/lint |
 | Group states (R5) | `active` · `superseded` · `resolved` |
 | Check conclusion (R6) | `failure` if active `error`/`critical`; `success` if none; `neutral` for warning/info only |

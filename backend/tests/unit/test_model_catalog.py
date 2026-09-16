@@ -13,6 +13,7 @@ from app.services.model_catalog import (
 def test_anthropic_judge_catalog_uses_configured_model():
     with patch("app.services.model_catalog.settings") as mock_settings:
         mock_settings.moonshot_api_key = None
+        mock_settings.effective_rtu_api_key = None
         mock_settings.anthropic_direct_enabled = True
         mock_settings.anthropic_gateway_enabled = False
         mock_settings.bedrock_enabled.return_value = False
@@ -31,19 +32,41 @@ def test_anthropic_judge_catalog_uses_configured_model():
 def test_build_model_catalog_includes_moonshot_when_configured():
     with patch("app.services.model_catalog.settings") as mock_settings:
         mock_settings.moonshot_api_key = "key"
+        mock_settings.effective_rtu_api_key = None
         mock_settings.anthropic_api_key = None
         mock_settings.bedrock_enabled.return_value = False
         mock_settings.effective_judge_provider = "anthropic"
         mock_settings.revy_anthropic_model = "claude-sonnet-4-20250514"
         catalog = build_model_catalog()
     assert any(
-        item.provider == "moonshot" for item in catalog[ModelRole.reviewer_standard.value]
+        item.provider == "moonshot" and item.model_id == "kimi-k2.7-code"
+        for item in catalog[ModelRole.reviewer_standard.value]
+    )
+
+
+def test_build_model_catalog_includes_rtu_when_configured():
+    with patch("app.services.model_catalog.settings") as mock_settings:
+        mock_settings.moonshot_api_key = None
+        mock_settings.effective_rtu_api_key = "rtu-key"
+        mock_settings.anthropic_api_key = None
+        mock_settings.bedrock_enabled.return_value = False
+        mock_settings.effective_judge_provider = "rtu"
+        mock_settings.revy_rtu_model_judge = "azure_ai/claude-opus-5"
+        catalog = build_model_catalog()
+    assert any(
+        item.provider == "rtu" and item.model_id == "azure_ai/kimi-k2.7-code"
+        for item in catalog[ModelRole.reviewer_standard.value]
+    )
+    assert any(
+        item.provider == "rtu" and item.model_id == "azure_ai/claude-opus-5"
+        for item in catalog[ModelRole.judge.value]
     )
 
 
 def test_is_valid_catalog_entry_accepts_known_model():
     with patch("app.services.model_catalog.settings") as mock_settings:
         mock_settings.moonshot_api_key = "key"
+        mock_settings.effective_rtu_api_key = None
         mock_settings.anthropic_api_key = None
         mock_settings.bedrock_enabled.return_value = False
         mock_settings.effective_judge_provider = "anthropic"
@@ -57,6 +80,7 @@ def test_is_valid_catalog_entry_accepts_known_model():
 def test_is_valid_catalog_entry_rejects_unknown_model():
     with patch("app.services.model_catalog.settings") as mock_settings:
         mock_settings.moonshot_api_key = "key"
+        mock_settings.effective_rtu_api_key = None
         mock_settings.anthropic_api_key = None
         mock_settings.bedrock_enabled.return_value = False
         mock_settings.effective_judge_provider = "anthropic"

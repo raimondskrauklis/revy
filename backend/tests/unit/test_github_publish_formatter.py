@@ -843,8 +843,9 @@ async def test_build_pr_review_comment_unwraps_json_body_from_moonshot():
 
     with patch("app.services.github_publish_formatter.settings") as mock_settings:
         mock_settings.reviewer_llm_enabled.return_value = True
+        mock_settings.effective_reviewer_provider = "moonshot"
         mock_settings.revy_revision_timeout_standard_seconds = 60
-        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.revy_reviewer_model_for_profile.return_value = "model"
         mock_settings.app_public_url = "https://app.revy.dev"
         with patch(
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
@@ -868,8 +869,9 @@ async def test_build_pr_review_comment_falls_back_when_llm_returns_unparsed_json
 
     with patch("app.services.github_publish_formatter.settings") as mock_settings:
         mock_settings.reviewer_llm_enabled.return_value = True
+        mock_settings.effective_reviewer_provider = "moonshot"
         mock_settings.revy_revision_timeout_standard_seconds = 60
-        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.revy_reviewer_model_for_profile.return_value = "model"
         mock_settings.app_public_url = "https://app.revy.dev"
         with patch(
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
@@ -1215,8 +1217,9 @@ async def test_build_pr_review_comment_moonshot_success_includes_greptile_sectio
 
     with patch("app.services.github_publish_formatter.settings") as mock_settings:
         mock_settings.reviewer_llm_enabled.return_value = True
+        mock_settings.effective_reviewer_provider = "moonshot"
         mock_settings.revy_revision_timeout_standard_seconds = 60
-        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.revy_reviewer_model_for_profile.return_value = "model"
         mock_settings.app_public_url = "https://app.revy.dev"
         with patch(
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
@@ -1247,8 +1250,9 @@ async def test_build_pr_review_comment_thin_moonshot_returns_fallback():
 
     with patch("app.services.github_publish_formatter.settings") as mock_settings:
         mock_settings.reviewer_llm_enabled.return_value = True
+        mock_settings.effective_reviewer_provider = "moonshot"
         mock_settings.revy_revision_timeout_standard_seconds = 60
-        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.revy_reviewer_model_for_profile.return_value = "model"
         mock_settings.app_public_url = "https://app.revy.dev"
         with patch(
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
@@ -1285,8 +1289,9 @@ async def test_build_pr_review_comment_accepts_lowercase_score_rationale():
 
     with patch("app.services.github_publish_formatter.settings") as mock_settings:
         mock_settings.reviewer_llm_enabled.return_value = True
+        mock_settings.effective_reviewer_provider = "moonshot"
         mock_settings.revy_revision_timeout_standard_seconds = 60
-        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.revy_reviewer_model_for_profile.return_value = "model"
         mock_settings.app_public_url = "https://app.revy.dev"
         with patch(
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
@@ -1322,8 +1327,9 @@ async def test_build_pr_review_comment_accepts_confidence_is_because_rationale()
 
     with patch("app.services.github_publish_formatter.settings") as mock_settings:
         mock_settings.reviewer_llm_enabled.return_value = True
+        mock_settings.effective_reviewer_provider = "moonshot"
         mock_settings.revy_revision_timeout_standard_seconds = 60
-        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.revy_reviewer_model_for_profile.return_value = "model"
         mock_settings.app_public_url = "https://app.revy.dev"
         with patch(
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
@@ -1355,8 +1361,9 @@ async def test_build_pr_review_comment_moonshot_missing_pr_block_returns_fallbac
 
     with patch("app.services.github_publish_formatter.settings") as mock_settings:
         mock_settings.reviewer_llm_enabled.return_value = True
+        mock_settings.effective_reviewer_provider = "moonshot"
         mock_settings.revy_revision_timeout_standard_seconds = 60
-        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.revy_reviewer_model_for_profile.return_value = "model"
         mock_settings.app_public_url = "https://app.revy.dev"
         with patch(
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
@@ -1377,8 +1384,9 @@ async def test_build_pr_review_comment_moonshot_failure_returns_fallback():
 
     with patch("app.services.github_publish_formatter.settings") as mock_settings:
         mock_settings.reviewer_llm_enabled.return_value = True
+        mock_settings.effective_reviewer_provider = "moonshot"
         mock_settings.revy_revision_timeout_standard_seconds = 60
-        mock_settings.revy_moonshot_model_for_profile.return_value = "model"
+        mock_settings.revy_reviewer_model_for_profile.return_value = "model"
         mock_settings.app_public_url = "https://app.revy.dev"
         with patch(
             "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
@@ -1389,6 +1397,59 @@ async def test_build_pr_review_comment_moonshot_failure_returns_fallback():
 
     assert result == expected
     assert result.strip()
+
+
+@pytest.mark.asyncio
+async def test_build_pr_review_comment_anthropic_provider_skips_moonshot_endpoint():
+    from app.services.github_publish_formatter import build_pr_review_comment
+
+    groups = [_group(severity=FindingSeverity.warning)]
+    ctx = _ctx(groups)
+    complete = AsyncMock(return_value="## Revy code review\n\nshould not be used")
+
+    with patch("app.services.github_publish_formatter.settings") as mock_settings:
+        mock_settings.reviewer_llm_enabled.return_value = True
+        mock_settings.effective_reviewer_provider = "anthropic"
+        mock_settings.revy_reviewer_model_for_profile.return_value = "claude-sonnet-5"
+        mock_settings.app_public_url = "https://app.revy.dev"
+        with patch(
+            "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
+            complete,
+        ):
+            result = await build_pr_review_comment(ctx)
+            expected = build_pr_review_comment_fallback(ctx)
+
+    complete.assert_not_called()
+    assert result == expected
+
+
+@pytest.mark.asyncio
+async def test_build_pr_review_comment_rtu_passes_origin_url_and_key():
+    from app.services.github_publish_formatter import build_pr_review_comment
+
+    groups = [_group(severity=FindingSeverity.warning)]
+    ctx = _ctx(groups)
+    complete = AsyncMock(return_value="## Revy code review\n\nthin")
+
+    with patch("app.services.github_publish_formatter.settings") as mock_settings:
+        mock_settings.reviewer_llm_enabled.return_value = True
+        mock_settings.effective_reviewer_provider = "rtu"
+        mock_settings.revy_revision_timeout_standard_seconds = 60
+        mock_settings.revy_reviewer_model_for_profile.return_value = "azure_ai/kimi-k2.7-code"
+        mock_settings.rtu_chat_completions_url = "https://llm.ai.rtu.lv/v1/chat/completions"
+        mock_settings.effective_rtu_api_key = "rtu-key"
+        mock_settings.app_public_url = "https://app.revy.dev"
+        with patch(
+            "app.services.github_publish_formatter.moonshot_review.complete_issue_comment_markdown",
+            complete,
+        ):
+            await build_pr_review_comment(ctx)
+
+    complete.assert_awaited()
+    kwargs = complete.await_args.kwargs
+    assert kwargs["api_url"] == "https://llm.ai.rtu.lv/v1/chat/completions"
+    assert kwargs["api_key"] == "rtu-key"
+    assert kwargs["model_id"] == "azure_ai/kimi-k2.7-code"
 
 
 def test_index_footer_on_fallback():

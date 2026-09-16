@@ -43,12 +43,14 @@ async def test_complete_review_returns_content():
 
     with patch("app.integrations.moonshot_review.settings") as mock_settings:
         mock_settings.moonshot_api_key = "test-key"
+        mock_settings.moonshot_chat_completions_url = "https://api.moonshot.ai/v1/chat/completions"
         mock_settings.revy_moonshot_model_for_profile.return_value = "kimi-k2.7-code"
         mock_settings.revy_moonshot_max_completion_tokens = 32768
         mock_settings.revy_revision_llm_http_timeout_seconds.return_value = 60.0
         content = await complete_review(client, profile="standard", user_prompt="review")
 
     assert json.loads(content)["findings"] == []
+    assert client.post.call_args.args[0] == "https://api.moonshot.ai/v1/chat/completions"
     post_kwargs = client.post.call_args.kwargs
     body = post_kwargs["json"]
     assert body["model"] == "kimi-k2.7-code"
@@ -56,6 +58,55 @@ async def test_complete_review_returns_content():
     assert "temperature" not in body
     assert "thinking" not in body
     assert body["max_completion_tokens"] == 32768
+
+
+@pytest.mark.asyncio
+async def test_complete_review_rtu_override_uses_api_url_and_key():
+    payload = {
+        "choices": [{"message": {"content": json.dumps({"findings": []})}}],
+    }
+    response = MagicMock()
+    response.status_code = 200
+    response.raise_for_status = MagicMock()
+    response.json.return_value = payload
+    client = AsyncMock(spec=httpx.AsyncClient)
+    client.post = AsyncMock(return_value=response)
+
+    with patch("app.integrations.moonshot_review.settings") as mock_settings:
+        mock_settings.moonshot_api_key = None
+        mock_settings.revy_moonshot_max_completion_tokens = 32768
+        mock_settings.revy_revision_llm_http_timeout_seconds.return_value = 60.0
+        content = await complete_review(
+            client,
+            profile="standard",
+            user_prompt="review",
+            model_id="azure_ai/kimi-k2.7-code",
+            api_url="https://llm.ai.rtu.lv/v1/chat/completions",
+            api_key="rtu-key",
+        )
+
+    assert json.loads(content)["findings"] == []
+    assert client.post.call_args.args[0] == "https://llm.ai.rtu.lv/v1/chat/completions"
+    assert client.post.call_args.kwargs["headers"]["Authorization"] == "Bearer rtu-key"
+    assert client.post.call_args.kwargs["json"]["model"] == "azure_ai/kimi-k2.7-code"
+
+
+@pytest.mark.asyncio
+async def test_complete_review_custom_api_url_does_not_fall_back_to_moonshot_key():
+    client = AsyncMock(spec=httpx.AsyncClient)
+    client.post = AsyncMock()
+    with patch("app.integrations.moonshot_review.settings") as mock_settings:
+        mock_settings.moonshot_api_key = "moonshot-secret"
+        with pytest.raises(ServiceUnavailableError) as exc:
+            await complete_review(
+                client,
+                profile="standard",
+                user_prompt="review",
+                model_id="azure_ai/kimi-k2.7-code",
+                api_url="https://llm.ai.rtu.lv/v1/chat/completions",
+            )
+    assert exc.value.error_code == "llm_disabled"
+    client.post.assert_not_called()
 
 
 def test_parse_review_json_valid():
@@ -105,6 +156,26 @@ def test_chat_completion_body_k2_7_code_omits_temperature():
     assert "thinking" not in body
     assert body["max_completion_tokens"] == 32768
     assert "reasoning_effort" not in body
+
+
+def test_chat_completion_body_rtu_kimi_uses_k2_thinking_params():
+    body = _chat_completion_body(
+        model="azure_ai/kimi-k2.7-code",
+        profile="standard",
+        messages=[{"role": "user", "content": "x"}],
+    )
+    assert "temperature" not in body
+    assert body["max_completion_tokens"] == 32768
+
+
+def test_chat_completion_body_rtu_fable_uses_temperature():
+    body = _chat_completion_body(
+        model="azure_ai/claude-fable-5-1",
+        profile="deep",
+        messages=[{"role": "user", "content": "x"}],
+    )
+    assert body["temperature"] == 0.2
+    assert "max_completion_tokens" not in body
 
 
 def test_chat_completion_body_k3_deep_uses_high_reasoning():

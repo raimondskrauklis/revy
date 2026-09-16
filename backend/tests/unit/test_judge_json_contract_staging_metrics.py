@@ -98,3 +98,60 @@ def test_summarize_publish_summary_maps_row():
 
 def test_summarize_publish_summary_empty_row():
     assert _summarize_publish_summary(None) == {}
+
+
+def test_content_shape_text_later_vs_thinking_only():
+    from scripts.judge_json_contract_staging_metrics import _content_shape
+
+    later = (
+        '[{"type": "thinking", "thinking": "", "signature": "x"},'
+        '{"type": "text", "text": "{}"}]'
+    )
+    only = '[{"type": "thinking", "thinking": "", "signature": "x"}]'
+    assert _content_shape(later) == "text_later"
+    assert _content_shape(only) == "thinking_only"
+
+
+def test_classify_failure_row_keeps_live_json_invalid_token():
+    from scripts.judge_json_contract_staging_metrics import _classify_failure_row
+
+    assert _classify_failure_row("judge_json_invalid", "not-json") == "invalid_json"
+    assert _classify_failure_row("judge_empty_text", None) == "thinking_only"
+    assert _classify_failure_row("Anthropic response invalid", None) == "transport"
+
+
+def test_failure_split_sql_filters_completed_runs():
+    from scripts.judge_json_contract_staging_metrics import (
+        _FAILURE_SPLIT_SQL,
+        _MANIFEST_CANDIDATES_SQL,
+    )
+
+    assert "rr.status = 'completed'" in _FAILURE_SPLIT_SQL
+    assert "rr.status = 'completed'" in _MANIFEST_CANDIDATES_SQL
+
+
+def test_summarize_thinking_split_does_not_blend_45_and_8():
+    from scripts.judge_json_contract_staging_metrics import _summarize_thinking_split
+
+    rows = (
+        [
+            {
+                "parse_error": "Anthropic response invalid",
+                "raw_response_text": '[{"type": "thinking"},{"type": "text"}]',
+                "retry_count": 0,
+            }
+        ]
+        * 45
+        + [
+            {
+                "parse_error": "Anthropic response invalid",
+                "raw_response_text": '[{"type": "thinking"}]',
+                "retry_count": 0,
+            }
+        ]
+        * 8
+    )
+    summary = _summarize_thinking_split(rows)
+    assert summary["text_later"] == 45
+    assert summary["thinking_only"] == 8
+    assert summary["failure_rows"] == 53

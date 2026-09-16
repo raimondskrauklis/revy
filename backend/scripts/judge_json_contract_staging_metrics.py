@@ -1,5 +1,10 @@
 # backend/scripts/judge_json_contract_staging_metrics.py
-"""Staging metrics for judge-json-contract P5 and review-context validation."""
+"""Staging metrics for judge-json-contract P5 and review-context validation.
+
+Groups judge manifest failures by any `parse_error` (including additive
+`judge_empty_text` and live `judge_json_invalid`). Do not filter on a
+hardcoded old transport string.
+"""
 from __future__ import annotations
 
 import argparse
@@ -76,6 +81,22 @@ WHERE s.step_type = 'judge'
   AND ($1::timestamptz IS NULL OR rr.created_at >= $1::timestamptz)
 ORDER BY rr.created_at DESC
 LIMIT 10;
+"""
+
+_FAILURE_SPLIT_SQL = """
+SELECT c->>'parse_error' AS parse_error,
+       c->>'raw_response_text' AS raw_response_text,
+       coalesce((c->>'retry_count')::int, 0) AS retry_count
+FROM github_pipeline_artifacts a
+JOIN github_pipeline_steps s ON s.id = a.step_id
+JOIN github_pipeline_runs pr ON pr.id = s.pipeline_run_id
+JOIN github_review_runs rr ON rr.id = pr.review_run_id
+CROSS JOIN LATERAL jsonb_array_elements(a.content_json->'candidates') AS c
+WHERE s.step_type = 'judge'
+  AND a.kind = 'manifest'
+  AND rr.status = 'completed'
+  AND c->>'outcome' IS NULL
+  AND ($1::timestamptz IS NULL OR rr.created_at >= $1::timestamptz)
 """
 
 _ALEMBIC_SQL = "SELECT version_num FROM alembic_version LIMIT 1;"
@@ -351,6 +372,54 @@ def _print_rcx_gate(rcx_gate: dict[str, Any], *, since: datetime | None) -> None
     print(f"  overall: {'PASS' if rcx_gate.get('passed') else 'FAIL'}")
 
 
+def _content_shape(raw: str | None) -> str:
+    if not raw:
+        return "unknown"
+    has_thinking = '"type": "thinking"' in raw or '"type":"thinking"' in raw
+    has_text = '"type": "text"' in raw or '"type":"text"' in raw
+    if has_thinking and has_text:
+        return "text_later"
+    if has_thinking and not has_text:
+        return "thinking_only"
+    return "other"
+
+
+def _classify_failure_row(parse_error: str | None, raw: str | None) -> str:
+    if parse_error == "judge_json_invalid":
+        return "invalid_json"
+    shape = _content_shape(raw)
+    if shape == "text_later":
+        return "text_later"
+    if shape == "thinking_only":
+        return "thinking_only"
+    if parse_error == "judge_empty_text":
+        return "thinking_only"
+    if parse_error == "Anthropic response invalid":
+        return "transport"
+    return "other"
+
+
+def _summarize_thinking_split(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    buckets = {
+        "text_later": 0,
+        "thinking_only": 0,
+        "invalid_json": 0,
+        "transport": 0,
+        "other": 0,
+    }
+    with_retry = 0
+    for row in rows:
+        bucket = _classify_failure_row(row.get("parse_error"), row.get("raw_response_text"))
+        buckets[bucket] = buckets.get(bucket, 0) + 1
+        if int(row.get("retry_count") or 0) > 0:
+            with_retry += 1
+    return {
+        "failure_rows": len(rows),
+        "with_retry": with_retry,
+        **buckets,
+    }
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Judge JSON contract staging metrics")
     parser.add_argument(
@@ -394,6 +463,7 @@ async def _fetch_metrics(since: datetime | None) -> dict[str, Any]:
         run_row = await conn.fetchrow(_CANDIDATE_RUNS_SQL)
         manifest_row = await conn.fetchrow(_MANIFEST_CANDIDATES_SQL, since)
         failures = await conn.fetch(_RECENT_FAILURES_SQL, since)
+        split_rows = await conn.fetch(_FAILURE_SPLIT_SQL, since)
         retrieve_row = await conn.fetchrow(_RETRIEVE_MANIFESTS_SQL, since)
         prompt_row = await conn.fetchrow(_REVIEW_PROMPT_SQL, since)
         context_stats_row = await conn.fetchrow(_CONTEXT_STATS_SQL, since)
@@ -416,6 +486,7 @@ async def _fetch_metrics(since: datetime | None) -> dict[str, Any]:
         "manifest_candidates": dict(manifest_row) if manifest_row else {},
         "outcome_persistence_pct": persistence_pct,
         "recent_failures": [dict(row) for row in failures],
+        "thinking_split": _summarize_thinking_split([dict(row) for row in split_rows]),
         "review_context": {
             "retrieve_manifest": dict(retrieve_row) if retrieve_row else {},
             "review_prompt": dict(prompt_row) if prompt_row else {},
@@ -488,6 +559,17 @@ async def _run() -> int:
                 f"{row['parse_error']} | retry={row['retry_count']} | "
                 f"prompt={row['user_prompt_chars']} chars"
             )
+    split = metrics.get("thinking_split") or {}
+    if split:
+        print()
+        print("Thinking-block split (manifest failures, no outcome):")
+        print(f"  failure_rows: {split.get('failure_rows', 0)}")
+        print(f"  text_later: {split.get('text_later', 0)}")
+        print(f"  thinking_only: {split.get('thinking_only', 0)}")
+        print(f"  invalid_json (judge_json_invalid): {split.get('invalid_json', 0)}")
+        print(f"  transport: {split.get('transport', 0)}")
+        print(f"  other: {split.get('other', 0)}")
+        print(f"  with_retry: {split.get('with_retry', 0)}")
     review_ctx = metrics.get("review_context", {})
     retrieve = review_ctx.get("retrieve_manifest", {})
     prompt = review_ctx.get("review_prompt", {})

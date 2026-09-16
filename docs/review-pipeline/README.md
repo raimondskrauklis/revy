@@ -65,6 +65,12 @@ docs/review-pipeline/
     waves/
       JUDGE_JSON_CONTRACT_EXECUTION.md
       JUDGE_JSON_CONTRACT_P0_EXECUTION.md … P5
+  judge-thinking-blocks/                 ← RTU thinking-first extract (P0–P2 on #103; staging human gate)
+    README.md
+    JUDGE_THINKING_BLOCKS_FINDINGS.md
+    JUDGE_THINKING_BLOCKS_GENERAL_PLAN.md
+    JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md
+    waves/
   review-engineering-context/            ← Moonshot manifest inject (findings + general plan P0–P5)
     README.md
     REVIEW_ENGINEERING_CONTEXT_FINDINGS.md

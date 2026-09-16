@@ -6,6 +6,7 @@ from __future__ import annotations
 from app.constants.model_policy import ModelRole
 from app.constants.model_registry import (
     BEDROCK_CATALOG_EXAMPLES,
+    MOONSHOT_REVIEWER_CATALOG,
     PLATFORM_MODEL_DEFAULTS,
     ModelCatalogEntry,
     normalize_provider_slug,
@@ -22,6 +23,12 @@ _POLICY_ROLES = (
 
 def _moonshot_reviewer_entries() -> list[ModelCatalogEntry]:
     if not settings.moonshot_api_key or not settings.moonshot_api_key.strip():
+        return []
+    return list(MOONSHOT_REVIEWER_CATALOG)
+
+
+def _rtu_reviewer_entries() -> list[ModelCatalogEntry]:
+    if not settings.effective_rtu_api_key:
         return []
     return [
         PLATFORM_MODEL_DEFAULTS[ModelRole.reviewer_standard],
@@ -61,28 +68,35 @@ def _bedrock_reviewer_entries() -> list[ModelCatalogEntry]:
     ]
 
 
+def _rtu_judge_entries() -> list[ModelCatalogEntry]:
+    if settings.effective_judge_provider != "rtu":
+        return []
+    if not settings.effective_rtu_api_key:
+        return []
+    model_id = (settings.revy_rtu_model_judge or "").strip()
+    if not model_id:
+        model_id = PLATFORM_MODEL_DEFAULTS[ModelRole.judge].model_id
+    return [
+        ModelCatalogEntry(
+            provider="rtu",
+            model_id=model_id,
+            display_name="Claude (RTU)",
+        )
+    ]
+
+
 def _anthropic_judge_entries() -> list[ModelCatalogEntry]:
     if settings.effective_judge_provider != "anthropic":
         return []
-    entries: list[ModelCatalogEntry] = []
-    if settings.anthropic_gateway_enabled:
-        gateway_model = settings.effective_anthropic_gateway_judge_model or "azure_ai/claude-opus-5"
-        entries.append(
-            ModelCatalogEntry(
-                provider="anthropic",
-                model_id=gateway_model,
-                display_name="Claude (gateway)",
-            )
+    if not settings.anthropic_direct_enabled:
+        return []
+    return [
+        ModelCatalogEntry(
+            provider="anthropic",
+            model_id=settings.revy_anthropic_model,
+            display_name="Claude (Anthropic API)",
         )
-    if settings.anthropic_direct_enabled:
-        entries.append(
-            ModelCatalogEntry(
-                provider="anthropic",
-                model_id=settings.revy_anthropic_model,
-                display_name="Claude (Anthropic API)",
-            )
-        )
-    return entries
+    ]
 
 
 def _bedrock_judge_entries() -> list[ModelCatalogEntry]:
@@ -124,6 +138,7 @@ def _entries_for_role(role: ModelRole) -> list[ModelCatalogEntry]:
         ModelRole.reviewer_critical,
     ):
         entries = [
+            *_rtu_reviewer_entries(),
             *_moonshot_reviewer_entries(),
             *_anthropic_reviewer_entries(),
             *_bedrock_reviewer_entries(),
@@ -137,7 +152,9 @@ def _entries_for_role(role: ModelRole) -> list[ModelCatalogEntry]:
         return _dedupe_entries([critical, *entries])
 
     if role == ModelRole.judge:
-        return _dedupe_entries([*_anthropic_judge_entries(), *_bedrock_judge_entries()])
+        return _dedupe_entries(
+            [*_rtu_judge_entries(), *_anthropic_judge_entries(), *_bedrock_judge_entries()]
+        )
 
     return []
 

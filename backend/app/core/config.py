@@ -91,19 +91,29 @@ class Settings(BaseSettings):
 
     # Model providers — MODEL_POLICY M0
     revy_reviewer_provider: str | None = None
-    revy_judge_provider: str = "anthropic"
-    revy_llm_provider: str = "moonshot"  # deprecated alias for revy_reviewer_provider
+    revy_judge_provider: str = "rtu"
+    revy_llm_provider: str = "rtu"  # deprecated alias for revy_reviewer_provider
+    # Moonshot.ai — unused while REVY_REVIEWER_PROVIDER=rtu; keep for switch-back.
     revy_moonshot_model_standard: str = "kimi-k2.7-code"
     revy_moonshot_model_deep: str = "kimi-k3"
     revy_moonshot_model_critical: str = "kimi-k3"
     # Thinking models share reasoning_content + content under max_completion_tokens.
-    # Moonshot API default when omitted is ~1024 — too low for K2/K3 (see staging dogfood).
     revy_moonshot_max_completion_tokens: int = 32768
+    # RTU LiteLLM origin (OpenAI /v1/chat/completions + Anthropic /v1/messages).
+    rtu_api_base: str = "https://llm.ai.rtu.lv"
+    rtu_api_key: str | None = None
+    revy_rtu_model_standard: str = "azure_ai/kimi-k2.7-code"
+    revy_rtu_model_deep: str = "azure_ai/claude-fable-5-1"
+    revy_rtu_model_critical: str = "azure_ai/claude-fable-5-1"
+    revy_rtu_model_judge: str = "azure_ai/claude-opus-5"
+    # Direct Anthropic Messages API (api.anthropic.com) — switch-back only.
     revy_anthropic_model: str = "claude-sonnet-5"
     revy_judge_structured_output: bool = False
-    # Optional Anthropic-compatible gateway (e.g. RTU llm.ai.rtu.lv) — does not replace direct API
+    # Optional Anthropic-compatible proxy when REVY_JUDGE_PROVIDER=anthropic.
+    # Not the RTU live path — that is RTU_API_BASE.
     anthropic_base_url: str | None = None
     revy_anthropic_gateway_model: str | None = None
+    moonshot_api_base: str = "https://api.moonshot.ai/v1"
     moonshot_api_key: str | None = None
     anthropic_api_key: str | None = None
     anthropic_auth_token: str | None = None
@@ -257,6 +267,31 @@ class Settings(BaseSettings):
         return f"{base}/v1/messages"
 
     @property
+    def moonshot_chat_completions_url(self) -> str:
+        base = (self.moonshot_api_base or "https://api.moonshot.ai/v1").strip().rstrip("/")
+        return f"{base}/chat/completions"
+
+    @property
+    def rtu_api_origin(self) -> str:
+        base = (self.rtu_api_base or "https://llm.ai.rtu.lv").strip().rstrip("/")
+        if base.endswith("/v1"):
+            return base[: -len("/v1")].rstrip("/")
+        return base
+
+    @property
+    def rtu_chat_completions_url(self) -> str:
+        return f"{self.rtu_api_origin}/v1/chat/completions"
+
+    @property
+    def rtu_messages_url(self) -> str:
+        return f"{self.rtu_api_origin}/v1/messages"
+
+    @property
+    def effective_rtu_api_key(self) -> str | None:
+        value = (self.rtu_api_key or "").strip()
+        return value or None
+
+    @property
     def effective_anthropic_gateway_judge_model(self) -> str | None:
         value = (self.revy_anthropic_gateway_model or "").strip()
         return value or None
@@ -272,11 +307,11 @@ class Settings(BaseSettings):
                 "revy_llm_provider is deprecated; set REVY_REVIEWER_PROVIDER instead",
             )
             _revy_llm_provider_alias_logged = True
-        return (self.revy_llm_provider or "moonshot").strip().lower()
+        return (self.revy_llm_provider or "rtu").strip().lower()
 
     @property
     def effective_judge_provider(self) -> str:
-        return (self.revy_judge_provider or "anthropic").strip().lower()
+        return (self.revy_judge_provider or "rtu").strip().lower()
 
     def bedrock_enabled(self) -> bool:
         region = (self.aws_region or "").strip()
@@ -290,6 +325,8 @@ class Settings(BaseSettings):
         provider = self.effective_reviewer_provider
         if provider == "moonshot":
             return bool(self.moonshot_api_key and self.moonshot_api_key.strip())
+        if provider == "rtu":
+            return bool(self.effective_rtu_api_key)
         if provider == "anthropic":
             return self.anthropic_direct_enabled
         if provider == "bedrock":
@@ -300,8 +337,10 @@ class Settings(BaseSettings):
 
     def judge_llm_enabled(self) -> bool:
         provider = self.effective_judge_provider
+        if provider == "rtu":
+            return bool(self.effective_rtu_api_key)
         if provider == "anthropic":
-            return self.anthropic_gateway_enabled or self.anthropic_direct_enabled
+            return self.anthropic_direct_enabled
         if provider == "bedrock":
             return self.bedrock_enabled() and bool(
                 (self.revy_bedrock_judge_model_id or "").strip()
@@ -334,6 +373,24 @@ class Settings(BaseSettings):
         if normalized == "critical":
             return self.revy_moonshot_model_critical
         return self.revy_moonshot_model_standard
+
+    def revy_rtu_model_for_profile(self, profile: str) -> str:
+        normalized = (profile or self.revy_default_review_profile).strip().lower()
+        if normalized == "deep":
+            return self.revy_rtu_model_deep
+        if normalized == "critical":
+            return self.revy_rtu_model_critical
+        return self.revy_rtu_model_standard
+
+    def revy_reviewer_model_for_profile(self, profile: str) -> str:
+        provider = self.effective_reviewer_provider
+        if provider == "rtu":
+            return self.revy_rtu_model_for_profile(profile)
+        if provider == "anthropic":
+            return self.revy_anthropic_model
+        if provider == "bedrock":
+            return (self.revy_bedrock_reviewer_model_id or "").strip()
+        return self.revy_moonshot_model_for_profile(profile)
 
     @property
     def revy_worktrees_path(self) -> str:

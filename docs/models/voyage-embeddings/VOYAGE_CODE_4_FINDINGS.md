@@ -2,7 +2,7 @@
 
 Baseline for evaluating **`voyage-code-4`** and **`voyage-code-4-large`** as successors to **`voyage-code-3`** in Revy's R3 code-index pipeline.
 
-**Date:** 2026-08-10 · **Status:** baseline-ready (API smoke done 2026-08-10; `voyage-code-4` still unavailable)
+**Date:** 2026-08-10 · **Status:** baseline-ready (API smoke 2026-08-10: 503). **Update 2026-08-21:** staging worker has been embedding **`voyage-code-4` since 2026-08-16** without a documented re-index — see [LIVE_TRAFFIC_FINDINGS.md](../../review-pipeline/staging-validation/LIVE_TRAFFIC_FINDINGS.md) LT-4. This file’s “unavailable” conclusion is **stale** for staging.
 
 ---
 

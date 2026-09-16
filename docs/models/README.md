@@ -2,6 +2,8 @@
 
 **Status:** Shipped M0–M3 on branch `feat/model-policy-m0` (PR #35).
 
+**Live defaults (2026-09-16):** `REVY_REVIEWER_PROVIDER=rtu` and `REVY_JUDGE_PROVIDER=rtu` — standard `azure_ai/kimi-k2.7-code`, deep/critical `azure_ai/claude-fable-5-1`, judge `azure_ai/claude-opus-5`. Moonshot.ai / direct Anthropic remain switch-back. Env template: `backend/.env.example`.
+
 Findings and plans for **which models run where** in the review pipeline — embeddings, reviewer, judge, and future jury.
 
 | Doc | Purpose |

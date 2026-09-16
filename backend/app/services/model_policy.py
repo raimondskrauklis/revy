@@ -53,9 +53,19 @@ def _reviewer_model_id_for_role(role: ModelRole) -> str:
     return settings.revy_moonshot_model_standard
 
 
+def _rtu_model_id_for_role(role: ModelRole) -> str:
+    if role == ModelRole.reviewer_deep:
+        return settings.revy_rtu_model_deep
+    if role == ModelRole.reviewer_critical:
+        return settings.revy_rtu_model_critical
+    return settings.revy_rtu_model_standard
+
+
 def _resolve_reviewer_model_id(provider: str, role: ModelRole) -> str:
     if provider == "moonshot":
         return _reviewer_model_id_for_role(role)
+    if provider == "rtu":
+        return _rtu_model_id_for_role(role)
     if provider == "anthropic":
         return settings.revy_anthropic_model
     if provider == "bedrock":
@@ -77,9 +87,11 @@ def _provider_credentials_configured(
         return False
     if normalized == "moonshot":
         return bool(settings.moonshot_api_key and settings.moonshot_api_key.strip())
+    if normalized == "rtu":
+        return bool(settings.effective_rtu_api_key)
     if normalized == "anthropic":
         if role == ModelRole.judge:
-            return settings.anthropic_gateway_enabled or settings.anthropic_direct_enabled
+            return settings.anthropic_direct_enabled
         return bool(settings.anthropic_api_key and settings.anthropic_api_key.strip())
     if normalized == "bedrock":
         if not (settings.aws_region or "").strip():
@@ -137,7 +149,10 @@ def _resolve_platform_model(role: ModelRole, *, require_credentials: bool = True
             )
         if require_credentials:
             _assert_provider_credentials(provider, role=role)
-        if provider == "anthropic":
+        if provider == "rtu":
+            model_id = settings.revy_rtu_model_judge
+            region = None
+        elif provider == "anthropic":
             model_id = settings.revy_anthropic_model
             region = None
         else:

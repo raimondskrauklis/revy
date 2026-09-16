@@ -1652,13 +1652,21 @@ def _build_issue_comment_user_prompt(ctx: PublishFormatContext) -> str:
 async def build_pr_review_comment_with_model(
     ctx: PublishFormatContext,
 ) -> tuple[str, str | None, str | None]:
-    """Returns markdown and optional publish model provider/id when Moonshot runs."""
+    """Returns markdown and optional publish model provider/id when the reviewer LLM runs."""
     fallback = build_pr_review_comment_fallback(ctx)
     if not settings.reviewer_llm_enabled():
         return fallback, None, None
 
     prompt = _build_issue_comment_user_prompt(ctx)
-    model_id = settings.revy_moonshot_model_for_profile("standard")
+    provider = settings.effective_reviewer_provider
+    if provider not in {"moonshot", "rtu"}:
+        return fallback, None, None
+    model_id = settings.revy_reviewer_model_for_profile("standard")
+    api_url = None
+    api_key = None
+    if provider == "rtu":
+        api_url = settings.rtu_chat_completions_url
+        api_key = settings.effective_rtu_api_key
     recorder = None
     if ctx.pipeline_run_id is not None and ctx.review_run_id is not None:
         recorder = LlmAttemptStartContext(
@@ -1668,7 +1676,7 @@ async def build_pr_review_comment_with_model(
             step_type=LlmCallStepType.publish,
             operation_name=LlmCallOperationName.chat,
             attempt_no=0,
-            provider="moonshot",
+            provider=provider,
             request_model=model_id,
         )
 
@@ -1687,6 +1695,8 @@ async def build_pr_review_comment_with_model(
                 user_prompt=prompt,
                 model_id=model_id,
                 recorder=recorder,
+                api_url=api_url,
+                api_key=api_key,
             )
         text = normalize_llm_issue_comment(raw)
         if not text or _looks_like_json_wrapper(text):

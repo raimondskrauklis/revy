@@ -149,22 +149,30 @@ REVY_EMBEDDING_DIMENSIONS=1024
 
 ### Model providers (LLM)
 
-**Primary (R4 review):** Moonshot Kimi via OpenAI-compatible API (`https://api.moonshot.ai/v1`).
+Live path is **RTU** (`REVY_REVIEWER_PROVIDER=rtu`, `REVY_JUDGE_PROVIDER=rtu`). One origin, one key. Moonshot.ai and direct Anthropic stay in code for switch-back. Bedrock stays optional.
 
-| Profile | Default model | Env override |
-|---------|---------------|--------------|
-| Standard | `kimi-k2.7-code` | `REVY_MOONSHOT_MODEL_STANDARD` |
-| Deep | `kimi-k3` | `REVY_MOONSHOT_MODEL_DEEP` |
-| Critical | `kimi-k3` | `REVY_MOONSHOT_MODEL_CRITICAL` |
+| Role | Model | Transport | Env |
+|------|-------|-----------|-----|
+| Reviewer standard | `azure_ai/kimi-k2.7-code` | OpenAI `POST /v1/chat/completions` | `REVY_RTU_MODEL_STANDARD` |
+| Reviewer deep / critical | `azure_ai/claude-fable-5-1` | OpenAI `POST /v1/chat/completions` | `REVY_RTU_MODEL_DEEP` / `_CRITICAL` |
+| Judge | `azure_ai/claude-opus-5` | Anthropic `POST /v1/messages` | `REVY_RTU_MODEL_JUDGE` |
 
-**Secondary (R5 judge):** Anthropic Claude — independent-family cross-check / escalation only (not the R4 default reviewer). Default model `claude-sonnet-5` (`REVY_ANTHROPIC_MODEL`). See `internal-docs/product/revy/docs/architecture.md` §13–14.
+`RTU_API_KEY` is the RTU virtual key (reviewer + judge). Leave `MOONSHOT_API_KEY` and `ANTHROPIC_API_KEY` empty until you switch those providers. Do not set `ANTHROPIC_BASE_URL` or `ANTHROPIC_AUTH_TOKEN` for RTU.
 
 ```env
-REVY_LLM_PROVIDER=moonshot
-MOONSHOT_API_KEY=
+REVY_REVIEWER_PROVIDER=rtu
+REVY_JUDGE_PROVIDER=rtu
+RTU_API_BASE=https://llm.ai.rtu.lv
+RTU_API_KEY=
+REVY_RTU_MODEL_STANDARD=azure_ai/kimi-k2.7-code
+REVY_RTU_MODEL_DEEP=azure_ai/claude-fable-5-1
+REVY_RTU_MODEL_CRITICAL=azure_ai/claude-fable-5-1
+REVY_RTU_MODEL_JUDGE=azure_ai/claude-opus-5
 REVY_MOONSHOT_MODEL_STANDARD=kimi-k2.7-code
 REVY_MOONSHOT_MODEL_DEEP=kimi-k3
 REVY_MOONSHOT_MODEL_CRITICAL=kimi-k3
+MOONSHOT_API_BASE=https://api.moonshot.ai/v1
+MOONSHOT_API_KEY=
 ANTHROPIC_API_KEY=
 REVY_ANTHROPIC_MODEL=claude-sonnet-5
 ```

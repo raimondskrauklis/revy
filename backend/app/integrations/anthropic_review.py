@@ -104,7 +104,7 @@ REVIEW_SYSTEM_PROMPT = (
 
 JUDGE_SYSTEM_PROMPT = (
     "You are a verification judge for automated code review, not the primary reviewer. "
-    "You receive ONE finding already produced by Moonshot (Kimi). Decide whether that "
+    "You receive ONE finding already produced by the primary reviewer. Decide whether that "
     "specific finding is supported by the code evidence provided. "
     "Do NOT search for additional bugs or perform a full PR review. "
     "Do NOT uphold findings based on style or issues outside the cited claim. "
@@ -171,14 +171,10 @@ def _gateway_profile(fallback_model_id: str) -> _AnthropicProfile | None:
 
 def _judge_profiles(model_id: str | None) -> list[_AnthropicProfile]:
     resolved_model = model_id or settings.revy_anthropic_model
-    profiles: list[_AnthropicProfile] = []
-    gateway = _gateway_profile(resolved_model)
-    if gateway is not None:
-        profiles.append(gateway)
     direct = _direct_profile(resolved_model)
-    if direct is not None:
-        profiles.append(direct)
-    return profiles
+    if direct is None:
+        return []
+    return [direct]
 
 
 def _require_anthropic_direct_enabled() -> None:
@@ -190,11 +186,7 @@ def _require_anthropic_direct_enabled() -> None:
 
 
 def _require_judge_anthropic_enabled() -> None:
-    if not settings.anthropic_gateway_enabled and not settings.anthropic_direct_enabled:
-        raise ServiceUnavailableError(
-            message="Anthropic judge API is not configured",
-            error_code="llm_disabled",
-        )
+    _require_anthropic_direct_enabled()
 
 
 def _response_preview(data: object) -> str:
@@ -205,6 +197,23 @@ def _response_preview(data: object) -> str:
     return truncate_judge_response_text(text)
 
 
+_SKIP_CONTENT_BLOCK_TYPES = frozenset({"thinking", "redacted_thinking"})
+
+
+def _content_block_types(data: dict) -> list[str]:
+    content_blocks = data.get("content")
+    if not isinstance(content_blocks, list):
+        return []
+    types: list[str] = []
+    for block in content_blocks:
+        if not isinstance(block, dict):
+            types.append("non_dict")
+            continue
+        block_type = block.get("type")
+        types.append(block_type if isinstance(block_type, str) else "unknown")
+    return types
+
+
 def _extract_message_text(data: dict) -> str:
     content_blocks = data.get("content")
     if not isinstance(content_blocks, list) or not content_blocks:
@@ -213,21 +222,18 @@ def _extract_message_text(data: dict) -> str:
             error_code="llm_error",
             details={"response_body_preview": _response_preview(data)},
         )
-    first = content_blocks[0]
-    if not isinstance(first, dict):
-        raise ServiceUnavailableError(
-            message="Anthropic response invalid",
-            error_code="llm_error",
-            details={"response_body_preview": _response_preview(data)},
-        )
-    text = first.get("text")
-    if not isinstance(text, str) or not text.strip():
-        raise ServiceUnavailableError(
-            message="Anthropic response invalid",
-            error_code="llm_error",
-            details={"response_body_preview": _response_preview(data)},
-        )
-    return text
+    texts: list[str] = []
+    for block in content_blocks:
+        if not isinstance(block, dict):
+            continue
+        if block.get("type") in _SKIP_CONTENT_BLOCK_TYPES:
+            continue
+        text = block.get("text")
+        if isinstance(text, str) and text.strip():
+            texts.append(text)
+    if texts:
+        return "".join(texts)
+    return ""
 
 
 def _parse_messages_response_json(response: httpx.Response) -> dict[str, Any]:
@@ -316,6 +322,20 @@ async def _post_judge_anthropic_messages(
         usage_fields = _extract_usage_fields(data)
         text = _extract_message_text(data)
         duration_ms = int((time.perf_counter() - started) * 1000)
+        if text == "":
+            transport_fields = {
+                **transport_base,
+                "duration_ms": duration_ms,
+                "response_chars": 0,
+                "parse_error": "judge_empty_text",
+                "content_block_types": _content_block_types(data),
+                **usage_fields,
+            }
+            _set_judge_transport_context(transport_fields)
+            raise JudgeParseError(
+                "judge_empty_text",
+                response_text=_response_preview(data),
+            )
         transport_fields = {
             **transport_base,
             "duration_ms": duration_ms,
@@ -365,7 +385,14 @@ async def _post_anthropic_messages(
             message="Anthropic response invalid",
             error_code="llm_error",
         )
-    return _extract_message_text(data)
+    text = _extract_message_text(data)
+    if text == "":
+        raise ServiceUnavailableError(
+            message="Anthropic response invalid",
+            error_code="llm_error",
+            details={"response_body_preview": _response_preview(data)},
+        )
+    return text
 
 
 async def _post_with_profile_fallback(
@@ -568,10 +595,28 @@ async def judge_finding(
     model_id: str | None = None,
     timeout_seconds: float | None = None,
     system_prompt: str | None = None,
+    messages_url: str | None = None,
+    api_key: str | None = None,
 ) -> dict:
-    _require_judge_anthropic_enabled()
     _set_judge_transport_context({})
-    profiles = _judge_profiles(model_id)
+    if messages_url:
+        key = (api_key or "").strip()
+        if not key:
+            raise ServiceUnavailableError(
+                message="Judge LLM API is not configured",
+                error_code="llm_disabled",
+            )
+        profiles = [
+            _AnthropicProfile(
+                messages_url=messages_url.strip(),
+                auth_headers={"Authorization": f"Bearer {key}"},
+                model_id=model_id or settings.revy_rtu_model_judge,
+                label="rtu",
+            )
+        ]
+    else:
+        _require_judge_anthropic_enabled()
+        profiles = _judge_profiles(model_id)
     return await _post_judge_with_profile_fallback(
         client,
         profiles,

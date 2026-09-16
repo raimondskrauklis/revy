@@ -1,7 +1,6 @@
 # backend/tests/unit/test_github_finding_judge.py
 """GitHub finding judge — R5."""
 import itertools
-import json
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -25,6 +24,7 @@ from app.models.github_review_run import GitHubReviewRunORM
 from app.services.github_compare_patches import CompareReviewContext
 from app.services.github_finding_judge import (
     _build_judge_prompt,
+    _judge_failure_artifact,
     _judge_failure_log_extra,
     is_judge_candidate,
     judge_candidate_group_sql_predicate,
@@ -215,6 +215,62 @@ def test_judge_failure_log_extra_includes_invalid_response_preview():
     assert extra["raw_response_text"] == "not-json {"
     assert extra["error"] == "Anthropic response invalid"
     assert extra["parse_error"] == "Anthropic response invalid"
+
+
+def test_judge_failure_artifact_codes_are_distinct():
+    from app.integrations.judge_llm_errors import JudgeParseError
+
+    group_id = uuid.uuid4()
+    empty = _judge_failure_artifact(
+        group_id=group_id,
+        evidence_snippet=None,
+        user_prompt="judge",
+        file_patch_chars=None,
+        exc=JudgeParseError("judge_empty_text", response_text="thinking-only"),
+    )
+    invalid = _judge_failure_artifact(
+        group_id=group_id,
+        evidence_snippet=None,
+        user_prompt="judge",
+        file_patch_chars=None,
+        exc=JudgeParseError("judge_json_invalid", response_text="not-json"),
+    )
+    http_exc = ServiceUnavailableError(
+        message="Anthropic response invalid",
+        error_code="llm_error",
+        details={"response_body_preview": "[]"},
+    )
+    transport = _judge_failure_artifact(
+        group_id=group_id,
+        evidence_snippet=None,
+        user_prompt="judge",
+        file_patch_chars=None,
+        exc=http_exc,
+    )
+    assert empty.parse_error == "judge_empty_text"
+    assert invalid.parse_error == "judge_json_invalid"
+    assert transport.parse_error == "Anthropic response invalid"
+    assert len({empty.parse_error, invalid.parse_error, transport.parse_error}) == 3
+
+
+def test_judge_failure_log_extra_includes_content_block_types():
+    from app.integrations import anthropic_review
+    from app.integrations.judge_llm_errors import JudgeParseError
+
+    anthropic_review._set_judge_transport_context(
+        {
+            "profile": "gateway",
+            "parse_error": "judge_empty_text",
+            "content_block_types": ["thinking"],
+        }
+    )
+    extra = _judge_failure_log_extra(
+        uuid.uuid4(),
+        JudgeParseError("judge_empty_text", response_text="thinking-only"),
+    )
+    assert extra["parse_error"] == "judge_empty_text"
+    assert extra["content_block_types"] == ["thinking"]
+    assert "signature" not in extra
 
 
 def test_build_judge_prompt_includes_engineering_locks():
@@ -457,7 +513,7 @@ def test_judge_system_prompt_verifier_role():
     from app.integrations.anthropic_review import JUDGE_SYSTEM_PROMPT
 
     assert "verification judge" in JUDGE_SYSTEM_PROMPT
-    assert "Moonshot" in JUDGE_SYSTEM_PROMPT
+    assert "primary reviewer" in JUDGE_SYSTEM_PROMPT
     assert "Do NOT search for additional bugs" in JUDGE_SYSTEM_PROMPT
     assert "full PR review" in JUDGE_SYSTEM_PROMPT
 
@@ -1116,61 +1172,6 @@ async def test_call_judge_with_optional_retry_retries_parse_failure():
 
 
 @pytest.mark.asyncio
-async def test_gateway_parse_fallback_call_judge_with_optional_retry_succeeds():
-    from app.integrations import anthropic_review
-    from app.services.github_finding_judge import call_judge_with_optional_retry
-    from app.services.model_policy import ModelRef
-
-    gateway_response = MagicMock()
-    gateway_response.raise_for_status = MagicMock()
-    gateway_response.json.return_value = {
-        "content": [{"text": "```not valid json```"}]
-    }
-    direct_response = MagicMock()
-    direct_response.raise_for_status = MagicMock()
-    direct_response.json.return_value = {
-        "content": [{"text": json.dumps({"outcome": "dismissed", "notes": "ok"})}]
-    }
-    client = AsyncMock(spec=httpx.AsyncClient)
-    client.post = AsyncMock(side_effect=[gateway_response, direct_response])
-
-    async def _real_judge(client, *, model_ref, user_prompt, timeout_seconds, system_prompt=None):
-        return await anthropic_review.judge_finding(
-            client,
-            user_prompt=user_prompt,
-            timeout_seconds=timeout_seconds,
-            system_prompt=system_prompt,
-        )
-
-    with (
-        patch("app.integrations.anthropic_review.settings") as mock_settings,
-        patch(
-            "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
-            AsyncMock(side_effect=_real_judge),
-        ),
-    ):
-        mock_settings.anthropic_gateway_enabled = True
-        mock_settings.anthropic_gateway_messages_url = "https://llm.ai.rtu.lv/v1/messages"
-        mock_settings.anthropic_auth_token = "rtu-token"
-        mock_settings.effective_anthropic_gateway_judge_model = "azure_ai/claude-opus-5"
-        mock_settings.anthropic_direct_enabled = True
-        mock_settings.anthropic_api_key = "direct-key"
-        mock_settings.revy_anthropic_model = "claude-sonnet-5"
-        mock_settings.revy_judge_structured_output = False
-        mock_settings.revy_revision_timeout_standard_seconds = 30
-        raw, retry_count = await call_judge_with_optional_retry(
-            client,
-            model_ref=ModelRef(provider="anthropic", model_id="claude-sonnet-5"),
-            user_prompt="judge",
-            timeout_seconds=30.0,
-        )
-
-    assert raw["outcome"] == "dismissed"
-    assert retry_count == 0
-    assert client.post.await_count == 2
-
-
-@pytest.mark.asyncio
 async def test_call_judge_with_optional_retry_does_not_retry_unrelated_value_error():
     from app.services.github_finding_judge import call_judge_with_optional_retry
 
@@ -1222,6 +1223,91 @@ async def test_call_judge_with_optional_retry_preserves_first_parse_body_on_doub
 
     assert call_count == 2
     assert exc_info.value.response_text == "attempt-1"
+    assert exc_info.value.judge_retry_count == 1
+
+
+@pytest.mark.asyncio
+async def test_call_judge_with_optional_retry_retries_judge_empty_text():
+    from app.integrations.judge_llm_errors import JudgeParseError
+    from app.services.github_finding_judge import call_judge_with_optional_retry
+
+    client = AsyncMock()
+    call_count = 0
+
+    async def _judge_side_effect(*_args, **_kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise JudgeParseError("judge_empty_text", response_text="thinking-only")
+        return {"outcome": "dismissed", "notes": "retry recovered"}
+
+    with patch(
+        "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
+        AsyncMock(side_effect=_judge_side_effect),
+    ):
+        raw, retry_count = await call_judge_with_optional_retry(
+            client,
+            model_ref=ModelRef(provider="anthropic", model_id="claude-test"),
+            user_prompt="judge",
+            timeout_seconds=30.0,
+        )
+
+    assert raw["outcome"] == "dismissed"
+    assert retry_count == 1
+    assert call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_call_judge_with_optional_retry_does_not_retry_http_error():
+    from app.services.github_finding_judge import call_judge_with_optional_retry
+
+    client = AsyncMock()
+    call_judge = AsyncMock(
+        side_effect=httpx.HTTPStatusError(
+            "502",
+            request=MagicMock(),
+            response=MagicMock(status_code=502),
+        )
+    )
+
+    with patch(
+        "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
+        call_judge,
+    ):
+        with pytest.raises(httpx.HTTPStatusError):
+            await call_judge_with_optional_retry(
+                client,
+                model_ref=ModelRef(provider="anthropic", model_id="claude-test"),
+                user_prompt="judge",
+                timeout_seconds=30.0,
+            )
+
+    assert call_judge.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_call_judge_with_optional_retry_records_retry_count_on_double_empty_text():
+    from app.integrations.judge_llm_errors import JudgeParseError
+    from app.services.github_finding_judge import call_judge_with_optional_retry
+
+    client = AsyncMock()
+
+    async def _judge_side_effect(*_args, **_kwargs):
+        raise JudgeParseError("judge_empty_text", response_text="thinking-only")
+
+    with patch(
+        "app.services.github_finding_judge.llm_dispatch.call_judge_llm",
+        AsyncMock(side_effect=_judge_side_effect),
+    ):
+        with pytest.raises(JudgeParseError) as exc_info:
+            await call_judge_with_optional_retry(
+                client,
+                model_ref=ModelRef(provider="anthropic", model_id="claude-test"),
+                user_prompt="judge",
+                timeout_seconds=30.0,
+            )
+
+    assert exc_info.value.code == "judge_empty_text"
     assert exc_info.value.judge_retry_count == 1
 
 

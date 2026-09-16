@@ -10,7 +10,8 @@
 
 | Key | Value |
 |-----|--------|
-| Reviewer | Moonshot `kimi-k2.7-code` (`REVY_REVIEWER_PROVIDER=moonshot`) |
+| Reviewer | RTU `azure_ai/kimi-k2.7-code` (`REVY_REVIEWER_PROVIDER=rtu`) |
+| Judge | RTU `azure_ai/claude-opus-5` (`REVY_JUDGE_PROVIDER=rtu`) |
 | Judge | Anthropic / Bedrock (escalation only) |
 | Embeddings | Voyage `voyage-code-3` (tier 1 after free-trial 3 RPM limit) |
 | Index scope | Full repo tarball at `head_sha` (R3 behaviour — not PR diff) |
