@@ -44,4 +44,4 @@
 
 P0 and P1 ship as **two commits, one PR**. Do not merge P0 without P1.
 
-**Next:** optional error/critical probe on [#106](https://github.com/raimondskrauklis/revy/pull/106) to exercise judge `azure_ai/claude-opus-5`; extract ≥95% still needs judge candidates ([validation memo](./JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md)).
+**Next:** S1 judge probe on [#106](https://github.com/raimondskrauklis/revy/pull/106); then S2 verification / S3 fix; S4 deep/critical is app-triggered (autostart is standard only).

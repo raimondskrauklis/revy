@@ -2,7 +2,7 @@
 
 **Program:** [README.md](./README.md) · **Baseline:** [JUDGE_THINKING_BLOCKS_FINDINGS.md](./JUDGE_THINKING_BLOCKS_FINDINGS.md)
 
-**Status:** RTU reviewer + publish **PASS** on dogfood [#106](https://github.com/raimondskrauklis/revy/pull/106) push 2 after virtual-key fix. Judge **skipped** (`not_applicable`, 0 escalation candidates) — opus-5 `/v1/messages` not exercised. Thinking-block extract remains **INCONCLUSIVE**.
+**Status:** RTU reviewer + publish **PASS** on [#106](https://github.com/raimondskrauklis/revy/pull/106) push 2. **S1 in flight** — command-injection probe to force R5 judge (`azure_ai/claude-opus-5`). Extract still **INCONCLUSIVE** until that run completes.
 
 ---
 
@@ -32,6 +32,34 @@
 |------|--------|--------|
 | 1 | Autostart after #103 deploy; confirm `rtu` model identity + completed review | **done** — review **failed** 401 (`81d8606`) |
 | 2 | Re-run after `RTU_API_KEY` = RTU virtual key (`RTU_AUTH_TOKEN`) | **done** — review + publish **200** (`f6f8a34`) |
+| 3 | S1 — `jtb_rtu_judge_probe` command injection (live `shell=True` call) | pending |
+
+---
+
+## Judge trigger (code — not guess)
+
+`is_judge_candidate` in `backend/app/services/github_finding_judge.py`:
+
+| Finding | Judge? |
+|---------|--------|
+| `error` or `critical` (any category) | **yes** |
+| `security` and severity ≥ `warning` | **yes** |
+| `warning`/`info` + bug/maintainability/other | **no** |
+| Autostart PR profile | **standard** only (`enqueue_review_run` in `index_tasks.py`) — deep/critical `azure_ai/claude-fable-5-1` is **not** this dogfood path |
+
+Reconcile then runs discovery judge (`record_review_run_judge_status_with_model`) and verification judge (`verify_still_open_escalation_groups`) on still-open escalation groups.
+
+---
+
+## Scenarios
+
+| ID | What | Models | Status |
+|----|------|--------|--------|
+| S0 | Clean probe, 0 findings | embed voyage-4; reviewer+publish rtu kimi; judge skip | **PASS** push 2 |
+| S1 | Command injection in `jtb_rtu_judge_probe.py` | + discovery judge rtu opus-5 `/v1/messages` | **pending** push 3 |
+| S2 | Leave defect (no hunk fix) | verification judge on still-open group | not started |
+| S3 | Remove invocation / fix | closure without cutting judge | not started |
+| S4 | Deep/critical profile | reviewer `azure_ai/claude-fable-5-1` | not started — needs Deep/Critical from app, not autostart |
 
 ---
 
@@ -148,8 +176,9 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
 | ID | Option | Verdict |
 |----|--------|---------|
 | A | Virtual key on origin | **done** — push 2 |
-| D | Optional: probe that raises error/critical so judge hits `POST /v1/messages` (`azure_ai/claude-opus-5`) | **open** if we need opus-5 HTTP evidence |
-| E | Do not treat 0-finding skip as judge FAIL | **locked** — escalation-only |
+| D | S1 command-injection probe so discovery judge hits `POST /v1/messages` | **in flight** push 3 |
+| E | S2 verification judge, then S3 fix | after S1 |
+| F | S4 deep/critical fable-5-1 via app review button | after S1; autostart cannot hit it |
 
 ---
 
