@@ -77,8 +77,10 @@ Pass-01 architecture review blockers (D2/D4 raise-site, P3 94.3% ceiling) are lo
 
 ---
 
-## Open calibration
+## Calibration
 
-**JTB-Q5:** thinking-only (8/53) may still fail after one retry — P3 records the rate; do not add retries or a second model without a new findings pass.
+**JTB-Q5:** **closed (not observed)** — post-#103 `retry_count=0`; do not add retries or a second model without a new findings pass.
 
-**Next step:** human gate — fill [JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md](./JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md) after P0–P2 is on the staging worker. Live token `judge_json_invalid`; additive `judge_empty_text` only.
+**JTB-Q5:** **closed (not observed)** — post-#103 `retry_count=0`; do not add retries or a second model without a new findings pass.
+
+**Next step:** none — program closed. See [JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md](./JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md). Live token `judge_json_invalid`; additive `judge_empty_text` only.

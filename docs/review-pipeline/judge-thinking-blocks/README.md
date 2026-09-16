@@ -1,6 +1,6 @@
 # Judge thinking-blocks — program index
 
-**Status:** P0–P3 **merged** [#103](https://github.com/raimondskrauklis/revy/pull/103). Dogfood [#106](https://github.com/raimondskrauklis/revy/pull/106): RTU reviewer/publish/judge **PASS**; S3 **PASS** after file delete (`fb28cd3`). D6: live `judge_json_invalid` stays; additive `judge_empty_text` only.  
+**Status:** **Closed.** P0–P3 on [#103](https://github.com/raimondskrauklis/revy/pull/103). S0–S3 [#106](https://github.com/raimondskrauklis/revy/pull/106). S4 Deep Fable [#108](https://github.com/raimondskrauklis/revy/pull/108) after [#107](https://github.com/raimondskrauklis/revy/pull/107) — **close #108 without merge**. D6: live `judge_json_invalid` stays; additive `judge_empty_text` only.  
 **Problem:** RTU `claude-sonnet-5` returns thinking-first Messages `content`; Revy reads only `content[0].text` and records `Anthropic response invalid`. 45/53 live misses already had a later `text` block.
 
 **Not in scope:** Moonshot review JSON; RG-6 withhold; Voyage embeddings; RCX truncation; review-attempt `wait_ms` (LT-2).
@@ -40,8 +40,8 @@
 | P0 | Content-block extract + review `""`→SUE | [P0](./waves/JUDGE_THINKING_BLOCKS_P0_EXECUTION.md) | done (`0fc5b45`) |
 | P1 | Judge wrap `judge_empty_text` + transport extra | [P1](./waves/JUDGE_THINKING_BLOCKS_P1_EXECUTION.md) | done (`bf480d7`) |
 | P2 | Distinct codes; D8 INFO; metrics grouping | [P2](./waves/JUDGE_THINKING_BLOCKS_P2_EXECUTION.md) | done (`d9fd997`) |
-| P3 | Staging validation + split evidence + doc sync | [P3](./waves/JUDGE_THINKING_BLOCKS_P3_EXECUTION.md) | shipped on #103; dogfood [#106](https://github.com/raimondskrauklis/revy/pull/106) |
+| P3 | Staging validation + split evidence + doc sync | [P3](./waves/JUDGE_THINKING_BLOCKS_P3_EXECUTION.md) | done — S0–S4 signed in [validation memo](./JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md) |
 
 P0 and P1 already shipped together on [#103](https://github.com/raimondskrauklis/revy/pull/103).
 
-**Next:** S4 deep/critical `azure_ai/claude-fable-5-1` — admin `POST …/review` with `profile=deep` (no `/reviewer` button; `@revy review` is standard).
+**Next:** none — program closed. Do not merge [#108](https://github.com/raimondskrauklis/revy/pull/108).
