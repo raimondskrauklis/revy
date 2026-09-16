@@ -91,6 +91,24 @@ async def test_complete_review_rtu_override_uses_api_url_and_key():
     assert client.post.call_args.kwargs["json"]["model"] == "azure_ai/kimi-k2.7-code"
 
 
+@pytest.mark.asyncio
+async def test_complete_review_custom_api_url_does_not_fall_back_to_moonshot_key():
+    client = AsyncMock(spec=httpx.AsyncClient)
+    client.post = AsyncMock()
+    with patch("app.integrations.moonshot_review.settings") as mock_settings:
+        mock_settings.moonshot_api_key = "moonshot-secret"
+        with pytest.raises(ServiceUnavailableError) as exc:
+            await complete_review(
+                client,
+                profile="standard",
+                user_prompt="review",
+                model_id="azure_ai/kimi-k2.7-code",
+                api_url="https://llm.ai.rtu.lv/v1/chat/completions",
+            )
+    assert exc.value.error_code == "llm_disabled"
+    client.post.assert_not_called()
+
+
 def test_parse_review_json_valid():
     raw = json.dumps(
         {

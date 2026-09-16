@@ -98,6 +98,7 @@ async def test_publish_model_fields_only_when_moonshot_output_used():
 
     with patch("app.services.github_publish_formatter.settings") as mock_settings:
         mock_settings.reviewer_llm_enabled.return_value = True
+        mock_settings.effective_reviewer_provider = "moonshot"
         mock_settings.revy_revision_timeout_standard_seconds = 60
         mock_settings.revy_reviewer_model_for_profile.return_value = "kimi-k2.7-code"
         with patch(

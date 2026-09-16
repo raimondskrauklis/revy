@@ -198,7 +198,10 @@ async def _complete_chat(
     api_url: str | None = None,
     api_key: str | None = None,
 ) -> str:
-    key = (api_key or settings.moonshot_api_key or "").strip()
+    if (api_url or "").strip():
+        key = (api_key or "").strip()
+    else:
+        key = (api_key or settings.moonshot_api_key or "").strip()
     if not key:
         raise ServiceUnavailableError(
             message="LLM API is not configured",

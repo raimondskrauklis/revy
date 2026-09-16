@@ -1659,6 +1659,8 @@ async def build_pr_review_comment_with_model(
 
     prompt = _build_issue_comment_user_prompt(ctx)
     provider = settings.effective_reviewer_provider
+    if provider not in {"moonshot", "rtu"}:
+        return fallback, None, None
     model_id = settings.revy_reviewer_model_for_profile("standard")
     api_url = None
     api_key = None
