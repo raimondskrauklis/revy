@@ -1,17 +1,11 @@
 # backend/app/services/jtb_rtu_judge_probe.py
-"""JTB RTU dogfood — judge-escalation probe (scenario S1).
+"""JTB RTU dogfood — S3: probe marker only (command injection removed)."""
 
-Intentional command injection so the standard reviewer emits a security/error
-finding and R5 judge (RTU ``azure_ai/claude-opus-5``) runs. Not product code.
-"""
-
-JTB_RTU_JUDGE_PROBE_MARKER = "jtb-rtu-judge-s1"
+JTB_RTU_JUDGE_PROBE_MARKER = "jtb-rtu-judge-s3"
 
 
 def jtb_rtu_judge_probe_run(user_input: str) -> None:
-    import subprocess
-
-    subprocess.call(user_input, shell=True)
+    _ = user_input
 
 
 def jtb_rtu_judge_probe_value() -> str:

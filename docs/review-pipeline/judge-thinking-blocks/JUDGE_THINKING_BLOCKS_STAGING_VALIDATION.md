@@ -2,7 +2,7 @@
 
 **Program:** [README.md](./README.md) · **Baseline:** [JUDGE_THINKING_BLOCKS_FINDINGS.md](./JUDGE_THINKING_BLOCKS_FINDINGS.md)
 
-**Status:** S1 **PASS** on [#106](https://github.com/raimondskrauklis/revy/pull/106) `b51c4c8` — discovery judge RTU opus-5 (`POST /v1/messages` 200 × 2, 2 outcomes). Reviewer+publish kimi still **PASS**. Probe stays on `chore/jtb-rtu-staging-dogfood` until S3.
+**Status:** S2 **PASS** on [#106](https://github.com/raimondskrauklis/revy/pull/106) `9843a7e` — verification judge `upheld` still-open test finding; discovery on remaining probe. **S3 in flight** — remove `shell=True`.
 
 ---
 
@@ -33,6 +33,8 @@
 | 1 | Autostart after #103 deploy; confirm `rtu` model identity + completed review | **done** — review **failed** 401 (`81d8606`) |
 | 2 | Re-run after `RTU_API_KEY` = RTU virtual key (`RTU_AUTH_TOKEN`) | **done** — review + publish **200** (`f6f8a34`) |
 | 3 | S1 — `jtb_rtu_judge_probe` command injection (live `shell=True` call) | **done** — judge **completed** (`b51c4c8`) |
+| 4 | S2 — docs-only, leave probe hunks | **done** — verification `upheld` (`9843a7e`) |
+| 5 | S3 — remove `shell=True` | pending |
 
 ---
 
@@ -57,8 +59,8 @@ Reconcile then runs discovery judge (`record_review_run_judge_status_with_model`
 |----|------|--------|--------|
 | S0 | Clean probe, 0 findings | embed voyage-4; reviewer+publish rtu kimi; judge skip | **PASS** push 2 |
 | S1 | Command injection in `jtb_rtu_judge_probe.py` | + discovery judge rtu opus-5 `/v1/messages` | **PASS** push 3 |
-| S2 | Leave defect (no hunk fix) | verification judge on still-open group | not started |
-| S3 | Remove invocation / fix | closure without cutting judge | not started |
+| S2 | Leave defect (no hunk fix) | verification judge on still-open group | **PASS** push 4 |
+| S3 | Remove invocation / fix | closure without cutting judge | **pending** push 5 |
 | S4 | Deep/critical profile | reviewer `azure_ai/claude-fable-5-1` | not started — needs Deep/Critical from app, not autostart |
 
 ---
@@ -174,6 +176,16 @@ Do **not** “fix” `shell=True` until S3 — those Revy threads are the S1 fix
 }
 ```
 
+### Push 4 — S2 leave probe (`9843a7e`, 2026-09-16)
+
+| Field | Value |
+|-------|-------|
+| `head_sha` | `9843a7e` (docs only — probe hunks untouched) |
+| `review_run_id` | `01a0aab1-63bc-7f12-a554-7df921aee6a7` |
+| Discovery | 1 candidate — new title on probe module (`modified`) |
+| Verification | unit-test group `upheld`; `resolution_status=still_open`; `state=active` |
+| Judge | snapshot `rtu` / `azure_ai/claude-opus-5`; `judge_status=completed` |
+
 ### Historical baseline (pre-#103 worker — not this pass)
 
 | Metric | Baseline (2026-08-21) | `--since 2026-08-07T00:00:00Z` (2026-09-16) |
@@ -201,7 +213,7 @@ Do **not** “fix” `shell=True` until S3 — those Revy threads are the S1 fix
 |----|--------|---------|
 | A | Virtual key on origin | **done** — push 2 |
 | D | S1 command-injection probe so discovery judge hits `POST /v1/messages` | **done** — 2× 200, 2 outcomes `modified` |
-| E | S2 verification judge (leave probe), then S3 remove it | **next** |
+| E | S2 verification judge (leave probe), then S3 remove it | S2 **done**; S3 this push |
 | F | S4 deep/critical fable-5-1 via app review button | after S2; autostart cannot hit it |
 
 ---
