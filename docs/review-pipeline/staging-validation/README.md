@@ -19,6 +19,7 @@
 
 | PR | Program | Branch | Status |
 |----|---------|--------|--------|
+| [#106](https://github.com/raimondskrauklis/revy/pull/106) | Judge thinking-blocks / RTU provider (post-#103) | `chore/jtb-rtu-staging-dogfood` | **open** — push 1 **FAIL** (RTU chat 401) |
 | [#97](https://github.com/raimondskrauklis/revy/pull/97) | Model run capture (post-#96) | `chore/mrc-staging-dogfood` | **merged** — P0/P1 **PASS** |
 | [#100](https://github.com/raimondskrauklis/revy/pull/100) | Model run capture (post-#98/#99) | `chore/mrc-staging-dogfood-p2` | **merged** — P2/P3 **PASS** |
 | *(open)* | Agent workflow pack E2E | `chore/agent-workflow-e2e-validation` | [#73](https://github.com/raimondskrauklis/revy/pull/73) push 1 |
@@ -42,7 +43,7 @@
 | Publish summary alignment | [PUBLISH_SUMMARY_ALIGNMENT_STAGING_VALIDATION.md](../publish-summary-alignment/PUBLISH_SUMMARY_ALIGNMENT_STAGING_VALIDATION.md) |
 | Review engineering context | [REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md](../review-engineering-context/REVIEW_ENGINEERING_CONTEXT_STAGING_VALIDATION.md) |
 | Judge JSON contract | [JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md](../judge-json-contract/JUDGE_JSON_CONTRACT_STAGING_VALIDATION.md) |
-| Judge thinking-blocks | [JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md](../judge-thinking-blocks/JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md) — P0–P2 on #103; human gate pending |
+| Judge thinking-blocks | [JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md](../judge-thinking-blocks/JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md) — post-#103 dogfood [#106](https://github.com/raimondskrauklis/revy/pull/106) push 1 **FAIL** (RTU 401) |
 | Finding resolution | [FINDING_RESOLUTION_STAGING_VALIDATION.md](../finding-resolution/FINDING_RESOLUTION_STAGING_VALIDATION.md) |
 | PR summary rollup | [PR_SUMMARY_ROLLUP_STAGING_VALIDATION.md](../pr-summary-rollup/PR_SUMMARY_ROLLUP_STAGING_VALIDATION.md) |
 | Model run capture | [MODEL_RUN_CAPTURE_STAGING_VALIDATION.md](../models/model-run-capture/MODEL_RUN_CAPTURE_STAGING_VALIDATION.md) — **sign-off PASS** (#97 P0/P1, #100 P2/P3) |

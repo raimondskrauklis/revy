@@ -1,6 +1,6 @@
 # Judge thinking-blocks — program index
 
-**Status:** P0–P2 **code-complete** on `fix/judge-parse` ([#103](https://github.com/raimondskrauklis/revy/pull/103)). P3 memo stubbed — **human gate pending** ([validation memo](./JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md)). D6: live `judge_json_invalid` stays; additive `judge_empty_text` only.  
+**Status:** P0–P3 **merged** [#103](https://github.com/raimondskrauklis/revy/pull/103). Human gate **FAIL** on dogfood [#106](https://github.com/raimondskrauklis/revy/pull/106) — RTU chat completions 401 ([validation memo](./JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md)). D6: live `judge_json_invalid` stays; additive `judge_empty_text` only.  
 **Problem:** RTU `claude-sonnet-5` returns thinking-first Messages `content`; Revy reads only `content[0].text` and records `Anthropic response invalid`. 45/53 live misses already had a later `text` block.
 
 **Not in scope:** Moonshot review JSON; RG-6 withhold; Voyage embeddings; RCX truncation; review-attempt `wait_ms` (LT-2).
@@ -44,4 +44,4 @@
 
 P0 and P1 ship as **two commits, one PR**. Do not merge P0 without P1.
 
-**Next:** deploy P0–P2 to staging → fill [validation memo](./JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md) (human gate).
+**Next:** valid `RTU_API_KEY` on staging → re-trigger [#106](https://github.com/raimondskrauklis/revy/pull/106) → fill [validation memo](./JUDGE_THINKING_BLOCKS_STAGING_VALIDATION.md) push 2.
