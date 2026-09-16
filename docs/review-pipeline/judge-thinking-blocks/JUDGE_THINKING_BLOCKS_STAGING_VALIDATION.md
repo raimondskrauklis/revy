@@ -2,7 +2,7 @@
 
 **Program:** [README.md](./README.md) · **Baseline:** [JUDGE_THINKING_BLOCKS_FINDINGS.md](./JUDGE_THINKING_BLOCKS_FINDINGS.md)
 
-**Status:** RTU reviewer + publish **PASS** on [#106](https://github.com/raimondskrauklis/revy/pull/106) push 2. **S1 in flight** — command-injection probe to force R5 judge (`azure_ai/claude-opus-5`). Extract still **INCONCLUSIVE** until that run completes.
+**Status:** S1 **PASS** on [#106](https://github.com/raimondskrauklis/revy/pull/106) `b51c4c8` — discovery judge RTU opus-5 (`POST /v1/messages` 200 × 2, 2 outcomes). Reviewer+publish kimi still **PASS**. Probe stays on `chore/jtb-rtu-staging-dogfood` until S3.
 
 ---
 
@@ -22,7 +22,7 @@
 
 | PR | Branch | Status |
 |----|--------|--------|
-| [#106](https://github.com/raimondskrauklis/revy/pull/106) | `chore/jtb-rtu-staging-dogfood` | **open** — push 2 `f6f8a34` Revy **pass** |
+| [#106](https://github.com/raimondskrauklis/revy/pull/106) | `chore/jtb-rtu-staging-dogfood` | **open** — S1 `b51c4c8` judge **completed** |
 
 ---
 
@@ -32,7 +32,7 @@
 |------|--------|--------|
 | 1 | Autostart after #103 deploy; confirm `rtu` model identity + completed review | **done** — review **failed** 401 (`81d8606`) |
 | 2 | Re-run after `RTU_API_KEY` = RTU virtual key (`RTU_AUTH_TOKEN`) | **done** — review + publish **200** (`f6f8a34`) |
-| 3 | S1 — `jtb_rtu_judge_probe` command injection (live `shell=True` call) | pending |
+| 3 | S1 — `jtb_rtu_judge_probe` command injection (live `shell=True` call) | **done** — judge **completed** (`b51c4c8`) |
 
 ---
 
@@ -56,7 +56,7 @@ Reconcile then runs discovery judge (`record_review_run_judge_status_with_model`
 | ID | What | Models | Status |
 |----|------|--------|--------|
 | S0 | Clean probe, 0 findings | embed voyage-4; reviewer+publish rtu kimi; judge skip | **PASS** push 2 |
-| S1 | Command injection in `jtb_rtu_judge_probe.py` | + discovery judge rtu opus-5 `/v1/messages` | **pending** push 3 |
+| S1 | Command injection in `jtb_rtu_judge_probe.py` | + discovery judge rtu opus-5 `/v1/messages` | **PASS** push 3 |
 | S2 | Leave defect (no hunk fix) | verification judge on still-open group | not started |
 | S3 | Remove invocation / fix | closure without cutting judge | not started |
 | S4 | Deep/critical profile | reviewer `azure_ai/claude-fable-5-1` | not started — needs Deep/Critical from app, not autostart |
@@ -150,6 +150,30 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
 }
 ```
 
+### Push 3 — S1 judge probe (`b51c4c8`, 2026-09-16)
+
+| Field | Value |
+|-------|-------|
+| Branch | `chore/jtb-rtu-staging-dogfood` ([#106](https://github.com/raimondskrauklis/revy/pull/106)) — **not** #105 |
+| `head_sha` | `b51c4c8` |
+| Reviewer | `POST …/v1/chat/completions` 200 |
+| Judge | `judge_llm_request_started` × 2; `POST …/v1/messages` 200 × 2 |
+| Outcomes | both `discovery` / `modified`; `rtu` / `azure_ai/claude-opus-5`; `warning`+`security` (eligible: security ≥ warning) |
+| Publish | chat 200; two inline comments on probe + test |
+
+Do **not** “fix” `shell=True` until S3 — those Revy threads are the S1 fixture.
+
+`models_snapshot`:
+
+```json
+{
+  "embedding": {"provider": "voyage", "model_id": "voyage-code-4", "dimensions": 1024},
+  "reviewer": {"provider": "rtu", "model_id": "azure_ai/kimi-k2.7-code"},
+  "judge": {"provider": "rtu", "model_id": "azure_ai/claude-opus-5"},
+  "publish": {"provider": "rtu", "model_id": "azure_ai/kimi-k2.7-code"}
+}
+```
+
 ### Historical baseline (pre-#103 worker — not this pass)
 
 | Metric | Baseline (2026-08-21) | `--since 2026-08-07T00:00:00Z` (2026-09-16) |
@@ -176,9 +200,9 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
 | ID | Option | Verdict |
 |----|--------|---------|
 | A | Virtual key on origin | **done** — push 2 |
-| D | S1 command-injection probe so discovery judge hits `POST /v1/messages` | **in flight** push 3 |
-| E | S2 verification judge, then S3 fix | after S1 |
-| F | S4 deep/critical fable-5-1 via app review button | after S1; autostart cannot hit it |
+| D | S1 command-injection probe so discovery judge hits `POST /v1/messages` | **done** — 2× 200, 2 outcomes `modified` |
+| E | S2 verification judge (leave probe), then S3 remove it | **next** |
+| F | S4 deep/critical fable-5-1 via app review button | after S2; autostart cannot hit it |
 
 ---
 
@@ -187,6 +211,6 @@ DATABASE_SSL_INSECURE=1 pipenv run sh -c \
 | Check | Status | Evidence |
 |-------|--------|----------|
 | RTU reviewer + publish live path | **PASS** | Push 2 snapshot + worker 200s + Revy pass on `f6f8a34` |
-| RTU judge opus-5 HTTP | **skipped** | `judge_status=not_applicable`; 0 candidates |
+| RTU judge opus-5 HTTP | **PASS** | Push 3: `POST …/v1/messages` 200 × 2; snapshot `judge={rtu, azure_ai/claude-opus-5}`; `judge_status=completed`; 2 discovery outcomes |
 | Staging PASS (≥95% **or** classified residual) | **INCONCLUSIVE** | No post-deploy judge candidates; D9 ceiling still noted |
 | Do not reopen JSON-contract for 0.7pt | locked (D7/D9) | findings |

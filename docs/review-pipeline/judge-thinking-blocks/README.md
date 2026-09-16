@@ -44,4 +44,4 @@
 
 P0 and P1 ship as **two commits, one PR**. Do not merge P0 without P1.
 
-**Next:** S1 judge probe on [#106](https://github.com/raimondskrauklis/revy/pull/106); then S2 verification / S3 fix; S4 deep/critical is app-triggered (autostart is standard only).
+**Next:** S2 verification (leave probe on [#106](https://github.com/raimondskrauklis/revy/pull/106)); S3 remove it; S4 deep/critical is app-triggered.
