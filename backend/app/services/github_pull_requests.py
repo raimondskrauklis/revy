@@ -709,7 +709,7 @@ async def get_github_pull_request(
     workspace_id: UUID,
     repository_id: UUID,
     pull_request_id: UUID,
-) -> GitHubPullRequestORM:
+) -> GitHubPullRequestResponse:
     pull_request = await session.scalar(
         select(GitHubPullRequestORM).where(
             GitHubPullRequestORM.id == pull_request_id,
@@ -719,7 +719,15 @@ async def get_github_pull_request(
     )
     if pull_request is None:
         raise NotFoundError("Pull request not found")
-    return pull_request
+    latest_revision_id = await session.scalar(
+        select(GitHubPullRequestRevisionORM.id)
+        .where(GitHubPullRequestRevisionORM.pull_request_id == pull_request.id)
+        .order_by(GitHubPullRequestRevisionORM.revision_number.desc())
+        .limit(1)
+    )
+    return GitHubPullRequestResponse.model_validate(pull_request).model_copy(
+        update={"latest_revision_id": latest_revision_id},
+    )
 
 
 async def list_github_pull_requests(

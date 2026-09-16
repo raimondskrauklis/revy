@@ -4,9 +4,11 @@ import type { CursorPage } from '@/hooks/useInfiniteList';
 import type {
   GitHubPullRequest,
   GitHubRepository,
+  IndexJob,
   PublishJob,
   ReconciledFinding,
   ReviewFinding,
+  ReviewProfile,
   ReviewRun,
 } from '@/features/reviewer/types';
 
@@ -114,6 +116,34 @@ export async function fetchPublishJob(
     `/workspaces/${workspaceId}/repositories/${repositoryId}/pull-requests/${pullRequestId}/revisions/${revisionId}/publish-job`,
   );
   return await parseSuccess<PublishJob | null>(response);
+}
+
+export async function triggerReview(
+  workspaceId: string,
+  repositoryId: string,
+  pullRequestId: string,
+  revisionId: string,
+  profile: ReviewProfile,
+): Promise<ReviewRun> {
+  const response = await apiClient.post(
+    `/workspaces/${workspaceId}/repositories/${repositoryId}/pull-requests/${pullRequestId}/revisions/${revisionId}/review`,
+    { profile },
+  );
+  return await parseSuccess<ReviewRun>(response);
+}
+
+export async function fetchIndexJob(
+  workspaceId: string,
+  repositoryId: string,
+  pullRequestId: string,
+  revisionId: string,
+  jobId?: string,
+): Promise<IndexJob | null> {
+  const response = await apiClient.get(
+    `/workspaces/${workspaceId}/repositories/${repositoryId}/pull-requests/${pullRequestId}/revisions/${revisionId}/index-job`,
+    { params: jobId ? { job_id: jobId } : undefined },
+  );
+  return await parseSuccess<IndexJob | null>(response);
 }
 
 /** Probe whether reviewer APIs are available for the workspace. */

@@ -658,7 +658,19 @@
       "pending": "Gaida",
       "processing": "Apstrādē",
       "completed": "Pabeigts",
-      "failed": "Neizdevās"
+      "failed": "Neizdevās",
+      "triggered": "Ielikta rindā {{profile}} recenzija",
+      "indexing": "Indeksē repozitoriju…",
+      "indexFailed": "Pilnā repozitorija indekss neizdevās",
+      "profiles": {
+        "standard": "Standarta",
+        "deep": "Dziļā",
+        "critical": "Kritiskā"
+      },
+      "trigger": {
+        "deep": "Dziļā recenzija",
+        "critical": "Kritiskā recenzija"
+      }
     },
     "publish": {
       "status": "Publicēšana: {{status}}",

@@ -31,7 +31,7 @@ from app.services.github_publish import deserialize_inline_thread_map
 
 logger = get_logger(__name__)
 
-_HUNK_HEADER_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
+_HUNK_HEADER_RE = re.compile(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@")
 
 
 def patch_touches_line_region(
@@ -40,7 +40,11 @@ def patch_touches_line_region(
     start_line: int | None,
     end_line: int | None,
 ) -> bool:
-    """True when the unified diff patch modifies lines overlapping the finding region."""
+    """True when the unified diff patch modifies lines overlapping the finding region.
+
+    Finding ``start_line`` is on the last-seen file (old side of the next
+    compare). Deletions must count old-file line numbers, not only the new side.
+    """
     if not patch.strip():
         return False
     if start_line is None:
@@ -51,13 +55,15 @@ def patch_touches_line_region(
 
     region_end = end_line if end_line is not None else start_line
     region = set(range(start_line, region_end + 1))
+    old_line = 0
     new_line = 0
     modified_lines: set[int] = set()
 
     for line in patch.splitlines():
         hunk_match = _HUNK_HEADER_RE.match(line)
         if hunk_match is not None:
-            new_line = int(hunk_match.group(1)) - 1
+            old_line = int(hunk_match.group(1)) - 1
+            new_line = int(hunk_match.group(2)) - 1
             continue
         if line.startswith("+++") or line.startswith("---") or line.startswith("\\"):
             continue
@@ -65,8 +71,10 @@ def patch_touches_line_region(
             new_line += 1
             modified_lines.add(new_line)
         elif line.startswith("-"):
-            modified_lines.add(max(new_line, 1))
+            old_line += 1
+            modified_lines.add(old_line)
         elif line.startswith(" "):
+            old_line += 1
             new_line += 1
 
     return bool(region & modified_lines)

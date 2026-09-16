@@ -3,6 +3,12 @@ export type PullRequestState = 'open' | 'closed';
 
 export type ReviewRunStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
+export type ReviewProfile = 'standard' | 'deep' | 'critical';
+
+export type IndexJobStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+export type IndexMode = 'diff' | 'full';
+
 export type GitHubReviewJudgeStatus =
   | 'not_applicable'
   | 'completed'
@@ -62,6 +68,7 @@ export interface GitHubPullRequest {
   base_ref: string;
   html_url: string | null;
   revision_count: number;
+  latest_revision_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -71,11 +78,23 @@ export interface ReviewRun {
   revision_id: string;
   workspace_id: string;
   status: ReviewRunStatus;
-  profile: string;
+  profile: ReviewProfile;
   provider: string | null;
   error_message: string | null;
   judge_status: GitHubReviewJudgeStatus;
   judge_escalation_candidate_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IndexJob {
+  id: string;
+  revision_id: string;
+  workspace_id: string;
+  status: IndexJobStatus;
+  index_mode: IndexMode;
+  error_message: string | null;
+  chunk_count: number | null;
   created_at: string;
   updated_at: string;
 }

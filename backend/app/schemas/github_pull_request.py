@@ -26,5 +26,6 @@ class GitHubPullRequestResponse(BaseModel):
     base_ref: str
     html_url: str | None
     revision_count: int
+    latest_revision_id: UUID | None = None
     created_at: datetime
     updated_at: datetime

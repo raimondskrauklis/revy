@@ -168,13 +168,14 @@ def test_chat_completion_body_rtu_kimi_uses_k2_thinking_params():
     assert body["max_completion_tokens"] == 32768
 
 
-def test_chat_completion_body_rtu_fable_uses_temperature():
+def test_chat_completion_body_rtu_fable_omits_temperature():
     body = _chat_completion_body(
         model="azure_ai/claude-fable-5-1",
         profile="deep",
         messages=[{"role": "user", "content": "x"}],
     )
-    assert body["temperature"] == 0.2
+    assert "temperature" not in body
+    assert body["response_format"] == {"type": "json_object"}
     assert "max_completion_tokens" not in body
 
 

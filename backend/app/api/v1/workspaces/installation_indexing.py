@@ -13,6 +13,7 @@ from app.core.exceptions import ForbiddenError
 from app.core.idempotency import idempotency_guard
 from app.core.permissions import Permission, require_permission
 from app.core.tenancy import require_same_workspace
+from app.models.github_index_job import GitHubIndexJobORM
 from app.schemas.common import SuccessResponse
 from app.schemas.github_indexing import (
     GitHubChunkSearchRequest,
@@ -83,6 +84,7 @@ async def get_index_job_for_revision(
     revision_id: UUID,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
+    job_id: Annotated[UUID | None, Query()] = None,
 ) -> SuccessResponse[GitHubIndexJobResponse | None]:
     require_permission(current_user, Permission.items_view)
     require_same_workspace(current_user, workspace_id)
@@ -94,6 +96,15 @@ async def get_index_job_for_revision(
         pull_request_id=pull_request_id,
         revision_id=revision_id,
     )
+    if job_id is not None:
+        job = await session.get(GitHubIndexJobORM, job_id)
+        if (
+            job is None
+            or job.workspace_id != workspace_id
+            or job.revision_id != revision_id
+        ):
+            return SuccessResponse(data=None)
+        return SuccessResponse(data=GitHubIndexJobResponse.model_validate(job))
     job = await get_latest_index_job(
         session,
         workspace_id=workspace_id,

@@ -100,6 +100,7 @@ async def post_review_pull_request_revision(
         raise ConflictError(
             message="Full-repo index required for deep/critical review; index job enqueued",
             error_code="full_index_required",
+            details={"index_job_id": str(enqueued_index.id)},
         )
 
     run = await create_review_run(

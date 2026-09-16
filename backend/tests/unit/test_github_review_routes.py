@@ -70,6 +70,48 @@ async def test_post_review_pull_request_revision_queues_run():
 
 
 @pytest.mark.asyncio
+async def test_post_review_full_index_required_includes_job_id():
+    workspace_id = uuid.uuid4()
+    session = AsyncMock()
+    session.commit = AsyncMock()
+    current_user = AsyncMock()
+    current_user.workspace_id = workspace_id
+    current_user.user_id = uuid.uuid4()
+    job_id = uuid.uuid4()
+    enqueued_index = AsyncMock()
+    enqueued_index.id = job_id
+
+    with patch("app.api.v1.workspaces.installation_review.require_permission"):
+        with patch("app.api.v1.workspaces.installation_review.require_same_workspace"):
+            with patch(
+                "app.api.v1.workspaces.installation_review.prepare_full_index_for_review_profile",
+                AsyncMock(return_value=enqueued_index),
+            ):
+                with patch(
+                    "app.api.v1.workspaces.installation_review.record_audit",
+                    AsyncMock(),
+                ):
+                    with patch(
+                        "app.api.v1.workspaces.installation_review.enqueue_index_job",
+                    ) as enqueue_mock:
+                        with pytest.raises(ConflictError) as exc:
+                            await post_review_pull_request_revision(
+                                workspace_id=workspace_id,
+                                repository_id=uuid.uuid4(),
+                                pull_request_id=uuid.uuid4(),
+                                revision_id=uuid.uuid4(),
+                                body=ReviewTriggerRequest(profile=ReviewProfile.deep),
+                                current_user=current_user,
+                                session=session,
+                                idempotent=None,
+                            )
+
+    enqueue_mock.assert_called_once_with(job_id)
+    assert exc.value.error_code == "full_index_required"
+    assert exc.value.details == {"index_job_id": str(job_id)}
+
+
+@pytest.mark.asyncio
 async def test_post_review_index_required_raises():
     workspace_id = uuid.uuid4()
     session = AsyncMock()

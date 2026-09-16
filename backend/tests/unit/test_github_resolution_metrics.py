@@ -45,6 +45,19 @@ def test_patch_touches_line_region_detects_modified_line():
     )
 
 
+def test_patch_touches_line_region_counts_deleted_old_file_lines():
+    """Finding lines live on the last-seen file (old side). A deletion-only hunk must close."""
+    patch = (
+        "@@ -13,1 +12,0 @@\n"
+        "-    subprocess.call(user_input, shell=True)\n"
+    )
+    assert github_resolution_metrics.patch_touches_line_region(
+        patch,
+        start_line=13,
+        end_line=13,
+    )
+
+
 def test_patch_touches_line_region_false_when_unchanged_region():
     patch = "@@ -1,3 +1,3 @@\n unchanged\n"
     assert not github_resolution_metrics.patch_touches_line_region(

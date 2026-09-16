@@ -658,7 +658,19 @@
       "pending": "Pending",
       "processing": "Processing",
       "completed": "Completed",
-      "failed": "Failed"
+      "failed": "Failed",
+      "triggered": "Queued {{profile}} review",
+      "indexing": "Indexing repository…",
+      "indexFailed": "Full-repo index failed",
+      "profiles": {
+        "standard": "Standard",
+        "deep": "Deep",
+        "critical": "Critical"
+      },
+      "trigger": {
+        "deep": "Deep review",
+        "critical": "Critical review"
+      }
     },
     "publish": {
       "status": "Publish: {{status}}",
