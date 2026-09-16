@@ -7,6 +7,7 @@ export const FULL_INDEX_REQUIRED = 'full_index_required';
 
 export const INDEX_POLL_MS = 2_000;
 export const INDEX_POLL_ATTEMPTS = 90;
+export const FULL_INDEX_TRIGGER_ROUNDS = 5;
 
 export class IndexWaitError extends Error {
   constructor(message: string) {
@@ -70,25 +71,26 @@ export async function triggerReviewWithFullIndexRetry(
   profile: ReviewProfile,
   deps: TriggerReviewDeps = defaultDeps,
 ): Promise<ReviewRun> {
-  try {
-    return await deps.trigger(
-      ids.workspaceId,
-      ids.repositoryId,
-      ids.pullRequestId,
-      ids.revisionId,
-      profile,
-    );
-  } catch (error) {
-    if (mapApiError(error).code !== FULL_INDEX_REQUIRED) {
-      throw error;
+  let lastError: unknown;
+  for (let round = 0; round < FULL_INDEX_TRIGGER_ROUNDS; round += 1) {
+    try {
+      return await deps.trigger(
+        ids.workspaceId,
+        ids.repositoryId,
+        ids.pullRequestId,
+        ids.revisionId,
+        profile,
+      );
+    } catch (error) {
+      lastError = error;
+      if (mapApiError(error).code !== FULL_INDEX_REQUIRED) {
+        throw error;
+      }
+      await waitForCompletedFullIndex(ids, deps, indexJobIdFromError(error));
     }
-    await waitForCompletedFullIndex(ids, deps, indexJobIdFromError(error));
-    return await deps.trigger(
-      ids.workspaceId,
-      ids.repositoryId,
-      ids.pullRequestId,
-      ids.revisionId,
-      profile,
-    );
   }
+  if (lastError instanceof Error) {
+    throw lastError;
+  }
+  throw new IndexWaitError('Timed out waiting for full-repo index');
 }

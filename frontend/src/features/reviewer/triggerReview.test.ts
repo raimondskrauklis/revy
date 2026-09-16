@@ -95,6 +95,31 @@ describe('triggerReviewWithFullIndexRetry', () => {
     expect(sleep).toHaveBeenCalledTimes(1);
   });
 
+  it('waits on a later full_index_required job id after a newer index is enqueued', async () => {
+    const run = reviewRun();
+    const trigger = vi
+      .fn()
+      .mockRejectedValueOnce(conflict(FULL_INDEX_REQUIRED, { index_job_id: 'idx-1' }))
+      .mockRejectedValueOnce(conflict(FULL_INDEX_REQUIRED, { index_job_id: 'idx-2' }))
+      .mockResolvedValueOnce(run);
+    const fetchIndex = vi
+      .fn()
+      .mockResolvedValueOnce(indexJob({ id: 'idx-1', status: 'completed' }))
+      .mockResolvedValueOnce(indexJob({ id: 'idx-2', status: 'completed' }));
+
+    await expect(
+      triggerReviewWithFullIndexRetry(ids, 'deep', {
+        trigger,
+        fetchIndex,
+        sleep: vi.fn(),
+        pollAttempts: 5,
+      }),
+    ).resolves.toBe(run);
+    expect(trigger).toHaveBeenCalledTimes(3);
+    expect(fetchIndex).toHaveBeenNthCalledWith(1, 'ws', 'repo', 'pr', 'rev', 'idx-1');
+    expect(fetchIndex).toHaveBeenNthCalledWith(2, 'ws', 'repo', 'pr', 'rev', 'idx-2');
+  });
+
   it('rethrows unrelated conflicts', async () => {
     const trigger = vi.fn().mockRejectedValue(conflict('index_in_progress'));
     await expect(

@@ -24,6 +24,7 @@ from app.services.github_pull_requests import (
     apply_issue_comment_webhook_event,
     apply_pull_request_review_webhook_event,
     apply_pull_request_webhook_event,
+    get_github_pull_request,
     list_github_pull_requests,
 )
 
@@ -563,6 +564,43 @@ async def test_list_github_pull_requests_returns_cursor_page():
 
     assert len(page.items) == 1
     assert page.items[0].title == "PR"
+
+
+@pytest.mark.asyncio
+async def test_get_github_pull_request_sets_latest_revision_on_response_not_orm():
+    workspace_id = uuid.uuid4()
+    repository_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    latest_revision_id = uuid.uuid4()
+    row = GitHubPullRequestORM(
+        repository_id=repository_id,
+        workspace_id=workspace_id,
+        installation_id=uuid.uuid4(),
+        github_pull_request_id=1,
+        number=1,
+        title="PR",
+        state=GitHubPullRequestState.open,
+        head_sha="sha",
+        head_ref="feature",
+        base_ref="main",
+        revision_count=2,
+    )
+    row.id = pull_request_id
+    row.created_at = datetime.now(UTC)
+    row.updated_at = datetime.now(UTC)
+
+    session = AsyncMock()
+    session.scalar = AsyncMock(side_effect=[row, latest_revision_id])
+
+    response = await get_github_pull_request(
+        session,
+        workspace_id=workspace_id,
+        repository_id=repository_id,
+        pull_request_id=pull_request_id,
+    )
+
+    assert response.latest_revision_id == latest_revision_id
+    assert "latest_revision_id" not in row.__dict__
 
 
 def _issue_comment_payload(*, body: str = "@revy review") -> dict:

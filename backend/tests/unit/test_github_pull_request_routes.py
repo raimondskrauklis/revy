@@ -68,17 +68,12 @@ async def test_get_repository_pull_request_returns_row():
                 "app.api.v1.workspaces.installation_pull_requests.get_github_pull_request",
                 AsyncMock(return_value=pull_request),
             ):
-                with patch(
-                    "app.api.v1.workspaces.installation_pull_requests.GitHubPullRequestResponse.model_validate",
-                    return_value=MagicMock(),
-                ) as validate_mock:
-                    response = await get_repository_pull_request(
-                        workspace_id=workspace_id,
-                        repository_id=repository_id,
-                        pull_request_id=pull_request_id,
-                        current_user=current_user,
-                        session=session,
-                    )
+                response = await get_repository_pull_request(
+                    workspace_id=workspace_id,
+                    repository_id=repository_id,
+                    pull_request_id=pull_request_id,
+                    current_user=current_user,
+                    session=session,
+                )
 
-    validate_mock.assert_called_once_with(pull_request)
-    assert response.data is validate_mock.return_value
+    assert response.data is pull_request

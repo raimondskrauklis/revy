@@ -32,6 +32,11 @@ export function PullRequestDetailPage() {
     'admin:users',
     user?.platform_role ?? undefined,
   );
+  const canTriggerReview = hasPermission(
+    user?.role ?? undefined,
+    'admin:users',
+    user?.platform_role ?? undefined,
+  );
 
   const dismissMutation = useMutation({
     mutationFn: (groupId: string) =>
@@ -135,7 +140,7 @@ export function PullRequestDetailPage() {
             })}
           </span>
         ) : null}
-        {canDismiss && revisionId ? (
+        {canTriggerReview && revisionId ? (
           <ReviewTriggerBar
             workspaceId={workspaceId}
             repositoryId={repoId}

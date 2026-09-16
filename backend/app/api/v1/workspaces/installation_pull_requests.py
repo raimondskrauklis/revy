@@ -38,7 +38,7 @@ async def get_repository_pull_request(
         repository_id=repository_id,
         pull_request_id=pull_request_id,
     )
-    return SuccessResponse(data=GitHubPullRequestResponse.model_validate(pull_request))
+    return SuccessResponse(data=pull_request)
 
 
 @router.get(
