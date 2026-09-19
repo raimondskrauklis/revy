@@ -466,10 +466,10 @@
       "signIn": "Pierakstīties"
     },
     "hero": {
-      "eyebrow": "MI koda pārskats GitHub",
-      "title": "Publicējiet ar pārliecību",
-      "subtitle": "Pievienojiet repozitorijus, palaidiet automatizētus pārskatus pull requestiem un turiet komandu saskaņotu vienā darba vidē.",
-      "cta": "Sākt",
+      "eyebrow": "PR operatora konsole",
+      "title": "Atradumi pirms apvienošanas",
+      "subtitle": "Savienojiet GitHub. Pārskatiet atradumus konsolē. Apvienojiet, kad lampas ir zaļas.",
+      "cta": "Atvērt konsoli",
       "secondary": "Jau ir konts?"
     },
     "features": {
@@ -486,23 +486,23 @@
         "body": "Uzaiciniet kolēģus, pārvaldiet instalācijas un piekļuvi katrā darba vidē."
       }
     },
-    "footer": "Radīts inženieru komandām, kas strādā ar GitHub."
+    "footer": "Operatora konsole GitHub pull request pārskatam."
   },
   "auth": {
     "loading": "Ielādē…",
     "login": {
-      "title": "Laipni lūdzam atpakaļ",
-      "body": "Pierakstieties ar organizācijas kontu. Izmantojam drošu SSO caur Keycloak.",
+      "title": "Pierakstīties",
+      "body": "Turpiniet ar organizācijas SSO. Sesiju nodrošina Keycloak.",
       "action": "Turpināt ar SSO",
       "hint": "Jūs tiksit novirzīts uz identitātes nodrošinātāju, lai pierakstītos.",
       "backHome": "Atpakaļ uz sākumu",
       "panel": {
-        "eyebrow": "Revy",
-        "title": "MI atbalstīts koda pārskats GitHub",
-        "subtitle": "No webhook uzņemšanas līdz publicētiem atradumiem — viena darba vide komandai.",
-        "bullet1": "Pievienojiet repozitorijus ar GitHub lietotni",
-        "bullet2": "Pārskatiet MI atradumus pirms apvienošanas",
-        "bullet3": "Sadarbojieties drošās komandas darba vidēs"
+        "eyebrow": "revy",
+        "title": "PR operatora konsole",
+        "subtitle": "Atradumi, smaguma lampas un apvienošanas verdikti — ne sveiciena panelis.",
+        "bullet1": "Savienojiet GitHub lietotni",
+        "bullet2": "Skenējiet atradumus pirms apvienošanas",
+        "bullet3": "Instalācijas un piekļuve paliek darba vidē"
       }
     },
     "sessionExpired": {

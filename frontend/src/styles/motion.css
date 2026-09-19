@@ -17,4 +17,24 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+
+  .cursor-block {
+    animation: none !important;
+    opacity: 1;
+  }
+}
+
+@keyframes cursor-block {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.cursor-block {
+  animation: cursor-block 160ms steps(1, end) infinite;
 }

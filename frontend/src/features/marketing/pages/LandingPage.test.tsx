@@ -12,15 +12,17 @@ vi.mock('@/contexts/AuthContext', () => ({
 }));
 
 describe('LandingPage', () => {
-  it('renders hero and sign-in links', () => {
-    render(
+  it('renders operator hero without feature cards', () => {
+    const { container } = render(
       <MemoryRouter>
         <LandingPage />
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { name: /ship with confidence/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /findings before you merge/i })).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: /sign in/i }).length).toBeGreaterThan(0);
-    expect(screen.getByRole('link', { name: /get started/i })).toHaveAttribute('href', '/login');
+    expect(screen.getByRole('link', { name: /open console/i })).toHaveAttribute('href', '/login');
+    expect(container.querySelector('svg.lucide')).toBeNull();
+    expect(screen.queryByRole('heading', { name: /github-native/i })).not.toBeInTheDocument();
   });
 });

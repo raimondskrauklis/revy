@@ -15,40 +15,28 @@ export function PublicAuthLayout({ children, showBackHome = true }: PublicAuthLa
   return (
     <div className="min-h-screen bg-[color:var(--app-canvas)]">
       <div className="mx-auto grid min-h-screen max-w-6xl lg:grid-cols-2">
-        <aside className="relative hidden overflow-hidden border-r border-[color:var(--app-ring)] bg-[color:var(--app-surface)] lg:flex lg:flex-col lg:justify-between lg:p-10">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,color-mix(in_srgb,var(--app-primary)_22%,transparent),transparent_55%)]"
-          />
-          <div className="relative">
+        <aside className="relative hidden border-r border-[color:var(--app-ring)] bg-[color:var(--app-surface)] lg:flex lg:flex-col lg:justify-between lg:p-10">
+          <div>
             <RevyLogo to="/" />
           </div>
-          <div className="relative space-y-4">
-            <p className="text-sm font-medium uppercase tracking-wide text-[color:var(--app-primary)]">
+          <div className="space-y-4 font-mono">
+            <p className="flex items-center gap-2 text-sm text-[color:var(--app-primary)]">
+              <span aria-hidden>{'>'}</span>
               {t('auth.login.panel.eyebrow')}
             </p>
-            <h1 className="text-3xl font-semibold leading-tight text-[color:var(--app-text-strong)]">
+            <h1 className="text-3xl font-medium leading-tight text-[color:var(--app-text-strong)]">
               {t('auth.login.panel.title')}
             </h1>
-            <p className="max-w-md text-base text-[color:var(--app-text-muted)]">
+            <p className="max-w-md font-sans text-base text-[color:var(--app-text-muted)]">
               {t('auth.login.panel.subtitle')}
             </p>
-            <ul className="space-y-3 pt-2 text-sm text-[color:var(--app-text)]">
-              <li className="flex gap-2">
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--app-primary)]" />
-                {t('auth.login.panel.bullet1')}
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--app-primary)]" />
-                {t('auth.login.panel.bullet2')}
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--app-primary)]" />
-                {t('auth.login.panel.bullet3')}
-              </li>
+            <ul className="space-y-3 pt-2 font-sans text-sm text-[color:var(--app-text)]">
+              <li>{t('auth.login.panel.bullet1')}</li>
+              <li>{t('auth.login.panel.bullet2')}</li>
+              <li>{t('auth.login.panel.bullet3')}</li>
             </ul>
           </div>
-          <p className="relative text-xs text-[color:var(--app-text-muted)]">{t('landing.footer')}</p>
+          <p className="text-xs text-[color:var(--app-text-muted)]">{t('landing.footer')}</p>
         </aside>
 
         <div className="flex flex-col">
@@ -59,7 +47,7 @@ export function PublicAuthLayout({ children, showBackHome = true }: PublicAuthLa
             {showBackHome ? (
               <Link
                 to="/"
-                className="text-sm font-medium text-[color:var(--app-link)] hover:underline focus-visible:outline-none focus-visible:ring-2 ring-[color:var(--app-ring-strong)] rounded"
+                className="rounded-[var(--app-radius-md)] text-sm font-medium text-[color:var(--app-link)] hover:underline focus-visible:outline-none focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
               >
                 {t('auth.login.backHome')}
               </Link>
