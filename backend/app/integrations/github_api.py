@@ -12,11 +12,20 @@ from urllib.parse import quote
 import httpx
 import jwt
 
+from app.constants.enums import GitHubAccountType
 from app.core.config import settings
-from app.core.exceptions import NotFoundError, RateLimitedError, ServiceUnavailableError
+from app.core.exceptions import (
+    ForbiddenError,
+    NotFoundError,
+    RateLimitedError,
+    ServiceUnavailableError,
+    ValidationError,
+)
 from app.core.logging import get_logger
 
 GITHUB_API_BASE = "https://api.github.com"
+GITHUB_OAUTH_TOKEN_URL = "https://github.com/login/oauth/access_token"
+GITHUB_OAUTH_AUTHORIZE_URL = "https://github.com/login/oauth/authorize"
 
 REVIEW_THREADS_PAGE_SIZE = 100
 REVIEW_THREAD_COMMENTS_PAGE_SIZE = 20
@@ -86,6 +95,14 @@ class CompareCommitsResult:
     @property
     def paths_to_remove(self) -> tuple[str, ...]:
         return self.deleted_paths + self.renamed_from_paths
+
+
+@dataclass(frozen=True)
+class AppInstallationAccount:
+    github_installation_id: int
+    account_login: str
+    account_type: GitHubAccountType
+    account_id: int
 
 
 def _compare_http_error(exc: httpx.HTTPStatusError) -> None:
@@ -221,6 +238,137 @@ async def list_installation_repositories(
             break
         page += 1
     return repos
+
+
+def _account_type_from_github(raw: object) -> GitHubAccountType:
+    if raw == "Organization":
+        return GitHubAccountType.organization
+    if raw == "User":
+        return GitHubAccountType.user
+    raise ServiceUnavailableError(
+        message="GitHub installation account type is invalid",
+        error_code="github_api_error",
+    )
+
+
+async def get_app_installation(
+    client: httpx.AsyncClient,
+    *,
+    github_installation_id: int,
+) -> AppInstallationAccount:
+    app_jwt = create_app_jwt()
+    try:
+        response = await _request(
+            client,
+            "GET",
+            f"{GITHUB_API_BASE}/app/installations/{github_installation_id}",
+            headers={
+                "Authorization": f"Bearer {app_jwt}",
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28",
+            },
+        )
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 404:
+            raise NotFoundError(
+                message="GitHub App installation not found",
+                error_code="github_app_installation_not_found",
+            ) from exc
+        raise
+    data = response.json()
+    if not isinstance(data, dict):
+        raise ServiceUnavailableError(
+            message="GitHub App installation response invalid",
+            error_code="github_api_error",
+        )
+    account = data.get("account")
+    if not isinstance(account, dict):
+        raise ServiceUnavailableError(
+            message="GitHub App installation account missing",
+            error_code="github_api_error",
+        )
+    login = account.get("login")
+    account_id = account.get("id")
+    if not isinstance(login, str) or not login or not isinstance(account_id, int):
+        raise ServiceUnavailableError(
+            message="GitHub App installation account invalid",
+            error_code="github_api_error",
+        )
+    return AppInstallationAccount(
+        github_installation_id=github_installation_id,
+        account_login=login,
+        account_type=_account_type_from_github(account.get("type")),
+        account_id=account_id,
+    )
+
+
+async def exchange_oauth_code(
+    client: httpx.AsyncClient,
+    *,
+    code: str,
+    redirect_uri: str,
+) -> str:
+    client_id = (settings.github_client_id or "").strip()
+    secret = (settings.github_client_secret or "").strip()
+    if not client_id or not secret:
+        raise ServiceUnavailableError(
+            message="GitHub OAuth client is not configured",
+            error_code="github_oauth_disabled",
+        )
+    response = await client.post(
+        GITHUB_OAUTH_TOKEN_URL,
+        headers={"Accept": "application/json"},
+        data={
+            "client_id": client_id,
+            "client_secret": secret,
+            "code": code,
+            "redirect_uri": redirect_uri,
+        },
+    )
+    response.raise_for_status()
+    data = response.json()
+    if not isinstance(data, dict):
+        raise ValidationError(message="GitHub OAuth code exchange failed", field="code")
+    token = data.get("access_token")
+    if not isinstance(token, str) or not token:
+        raise ValidationError(message="GitHub OAuth code exchange failed", field="code")
+    return token
+
+
+async def require_user_installation(
+    client: httpx.AsyncClient,
+    *,
+    user_access_token: str,
+    github_installation_id: int,
+) -> None:
+    headers = {
+        "Authorization": f"Bearer {user_access_token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    page = 1
+    while True:
+        response = await _request(
+            client,
+            "GET",
+            f"{GITHUB_API_BASE}/user/installations",
+            headers=headers,
+            params={"per_page": 100, "page": page},
+        )
+        data = response.json()
+        batch = data.get("installations") if isinstance(data, dict) else None
+        if not isinstance(batch, list) or not batch:
+            break
+        for item in batch:
+            if isinstance(item, dict) and item.get("id") == github_installation_id:
+                return
+        if len(batch) < 100:
+            break
+        page += 1
+    raise ForbiddenError(
+        message="GitHub user is not associated with this installation",
+        error_code="github_installer_mismatch",
+    )
 
 
 async def compare_commits(

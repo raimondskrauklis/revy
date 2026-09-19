@@ -11,6 +11,7 @@ export interface GitHubInstallation {
   account_id: number;
   status: GitHubInstallationStatus;
   permissions_snapshot: Record<string, string> | null;
+  verified_at: string | null;
   created_at: string;
   updated_at: string;
 }

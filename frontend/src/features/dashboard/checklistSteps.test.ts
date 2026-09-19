@@ -25,6 +25,7 @@ const baseContext = {
   workspaceId: 'ws-1',
   memberCount: 1,
   installationCount: 0,
+  hasVerifiedInstallation: false,
   plan: 'free',
 };
 
@@ -81,8 +82,29 @@ describe('checklistSteps', () => {
         ...baseContext,
         memberCount: 2,
         installationCount: 1,
+        hasVerifiedInstallation: true,
         plan: 'pro',
       }),
     ).toBe(false);
+  });
+
+  it('does not complete Connect GitHub from an unverified installation row', () => {
+    const steps = evaluateChecklist(baseUser(), {
+      ...baseContext,
+      installationCount: 1,
+      hasVerifiedInstallation: false,
+    });
+    const connect = steps.find((step) => step.id === 'connect_integration');
+    expect(connect?.isComplete).toBe(false);
+  });
+
+  it('completes Connect GitHub when verified_at is set', () => {
+    const steps = evaluateChecklist(baseUser(), {
+      ...baseContext,
+      installationCount: 1,
+      hasVerifiedInstallation: true,
+    });
+    const connect = steps.find((step) => step.id === 'connect_integration');
+    expect(connect?.isComplete).toBe(true);
   });
 });

@@ -350,3 +350,78 @@ async def test_resolve_review_thread_raises_service_unavailable_for_transient_gr
                 thread_id="PRRT_test",
             )
     assert "Something went wrong" in exc.value.message
+
+
+@pytest.mark.asyncio
+async def test_get_app_installation_returns_account():
+    client = AsyncMock()
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = {
+        "id": 99,
+        "account": {"login": "acme", "id": 7, "type": "Organization"},
+    }
+    client.request = AsyncMock(return_value=response)
+
+    with patch("app.integrations.github_api.create_app_jwt", return_value="jwt"):
+        account = await github_api.get_app_installation(client, github_installation_id=99)
+
+    assert account.account_login == "acme"
+    assert account.account_type.value == "organization"
+    assert account.account_id == 7
+
+
+@pytest.mark.asyncio
+async def test_get_app_installation_404_raises_not_found():
+    client = AsyncMock()
+    error_response = MagicMock(status_code=404)
+    client.request = AsyncMock(
+        side_effect=httpx.HTTPStatusError(
+            "missing",
+            request=MagicMock(),
+            response=error_response,
+        )
+    )
+
+    with patch("app.integrations.github_api.create_app_jwt", return_value="jwt"):
+        with pytest.raises(NotFoundError) as exc:
+            await github_api.get_app_installation(client, github_installation_id=99)
+    assert exc.value.error_code == "github_app_installation_not_found"
+
+
+@pytest.mark.asyncio
+async def test_require_user_installation_rejects_missing_id():
+    from app.core.exceptions import ForbiddenError
+
+    client = AsyncMock()
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = {"installations": [{"id": 1}]}
+    client.request = AsyncMock(return_value=response)
+
+    with pytest.raises(ForbiddenError) as exc:
+        await github_api.require_user_installation(
+            client,
+            user_access_token="user-token",
+            github_installation_id=99,
+        )
+    assert exc.value.error_code == "github_installer_mismatch"
+
+
+@pytest.mark.asyncio
+async def test_exchange_oauth_code_returns_access_token():
+    client = AsyncMock()
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = {"access_token": "ghu_test"}
+    client.post = AsyncMock(return_value=response)
+
+    with patch("app.integrations.github_api.settings") as mock_settings:
+        mock_settings.github_client_id = "client"
+        mock_settings.github_client_secret = "secret"
+        token = await github_api.exchange_oauth_code(
+            client,
+            code="abc",
+            redirect_uri="http://localhost:8000/api/v1/github/callback",
+        )
+    assert token == "ghu_test"

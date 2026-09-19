@@ -4,7 +4,7 @@
 
 When reviewing **backend** or **frontend** changes for GitHub onboarding, treat these as authoritative:
 
-- [GITHUB_ONBOARDING_P0_EXECUTION.md](../docs/github-onboarding/GITHUB_ONBOARDING_P0_EXECUTION.md) — P0 LOOP (env, HMAC `state`, target-config Q8+Q12)
+- [GITHUB_ONBOARDING_P1_EXECUTION.md](../docs/github-onboarding/GITHUB_ONBOARDING_P1_EXECUTION.md) — P1 LOOP (public hops, bind, `verified_at` checklist)
 - [GITHUB_ONBOARDING_FINDINGS.md](../docs/github-onboarding/GITHUB_ONBOARDING_FINDINGS.md) — Q1–Q9, Q11–Q21
 - [GITHUB_ONBOARDING_GENERAL_PLAN.md](../docs/github-onboarding/GITHUB_ONBOARDING_GENERAL_PLAN.md) — P0–P4 goals
 

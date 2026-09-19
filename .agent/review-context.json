@@ -6,8 +6,8 @@
       "scope": ["backend/**", "frontend/**"],
       "paths": [
         {
-          "path": "docs/github-onboarding/GITHUB_ONBOARDING_P0_EXECUTION.md",
-          "description": "GitHub onboarding P0 — env, HMAC state, target-config Q8+Q12"
+          "path": "docs/github-onboarding/GITHUB_ONBOARDING_P1_EXECUTION.md",
+          "description": "GitHub onboarding P1 — public Setup/Callback hops, bind, verified_at checklist"
         },
         {
           "path": "docs/github-onboarding/GITHUB_ONBOARDING_FINDINGS.md",

@@ -30,5 +30,6 @@ class GitHubInstallationResponse(BaseModel):
     account_id: int
     status: GitHubInstallationStatus
     permissions_snapshot: dict[str, Any] | None
+    verified_at: datetime | None
     created_at: datetime
     updated_at: datetime
