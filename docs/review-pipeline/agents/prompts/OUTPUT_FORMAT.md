@@ -70,19 +70,19 @@ If subagent says “no bugs” but thinking explored edge cases → master recor
 
 ---
 
-## Greptile + PR body (RC2-lite)
+## PR body (scope for humans + Revy)
 
-Greptile **👀** on PR open = queued ack, not comprehension. Wired `.greptile/files.json` + diff matter more than PR prose — but a short body helps scope:
+A short PR body helps humans and Revy; it is not a substitute for `.revy/review-context.json` + `BUGBOT.md`.
 
 ```markdown
 ## Scope
-RQ9 — <one line>
+<phase> — <one line>
 
 ## Mechanism
-<failure path or locked decision, e.g. draft-after-index not draft-autostart>
+<failure path or locked decision>
 
 ## Contract
-REVIEW_QUALITY_EXECUTION.md § RQn
+<execution file>
 
 ## Test plan
 - [ ] …
@@ -91,7 +91,7 @@ REVIEW_QUALITY_EXECUTION.md § RQn
 …
 ```
 
-**After push:** log Greptile first comment in [DOGFOOD § PR #51](../../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#dogfood-pr-51--docsagent-work-rq9) — did it cite execution § RQn or only diff?
+Do not log or babysit Greptile comments.
 
 ---
 

@@ -29,7 +29,7 @@ description: >-
 
 ## 2. Write `.agent/manifest.json`
 
-Adapt template — set `integrations.greptile: false` unless user explicitly asks.
+Adapt template — set `integrations.greptile: false`. Do not enable Greptile in this repo.
 
 **Scope:** detect `backend/` + `frontend/` (standard full-stack layout). Default `default_scope: ["backend/**"]`. If user or execution doc requires UI work, set `programs[].scope` to include `frontend/**` — see `patterns/SCOPE.md`.
 
@@ -51,7 +51,7 @@ Follow `patterns/skills-audit.md`.
 `create-findings`, `create-general-plan`, `create-execution-plan`, `architecture-peer-review`, `execution-peer-review`, `devils-advocate`, `post-finish-gap-pass`.
 
 **Optional:**
-- `babysit-pr` — only if `integrations.greptile: true`; **remove** if greptile off and skill present
+- `babysit-pr` — **do not install** (`integrations.greptile` stays false)
 - `sentry-fix-issues` — only if Sentry MCP in `.cursor/mcp.json`
 - `md-formatting`, `md-docx-export`, `docx-md-export` — docs export handoff repos or user asks
 
@@ -98,9 +98,9 @@ Merge `templates/AGENTS.workflow.snippet.md` — list **installed** skills only 
 
 ---
 
-## 8. Greptile backend (only if `integrations.greptile: true`)
+## 8. Greptile backend
 
-Implement from `patterns/backend/` in target `backend/`. Do not implement otherwise.
+Skip. This repo does not use Greptile (`integrations.greptile: false`). Do not copy Greptile generator wiring into agent LOOP skills.
 
 ---
 
@@ -112,7 +112,6 @@ Implement from `patterns/backend/` in target `backend/`. Do not implement otherw
 [ ] Review context: `.revy` canonical when `integrations.revy`; `.agent` mirror in sync
 [ ] .cursor/BUGBOT.md links resolve
 [ ] AGENTS.md skills table matches installed set
-[ ] If greptile: generator --check passes
 ```
 
 Report: audit table, files created, integrations, gaps.
@@ -124,7 +123,7 @@ Report: audit table, files created, integrations, gaps.
 User says "audit skills" or "upgrade workflow pack" without full bootstrap:
 
 1. Run **skill audit** only — compare installed vs catalog + repo signals.
-2. Upgrade outdated core skills; add missing; remove `babysit-pr` if greptile disabled.
+2. Upgrade outdated core skills; add missing; keep `babysit-pr` uninstalled.
 3. Bump `.agent/skills.catalog.json` `pack_version`.
 
 ---
@@ -139,4 +138,4 @@ See `overlays/revy/README.md`. Add `.agent/` layer; do not delete `docs/review-p
 
 - SaaS scaffold (`starter-pack`)
 - CI/CD unless user asks
-- Greptile vendor account setup
+- Greptile vendor account setup (unused)

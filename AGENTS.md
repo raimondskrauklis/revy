@@ -49,7 +49,7 @@ Root [`.cursorrules`](.cursorrules) is a short pointer.
 |-------|------|
 | **Flow manifest** | [.agent/manifest.json](.agent/manifest.json) — scope: default `backend/**`, add `frontend/**` per program |
 | **Skill catalog** | [.agent/skills.catalog.json](.agent/skills.catalog.json) |
-| **Review context SSOT** | [.revy/review-context.json](.revy/review-context.json) — Moonshot/Greptile; mirrored to [.agent/review-context.json](.agent/review-context.json) for agent workflow |
+| **Review context SSOT** | [.revy/review-context.json](.revy/review-context.json) — Moonshot inject; mirrored to [.agent/review-context.json](.agent/review-context.json) for agent workflow |
 | **Orchestration** | [docs/review-pipeline/agents/README.md](docs/review-pipeline/agents/README.md) |
 | **Staging validation E2E** | [AGENT_WORKFLOW_PACK_E2E_VALIDATION.md](docs/review-pipeline/staging-validation/AGENT_WORKFLOW_PACK_E2E_VALIDATION.md) |
 | **Bugbot (pre-push)** | [.cursor/BUGBOT.md](.cursor/BUGBOT.md) |
@@ -68,11 +68,11 @@ Full installed set: [.agent/manifest.json](.agent/manifest.json) → `skills.ins
 | **Staging validation** | `staging-validation` |
 | **Revy PR loop** | `babysit-revy-pr` (when `integrations.revy: true`) |
 
-`babysit-pr` is in the catalog but **not installed** — Greptile off (`integrations.greptile: false`). Enable Greptile in manifest first, then install via `bootstrap-workflow` audit.
+`babysit-pr` is in the catalog but **not installed** — Greptile is off and stays off. Do not enable it.
 
 `babysit-revy-pr` — poll Revy idle (120s), fetch `revybot` comments, fix → local Bugbot → push → loop until solved. See `.cursor/skills/babysit-revy-pr/SKILL.md`.
 
-**Default gate:** local Bugbot before every push. **Revy:** never push while `gh pr checks` shows Revy `pending` / `in_progress` — wait for `pass`/`fail`/`skipping`/`neutral`, then push; wait again after push before the next one. Greptile is optional — enable in `.agent/manifest.json` when user asks.
+**Default gate:** local Bugbot before every push. **Revy:** never push while `gh pr checks` shows Revy `pending` / `in_progress` — wait for `pass`/`fail`/`skipping`/`neutral`, then push; wait again after push before the next one. Do not babysit or wait on Greptile.
 
 **PR titles:** `feat(<program-slug>): <what shipped>` — phase labels (`R0`–`R8`) belong on LOOP commits, not as the PR title alone. Update with `gh pr edit` when batched scope grows. Details: `.cursor/skills/ship-changes/SKILL.md`.
 

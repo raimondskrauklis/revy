@@ -1,12 +1,12 @@
 # Bugbot — review pipeline contract
 
-**Active program:** judge-thinking-blocks — RTU thinking-first Messages extract.
+**Active program:** github-onboarding — in-app GitHub App connect wizard (Q10).
 
-When reviewing **backend** changes for judge thinking-blocks, treat these as authoritative:
+When reviewing **backend** or **frontend** changes for GitHub onboarding, treat these as authoritative:
 
-- [JUDGE_THINKING_BLOCKS_P0_EXECUTION.md](../docs/review-pipeline/judge-thinking-blocks/waves/JUDGE_THINKING_BLOCKS_P0_EXECUTION.md) — P0 LOOP (content-block extract)
-- [JUDGE_THINKING_BLOCKS_FINDINGS.md](../docs/review-pipeline/judge-thinking-blocks/JUDGE_THINKING_BLOCKS_FINDINGS.md) — JTB-D1–D9
-- [JUDGE_THINKING_BLOCKS_GENERAL_PLAN.md](../docs/review-pipeline/judge-thinking-blocks/JUDGE_THINKING_BLOCKS_GENERAL_PLAN.md) — P0–P3 goals
+- [GITHUB_ONBOARDING_P0_EXECUTION.md](../docs/github-onboarding/GITHUB_ONBOARDING_P0_EXECUTION.md) — P0 LOOP (env, HMAC `state`, target-config Q8+Q12)
+- [GITHUB_ONBOARDING_FINDINGS.md](../docs/github-onboarding/GITHUB_ONBOARDING_FINDINGS.md) — Q1–Q9, Q11–Q21
+- [GITHUB_ONBOARDING_GENERAL_PLAN.md](../docs/github-onboarding/GITHUB_ONBOARDING_GENERAL_PLAN.md) — P0–P4 goals
 
 **Agent workflow:**
 

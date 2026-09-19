@@ -102,7 +102,7 @@ Update `validation.index_doc` — active dogfood PR row, link to program memo.
 ## 5. Not in scope (unless asked)
 
 - Opening dogfood PR (use `ship-changes`)
-- Greptile babysit
+- Greptile babysit (off — do not invoke `babysit-pr`)
 - Changing product code to fix validation failure (user directs separately)
 - Inventing metrics without running script or user-provided output
 

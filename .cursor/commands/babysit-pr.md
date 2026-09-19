@@ -1,6 +1,6 @@
-# Babysit PR (Greptile → fix → push)
+# Babysit PR (unused — Greptile off)
 
-**On demand.** User invokes `/babysit-pr` with an optional PR number or URL. Default: current branch’s open PR.
+**This repo does not use Greptile.** `integrations.greptile` is false. **Stop** — do not fetch Greptile threads. Use `/babysit-revy-pr` for Revy comments.
 
 ## Loop (one pass unless user asks to repeat)
 

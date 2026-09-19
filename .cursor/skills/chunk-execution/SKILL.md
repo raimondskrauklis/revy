@@ -20,7 +20,7 @@ description: >-
 2. Open execution file; identify **single** subphase (e.g. P0.1).
 3. Create **2–5** TODOs for that subphase only — target files, deliverable, verify command.
 4. Implement → run deliverable tests → mark TODOs done.
-5. If subphase is **P0.0 / PR review context**: SSOT + regenerate `files.json` + `--check` + `test_generate_greptile_files.py` — see `phase-execution` skill (never skip).
+5. If subphase is **P0.0 / PR review context**: SSOT + agent mirror + `BUGBOT.md` + `test_engineering_context_manifest.py` — see `phase-execution` skill (never skip). Do not babysit Greptile.
 6. **Stop.** Report what shipped and what subphase is next. **`ship-changes`** if user wants commit/PR.
 
 Do **not** pre-create TODOs for later subphases. Do **not** continue to P0.2 unless user asks in a **new** message.

@@ -1,24 +1,27 @@
 {
   "files": [
     {
-      "path": "docs/review-pipeline/judge-thinking-blocks/waves/JUDGE_THINKING_BLOCKS_P0_EXECUTION.md",
-      "description": "Judge thinking-blocks P0 \u2014 content-block extract",
+      "path": "docs/github-onboarding/GITHUB_ONBOARDING_P0_EXECUTION.md",
+      "description": "GitHub onboarding P0 \u2014 env, HMAC state, target-config Q8+Q12",
       "scope": [
-        "backend/**"
+        "backend/**",
+        "frontend/**"
       ]
     },
     {
-      "path": "docs/review-pipeline/judge-thinking-blocks/JUDGE_THINKING_BLOCKS_FINDINGS.md",
-      "description": "Judge thinking-blocks baseline \u2014 JTB-D1\u2013D9",
+      "path": "docs/github-onboarding/GITHUB_ONBOARDING_FINDINGS.md",
+      "description": "GitHub onboarding baseline \u2014 Q1\u2013Q9, Q11\u2013Q21",
       "scope": [
-        "backend/**"
+        "backend/**",
+        "frontend/**"
       ]
     },
     {
-      "path": "docs/review-pipeline/judge-thinking-blocks/JUDGE_THINKING_BLOCKS_GENERAL_PLAN.md",
-      "description": "Judge thinking-blocks general plan \u2014 P0\u2013P3",
+      "path": "docs/github-onboarding/GITHUB_ONBOARDING_GENERAL_PLAN.md",
+      "description": "GitHub onboarding general plan \u2014 P0\u2013P4",
       "scope": [
-        "backend/**"
+        "backend/**",
+        "frontend/**"
       ]
     }
   ]

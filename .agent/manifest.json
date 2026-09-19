@@ -23,7 +23,6 @@
     "ssot": ".revy/review-context.json",
     "agent_mirror": ".agent/review-context.json",
     "bugbot": ".cursor/BUGBOT.md",
-    "greptile_output": ".greptile/files.json",
     "sync_rule": "On program switch: edit .revy first, then copy to .agent/review-context.json"
   },
   "integrations": {
@@ -33,14 +32,7 @@
   "flows": {
     "phase-loop": { "enabled": true, "skill": "phase-execution" },
     "ship": { "enabled": true, "skill": "ship-changes" },
-    "greptile-parallel": { "enabled": false, "skill": "babysit-pr" },
     "revy-parallel": { "enabled": true, "skill": "babysit-revy-pr" }
-  },
-  "greptile": {
-    "generator_module": "scripts.generate_greptile_files_from_review_context",
-    "check_command": "cd backend && python -m scripts.generate_greptile_files_from_review_context --check",
-    "write_command": "cd backend && python -m scripts.generate_greptile_files_from_review_context --write",
-    "test_file": "tests/unit/test_generate_greptile_files.py"
   },
   "skills": {
     "catalog": ".agent/skills.catalog.json",
