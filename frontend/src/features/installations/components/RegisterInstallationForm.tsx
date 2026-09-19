@@ -9,9 +9,14 @@ import { GitHubAccountType } from '@/shared/types/enums';
 interface RegisterInstallationFormProps {
   onSubmit: (payload: RegisterInstallationPayload) => Promise<void>;
   submitting: boolean;
+  embedded?: boolean;
 }
 
-export function RegisterInstallationForm({ onSubmit, submitting }: RegisterInstallationFormProps) {
+export function RegisterInstallationForm({
+  onSubmit,
+  submitting,
+  embedded = false,
+}: RegisterInstallationFormProps) {
   const { t } = useTranslation();
   const [githubInstallationId, setGithubInstallationId] = useState('');
   const [accountLogin, setAccountLogin] = useState('');
@@ -34,7 +39,11 @@ export function RegisterInstallationForm({ onSubmit, submitting }: RegisterInsta
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4 rounded-xl bg-[color:var(--app-surface)] ring-1 ring-[color:var(--app-ring)] p-4"
+      className={
+        embedded
+          ? 'space-y-4'
+          : 'space-y-4 rounded-xl bg-[color:var(--app-surface)] ring-1 ring-[color:var(--app-ring)] p-4'
+      }
     >
       <h2 className="text-base font-semibold text-[color:var(--app-text-strong)]">
         {t('installations.register.title')}

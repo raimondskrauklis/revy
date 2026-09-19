@@ -47,3 +47,14 @@ export async function registerInstallation(
   const response = await apiClient.post(`/workspaces/${workspaceId}/installations`, payload);
   return await parseSuccess<GitHubInstallation>(response);
 }
+
+export interface ConnectInstallationResponse {
+  install_url: string;
+}
+
+export async function connectInstallation(
+  workspaceId: string,
+): Promise<ConnectInstallationResponse> {
+  const response = await apiClient.post(`/workspaces/${workspaceId}/installations/connect`);
+  return await parseSuccess<ConnectInstallationResponse>(response);
+}

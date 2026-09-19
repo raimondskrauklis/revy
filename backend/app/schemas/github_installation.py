@@ -19,6 +19,10 @@ class GitHubInstallationCreate(BaseModel):
     permissions_snapshot: dict[str, Any] | None = None
 
 
+class GitHubConnectResponse(BaseModel):
+    install_url: str
+
+
 class GitHubInstallationResponse(BaseModel):
     model_config = {"from_attributes": True}
 

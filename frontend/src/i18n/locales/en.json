@@ -560,6 +560,40 @@
     "subtitle": "Connect GitHub App installations to this workspace.",
     "empty": "No GitHub installations yet.",
     "noWorkspace": "Select a workspace to view installations.",
+    "connect": {
+      "title": "Connect GitHub",
+      "install": "Install Revy",
+      "installing": "Opening GitHub…",
+      "cards": {
+        "orgOwner": {
+          "title": "Organization owner may be required",
+          "body": "Installing on an organization may need an org owner to approve the App."
+        },
+        "sso": {
+          "title": "SSO organizations",
+          "body": "If the organization uses SAML SSO, complete GitHub SSO before you install."
+        },
+        "selectRepos": {
+          "title": "Only select repositories",
+          "body": "Choose Only select repositories and grant the repos Revy should review."
+        },
+        "authorizeVsInstall": {
+          "title": "Authorize is not install",
+          "body": "Approving GitHub access is not the same as installing the App. Finish Install on GitHub."
+        }
+      }
+    },
+    "setupError": {
+      "invalid_state": "GitHub connect could not be completed. Start Install Revy again.",
+      "not_configured": "GitHub App is not configured. Ask an operator to finish setup.",
+      "oauth_denied": "GitHub authorization was cancelled. You can start again when ready.",
+      "github_installer_mismatch": "The GitHub account that authorized is not the one that installed the App.",
+      "conflict": "This GitHub installation is already linked to another workspace.",
+      "not_found": "The workspace for this install is no longer available.",
+      "github_unavailable": "GitHub could not be reached. Try again in a few minutes.",
+      "plan_upgrade_required": "Upgrade to Pro to connect GitHub.",
+      "unknown": "GitHub connect did not finish. Start Install Revy again."
+    },
     "table": {
       "account": "Account",
       "type": "Type",
@@ -577,8 +611,9 @@
       "removed": "Removed"
     },
     "register": {
-      "title": "Register installation",
-      "description": "Dev-only manual registration until the webhook phase ships.",
+      "title": "Register installation manually",
+      "description": "Admin/dev fallback if GitHub cannot redirect back to Revy. The checklist stays incomplete until Revy verifies at least one granted repository.",
+      "fallbackSummary": "Manual installation ID (admin/dev fallback)",
       "installationId": "GitHub installation ID",
       "accountLogin": "Account login",
       "accountId": "GitHub account ID",

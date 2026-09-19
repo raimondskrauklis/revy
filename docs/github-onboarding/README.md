@@ -23,7 +23,7 @@ This is review-pipeline **Q10** (OAuth install UI) as its own parallel program.
 |-------|-------|------|--------|
 | P0 | Env, HMAC `state`, target-config Q8+Q12 | [GITHUB_ONBOARDING_P0_EXECUTION.md](./GITHUB_ONBOARDING_P0_EXECUTION.md) | done |
 | P1 | Public hops (no JWT), persist, `verified_at` + checklist + backfill | [GITHUB_ONBOARDING_P1_EXECUTION.md](./GITHUB_ONBOARDING_P1_EXECUTION.md) | done |
-| P2 | Start-connect JWT API + wizard UI | [GITHUB_ONBOARDING_P2_EXECUTION.md](./GITHUB_ONBOARDING_P2_EXECUTION.md) | pending |
+| P2 | Start-connect JWT API + wizard UI | [GITHUB_ONBOARDING_P2_EXECUTION.md](./GITHUB_ONBOARDING_P2_EXECUTION.md) | done |
 | P3 | Live ≥1-repo verify sets `verified_at` | [GITHUB_ONBOARDING_P3_EXECUTION.md](./GITHUB_ONBOARDING_P3_EXECUTION.md) | pending |
 | P4 | Dogfood saas-base, live App paste, Q10 close, doc-sync | [GITHUB_ONBOARDING_P4_EXECUTION.md](./GITHUB_ONBOARDING_P4_EXECUTION.md) | pending |
 

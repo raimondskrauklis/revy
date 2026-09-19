@@ -1,8 +1,8 @@
 {
   "files": [
     {
-      "path": "docs/github-onboarding/GITHUB_ONBOARDING_P1_EXECUTION.md",
-      "description": "GitHub onboarding P1 \u2014 public Setup/Callback hops, bind, verified_at checklist",
+      "path": "docs/github-onboarding/GITHUB_ONBOARDING_P2_EXECUTION.md",
+      "description": "GitHub onboarding P2 \u2014 start-connect JWT API and connect wizard UI",
       "scope": [
         "backend/**",
         "frontend/**"
