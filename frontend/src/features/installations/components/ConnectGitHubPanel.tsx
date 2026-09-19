@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { RegisterInstallationForm } from '@/features/installations/components/RegisterInstallationForm';
 import type { RegisterInstallationPayload } from '@/features/installations/api';
 
-const CARD_KEYS = ['orgOwner', 'sso', 'selectRepos', 'authorizeVsInstall'] as const;
+const STEP_KEYS = ['orgOwner', 'sso', 'selectRepos', 'authorizeVsInstall'] as const;
 
 interface ConnectGitHubPanelProps {
   connecting: boolean;
@@ -25,32 +25,22 @@ export function ConnectGitHubPanel({
 
   return (
     <section className="space-y-4">
-      <div className="space-y-3 rounded-xl bg-[color:var(--app-surface)] p-4 ring-1 ring-[color:var(--app-ring)]">
-        <h2 className="text-base font-semibold text-[color:var(--app-text-strong)]">
+      <div className="space-y-3 rounded-[var(--app-radius-md)] bg-[color:var(--app-surface)] p-4 shadow-[inset_0_0_0_1px_var(--app-ring)]">
+        <h2 className="text-base font-medium text-[color:var(--app-text-strong)]">
           {t('installations.connect.title')}
         </h2>
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {CARD_KEYS.map((key) => (
-            <li
-              key={key}
-              className="rounded-lg bg-[color:var(--app-chip)] p-3"
-            >
-              <p className="text-sm font-medium text-[color:var(--app-text-strong)]">
-                {t(`installations.connect.cards.${key}.title`)}
-              </p>
-              <p className="mt-1 text-sm text-[color:var(--app-text-muted)]">
-                {t(`installations.connect.cards.${key}.body`)}
-              </p>
-            </li>
+        <ol className="list-decimal space-y-1 pl-5 text-sm text-[color:var(--app-text-muted)]">
+          {STEP_KEYS.map((key) => (
+            <li key={key}>{t(`installations.connect.cards.${key}.title`)}</li>
           ))}
-        </ul>
+        </ol>
         <button
           type="button"
           disabled={busy}
           onClick={() => {
             void onConnect();
           }}
-          className="min-h-11 rounded-lg bg-[color:var(--app-cta-bg)] px-4 text-[color:var(--app-cta-fg)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)] disabled:opacity-50"
+          className="min-h-11 rounded-[var(--app-radius-md)] bg-[color:var(--app-cta-bg)] px-4 text-[color:var(--app-cta-fg)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)] disabled:opacity-50"
         >
           {connecting
             ? t('installations.connect.installing')
@@ -59,7 +49,7 @@ export function ConnectGitHubPanel({
       </div>
 
       <details
-        className="rounded-xl bg-[color:var(--app-surface)] p-4 ring-1 ring-[color:var(--app-ring)]"
+        className="rounded-[var(--app-radius-md)] bg-[color:var(--app-surface)] p-4 shadow-[inset_0_0_0_1px_var(--app-ring)]"
         onToggle={(event) => {
           setFallbackOpen(event.currentTarget.open);
         }}

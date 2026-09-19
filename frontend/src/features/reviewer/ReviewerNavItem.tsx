@@ -24,7 +24,7 @@ export function ReviewerNavItem() {
       <Link
         to="/reviewer"
         className={[
-          'flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-sm',
+          'flex min-h-11 items-center gap-2 rounded-[var(--app-radius-md)] px-3 py-2 text-sm',
           'focus-visible:ring-2 ring-[color:var(--app-ring-strong)]',
           active
             ? 'bg-[color:var(--app-chip-active)] text-[color:var(--app-text-strong)]'
