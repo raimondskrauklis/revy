@@ -74,7 +74,7 @@ export function StackShell() {
             <button
               key={`${item.type}-${item.id}`}
               type="button"
-              className="absolute top-4 bottom-4 w-10 pointer-events-auto rounded-l-xl bg-[color:var(--app-surface)] ring-1 ring-[color:var(--app-ring)]"
+              className="absolute top-4 bottom-4 w-10 pointer-events-auto rounded-l-[var(--app-radius-md)] bg-[color:var(--app-surface)] shadow-[inset_0_0_0_1px_var(--app-ring)]"
               style={{ right: offsetRight, zIndex: `calc(var(--z-panel) + ${index})` }}
               onClick={() => popTo(index)}
               aria-label={t('panels.focusPanel', { title: item.title })}
@@ -88,7 +88,7 @@ export function StackShell() {
             role="dialog"
             aria-modal="true"
             aria-labelledby={`panel-title-${item.type}-${item.id}`}
-            className="absolute top-2 bottom-2 pointer-events-auto flex flex-col w-full max-w-[min(900px,100vw)] bg-[color:var(--app-surface)] ring-1 ring-[color:var(--app-ring)] rounded-l-xl shadow-lg"
+            className="absolute top-2 bottom-2 pointer-events-auto flex flex-col w-full max-w-[min(900px,100vw)] bg-[color:var(--app-surface)] shadow-[inset_0_0_0_1px_var(--app-ring)] rounded-l-[var(--app-radius-md)]"
             style={{ right: offsetRight, zIndex: `calc(var(--z-panel) + ${index})` }}
           >
             <header className="flex items-center gap-2 px-4 py-3 ring-b ring-[color:var(--app-ring)]">
@@ -101,7 +101,7 @@ export function StackShell() {
               <button
                 type="button"
                 onClick={pop}
-                className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
+                className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-[var(--app-radius-md)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
                 aria-label={t('panels.close')}
               >
                 <X className="h-4 w-4" aria-hidden />

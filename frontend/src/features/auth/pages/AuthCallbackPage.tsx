@@ -15,7 +15,7 @@ export function AuthCallbackPage() {
       navigate('/login', { replace: true });
       return;
     }
-    navigate('/dashboard', { replace: true });
+    navigate('/reviewer', { replace: true });
   }, [isAuthenticated, isLoading, isUserLoading, navigate]);
 
   return (

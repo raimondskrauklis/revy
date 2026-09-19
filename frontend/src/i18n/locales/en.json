@@ -54,10 +54,6 @@
   "dashboard": {
     "noWorkspace": "Select a workspace to view the dashboard.",
     "widgetError": "This widget could not be loaded.",
-    "welcome": {
-      "greeting": "Welcome, {{name}}",
-      "workspace": "You are working in {{workspace}}"
-    },
     "checklist": {
       "title": "Get started",
       "progress": "{{completed}} of {{total}} complete",
@@ -183,7 +179,7 @@
       "body": "Password, multi-factor authentication, and session management will be available in Revy later. Contact your workspace admin if you need to change how you sign in."
     },
     "appearance": {
-      "body": "Choose how the app looks on this device. Theme preference is stored locally in your browser.",
+      "body": "This product is a console-only operator surface. Light and system themes stay in the store for a later revert; they are not a working choice here.",
       "themeLabel": "Theme"
     },
     "workspace": {
@@ -466,43 +462,29 @@
       "signIn": "Sign in"
     },
     "hero": {
-      "eyebrow": "AI code review for GitHub",
-      "title": "Ship with confidence",
-      "subtitle": "Connect your repositories, run automated reviews on pull requests, and keep your team aligned in one workspace.",
-      "cta": "Get started",
+      "eyebrow": "PR operator console",
+      "title": "Findings before you merge",
+      "subtitle": "Connect GitHub. Review findings in the console. Merge when the lamps say so.",
+      "cta": "Open console",
       "secondary": "Already have an account?"
     },
-    "features": {
-      "github": {
-        "title": "GitHub-native",
-        "body": "Install the Revy GitHub App on your organization. Webhooks keep repositories and pull requests in sync."
-      },
-      "review": {
-        "title": "AI-assisted review",
-        "body": "Indexing, findings, and publish back to GitHub — with human oversight in the reviewer UI."
-      },
-      "workspace": {
-        "title": "Team workspaces",
-        "body": "Invite collaborators, manage installations, and control access per workspace."
-      }
-    },
-    "footer": "Built for engineering teams shipping on GitHub."
+    "footer": "Operator console for GitHub pull-request review."
   },
   "auth": {
     "loading": "Loading…",
     "login": {
-      "title": "Welcome back",
-      "body": "Sign in with your organization account. We use secure SSO via Keycloak.",
+      "title": "Sign in",
+      "body": "Continue with your organization SSO. Keycloak handles the session.",
       "action": "Continue with SSO",
       "hint": "You will be redirected to your identity provider to sign in.",
       "backHome": "Back to home",
       "panel": {
-        "eyebrow": "Revy",
-        "title": "AI-assisted code review on GitHub",
-        "subtitle": "From webhook ingestion to published findings — one workspace for your team.",
-        "bullet1": "Connect repositories via the GitHub App",
-        "bullet2": "Review AI findings before you merge",
-        "bullet3": "Collaborate in secure team workspaces"
+        "eyebrow": "revy",
+        "title": "PR operator console",
+        "subtitle": "Findings, severity lamps, and merge verdicts — not a greeting dashboard.",
+        "bullet1": "Connect the GitHub App",
+        "bullet2": "Scan findings before you merge",
+        "bullet3": "Keep installs and access in the workspace"
       }
     },
     "sessionExpired": {
@@ -566,20 +548,16 @@
       "installing": "Opening GitHub…",
       "cards": {
         "orgOwner": {
-          "title": "Organization owner may be required",
-          "body": "Installing on an organization may need an org owner to approve the App."
+          "title": "Organization owner may be required"
         },
         "sso": {
-          "title": "SSO organizations",
-          "body": "If the organization uses SAML SSO, complete GitHub SSO before you install."
+          "title": "SSO organizations"
         },
         "selectRepos": {
-          "title": "Only select repositories",
-          "body": "Choose Only select repositories and grant the repos Revy should review."
+          "title": "Only select repositories"
         },
         "authorizeVsInstall": {
-          "title": "Authorize is not install",
-          "body": "Approving GitHub access is not the same as installing the App. Finish Install on GitHub."
+          "title": "Authorize is not install"
         }
       }
     },
@@ -635,6 +613,8 @@
     "installation": "GitHub installation",
     "repositories": {
       "empty": "No repositories synced for this installation.",
+      "loading": "Loading repositories…",
+      "error": "Could not load repositories.",
       "name": "Repository",
       "fullName": "Full name",
       "actions": "Actions",
@@ -642,6 +622,8 @@
     },
     "pullRequests": {
       "empty": "No pull requests ingested for this repository yet.",
+      "loading": "Loading pull requests…",
+      "error": "Could not load pull requests.",
       "number": "#",
       "title": "Title",
       "headSha": "Head SHA",
@@ -737,6 +719,8 @@
     "widget": {
       "title": "Code review",
       "body": "Browse PR findings and merge readiness in Revy.",
+      "unavailable": "Connect a GitHub installation to open the reviewer.",
+      "connect": "Connect GitHub",
       "open": "Open reviewer"
     }
   },

@@ -28,8 +28,16 @@ export function PullRequestListPage() {
     );
   }
 
+  if (error) {
+    return (
+      <p className="text-sm text-[color:var(--app-danger)]">{t('reviewer.pullRequests.error')}</p>
+    );
+  }
+
   if (isLoading) {
-    return <p className="text-sm text-[color:var(--app-text-muted)]">{t('common.loading')}</p>;
+    return (
+      <p className="text-sm text-[color:var(--app-text-muted)]">{t('reviewer.pullRequests.loading')}</p>
+    );
   }
 
   if (pullRequests.length === 0) {
@@ -39,7 +47,7 @@ export function PullRequestListPage() {
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg ring-1 ring-[color:var(--app-ring)]">
+    <div className="overflow-x-auto rounded-[var(--app-radius-sm)] shadow-[inset_0_0_0_1px_var(--app-ring)]">
       <table className="min-w-full text-left text-sm">
         <thead className="bg-[color:var(--app-chip)] text-[color:var(--app-text-muted)]">
           <tr>
@@ -61,7 +69,9 @@ export function PullRequestListPage() {
                   #{pullRequest.number}
                 </Link>
               </td>
-              <td className="px-3 py-2 text-[color:var(--app-text-strong)]">{pullRequest.title}</td>
+              <td className="px-3 py-2 font-sans text-[color:var(--app-text-strong)]">
+                {pullRequest.title}
+              </td>
               <td className="px-3 py-2">
                 <PullRequestStateBadge pullRequest={pullRequest} />
               </td>

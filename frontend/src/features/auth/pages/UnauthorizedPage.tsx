@@ -17,7 +17,7 @@ export function UnauthorizedPage() {
 
   useEffect(() => {
     if (permissionDenied || !user) return;
-    navigate('/dashboard', { replace: true });
+    navigate('/reviewer', { replace: true });
   }, [navigate, permissionDenied, user]);
 
   if (!user && isUserLoading) {
@@ -55,15 +55,15 @@ export function UnauthorizedPage() {
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="min-h-11 px-4 rounded-lg ring-1 ring-[color:var(--app-ring)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
+            className="min-h-11 px-4 rounded-[var(--app-radius-md)] shadow-[inset_0_0_0_1px_var(--app-ring)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
             >
               {t('auth.unauthorized.goBack')}
             </button>
           ) : null}
           {!sessionWithoutProfile ? (
             <Link
-              to="/dashboard"
-              className="min-h-11 inline-flex items-center px-4 rounded-lg bg-[color:var(--app-cta-bg)] text-[color:var(--app-cta-fg)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
+              to="/reviewer"
+              className="min-h-11 inline-flex items-center px-4 rounded-[var(--app-radius-md)] bg-[color:var(--app-cta-bg)] text-[color:var(--app-cta-fg)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
             >
               {t('auth.unauthorized.goHome')}
             </Link>
@@ -71,7 +71,7 @@ export function UnauthorizedPage() {
           <button
             type="button"
             onClick={() => logout()}
-            className="min-h-11 px-4 rounded-lg text-[color:var(--app-text-muted)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
+            className="min-h-11 px-4 rounded-[var(--app-radius-md)] text-[color:var(--app-text-muted)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
           >
             {t('auth.actions.signOut')}
           </button>

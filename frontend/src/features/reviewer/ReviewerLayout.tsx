@@ -1,11 +1,14 @@
 // frontend/src/features/reviewer/ReviewerLayout.tsx
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useReviewerRepoHop } from '@/features/reviewer/useReviewerRepoHop';
 
 export function ReviewerLayout() {
   const { t } = useTranslation();
   const location = useLocation();
+  const { shouldHop, isLoading } = useReviewerRepoHop();
   const onHome = location.pathname === '/reviewer';
+  const showBack = !onHome && !shouldHop && !isLoading;
 
   return (
     <div className="space-y-4">
@@ -16,7 +19,7 @@ export function ReviewerLayout() {
           </h1>
           <p className="text-sm text-[color:var(--app-text-muted)]">{t('reviewer.subtitle')}</p>
         </div>
-        {!onHome ? (
+        {showBack ? (
           <Link
             to="/reviewer"
             className="ml-auto text-sm text-[color:var(--app-link)] hover:underline focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"

@@ -1,26 +1,23 @@
 {
   "files": [
     {
-      "path": "docs/github-onboarding/GITHUB_ONBOARDING_P3_EXECUTION.md",
-      "description": "GitHub onboarding P3 \u2014 live \u22651-repo verify sets verified_at",
+      "path": "docs/visual-identity/VISUAL_IDENTITY_P0_EXECUTION.md",
+      "description": "Visual identity P0 \u2014 overlay, type, force-dark, mark, toasts",
       "scope": [
-        "backend/**",
         "frontend/**"
       ]
     },
     {
-      "path": "docs/github-onboarding/GITHUB_ONBOARDING_FINDINGS.md",
-      "description": "GitHub onboarding baseline \u2014 Q1\u2013Q9, Q11\u2013Q21",
+      "path": "docs/visual-identity/VISUAL_IDENTITY_FINDINGS.md",
+      "description": "Visual identity baseline \u2014 VI-Q0\u2013Q10",
       "scope": [
-        "backend/**",
         "frontend/**"
       ]
     },
     {
-      "path": "docs/github-onboarding/GITHUB_ONBOARDING_GENERAL_PLAN.md",
-      "description": "GitHub onboarding general plan \u2014 P0\u2013P4",
+      "path": "docs/visual-identity/VISUAL_IDENTITY_GENERAL_PLAN.md",
+      "description": "Visual identity general plan \u2014 P0\u2013P4",
       "scope": [
-        "backend/**",
         "frontend/**"
       ]
     }

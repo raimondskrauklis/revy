@@ -54,10 +54,6 @@
   "dashboard": {
     "noWorkspace": "Izvēlieties darba vidi, lai skatītu informācijas paneli.",
     "widgetError": "Šo logrīku neizdevās ielādēt.",
-    "welcome": {
-      "greeting": "Laipni lūdzam, {{name}}",
-      "workspace": "Jūs strādājat {{workspace}}"
-    },
     "checklist": {
       "title": "Sākt darbu",
       "progress": "{{completed}} no {{total}} pabeigti",
@@ -183,7 +179,7 @@
       "body": "Parole, daudzfaktoru autentifikācija un sesiju pārvaldība Revy būs pieejama vēlāk. Ja nepieciešams mainīt pierakstīšanos, sazinieties ar darbvietas administratoru."
     },
     "appearance": {
-      "body": "Izvēlieties, kā lietotne izskatās šajā ierīcē. Tēmas iestatījums tiek saglabāts lokāli pārlūkā.",
+      "body": "Šis produkts ir tikai konsoles operatora virsma. Gaišā un sistēmas tēma paliek krātuvē vēlākai atgriešanai; šeit tās nav strādājoša izvēle.",
       "themeLabel": "Tēma"
     },
     "workspace": {
@@ -466,43 +462,29 @@
       "signIn": "Pierakstīties"
     },
     "hero": {
-      "eyebrow": "MI koda pārskats GitHub",
-      "title": "Publicējiet ar pārliecību",
-      "subtitle": "Pievienojiet repozitorijus, palaidiet automatizētus pārskatus pull requestiem un turiet komandu saskaņotu vienā darba vidē.",
-      "cta": "Sākt",
+      "eyebrow": "PR operatora konsole",
+      "title": "Atradumi pirms apvienošanas",
+      "subtitle": "Savienojiet GitHub. Pārskatiet atradumus konsolē. Apvienojiet, kad lampas ir zaļas.",
+      "cta": "Atvērt konsoli",
       "secondary": "Jau ir konts?"
     },
-    "features": {
-      "github": {
-        "title": "GitHub integrācija",
-        "body": "Instalējiet Revy GitHub lietotni organizācijai. Webhooki sinhronizē repozitorijus un pull requestus."
-      },
-      "review": {
-        "title": "MI atbalstīts pārskats",
-        "body": "Indeksēšana, atradumi un publicēšana atpakaļ GitHub — ar cilvēka uzraudzību pārskatītāja saskarnē."
-      },
-      "workspace": {
-        "title": "Komandas darba vides",
-        "body": "Uzaiciniet kolēģus, pārvaldiet instalācijas un piekļuvi katrā darba vidē."
-      }
-    },
-    "footer": "Radīts inženieru komandām, kas strādā ar GitHub."
+    "footer": "Operatora konsole GitHub pull request pārskatam."
   },
   "auth": {
     "loading": "Ielādē…",
     "login": {
-      "title": "Laipni lūdzam atpakaļ",
-      "body": "Pierakstieties ar organizācijas kontu. Izmantojam drošu SSO caur Keycloak.",
+      "title": "Pierakstīties",
+      "body": "Turpiniet ar organizācijas SSO. Sesiju nodrošina Keycloak.",
       "action": "Turpināt ar SSO",
       "hint": "Jūs tiksit novirzīts uz identitātes nodrošinātāju, lai pierakstītos.",
       "backHome": "Atpakaļ uz sākumu",
       "panel": {
-        "eyebrow": "Revy",
-        "title": "MI atbalstīts koda pārskats GitHub",
-        "subtitle": "No webhook uzņemšanas līdz publicētiem atradumiem — viena darba vide komandai.",
-        "bullet1": "Pievienojiet repozitorijus ar GitHub lietotni",
-        "bullet2": "Pārskatiet MI atradumus pirms apvienošanas",
-        "bullet3": "Sadarbojieties drošās komandas darba vidēs"
+        "eyebrow": "revy",
+        "title": "PR operatora konsole",
+        "subtitle": "Atradumi, smaguma lampas un apvienošanas verdikti — ne sveiciena panelis.",
+        "bullet1": "Savienojiet GitHub lietotni",
+        "bullet2": "Skenējiet atradumus pirms apvienošanas",
+        "bullet3": "Instalācijas un piekļuve paliek darba vidē"
       }
     },
     "sessionExpired": {
@@ -566,20 +548,16 @@
       "installing": "Atver GitHub…",
       "cards": {
         "orgOwner": {
-          "title": "Var būt nepieciešams organizācijas īpašnieks",
-          "body": "Instalējot organizācijā, GitHub App apstiprināšanai var būt vajadzīgs organizācijas īpašnieks."
+          "title": "Var būt nepieciešams organizācijas īpašnieks"
         },
         "sso": {
-          "title": "SSO organizācijas",
-          "body": "Ja organizācija izmanto SAML SSO, pirms instalēšanas pabeidziet GitHub SSO."
+          "title": "SSO organizācijas"
         },
         "selectRepos": {
-          "title": "Only select repositories",
-          "body": "Izvēlieties Only select repositories un piešķiriet repo, kurus Revy vajadzētu recenzēt."
+          "title": "Only select repositories"
         },
         "authorizeVsInstall": {
-          "title": "Autorizācija nav instalācija",
-          "body": "GitHub piekļuves apstiprināšana nav tas pats, kas App instalācija. Pabeidziet Install GitHub."
+          "title": "Autorizācija nav instalācija"
         }
       }
     },
@@ -635,6 +613,8 @@
     "installation": "GitHub instalācija",
     "repositories": {
       "empty": "Šai instalācijai nav sinhronizētu repozitoriju.",
+      "loading": "Ielādē repozitorijus…",
+      "error": "Neizdevās ielādēt repozitorijus.",
       "name": "Repozitorijs",
       "fullName": "Pilnais nosaukums",
       "actions": "Darbības",
@@ -642,6 +622,8 @@
     },
     "pullRequests": {
       "empty": "Šim repozitorijam vēl nav importētu pull request.",
+      "loading": "Ielādē pull request…",
+      "error": "Neizdevās ielādēt pull request.",
       "number": "#",
       "title": "Nosaukums",
       "headSha": "Head SHA",
@@ -737,6 +719,8 @@
     "widget": {
       "title": "Koda recenzija",
       "body": "Pārlūkojiet PR atradumus un sapludināšanas gatavību Revy.",
+      "unavailable": "Pievienojiet GitHub instalāciju, lai atvērtu recenzentu.",
+      "connect": "Pievienot GitHub",
       "open": "Atvērt recenzentu"
     }
   },

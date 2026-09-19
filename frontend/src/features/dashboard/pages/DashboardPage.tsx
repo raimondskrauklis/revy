@@ -5,7 +5,6 @@ import { DashboardGrid } from '@/features/dashboard/layout/DashboardGrid';
 import { QuickActionsWidget } from '@/features/dashboard/widgets/QuickActionsWidget';
 import { RecentActivityWidget } from '@/features/dashboard/widgets/RecentActivityWidget';
 import { SetupChecklistWidget } from '@/features/dashboard/widgets/SetupChecklistWidget';
-import { WelcomeWidget } from '@/features/dashboard/widgets/WelcomeWidget';
 import { useExtensions } from '@/platform/extensions/hooks';
 import { WidgetErrorBoundary } from '@/platform/extensions/WidgetErrorBoundary';
 
@@ -22,8 +21,6 @@ export function DashboardPage() {
           {t('nav.dashboard')}
         </h1>
       </div>
-
-      <WelcomeWidget />
 
       {hasWorkspace ? (
         <>
@@ -43,7 +40,9 @@ export function DashboardPage() {
             </DashboardGrid>
           ) : null}
         </>
-      ) : null}
+      ) : (
+        <p className="text-sm text-[color:var(--app-text-muted)]">{t('dashboard.noWorkspace')}</p>
+      )}
     </div>
   );
 }

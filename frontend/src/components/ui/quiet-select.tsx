@@ -28,7 +28,7 @@ export function QuietSelectTrigger({
       data-slot="quiet-select-trigger"
       data-size={size}
       className={cn(
-        'rounded-lg px-3 outline-none shadow-none flex items-center justify-between gap-2',
+        'rounded-[var(--app-radius-md)] px-3 outline-none shadow-none flex items-center justify-between gap-2',
         'bg-[color:var(--app-surface)] shadow-[inset_0_0_0_1px_var(--app-input-border)]',
         'text-[color:var(--app-text)] [&_svg]:text-[color:var(--app-text-muted)]',
         'hover:bg-[color:var(--app-chip)] data-[state=open]:bg-[color:var(--app-chip-active)]',

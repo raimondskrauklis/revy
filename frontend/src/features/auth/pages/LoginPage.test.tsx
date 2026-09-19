@@ -18,15 +18,17 @@ vi.mock('@/contexts/AuthContext', () => ({
 describe('LoginPage', () => {
   it('renders SSO button and triggers login', async () => {
     const user = userEvent.setup();
-    render(
+    const { container } = render(
       <MemoryRouter>
         <LoginPage />
       </MemoryRouter>,
     );
 
+    expect(container.querySelector('.lg\\:grid-cols-2')).not.toBeNull();
+
     const button = screen.getByRole('button', { name: /continue with sso/i });
     expect(button).toBeInTheDocument();
     await user.click(button);
-    expect(login).toHaveBeenCalledWith('/dashboard');
+    expect(login).toHaveBeenCalledWith('/reviewer');
   });
 });

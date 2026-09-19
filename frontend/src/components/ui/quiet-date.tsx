@@ -82,7 +82,7 @@ export function QuietDateInput({
           className={cn(
             'w-full justify-between gap-2',
             'bg-[color:var(--app-surface)] text-[color:var(--app-text)]',
-            'shadow-[inset_0_0_0_1px_var(--app-input-border)] rounded-lg px-3 h-11',
+            'shadow-[inset_0_0_0_1px_var(--app-input-border)] rounded-[var(--app-radius-md)] px-3 h-11',
             'hover:bg-[color:var(--app-chip)]',
             'focus-visible:ring-2 focus-visible:ring-[color:var(--app-ring-strong)]',
             'focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--app-surface)]',

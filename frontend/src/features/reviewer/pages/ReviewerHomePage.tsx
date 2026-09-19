@@ -1,59 +1,54 @@
 // frontend/src/features/reviewer/pages/ReviewerHomePage.tsx
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '@/contexts/AuthContext';
-import { fetchInstallations, type GitHubInstallation } from '@/features/installations/api';
+import {
+  QuietSelect,
+  QuietSelectContent,
+  QuietSelectItem,
+  QuietSelectTrigger,
+  QuietSelectValue,
+} from '@/components/ui/quiet-select';
 import { useInstallationRepositories } from '@/features/reviewer/hooks';
+import { useReviewerRepoHop } from '@/features/reviewer/useReviewerRepoHop';
 import { mapApiError } from '@/shared/errors';
 import { showDomainErrorToast } from '@/shared/errors/toasts';
 
 export function ReviewerHomePage() {
   const { t } = useTranslation();
-  const { user } = useAuth();
-  const workspaceId = user?.workspace_id ?? null;
-
-  const [installations, setInstallations] = useState<GitHubInstallation[]>([]);
-  const [selectedInstallationId, setSelectedInstallationId] = useState<string | null>(null);
-  const [loadingInstallations, setLoadingInstallations] = useState(true);
-
   const {
-    items: repositories,
-    isLoading: loadingRepos,
-    error: reposError,
-    ref,
-  } = useInstallationRepositories(workspaceId, selectedInstallationId);
+    workspaceId,
+    installations,
+    installationsError,
+    isLoadingInstallations,
+    shouldHop,
+    hopRepositoryId,
+    hopRepositories,
+    hopReposLoading,
+    hopReposError,
+    hopReposRef,
+    isLoading: hopLoading,
+  } = useReviewerRepoHop();
+
+  const [selectedInstallationId, setSelectedInstallationId] = useState<string | null>(null);
+  const multiInstall = installations.length > 1;
+  const activeInstallationId = selectedInstallationId ?? installations[0]?.id ?? null;
+
+  const selectedReposQuery = useInstallationRepositories(
+    workspaceId,
+    multiInstall ? activeInstallationId : null,
+  );
+
+  const repositories = multiInstall ? selectedReposQuery.items : hopRepositories;
+  const loadingRepos = multiInstall ? selectedReposQuery.isLoading : hopReposLoading;
+  const reposError = multiInstall ? selectedReposQuery.error : hopReposError;
+  const ref = multiInstall ? selectedReposQuery.ref : hopReposRef;
 
   useEffect(() => {
-    if (!workspaceId) {
-      setInstallations([]);
-      setLoadingInstallations(false);
-      return;
+    if (installationsError) {
+      showDomainErrorToast(mapApiError(installationsError));
     }
-    let cancelled = false;
-    setLoadingInstallations(true);
-    void fetchInstallations(workspaceId)
-      .then((rows) => {
-        if (cancelled) return;
-        setInstallations(rows);
-        if (rows[0]) {
-          setSelectedInstallationId(rows[0].id);
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          showDomainErrorToast(mapApiError(error));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoadingInstallations(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [workspaceId]);
+  }, [installationsError]);
 
   useEffect(() => {
     if (reposError) {
@@ -67,53 +62,62 @@ export function ReviewerHomePage() {
     );
   }
 
+  if (shouldHop && hopRepositoryId) {
+    return (
+      <Navigate to={`/reviewer/repositories/${hopRepositoryId}/pull-requests`} replace />
+    );
+  }
+
+  const listError = installationsError ?? reposError;
+
   return (
     <div className="space-y-6">
-      {installations.length > 1 ? (
+      {installations.length > 1 && activeInstallationId ? (
         <label className="flex max-w-md flex-col gap-1 text-sm">
           <span className="text-[color:var(--app-text-muted)]">{t('reviewer.installation')}</span>
-          <select
-            className="min-h-11 rounded-lg border border-[color:var(--app-ring)] bg-[color:var(--app-surface)] px-3 text-[color:var(--app-text-strong)]"
-            value={selectedInstallationId ?? ''}
-            onChange={(event) => setSelectedInstallationId(event.target.value || null)}
-          >
-            {installations.map((installation) => (
-              <option key={installation.id} value={installation.id}>
-                {installation.account_login}
-              </option>
-            ))}
-          </select>
+          <QuietSelect value={activeInstallationId} onValueChange={setSelectedInstallationId}>
+            <QuietSelectTrigger fullWidth>
+              <QuietSelectValue />
+            </QuietSelectTrigger>
+            <QuietSelectContent>
+              {installations.map((installation) => (
+                <QuietSelectItem key={installation.id} value={installation.id}>
+                  {installation.account_login}
+                </QuietSelectItem>
+              ))}
+            </QuietSelectContent>
+          </QuietSelect>
         </label>
       ) : null}
 
-      {loadingInstallations || loadingRepos ? (
-        <p className="text-sm text-[color:var(--app-text-muted)]">{t('common.loading')}</p>
+      {listError ? (
+        <p className="text-sm text-[color:var(--app-danger)]">{t('reviewer.repositories.error')}</p>
+      ) : hopLoading || isLoadingInstallations || loadingRepos ? (
+        <p className="text-sm text-[color:var(--app-text-muted)]">{t('reviewer.repositories.loading')}</p>
       ) : repositories.length === 0 ? (
         <p className="text-sm text-[color:var(--app-text-muted)]">{t('reviewer.repositories.empty')}</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg ring-1 ring-[color:var(--app-ring)]">
+        <div className="overflow-x-auto rounded-[var(--app-radius-sm)] shadow-[inset_0_0_0_1px_var(--app-ring)]">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-[color:var(--app-chip)] text-[color:var(--app-text-muted)]">
               <tr>
                 <th className="px-3 py-2 font-medium">{t('reviewer.repositories.name')}</th>
                 <th className="px-3 py-2 font-medium">{t('reviewer.repositories.fullName')}</th>
-                <th className="px-3 py-2 font-medium">{t('reviewer.repositories.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {repositories.map((repository) => (
                 <tr key={repository.id} className="border-t border-[color:var(--app-ring)]">
-                  <td className="px-3 py-2 text-[color:var(--app-text-strong)]">{repository.name}</td>
-                  <td className="px-3 py-2 font-mono text-[color:var(--app-text-muted)]">
-                    {repository.full_name}
-                  </td>
                   <td className="px-3 py-2">
                     <Link
                       to={`/reviewer/repositories/${repository.id}/pull-requests`}
-                      className="text-[color:var(--app-link)] hover:underline focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
+                      className="font-medium text-[color:var(--app-text-strong)] hover:underline focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
                     >
-                      {t('reviewer.repositories.viewPullRequests')}
+                      {repository.name}
                     </Link>
+                  </td>
+                  <td className="px-3 py-2 font-mono text-[color:var(--app-text-muted)]">
+                    {repository.full_name}
                   </td>
                 </tr>
               ))}

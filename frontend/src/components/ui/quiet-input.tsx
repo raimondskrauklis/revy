@@ -48,7 +48,7 @@ export const QuietInput = React.forwardRef<HTMLInputElement, React.ComponentProp
     <BaseInput
       ref={ref}
       className={cn(
-        'h-11 rounded-lg border-0 shadow-none',
+        'h-11 rounded-[var(--app-radius-md)] border-0 shadow-none',
         'bg-[color:var(--app-surface)] text-[color:var(--app-text)]',
         'shadow-[inset_0_0_0_1px_var(--app-input-border)] hover:bg-[color:var(--app-chip)]',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--app-ring-strong)] focus-visible:ring-offset-1 focus-visible:ring-offset-[color:var(--app-surface)]',
@@ -67,7 +67,7 @@ export const QuietTextarea = React.forwardRef<HTMLTextAreaElement, React.Compone
     <BaseTextarea
       ref={ref}
       className={cn(
-        'rounded-lg border-0 shadow-none',
+        'rounded-[var(--app-radius-md)] border-0 shadow-none',
         'bg-[color:var(--app-surface)] text-[color:var(--app-text)]',
         'shadow-[inset_0_0_0_1px_var(--app-input-border)] hover:bg-[color:var(--app-chip)]',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--app-ring-strong)] focus-visible:ring-offset-1 focus-visible:ring-offset-[color:var(--app-surface)]',

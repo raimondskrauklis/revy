@@ -160,7 +160,7 @@ Revy changes flowed back to `internal-docs/starter-pack/templates/backend/` for:
 | Q1 | `ENVIRONMENT` value for dev | **locked** | `development` (not `local`) |
 | Q2 | Canonical backend env template | **locked** | `backend/.env.example` only |
 | Q3 | Public URL for emails | **locked** | `APP_PUBLIC_URL`; no `FRONTEND_BASE_URL` |
-| Q4 | Frontend tokens | **locked** | `--app-*` + `tokens.revy.css` |
+| Q4 | Frontend tokens | **locked** | `--app-*` + `tokens.revy.css` (console overlay shipped in [visual-identity](../visual-identity/README.md); not indigo) |
 | Q5 | Postgres for dev | **locked** | DO managed (no local PG container) |
 | Q6 | Redis local | **locked** | `backend/docker-compose.yml` Redis only |
 | Q7 | Cursor rules / deploy workflow | **locked** | Leave as-is for now |

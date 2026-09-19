@@ -21,7 +21,7 @@ export function CompleteProfilePage() {
   }
 
   if (user?.status === 'active') {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/reviewer" replace />;
   }
 
   if (user?.status === 'pending_approval') {
@@ -42,7 +42,7 @@ export function CompleteProfilePage() {
       const updatedUser = await completeProfile({ full_name: trimmed });
       await refetchUser();
       const destination =
-        updatedUser.status === 'pending_approval' ? '/pending-approval' : '/dashboard';
+        updatedUser.status === 'pending_approval' ? '/pending-approval' : '/reviewer';
       navigate(destination, { replace: true });
     } catch (error) {
       const domainError = mapApiError(error);

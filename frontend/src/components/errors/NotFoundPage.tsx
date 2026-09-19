@@ -6,17 +6,17 @@ export function NotFoundPage() {
   const { t } = useTranslation();
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[color:var(--app-canvas)] p-6">
-      <div className="text-center space-y-4">
-        <h1 className="text-xl font-semibold text-[color:var(--app-text-strong)]">
+    <div className="flex min-h-screen items-center justify-center bg-[color:var(--app-canvas)] p-6 font-mono">
+      <div className="max-w-md space-y-4 text-center rounded-[var(--app-radius-md)] p-6 shadow-[inset_0_0_0_1px_var(--app-ring)]">
+        <h1 className="text-xl font-medium text-[color:var(--app-text-strong)]">
           {t('errors.not_found_page.title')}
         </h1>
-        <p className="text-sm text-[color:var(--app-text-muted)]">
+        <p className="font-sans text-sm text-[color:var(--app-text-muted)]">
           {t('errors.not_found_page.body')}
         </p>
         <Link
-          to="/dashboard"
-          className="inline-flex min-h-11 items-center px-4 rounded-lg bg-[color:var(--app-cta-bg)] text-[color:var(--app-cta-fg)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
+          to="/reviewer"
+          className="inline-flex min-h-11 items-center rounded-[var(--app-radius-md)] px-4 bg-[color:var(--app-cta-bg)] text-[color:var(--app-cta-fg)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
         >
           {t('auth.unauthorized.goHome')}
         </Link>

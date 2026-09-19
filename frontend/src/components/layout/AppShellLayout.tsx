@@ -13,6 +13,7 @@ import { StackShell } from '@/components/layout/StackShell';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher';
 import { UserMenu } from '@/components/layout/UserMenu';
+import { RevyLogo } from '@/components/auth/RevyLogo';
 import { useExtensions } from '@/platform/extensions/hooks';
 
 type NavItem = {
@@ -27,6 +28,8 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/settings', label: 'nav.settings', icon: Settings },
 ];
 
+const NAV_LINK_RADIUS = 'rounded-[var(--app-radius-md)]';
+
 function isNavActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -38,9 +41,9 @@ export function AppShellLayout() {
 
   return (
     <div className="flex h-screen min-h-0 overflow-hidden bg-[color:var(--app-canvas)]">
-      <aside className="hidden md:flex w-56 shrink-0 flex-col ring-1 ring-[color:var(--app-ring)] bg-[color:var(--app-surface)]">
-        <div className="px-4 py-3 text-sm font-semibold text-[color:var(--app-text-strong)]">
-          {t('common.appName', { defaultValue: 'App' })}
+      <aside className="hidden md:flex w-56 shrink-0 flex-col border-r border-[color:var(--app-ring)] bg-[color:var(--app-surface)]">
+        <div className="px-4 py-3">
+          <RevyLogo to="/reviewer" />
         </div>
         <nav className="flex-1 overflow-y-auto px-2 py-2" aria-label={t('sidebar.mainNav')}>
           <ul className="space-y-1">
@@ -52,7 +55,8 @@ export function AppShellLayout() {
                   <Link
                     to={item.href}
                     className={[
-                      'flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-sm',
+                      'flex min-h-11 items-center gap-2 px-3 py-2 text-sm',
+                      NAV_LINK_RADIUS,
                       'focus-visible:ring-2 ring-[color:var(--app-ring-strong)]',
                       active
                         ? 'bg-[color:var(--app-chip-active)] text-[color:var(--app-text-strong)]'

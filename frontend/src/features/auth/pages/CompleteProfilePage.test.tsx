@@ -1,7 +1,7 @@
 // frontend/src/features/auth/pages/CompleteProfilePage.test.tsx
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { CompleteProfilePage } from '@/features/auth/pages/CompleteProfilePage';
 import { AppRole } from '@/shared/types/enums';
@@ -84,7 +84,11 @@ describe('CompleteProfilePage', () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter>
-        <CompleteProfilePage />
+        <Routes>
+          <Route path="/" element={<CompleteProfilePage />} />
+          <Route path="/reviewer" element={<div>Reviewer</div>} />
+          <Route path="/pending-approval" element={<div>Pending</div>} />
+        </Routes>
       </MemoryRouter>,
     );
 
@@ -93,5 +97,70 @@ describe('CompleteProfilePage', () => {
 
     expect(completeProfile).toHaveBeenCalledWith({ full_name: 'Ada' });
     expect(refetchUser).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.getByText('Reviewer')).toBeInTheDocument();
+    });
+  });
+
+  it('sends already-active users to reviewer', () => {
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: '1',
+        email: 'user@example.com',
+        full_name: 'Ada',
+        status: 'active',
+        platform_role: null,
+        workspace_id: 'ws',
+        workspace_plan: null,
+        role: AppRole.admin,
+        memberships: [],
+      },
+      refetchUser: vi.fn(),
+    } as unknown as ReturnType<typeof useAuth>);
+
+    render(
+      <MemoryRouter>
+        <Routes>
+          <Route path="/" element={<CompleteProfilePage />} />
+          <Route path="/reviewer" element={<div>Reviewer</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Reviewer')).toBeInTheDocument();
+  });
+
+  it('keeps pending_approval users on pending-approval', () => {
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: {
+        id: '1',
+        email: 'user@example.com',
+        full_name: 'Ada',
+        status: 'pending_approval',
+        platform_role: null,
+        workspace_id: null,
+        workspace_plan: null,
+        role: null,
+        memberships: [],
+      },
+      refetchUser: vi.fn(),
+    } as unknown as ReturnType<typeof useAuth>);
+
+    render(
+      <MemoryRouter>
+        <Routes>
+          <Route path="/" element={<CompleteProfilePage />} />
+          <Route path="/pending-approval" element={<div>Pending</div>} />
+          <Route path="/reviewer" element={<div>Reviewer</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Pending')).toBeInTheDocument();
+    expect(screen.queryByText('Reviewer')).not.toBeInTheDocument();
   });
 });

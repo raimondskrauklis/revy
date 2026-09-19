@@ -14,7 +14,7 @@ export function AdminLayout() {
         <div className="flex items-center gap-3">
           <Link
             to="/dashboard"
-            className="flex min-h-11 items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[color:var(--app-text-muted)] hover:bg-[color:var(--app-chip)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
+            className="flex min-h-11 items-center gap-2 rounded-[var(--app-radius-md)] px-2 py-1.5 text-sm text-[color:var(--app-text-muted)] hover:bg-[color:var(--app-chip)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden />
             {t('admin.backToApp')}
