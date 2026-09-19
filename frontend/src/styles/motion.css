@@ -36,5 +36,5 @@
 }
 
 .cursor-block {
-  animation: cursor-block 160ms steps(1, end) infinite;
+  animation: cursor-block 1000ms steps(1, end) infinite;
 }

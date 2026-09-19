@@ -54,10 +54,6 @@
   "dashboard": {
     "noWorkspace": "Select a workspace to view the dashboard.",
     "widgetError": "This widget could not be loaded.",
-    "welcome": {
-      "greeting": "Welcome, {{name}}",
-      "workspace": "You are working in {{workspace}}"
-    },
     "checklist": {
       "title": "Get started",
       "progress": "{{completed}} of {{total}} complete",
@@ -472,20 +468,6 @@
       "cta": "Open console",
       "secondary": "Already have an account?"
     },
-    "features": {
-      "github": {
-        "title": "GitHub-native",
-        "body": "Install the Revy GitHub App on your organization. Webhooks keep repositories and pull requests in sync."
-      },
-      "review": {
-        "title": "AI-assisted review",
-        "body": "Indexing, findings, and publish back to GitHub — with human oversight in the reviewer UI."
-      },
-      "workspace": {
-        "title": "Team workspaces",
-        "body": "Invite collaborators, manage installations, and control access per workspace."
-      }
-    },
     "footer": "Operator console for GitHub pull-request review."
   },
   "auth": {
@@ -566,20 +548,16 @@
       "installing": "Opening GitHub…",
       "cards": {
         "orgOwner": {
-          "title": "Organization owner may be required",
-          "body": "Installing on an organization may need an org owner to approve the App."
+          "title": "Organization owner may be required"
         },
         "sso": {
-          "title": "SSO organizations",
-          "body": "If the organization uses SAML SSO, complete GitHub SSO before you install."
+          "title": "SSO organizations"
         },
         "selectRepos": {
-          "title": "Only select repositories",
-          "body": "Choose Only select repositories and grant the repos Revy should review."
+          "title": "Only select repositories"
         },
         "authorizeVsInstall": {
-          "title": "Authorize is not install",
-          "body": "Approving GitHub access is not the same as installing the App. Finish Install on GitHub."
+          "title": "Authorize is not install"
         }
       }
     },

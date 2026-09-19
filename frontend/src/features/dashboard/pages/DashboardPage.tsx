@@ -27,23 +27,22 @@ export function DashboardPage() {
           <SetupChecklistWidget />
           <QuickActionsWidget />
           <RecentActivityWidget />
+          {dashboardWidgets.length > 0 ? (
+            <DashboardGrid>
+              {dashboardWidgets.map((extension) => {
+                const Component = extension.component;
+                return (
+                  <WidgetErrorBoundary key={extension.id}>
+                    <Component />
+                  </WidgetErrorBoundary>
+                );
+              })}
+            </DashboardGrid>
+          ) : null}
         </>
       ) : (
         <p className="text-sm text-[color:var(--app-text-muted)]">{t('dashboard.noWorkspace')}</p>
       )}
-
-      {dashboardWidgets.length > 0 ? (
-        <DashboardGrid>
-          {dashboardWidgets.map((extension) => {
-            const Component = extension.component;
-            return (
-              <WidgetErrorBoundary key={extension.id}>
-                <Component />
-              </WidgetErrorBoundary>
-            );
-          })}
-        </DashboardGrid>
-      ) : null}
     </div>
   );
 }

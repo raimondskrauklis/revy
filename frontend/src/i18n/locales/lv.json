@@ -54,10 +54,6 @@
   "dashboard": {
     "noWorkspace": "Izvēlieties darba vidi, lai skatītu informācijas paneli.",
     "widgetError": "Šo logrīku neizdevās ielādēt.",
-    "welcome": {
-      "greeting": "Laipni lūdzam, {{name}}",
-      "workspace": "Jūs strādājat {{workspace}}"
-    },
     "checklist": {
       "title": "Sākt darbu",
       "progress": "{{completed}} no {{total}} pabeigti",
@@ -472,20 +468,6 @@
       "cta": "Atvērt konsoli",
       "secondary": "Jau ir konts?"
     },
-    "features": {
-      "github": {
-        "title": "GitHub integrācija",
-        "body": "Instalējiet Revy GitHub lietotni organizācijai. Webhooki sinhronizē repozitorijus un pull requestus."
-      },
-      "review": {
-        "title": "MI atbalstīts pārskats",
-        "body": "Indeksēšana, atradumi un publicēšana atpakaļ GitHub — ar cilvēka uzraudzību pārskatītāja saskarnē."
-      },
-      "workspace": {
-        "title": "Komandas darba vides",
-        "body": "Uzaiciniet kolēģus, pārvaldiet instalācijas un piekļuvi katrā darba vidē."
-      }
-    },
     "footer": "Operatora konsole GitHub pull request pārskatam."
   },
   "auth": {
@@ -566,20 +548,16 @@
       "installing": "Atver GitHub…",
       "cards": {
         "orgOwner": {
-          "title": "Var būt nepieciešams organizācijas īpašnieks",
-          "body": "Instalējot organizācijā, GitHub App apstiprināšanai var būt vajadzīgs organizācijas īpašnieks."
+          "title": "Var būt nepieciešams organizācijas īpašnieks"
         },
         "sso": {
-          "title": "SSO organizācijas",
-          "body": "Ja organizācija izmanto SAML SSO, pirms instalēšanas pabeidziet GitHub SSO."
+          "title": "SSO organizācijas"
         },
         "selectRepos": {
-          "title": "Only select repositories",
-          "body": "Izvēlieties Only select repositories un piešķiriet repo, kurus Revy vajadzētu recenzēt."
+          "title": "Only select repositories"
         },
         "authorizeVsInstall": {
-          "title": "Autorizācija nav instalācija",
-          "body": "GitHub piekļuves apstiprināšana nav tas pats, kas App instalācija. Pabeidziet Install GitHub."
+          "title": "Autorizācija nav instalācija"
         }
       }
     },
