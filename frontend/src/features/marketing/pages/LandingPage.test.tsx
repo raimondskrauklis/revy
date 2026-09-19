@@ -1,5 +1,5 @@
 // frontend/src/features/marketing/pages/LandingPage.test.tsx
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LandingPage } from '@/features/marketing/pages/LandingPage';
@@ -32,7 +32,7 @@ describe('LandingPage', () => {
     expect(screen.queryByRole('heading', { name: /github-native/i })).not.toBeInTheDocument();
   });
 
-  it('replaces authenticated users to reviewer', async () => {
+  it('replaces authenticated users to reviewer', () => {
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -47,8 +47,6 @@ describe('LandingPage', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => {
-      expect(screen.getByText('Reviewer')).toBeInTheDocument();
-    });
+    expect(screen.getByText('Reviewer')).toBeInTheDocument();
   });
 });

@@ -1,7 +1,6 @@
 // frontend/src/features/marketing/pages/LandingPage.tsx
-import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { RevyLogo } from '@/components/auth/RevyLogo';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -9,14 +8,11 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export function LandingPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { isAuthenticated, isLoading } = useAuth();
 
-  useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      navigate('/reviewer', { replace: true });
-    }
-  }, [isAuthenticated, isLoading, navigate]);
+  if (!isLoading && isAuthenticated) {
+    return <Navigate to="/reviewer" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-[color:var(--app-canvas)] font-mono">
