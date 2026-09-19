@@ -17,18 +17,21 @@ export function useReviewerRepoHop() {
   const installations = installationsQuery.data ?? [];
   const hopInstallationId = installations.length <= 1 ? (installations[0]?.id ?? null) : null;
 
-  const hopReposQuery = useInstallationRepositories(workspaceId, hopInstallationId);
+  const {
+    items: hopRepos,
+    isLoading: hopReposLoading,
+    hasNextPage: hopHasMorePages,
+  } = useInstallationRepositories(workspaceId, hopInstallationId);
 
   const isLoading =
     Boolean(workspaceId) &&
-    (installationsQuery.isLoading ||
-      (hopInstallationId != null && hopReposQuery.isLoading));
+    (installationsQuery.isLoading || (hopInstallationId != null && hopReposLoading));
 
   const shouldHop =
     !isLoading &&
     installations.length <= 1 &&
-    hopReposQuery.items.length === 1 &&
-    hopReposQuery.hasNextPage !== true;
+    hopRepos.length === 1 &&
+    hopHasMorePages === false;
 
   return {
     workspaceId,
@@ -36,7 +39,7 @@ export function useReviewerRepoHop() {
     installationsError: installationsQuery.error,
     isLoadingInstallations: installationsQuery.isLoading,
     shouldHop,
-    hopRepositoryId: shouldHop ? hopReposQuery.items[0]!.id : null,
+    hopRepositoryId: shouldHop ? hopRepos[0]!.id : null,
     isLoading,
   };
 }
