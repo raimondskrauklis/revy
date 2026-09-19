@@ -25,7 +25,10 @@ export function useReviewerRepoHop() {
       (hopInstallationId != null && hopReposQuery.isLoading));
 
   const shouldHop =
-    !isLoading && installations.length <= 1 && hopReposQuery.items.length === 1;
+    !isLoading &&
+    installations.length <= 1 &&
+    hopReposQuery.items.length === 1 &&
+    hopReposQuery.hasNextPage !== true;
 
   return {
     workspaceId,

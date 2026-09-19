@@ -130,4 +130,19 @@ describe('useReviewerRepoHop', () => {
     expect(result.current.shouldHop).toBe(false);
     expect(fetchInstallationRepositories).not.toHaveBeenCalled();
   });
+
+  it('does not hop when the first repository page has a next cursor', async () => {
+    vi.mocked(fetchInstallations).mockResolvedValue([makeInstallation('inst-1', 'acme')]);
+    vi.mocked(fetchInstallationRepositories).mockResolvedValue({
+      items: [makeRepo('repo-1', 'api')],
+      cursor: { has_next: true, next_cursor: 'c1' },
+    });
+
+    const { result } = renderHook(() => useReviewerRepoHop(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+    expect(result.current.shouldHop).toBe(false);
+  });
 });
