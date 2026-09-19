@@ -1,15 +1,11 @@
 // frontend/src/features/reviewer/ReviewerNavItem.test.tsx
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { ReviewerNavItem } from '@/features/reviewer/ReviewerNavItem';
 
-vi.mock('@/features/reviewer/hooks', () => ({
-  useReviewerAvailability: vi.fn(() => ({ data: false, isLoading: false })),
-}));
-
 describe('ReviewerNavItem', () => {
-  it('renders the reviewer link when availability is false', () => {
+  it('renders the reviewer link', () => {
     render(
       <MemoryRouter>
         <ul>

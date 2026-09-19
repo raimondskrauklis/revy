@@ -10,7 +10,7 @@ export function useReviewerRepoHop() {
 
   const installationsQuery = useQuery({
     queryKey: reviewerQueryKeys.installations(workspaceId ?? ''),
-    queryFn: () => fetchInstallations(workspaceId!),
+    queryFn: () => (workspaceId ? fetchInstallations(workspaceId) : Promise.resolve([])),
     enabled: Boolean(workspaceId),
   });
 
@@ -39,7 +39,7 @@ export function useReviewerRepoHop() {
     installationsError: installationsQuery.error,
     isLoadingInstallations: installationsQuery.isLoading,
     shouldHop,
-    hopRepositoryId: shouldHop ? hopRepos[0]!.id : null,
+    hopRepositoryId: shouldHop ? (hopRepos[0]?.id ?? null) : null,
     isLoading,
   };
 }
