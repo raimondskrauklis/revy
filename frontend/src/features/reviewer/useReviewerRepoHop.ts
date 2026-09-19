@@ -21,6 +21,8 @@ export function useReviewerRepoHop() {
     items: hopRepos,
     isLoading: hopReposLoading,
     hasNextPage: hopHasMorePages,
+    error: hopReposError,
+    ref: hopReposRef,
   } = useInstallationRepositories(workspaceId, hopInstallationId);
 
   const isLoading =
@@ -40,6 +42,10 @@ export function useReviewerRepoHop() {
     isLoadingInstallations: installationsQuery.isLoading,
     shouldHop,
     hopRepositoryId: shouldHop ? (hopRepos[0]?.id ?? null) : null,
+    hopRepositories: hopRepos,
+    hopReposLoading,
+    hopReposError,
+    hopReposRef,
     isLoading,
   };
 }

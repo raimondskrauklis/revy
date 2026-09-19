@@ -23,18 +23,26 @@ export function ReviewerHomePage() {
     isLoadingInstallations,
     shouldHop,
     hopRepositoryId,
+    hopRepositories,
+    hopReposLoading,
+    hopReposError,
+    hopReposRef,
     isLoading: hopLoading,
   } = useReviewerRepoHop();
 
   const [selectedInstallationId, setSelectedInstallationId] = useState<string | null>(null);
+  const multiInstall = installations.length > 1;
   const activeInstallationId = selectedInstallationId ?? installations[0]?.id ?? null;
 
-  const {
-    items: repositories,
-    isLoading: loadingRepos,
-    error: reposError,
-    ref,
-  } = useInstallationRepositories(workspaceId, activeInstallationId);
+  const selectedReposQuery = useInstallationRepositories(
+    workspaceId,
+    multiInstall ? activeInstallationId : null,
+  );
+
+  const repositories = multiInstall ? selectedReposQuery.items : hopRepositories;
+  const loadingRepos = multiInstall ? selectedReposQuery.isLoading : hopReposLoading;
+  const reposError = multiInstall ? selectedReposQuery.error : hopReposError;
+  const ref = multiInstall ? selectedReposQuery.ref : hopReposRef;
 
   useEffect(() => {
     if (installationsError) {
