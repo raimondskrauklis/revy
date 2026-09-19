@@ -2,20 +2,10 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { GitPullRequest } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useReviewerAvailability } from '@/features/reviewer/hooks';
 
 export function ReviewerNavItem() {
   const { t } = useTranslation();
   const location = useLocation();
-  const { user } = useAuth();
-  const workspaceId = user?.workspace_id ?? null;
-  const { data: available, isLoading } = useReviewerAvailability(workspaceId);
-
-  if (isLoading || !available) {
-    return null;
-  }
-
   const active =
     location.pathname === '/reviewer' || location.pathname.startsWith('/reviewer/');
 

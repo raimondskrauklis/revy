@@ -76,7 +76,7 @@ describe('DashboardPage', () => {
     expect(screen.queryByText(/quick actions/i)).not.toBeInTheDocument();
   });
 
-  it('renders workspace widgets when workspace is selected', async () => {
+  it('renders workspace widgets when workspace is selected', () => {
     vi.mocked(useAuth).mockReturnValue({
       user: {
         id: '1',
@@ -101,7 +101,8 @@ describe('DashboardPage', () => {
 
     renderPage();
 
-    expect(await screen.findByText(/welcome, admin/i)).toBeInTheDocument();
+    expect(screen.queryByText(/welcome, admin/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /dashboard/i })).toBeInTheDocument();
     expect(screen.getByText(/quick actions/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /recent activity/i })).toBeInTheDocument();
   });

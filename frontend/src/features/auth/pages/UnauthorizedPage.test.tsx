@@ -16,7 +16,7 @@ function renderUnauthorized(state?: { reason?: string }) {
     <MemoryRouter initialEntries={[{ pathname: '/unauthorized', state }]}>
       <Routes>
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
-        <Route path="/dashboard" element={<div>Dashboard</div>} />
+        <Route path="/reviewer" element={<div>Reviewer</div>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -39,7 +39,7 @@ describe('UnauthorizedPage', () => {
     expect(document.body.textContent).not.toContain("Couldn't load your account");
   });
 
-  it('redirects active users to dashboard when not permission denied', async () => {
+  it('redirects active users to reviewer when not permission denied', async () => {
     vi.mocked(useAuth).mockReturnValue({
       user: {
         id: '1',
@@ -56,7 +56,7 @@ describe('UnauthorizedPage', () => {
 
     renderUnauthorized();
     await waitFor(() => {
-      expect(document.body.textContent).toContain('Dashboard');
+      expect(document.body.textContent).toContain('Reviewer');
     });
   });
 
@@ -79,6 +79,6 @@ describe('UnauthorizedPage', () => {
     await waitFor(() => {
       expect(document.body.textContent).toContain('Access denied');
     });
-    expect(document.body.textContent).not.toContain('Dashboard');
+    expect(document.body.textContent).not.toContain('Reviewer');
   });
 });

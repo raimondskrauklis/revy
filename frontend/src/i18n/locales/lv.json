@@ -737,6 +737,8 @@
     "widget": {
       "title": "Koda recenzija",
       "body": "Pārlūkojiet PR atradumus un sapludināšanas gatavību Revy.",
+      "unavailable": "Pievienojiet GitHub instalāciju, lai atvērtu recenzentu.",
+      "connect": "Pievienot GitHub",
       "open": "Atvērt recenzentu"
     }
   },

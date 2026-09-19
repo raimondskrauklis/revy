@@ -5,12 +5,12 @@ import { describe, expect, it } from 'vitest';
 import { NotFoundPage } from '@/components/errors/NotFoundPage';
 
 describe('NotFoundPage', () => {
-  it('links home to dashboard', () => {
+  it('links home to reviewer', () => {
     render(
       <MemoryRouter>
         <NotFoundPage />
       </MemoryRouter>,
     );
-    expect(screen.getByRole('link', { name: /go home/i })).toHaveAttribute('href', '/dashboard');
+    expect(screen.getByRole('link', { name: /go home/i })).toHaveAttribute('href', '/reviewer');
   });
 });

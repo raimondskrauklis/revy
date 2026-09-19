@@ -16,7 +16,7 @@ function renderCallback() {
       <Routes>
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
         <Route path="/login" element={<div>Login</div>} />
-        <Route path="/dashboard" element={<div>Dashboard</div>} />
+        <Route path="/reviewer" element={<div>Reviewer</div>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -40,7 +40,7 @@ describe('AuthCallbackPage', () => {
     });
   });
 
-  it('waits for profile load before redirecting to dashboard', async () => {
+  it('waits for profile load before redirecting to reviewer', async () => {
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -49,10 +49,10 @@ describe('AuthCallbackPage', () => {
 
     renderCallback();
     expect(screen.getByText(/loading/i)).toBeInTheDocument();
-    expect(screen.queryByText('Dashboard')).not.toBeInTheDocument();
+    expect(screen.queryByText('Reviewer')).not.toBeInTheDocument();
   });
 
-  it('redirects to dashboard after profile load settles', async () => {
+  it('redirects to reviewer after profile load settles', async () => {
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -61,7 +61,7 @@ describe('AuthCallbackPage', () => {
 
     renderCallback();
     await waitFor(() => {
-      expect(screen.getByText('Dashboard')).toBeInTheDocument();
+      expect(screen.getByText('Reviewer')).toBeInTheDocument();
     });
   });
 });

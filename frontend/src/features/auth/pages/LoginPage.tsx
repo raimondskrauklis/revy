@@ -9,7 +9,7 @@ export function LoginPage() {
   const { t } = useTranslation();
   const { isAuthenticated, isLoading, login } = useAuth();
   const location = useLocation();
-  const from = (location.state as { from?: string } | null)?.from ?? '/dashboard';
+  const from = (location.state as { from?: string } | null)?.from ?? '/reviewer';
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {

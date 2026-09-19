@@ -28,7 +28,7 @@ Linear for `phase-execution` (P2 depends only on P0; still after P1 by number).
 | P0 | Overlay, type `@theme`, force-dark, mark, toasts | [VISUAL_IDENTITY_P0_EXECUTION.md](./VISUAL_IDENTITY_P0_EXECUTION.md) | done |
 | P1 | Public landing + login split + voice | [VISUAL_IDENTITY_P1_EXECUTION.md](./VISUAL_IDENTITY_P1_EXECUTION.md) | done |
 | P2 | Shell, settings/admin, connect chrome | [VISUAL_IDENTITY_P2_EXECUTION.md](./VISUAL_IDENTITY_P2_EXECUTION.md) | done |
-| P3 | Operator home `/reviewer` + dest retarget | [VISUAL_IDENTITY_P3_EXECUTION.md](./VISUAL_IDENTITY_P3_EXECUTION.md) | pending |
+| P3 | Operator home `/reviewer` + dest retarget | [VISUAL_IDENTITY_P3_EXECUTION.md](./VISUAL_IDENTITY_P3_EXECUTION.md) | done |
 | P4 | Reviewer scan, one-repo hop, doc-sync | [VISUAL_IDENTITY_P4_EXECUTION.md](./VISUAL_IDENTITY_P4_EXECUTION.md) | pending |
 
 **Depends:** P1 → P0 · P2 → P0 · P3 → P0+P2 · P4 → P0+P3.

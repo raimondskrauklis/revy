@@ -17,7 +17,7 @@ export function UnauthorizedPage() {
 
   useEffect(() => {
     if (permissionDenied || !user) return;
-    navigate('/dashboard', { replace: true });
+    navigate('/reviewer', { replace: true });
   }, [navigate, permissionDenied, user]);
 
   if (!user && isUserLoading) {
@@ -62,7 +62,7 @@ export function UnauthorizedPage() {
           ) : null}
           {!sessionWithoutProfile ? (
             <Link
-              to="/dashboard"
+              to="/reviewer"
               className="min-h-11 inline-flex items-center px-4 rounded-[var(--app-radius-md)] bg-[color:var(--app-cta-bg)] text-[color:var(--app-cta-fg)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
             >
               {t('auth.unauthorized.goHome')}

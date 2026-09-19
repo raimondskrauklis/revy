@@ -5,7 +5,6 @@ import { DashboardGrid } from '@/features/dashboard/layout/DashboardGrid';
 import { QuickActionsWidget } from '@/features/dashboard/widgets/QuickActionsWidget';
 import { RecentActivityWidget } from '@/features/dashboard/widgets/RecentActivityWidget';
 import { SetupChecklistWidget } from '@/features/dashboard/widgets/SetupChecklistWidget';
-import { WelcomeWidget } from '@/features/dashboard/widgets/WelcomeWidget';
 import { useExtensions } from '@/platform/extensions/hooks';
 import { WidgetErrorBoundary } from '@/platform/extensions/WidgetErrorBoundary';
 
@@ -23,26 +22,27 @@ export function DashboardPage() {
         </h1>
       </div>
 
-      <WelcomeWidget />
-
       {hasWorkspace ? (
         <>
           <SetupChecklistWidget />
           <QuickActionsWidget />
           <RecentActivityWidget />
-          {dashboardWidgets.length > 0 ? (
-            <DashboardGrid>
-              {dashboardWidgets.map((extension) => {
-                const Component = extension.component;
-                return (
-                  <WidgetErrorBoundary key={extension.id}>
-                    <Component />
-                  </WidgetErrorBoundary>
-                );
-              })}
-            </DashboardGrid>
-          ) : null}
         </>
+      ) : (
+        <p className="text-sm text-[color:var(--app-text-muted)]">{t('dashboard.noWorkspace')}</p>
+      )}
+
+      {dashboardWidgets.length > 0 ? (
+        <DashboardGrid>
+          {dashboardWidgets.map((extension) => {
+            const Component = extension.component;
+            return (
+              <WidgetErrorBoundary key={extension.id}>
+                <Component />
+              </WidgetErrorBoundary>
+            );
+          })}
+        </DashboardGrid>
       ) : null}
     </div>
   );

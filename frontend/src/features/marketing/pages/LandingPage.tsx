@@ -13,7 +13,7 @@ export function LandingPage() {
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      window.location.replace('/dashboard');
+      window.location.replace('/reviewer');
     }
   }, [isAuthenticated, isLoading]);
 

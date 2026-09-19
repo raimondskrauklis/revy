@@ -29,6 +29,6 @@ describe('LoginPage', () => {
     const button = screen.getByRole('button', { name: /continue with sso/i });
     expect(button).toBeInTheDocument();
     await user.click(button);
-    expect(login).toHaveBeenCalledWith('/dashboard');
+    expect(login).toHaveBeenCalledWith('/reviewer');
   });
 });

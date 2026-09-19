@@ -737,6 +737,8 @@
     "widget": {
       "title": "Code review",
       "body": "Browse PR findings and merge readiness in Revy.",
+      "unavailable": "Connect a GitHub installation to open the reviewer.",
+      "connect": "Connect GitHub",
       "open": "Open reviewer"
     }
   },

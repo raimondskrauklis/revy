@@ -15,7 +15,7 @@ export function NotFoundPage() {
           {t('errors.not_found_page.body')}
         </p>
         <Link
-          to="/dashboard"
+          to="/reviewer"
           className="inline-flex min-h-11 items-center rounded-[var(--app-radius-md)] px-4 bg-[color:var(--app-cta-bg)] text-[color:var(--app-cta-fg)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
         >
           {t('auth.unauthorized.goHome')}
