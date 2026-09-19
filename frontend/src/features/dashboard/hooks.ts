@@ -39,6 +39,7 @@ export function useChecklistContext(workspaceId: string | null | undefined) {
         workspaceId: workspaceId!,
         memberCount: memberCount.count,
         installationCount: installations.length,
+        hasVerifiedInstallation: installations.some((row) => Boolean(row.verified_at)),
         plan: user?.workspace_plan ?? 'free',
       };
     },

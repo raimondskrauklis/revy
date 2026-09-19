@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Any
 
-from sqlalchemy import BigInteger, ForeignKey, String, Text, Uuid
+from sqlalchemy import BigInteger, DateTime, ForeignKey, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -35,3 +36,4 @@ class GitHubInstallationORM(TimestampedModel):
         server_default=GitHubInstallationStatus.active.value,
     )
     permissions_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

@@ -86,6 +86,12 @@ class Settings(BaseSettings):
     github_app_id: str | None = None
     github_app_private_key_path: str | None = None
     github_webhook_secret: str | None = None
+    github_app_slug: str | None = None
+    github_client_id: str | None = None
+    github_client_secret: str | None = None
+    # API origin GitHub redirects the browser to (Q12). Not APP_PUBLIC_URL (SPA).
+    github_oauth_public_base: str | None = None
+    github_install_state_ttl_seconds: int = 1800
     keycloak_webhook_secret: str | None = None
     revy_bot_login: str = "revy[bot]"
 
@@ -235,6 +241,25 @@ class Settings(BaseSettings):
             and self.github_app_private_key_path
             and self.github_app_private_key_path.strip()
         )
+
+    @property
+    def github_oauth_public_origin(self) -> str | None:
+        base = (self.github_oauth_public_base or "").strip().rstrip("/")
+        return base or None
+
+    @property
+    def github_setup_url(self) -> str | None:
+        origin = self.github_oauth_public_origin
+        if origin is None:
+            return None
+        return f"{origin}/api/v1/github/setup"
+
+    @property
+    def github_callback_url(self) -> str | None:
+        origin = self.github_oauth_public_origin
+        if origin is None:
+            return None
+        return f"{origin}/api/v1/github/callback"
 
     @property
     def embeddings_enabled(self) -> bool:

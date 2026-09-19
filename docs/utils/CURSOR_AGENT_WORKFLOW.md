@@ -25,7 +25,7 @@ Master   → only agent you talk to; memory, implement, gate before run, compile
 Reviewer → Bugbot subagent; one task per spawn; no human chat
 ```
 
-Greptile (GitHub) = post-push contract reviewer; feeds babysit, not your chat.
+Revy (GitHub) = post-push product reviewer; feeds `babysit-revy-pr`, not your chat. Greptile is off.
 
 ---
 
@@ -34,7 +34,7 @@ Greptile (GitHub) = post-push contract reviewer; feeds babysit, not your chat.
 | Track | When | Verb | Your question |
 |-------|------|------|---------------|
 | **Phase LOOP** | RQ slice done | FIND → CLOSE | What did I break? |
-| **Babysit** | Greptile thread fixed | VALIDATE → CLOSE | Is Greptile's fix real? |
+| **Babysit** | Revy thread fixed | VALIDATE → CLOSE | Is Revy's fix real? |
 | **Doc sync** | Agent docs changed | FIND | Do our docs contradict? |
 
 Master must set **VERB** in the brief — agent won't infer the track.
@@ -68,21 +68,18 @@ implement → pytest → ruff → LOCAL BUGBOT → commit → push
 
 **Do not push** with open Bugbot blockers. Skipping the gate is when corners get cut.
 
-Skills: `phase-execution` · `ship-changes` · `babysit-pr`
+Skills: `phase-execution` · `ship-changes` · `babysit-revy-pr`
 
 ---
 
-## Greptile + Bugbot (different jobs)
+## Revy + Bugbot (different jobs)
 
-| | Greptile | Local Bugbot |
-|--|----------|--------------|
+| | Revy | Local Bugbot |
+|--|------|--------------|
 | When | After push | Before push |
-| Job | Contract / symptom | Prove mechanism / break diff |
-| Babysit | Says *where* | VALIDATE says *does the fix work* |
+| Job | Product review on the PR | Prove mechanism / break diff |
 
-Greptile minimum fix ≠ production fix (RC-D17). Always VALIDATE with a named failure path.
-
-**Greptile 👀** on PR open = queued ack (RC-D20), not “read your summary.” Log first comment in [DOGFOOD § PR #51](../review-pipeline/review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#dogfood-pr-51--docsagent-work-rq9) — did it cite execution § RQn?
+**Do not** babysit Greptile. `integrations.greptile` is false.
 
 **Bugbot gate:** `VERB` + trace quality in thinking export — **not** subagent table shape (RC-D23). Master synthesizes for human; accept XML / one-line answers.
 
@@ -94,7 +91,7 @@ Greptile minimum fix ≠ production fix (RC-D17). Always VALIDATE with a named f
 
 | Now | Later (Revy product) |
 |-----|----------------------|
-| Cursor ops — master + Bugbot + Greptile parallel | Distill patterns into Revy |
+| Cursor ops — master + Bugbot + Revy | Distill patterns into Revy |
 | Fix schema/ops while diff is small | Customer pipeline without Cursor parent |
 | Keep agent docs in sync — agents read them | **G-UX+** ack affordances (👀 parity) — post-v1 |
 

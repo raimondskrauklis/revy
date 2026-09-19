@@ -42,7 +42,13 @@ describe('DashboardPage', () => {
       isLoading: false,
     } as unknown as ReturnType<typeof useWorkspaceAudit>);
     vi.mocked(useChecklistContext).mockReturnValue({
-      data: { workspaceId: 'ws-1', memberCount: 1, installationCount: 0, plan: 'free' },
+      data: {
+        workspaceId: 'ws-1',
+        memberCount: 1,
+        installationCount: 0,
+        hasVerifiedInstallation: false,
+        plan: 'free',
+      },
       isLoading: false,
     } as unknown as ReturnType<typeof useChecklistContext>);
     vi.mocked(useExtensions).mockReturnValue([]);

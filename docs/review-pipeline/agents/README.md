@@ -12,7 +12,7 @@
 |-------|------|-------|------------------|
 | **1. Contract** | Locked Q#, schema, routes, RQ scope | [FINDINGS](../review-quality/REVIEW_QUALITY_FINDINGS.md) + [EXECUTION](../waves/REVIEW_QUALITY_EXECUTION.md) § RQn | Implementing RQn |
 | **2. Process** | LOOP, gates, prompts | **This folder** + [prompts/](./prompts/) + [skills](../../../.cursor/skills/) | Every push / phase-execution |
-| **3. Wiring** | Greptile + Bugbot see the contract | `.greptile/files.json`, `.cursor/BUGBOT.md`, [CURSOR_AGENT_WORKFLOW.md](../../utils/CURSOR_AGENT_WORKFLOW.md) | RC0 shipped |
+| **3. Wiring** | Bugbot + Moonshot see the contract | `.cursor/BUGBOT.md`, `.revy/review-context.json`, [CURSOR_AGENT_WORKFLOW.md](../../utils/CURSOR_AGENT_WORKFLOW.md) | first LOOP commit |
 | **4. Evidence** | What we learned on a real PR | [DOGFOOD_PR50](../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md), [CODE_REVIEW_LEARNINGS](../REVIEW_PIPELINE_CODE_REVIEW_LEARNINGS.md), [`chain_of_thoughts/`](./chain_of_thoughts/) (raw exports) | After push; before next RQ |
 
 **Post-v1 strategy** (read only when relevant): [STRUCTURAL_CONTEXT](../review-quality/REVIEW_QUALITY_STRUCTURAL_CONTEXT.md) (code graph), [REVIEW_CONTEXT](../review-quality/REVIEW_QUALITY_REVIEW_CONTEXT.md) (bot wiring roadmap).
@@ -30,14 +30,14 @@ LOCAL BUGBOT  ← mandatory (skills enforce)
         ↓
 commit → push
         ↓
-Greptile + Revy on PR  →  babysit (shallow) + local Bugbot (deep)  →  distill  →  push
+Revy on PR  →  babysit-revy-pr + local Bugbot  →  push
         ↓
 Human gate if execution says stop (e.g. migration pause)
         ↓
 Next RQ
 ```
 
-**Parallel dogfood on #50:** Greptile (GitHub) · local Bugbot (Cursor) · distill → Revy. Revy app **suspended**. Cursor+Bugbot = **complement while building**; customers get Revy-on-repo (RC-D7).
+**Post-push:** Revy on the PR. Greptile is off — do not babysit it.
 
 ---
 
@@ -45,10 +45,10 @@ Next RQ
 
 | | |
 |-|-|
-| **Distill** | Parallel Greptile/Bugbot runs → findings → Revy features; **skim Bugbot transcripts** after each spin; durable rows in learnings — raw exports in `chain_of_thoughts/` when worth keeping ([RC-D23 distill](./chain_of_thoughts/cursor_bugbot_judge_p56_evidence_close.md)) |
+| **Distill** | Bugbot + Revy runs → findings; **skim Bugbot transcripts** after each spin; durable rows in learnings — raw exports in `chain_of_thoughts/` when worth keeping ([RC-D23 distill](./chain_of_thoughts/cursor_bugbot_judge_p56_evidence_close.md)) |
 | **Iterate** | Fix → re-Bugbot → push; multi-pass is normal (RC-D8), not one-shot |
 | **Pause** | Migration / staging gates are features |
-| **Awesome for us** | Greptile-shaped GitHub UX (RQ7) is the bar — see PR #50 visual gap |
+| **Awesome for us** | Revy GitHub UX is the bar |
 | **Thin routers** | [AGENTS.md](../../../AGENTS.md) = pointer; detail stays here |
 
 ---
@@ -63,7 +63,7 @@ Next RQ
 | [PROMPTS.md](./PROMPTS.md) | Copy-paste Bugbot shells (points at `prompts/`) |
 | [chain_of_thoughts/](./chain_of_thoughts/) | Committed Bugbot gate + Cursor chat exports (evidence archive; add selectively) · [judge P56 CLOSE distill](./chain_of_thoughts/cursor_bugbot_judge_p56_evidence_close.md) |
 
-**Skills (gates):** [phase-execution](../../../.cursor/skills/phase-execution/SKILL.md) · [ship-changes](../../../.cursor/skills/ship-changes/SKILL.md) · [babysit-pr](../../../.cursor/skills/babysit-pr/SKILL.md)
+**Skills (gates):** [phase-execution](../../../.cursor/skills/phase-execution/SKILL.md) · [ship-changes](../../../.cursor/skills/ship-changes/SKILL.md) · [babysit-revy-pr](../../../.cursor/skills/babysit-revy-pr/SKILL.md)
 
 ---
 
@@ -72,6 +72,6 @@ Next RQ
 - Duplicate contract into `agents/` — point at FINDINGS + EXECUTION
 - Bloat [AGENTS.md](../../../AGENTS.md) — one row in Read first; expand at **RQ8** doc-sync only
 - New index files per PR — extend `DOGFOOD_PR50.md` table or add `DOGFOOD_PR<n>.md` when needed
-- Skip Bugbot because Greptile will run later
+- Skip Bugbot because Revy will run later
 
 **Active program:** review-quality **merged** — [PR #50](https://github.com/raimondskrauklis/revy/pull/50) · **Next:** human gate AS2 + `0026` on staging → tag `review-quality-v1` · **Quick ref:** [CURSOR_AGENT_WORKFLOW.md](../../utils/CURSOR_AGENT_WORKFLOW.md)

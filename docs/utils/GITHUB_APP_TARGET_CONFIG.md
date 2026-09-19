@@ -5,7 +5,7 @@
 **Incremental / today-only:** [GITHUB_APP_SETUP.md](./GITHUB_APP_SETUP.md)  
 **Description copy-paste:** [GITHUB_APP_DESCRIPTION.md](./GITHUB_APP_DESCRIPTION.md)
 
-**Authority:** [REVIEW_PIPELINE_FINDINGS.md](../review-pipeline/REVIEW_PIPELINE_FINDINGS.md), [REVIEW_PIPELINE_PROGRAM.md](../review-pipeline/REVIEW_PIPELINE_PROGRAM.md), [REVY_PRODUCT_SLICE.md](../starter-pack/REVY_PRODUCT_SLICE.md).
+**Authority:** [GITHUB_ONBOARDING_FINDINGS.md](../github-onboarding/GITHUB_ONBOARDING_FINDINGS.md) Q8/Q12, [REVIEW_PIPELINE_FINDINGS.md](../review-pipeline/REVIEW_PIPELINE_FINDINGS.md), [REVIEW_PIPELINE_PROGRAM.md](../review-pipeline/REVIEW_PIPELINE_PROGRAM.md), [REVY_PRODUCT_SLICE.md](../starter-pack/REVY_PRODUCT_SLICE.md).
 
 ---
 
@@ -21,12 +21,12 @@
 
 ### Identifying and authorizing users
 
-| Field | Target value | Notes |
-|-------|--------------|-------|
-| **Callback URL** | `https://revy.createit.digital/settings/integrations/github/callback` | Placeholder until OAuth install UI ships; ignored until then |
-| **Expire user authorization tokens** | ✓ Checked | GitHub default |
-| **Request user authorization (OAuth) during installation** | ✓ Checked (prod) / ☐ (dev manual register) | Prod: install-from-Revy flow. Dev: unchecked if installing from GitHub UI only |
-| **Enable Device Flow** | ☐ Unchecked | Not used |
+| Field | Production | Staging / dev | Notes |
+|-------|------------|---------------|-------|
+| **Callback URL** | `https://revy.createit.digital/api/v1/github/callback` | `http://localhost:8000/api/v1/github/callback` | Public API GET (Q12). Not the SPA. Hops use `GITHUB_OAUTH_PUBLIC_BASE`, not `APP_PUBLIC_URL` (`:5173` locally). |
+| **Expire user authorization tokens** | ✓ Checked | ✓ Checked | GitHub default |
+| **Request user authorization (OAuth) during installation** | ☐ Unchecked | ☐ Unchecked | Q8 — GitHub forbids this together with a chosen Callback URL |
+| **Enable Device Flow** | ☐ Unchecked | ☐ Unchecked | Not used |
 
 ### Webhook
 
@@ -36,14 +36,12 @@
 | **Webhook URL** | `https://<api-host>/api/v1/webhooks/github` |
 | **Webhook secret** | Generate → `GITHUB_WEBHOOK_SECRET` (same in GitHub + backend env) |
 
-### Post-install (when OAuth install ships)
+### Post-install
 
-| Field | Value |
-|-------|-------|
-| **Setup URL** | `https://revy.createit.digital/installations?setup=1` |
-| **Redirect on update** | ✓ (repo add/remove on installation) |
-
-Until OAuth install ships: leave **Setup URL** empty; link installations via Revy **Register installation** form.
+| Field | Production | Staging / dev | Notes |
+|-------|------------|---------------|-------|
+| **Setup URL** | `https://revy.createit.digital/api/v1/github/setup` | `http://localhost:8000/api/v1/github/setup` | Public API GET (Q12). Live GitHub App dashboard paste is **P4**. |
+| **Redirect on update** | ✓ | ✓ | Repo add/remove re-enters Setup URL |
 
 ### Where can this GitHub App be installed?
 
@@ -215,7 +213,7 @@ pipenv run celery -A app.workers.celery_app worker \
 | 3 | `alembic upgrade head` on target DB |
 | 4 | Deploy API + worker with env above |
 | 5 | **Install App** on customer org/account (all repos or selected) — note **installation ID** from settings URL |
-| 6 | Link **installation ID** in Revy workspace (manual register until OAuth UI; pro plan) |
+| 6 | Link installation from Revy connect wizard (HMAC Setup/Callback). Manual register remains a fallback until P4 live paste. |
 | 7 | Verify webhook deliveries → **200** on `POST /api/v1/webhooks/github` |
 | 8 | Optional: `POST …/sync-repositories` for full repo reconcile |
 

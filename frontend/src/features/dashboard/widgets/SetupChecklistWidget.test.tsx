@@ -49,7 +49,13 @@ describe('SetupChecklistWidget', () => {
       },
     } as unknown as ReturnType<typeof useAuth>);
     vi.mocked(useChecklistContext).mockReturnValue({
-      data: { workspaceId: 'ws-1', memberCount: 1, installationCount: 0, plan: 'free' },
+      data: {
+        workspaceId: 'ws-1',
+        memberCount: 1,
+        installationCount: 0,
+        hasVerifiedInstallation: false,
+        plan: 'free',
+      },
       isLoading: false,
     } as unknown as ReturnType<typeof useChecklistContext>);
 
@@ -82,7 +88,13 @@ describe('SetupChecklistWidget', () => {
       },
     } as unknown as ReturnType<typeof useAuth>);
     vi.mocked(useChecklistContext).mockReturnValue({
-      data: { workspaceId: 'ws-1', memberCount: 2, installationCount: 1, plan: 'pro' },
+      data: {
+        workspaceId: 'ws-1',
+        memberCount: 2,
+        installationCount: 1,
+        hasVerifiedInstallation: true,
+        plan: 'pro',
+      },
       isLoading: false,
     } as unknown as ReturnType<typeof useChecklistContext>);
 

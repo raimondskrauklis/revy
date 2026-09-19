@@ -2,9 +2,9 @@
 
 **Index:** [agents/README.md](./README.md) · **Prompts:** [PROMPTS.md](./PROMPTS.md)
 
-Distill how to run **phase-execution** on large program PRs: ship **Revy**, run **Greptile + local Bugbot + Revy** on our PRs (#50 has **no GitHub Bugbot**) and distill what to absorb — not depend on external tools long-term. Grows from [PR #50 dogfood](../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md).
+Distill how to run **phase-execution** on large program PRs: ship **Revy**, run **local Bugbot + Revy** on our PRs. Grows from [PR #50 dogfood](../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md).
 
-**North star:** tune Revy to do what Greptile (and GitHub Bugbot-class depth, from operator/arch reference) do well. External tools = **reference + dogfood**, not product architecture.
+**North star:** tune Revy. External vendor reviewers are not part of the agent LOOP. `integrations.greptile` is false.
 
 **Audience:** Humans + master agent (Composer) orchestrating reviewer subagents.
 
@@ -21,43 +21,34 @@ Master **blocks run** until gate green. Skipping Bugbot to save time is when cor
 | Before **first** push on a branch | Local Bugbot on `uncommitted changes` or `branch changes` | **No** |
 | Before **each phase** commit (LOOP) | Same | **No** |
 | Before **push** when Revy check active on PR | Revy idle — `gh pr checks`; no push while `pending`/`in_progress` | **No** |
-| After fixing Greptile (`babysit-pr`) | VALIDATE → CLOSE (re-CLOSE until clean) | **No** |
 | After fixing Revy (`babysit-revy-pr`) | Poll 120s until idle → fix → Bugbot → push → loop | **No** |
 | After `ruff`/test fixes only | Re-run Bugbot if Python changed | **No** |
 
 **Revy on PR (when app enabled):** post-push check on our own PRs — **wait for idle before the next push** so we do not stack runs or push over an in-flight review. If Revy is suspended (no check row), gate is a no-op.
 
-**Greptile on PR is post-push** dogfood — distill into findings. **Local Bugbot** stays (Cursor, pre-push). **GitHub Bugbot** not on #50; operator/arch reference for RQ4+ bar.
+**Do not** babysit Greptile. **Local Bugbot** stays (Cursor, pre-push).
 
 ```text
 implement → pytest → ruff → phase gate → LOCAL BUGBOT → commit
                                               │
                     Revy idle? (if check on PR) ──no pending──► push
                                               │
-                    ┌─────────────────────────┴─────────────────────────┐
-                    ▼                                                   ▼
-            Greptile (PR review, optional)                    Revy (PR check, when enabled)
-            babysit-pr on user ask only                         wait idle → push fixes
-                    │
-                    └── fix → ruff → VALIDATE → CLOSE → Revy idle → push
+                                              ▼
+                                    Revy (PR check, when enabled)
+                                    wait idle → babysit-revy-pr → push fixes
 ```
 
 ---
 
-## Reference reviewers — distill, don’t depend
+## Reviewers on our PRs
 
-Run in **parallel on our PRs** while building Revy. Capture **what they do well and how** → findings → RQ waves. Customer-facing product is **Revy only**.
+| Reviewer | When | Stays? |
+|----------|------|--------|
+| **Local Bugbot** (Cursor) | Pre-push | **Yes** — LOOP hard gate |
+| **Revy** (deploy) | Post-push | **Yes** — the product |
+| **Greptile** | — | **No** — off; do not babysit |
 
-| Reference | On PR #50? | Why we care | What to distill into Revy | Stays after v1? |
-|-----------|------------|-------------|---------------------------|-----------------|
-| **Local Bugbot** (Cursor) | Yes (pre-push) | Hygiene; included in IDE | Fast diff pass; agent read/grep on harder hunks | **Yes** — dev workflow |
-| **Greptile** (GitHub) | Yes (post-push) | Contract/spec via RC0 `files.json` | Execution-doc findings; P-badge inline; confidence (RQ7) | **No** — patterns → Revy |
-| **GitHub Bugbot** | **No** on #50 | Operator knowledge + arch notes — deeper than local, often finds more | Multi-pass / agentic trace (RQ4+) | **No** — patterns → Revy |
-| **Revy** (deploy) | Yes | Product on real stack | Gap vs Greptile UX + retrieval | **Yes** — the product |
-
-**Hypothesis:** Greptile and GitHub Bugbot (where used) are **agent loops** under the hood — same class as local Bugbot, more passes/PR context. Revy implements distilled mechanics; we do not stack vendors.
-
-**Visual/context bar:** Greptile/Bugbot UX — [dogfood visual §](../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#visual--context-ux--greptile--bugbot-vs-revy-target-bar).
+Historical dogfood vs Greptile (PR #50) stays in [DOGFOOD_PR50](../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md). It is not part of the current agent LOOP.
 
 ---
 
@@ -106,9 +97,9 @@ Patterns that worked on PR #50 (Composer-class parent):
 
 | Parallel | Sequential |
 |----------|------------|
-| Human applies staging migration while Greptile runs on PR | Bugbot → commit → push |
+| Human applies staging migration while Revy runs on PR | Bugbot → commit → push |
 | Multiple `gh` queries while planning | Migration subphase + later subphases same session |
-| User triages Greptile while agent stopped at pause | Push before Bugbot green |
+| User triages Revy while agent stopped at pause | Push before Bugbot green |
 
 ---
 
@@ -125,11 +116,11 @@ Patterns that worked on PR #50 (Composer-class parent):
 [ ] Revy idle on PR? (if check present — no pending/in_progress)
 [ ] Commit: feat(<program>): <PhaseId> …
 [ ] Push
-[ ] Optional: note dogfood row (Greptile/Revy when available)
+[ ] Optional: note dogfood row (Revy when available)
 [ ] Migration pause? STOP — do not continue LOOP
 ```
 
-**First iteration only:** `.greptile/files.json` + `.cursor/BUGBOT.md` (RC0).
+**First iteration only:** `.revy/review-context.json` + `.agent/review-context.json` + `.cursor/BUGBOT.md`.
 
 Copy-paste prompts: [PROMPTS.md](./PROMPTS.md) · Distilled: [prompts/](./prompts/).
 
@@ -151,15 +142,11 @@ Copy-paste prompts: [PROMPTS.md](./PROMPTS.md) · Distilled: [prompts/](./prompt
 
 | Anti-pattern | Why |
 |--------------|-----|
-| **Rely** on Greptile/GitHub Bugbot as permanent product stack | We distill their strengths into Revy; parallel runs are research |
+| **Babysit Greptile** | Off — `integrations.greptile` is false |
 | Push without local Bugbot | Cheap pre-push gate while building (Cursor) |
-| Parent paraphrases Greptile; Bugbot never gets VALIDATE hook | Anchors on wrong minimum fix (RC-D17) |
 | Master reports "Bugbot clean" without synthesis | Human must hear *why*, not subagent transcript |
-| Treat Greptile findings as “done” without dogfood row | Distillation is the deliverable — update DOGFOOD / learnings |
 | Copy full Bugbot transcripts into learnings | Archive in `chain_of_thoughts/`; distill one row per pattern |
-| Expect local Bugbot = GitHub Bugbot | Same class (agents), different depth/passes — both inform Revy design |
-| Treat Greptile as pre-push gate | Runs after push only |
-| Full findings edit every commit | Blows Bugbot/Greptile context budget |
+| Full findings edit every commit | Blows Bugbot context budget |
 | Parent + Bugbot same turn as half-done code | Wastes review; review incomplete diff |
 | Ignore migration pause | Staging breaks; RQn+1 depends on schema |
 

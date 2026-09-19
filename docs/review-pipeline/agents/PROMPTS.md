@@ -18,11 +18,11 @@ Diff: uncommitted changes
 Custom Instructions:
 VERB: FIND | VALIDATE | CLOSE
 SCOPE: <files>
-VALIDATE: <fn → failure path>   # VALIDATE only — stops Greptile anchoring (RC-D17)
+VALIDATE: <fn → failure path>   # VALIDATE only — stops wrong-mechanism fixes
 OUT OF SCOPE: <one line>
 Any output format fine — master reads thinking if answer thin (RC-D23)
 <PHASES § RQn — FIND only>
-<Greptile verbatim — VALIDATE only>
+<revybot verbatim — VALIDATE only>
 <OUTPUT_FORMAT pass block>
 ```
 
@@ -41,13 +41,13 @@ Migration pause: stop after RQ0 until staging `alembic upgrade head`.
 
 ---
 
-## babysit-pr
+## babysit-revy-pr
 
 ```text
-/babysit-pr 50
+/babysit-revy-pr
 ```
 
-Greptile is post-push. **VALIDATE** (pass 1) → fix → **CLOSE** (pass 2); re-CLOSE until clean before push. Authoritative flow: [babysit-pr skill](../../../.cursor/skills/babysit-pr/SKILL.md). See [ROLES.md](./prompts/ROLES.md).
+Revy is post-push. Poll until idle → fix revybot comments → **VALIDATE** → **CLOSE** until clean → push. **Do not** run `/babysit-pr` (Greptile is off). Authoritative flow: [babysit-revy-pr skill](../../../.cursor/skills/babysit-revy-pr/SKILL.md).
 
 ---
 

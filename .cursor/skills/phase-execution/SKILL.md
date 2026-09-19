@@ -51,38 +51,34 @@ Announce once before coding: plan folder, start phase, end phase, file per phase
 
 ---
 
-## PR review context (Greptile + Bugbot + Moonshot) — **hard gate**
+## PR review context (Bugbot + Moonshot) — **hard gate**
 
-Programs that ship **code + planning docs in one PR** must wire review context on the **first LOOP iteration** (same commit as first schema/bootstrap work when applicable). **Never skip.** This is how Greptile, Bugbot, and **Moonshot engineering inject** know which locked decisions apply.
+Programs that ship **code + planning docs in one PR** must wire review context on the **first LOOP iteration** (same commit as first schema/bootstrap work when applicable). **Never skip.** This is how Bugbot and **Moonshot engineering inject** know which locked decisions apply.
 
-Changed `.md` files appear in the PR diff, but bots and Moonshot do **not** treat planning docs as authoritative unless wired.
+**Do not** babysit Greptile, wait on Greptile checks, invoke `babysit-pr`, or treat `.greptile/files.json` as a reviewer. `integrations.greptile` is **false**.
+
+Changed `.md` files appear in the PR diff, but Bugbot and Moonshot do **not** treat planning docs as authoritative unless wired.
 
 | Consumer | Repo file | What to edit |
 |:---|:---|:---|
 | **Moonshot inject** (Revy pipeline) | `.revy/review-context.json` | **SSOT** — set `active_program`; add/update `programs[]` entry with `scope` + 3 doc `paths` |
-| **Greptile** (vendor) | `.greptile/files.json` | **Generated only** from SSOT — never hand-edit after RCX P3 |
 | **Bugbot** | `.cursor/BUGBOT.md` | Markdown links to same docs (paths relative to `.cursor/`) |
-
-**Folder split:** `.revy/` = Revy product manifest (SSOT). `.greptile/` = Greptile vendor output only (`files.json` generated from SSOT).
+| **Agent mirror** | `.agent/review-context.json` | Copy of SSOT after `.revy` is edited |
 
 **SSOT workflow (RCX-D11 — mandatory on every program switch):**
 
 1. Edit `.revy/review-context.json`:
    - `active_program` = this program's `id`
    - **`programs[]` = exactly one entry** — the active program only (`id`, `scope`, three doc `paths`). **Remove** prior/shipped program entries; do not accumulate.
-2. Regenerate Greptile manifest:
-   ```bash
-   cd backend && python -m scripts.generate_greptile_files_from_review_context --write
-   ```
+2. Copy the same JSON to `.agent/review-context.json`.
 3. Update `.cursor/BUGBOT.md` — **replace** program doc links with the active program's three docs only (remove shipped-program sections).
-4. **Verify before phase gate** (non-negotiable):
+4. **Verify before phase gate:**
    ```bash
-   cd backend && python -m scripts.generate_greptile_files_from_review_context --check
-   pipenv run pytest tests/unit/test_generate_greptile_files.py tests/unit/test_engineering_context_manifest.py -q
+   python -m json.tool ../.revy/review-context.json > /dev/null
+   pipenv run pytest tests/unit/test_engineering_context_manifest.py -q
    ```
-5. Commit **SSOT + generated `files.json` + `BUGBOT.md` together** in the first phase commit.
-
-**Do not** hand-edit `.greptile/files.json`. **Do not** add source code paths to Greptile — docs only; code context comes from the PR diff.
+5. If `tests/unit/test_generate_greptile_files.py` still exists, regenerate leftover `.greptile/files.json` from SSOT so CI does not drift (`python -m scripts.generate_greptile_files_from_review_context --write`). That file is **not** a reviewer and must not be babysat.
+6. Commit **SSOT + agent mirror + `BUGBOT.md`** together in the first phase commit.
 
 **Default doc paths** (when execution doc does not override):
 
@@ -93,18 +89,18 @@ Changed `.md` files appear in the PR diff, but bots and Moonshot do **not** trea
 **First-iteration checklist:**
 
 - [ ] `.revy/review-context.json` — `active_program` switched; **`programs[]` has one entry only** (prior programs removed)
-- [ ] `.greptile/files.json` — regenerated from SSOT (`--check` passes)
+- [ ] `.agent/review-context.json` — identical to SSOT
 - [ ] `.cursor/BUGBOT.md` — **only** active program + three doc links (shipped programs removed)
-- [ ] `test_generate_greptile_files.py` green
+- [ ] `test_engineering_context_manifest.py` green
 - [ ] All three ship in **first phase commit** — do not defer to final doc-sync phase
 
 **Per-phase commit pattern:** phase code + **minimal** doc touch (README status row / execution table for that slice). Do **not** re-edit full findings + peer-review corpus every push (context budget).
 
 **Not** `.cursor/rules/` — IDE-agent only; Bugbot does not read them.
 
-**Reference:** [REVIEW_QUALITY_EXECUTION.md](../../docs/review-pipeline/waves/REVIEW_QUALITY_EXECUTION.md) § PR review context · [REVIEW_ENGINEERING_CONTEXT_FINDINGS.md](../../docs/review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_FINDINGS.md) RCX-D11.
+**Reference:** [REVIEW_ENGINEERING_CONTEXT_FINDINGS.md](../../docs/review-pipeline/review-engineering-context/REVIEW_ENGINEERING_CONTEXT_FINDINGS.md) RCX-D11.
 
-If the execution doc has an explicit **PR review context** block — follow it; if it still says hand-edit `files.json`, use **SSOT workflow above** instead (post-RCX canonical).
+If the execution doc has an explicit **PR review context** block — follow it, but **omit Greptile** even if the doc still names `files.json`.
 
 ---
 
@@ -116,7 +112,7 @@ One **iteration** = one full phase. After success → **next phase immediately**
 FOR each phase in scope (discovered order):
   1. Read ONLY this phase's execution file (+ findings locks if doc references them)
   2. If file/README links **Authority:** — read it; stop if this phase contradicts it
-  3. First iteration only: **PR review context hard gate** — SSOT `.revy/review-context.json` → regenerate `files.json` → `BUGBOT.md` → `test_generate_greptile_files.py` + `--check` (see section above; never skip)
+  3. First iteration only: **PR review context hard gate** — SSOT `.revy/review-context.json` → `.agent` mirror → `BUGBOT.md` → `test_engineering_context_manifest.py` (see section above; never skip). Do not babysit Greptile.
   4. Cancel prior phase todos; create one todo per **remaining** subphase (from resume point if set)
   5. FOR each subphase in order (skip subphases before resume point):
        implement → run tests from **Deliverable** / doc → mark todo done
@@ -167,10 +163,9 @@ pipenv run ruff check .
 ## Phase gate (before ship)
 
 - Use the execution doc **phase gate** block when present.
-- **First LOOP iteration** (or any commit touching `.revy/` or `.greptile/`): phase gate **must** include:
+- **First LOOP iteration** (or any commit touching `.revy/`): phase gate **must** include:
   ```bash
-  cd backend && python -m scripts.generate_greptile_files_from_review_context --check
-  pipenv run pytest tests/unit/test_generate_greptile_files.py -q
+  pipenv run pytest tests/unit/test_engineering_context_manifest.py -q
   ```
 - **Never ship** until green. Two failures after fixes → stop LOOP; report last good commit.
 
@@ -178,7 +173,7 @@ pipenv run ruff check .
 
 ## Local Bugbot (before every commit/push — hard gate)
 
-**Mandatory** before **each** LOOP commit and **every** `git push` on the feature branch — including after `babysit-pr` fixes.
+**Mandatory** before **each** LOOP commit and **every** `git push` on the feature branch — including after `babysit-revy-pr` fixes.
 
 1. Invoke **`review-bugbot`** skill (Bugbot subagent, `run_in_background: false`).
 2. Default: `Diff: uncommitted changes` (or `branch changes` after staging).
@@ -186,7 +181,7 @@ pipenv run ruff check .
 4. Fix **blockers**; re-run **ruff** + **phase gate** if Python changed.
 5. **Do not commit or push** if Bugbot reports unresolved blockers (stop rule below).
 
-Greptile and Revy run **after** push — they never replace this step.
+Revy runs **after** push — it never replaces this step. Do not wait on or babysit Greptile.
 
 ---
 
@@ -242,7 +237,7 @@ Programs with code + docs in one PR: execution doc **first phase** should includ
 ## After the LOOP
 
 - Summary: phases completed, SHAs, **PR URL**, early-stop reason.
-- User may **`babysit`** the PR separately.
+- User may **`babysit-revy-pr`** separately. Do not run `babysit-pr` (Greptile is off).
 
 **Invoke with:** attach plan folder or start execution file + `/phase-execution`. Opt out of PR: add **“no pr”**.
 

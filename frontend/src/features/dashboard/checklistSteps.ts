@@ -6,6 +6,7 @@ export interface ChecklistContext {
   workspaceId: string | null;
   memberCount: number;
   installationCount: number;
+  hasVerifiedInstallation: boolean;
   plan: string;
 }
 
@@ -44,7 +45,7 @@ export const CHECKLIST_STEPS: ChecklistStep[] = [
     labelKey: 'dashboard.checklist.connectIntegration',
     href: '/installations',
     available: true,
-    isComplete: (_me, ctx) => ctx.installationCount > 0,
+    isComplete: (_me, ctx) => ctx.hasVerifiedInstallation,
   },
   {
     id: 'setup_billing',

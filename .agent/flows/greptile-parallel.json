@@ -1,8 +1,0 @@
-{
-  "enabled": false,
-  "skill": "babysit-pr",
-  "description": "Post-push Greptile review + babysit — enable only when user asks",
-  "requires": {
-    "integrations.greptile": true
-  }
-}

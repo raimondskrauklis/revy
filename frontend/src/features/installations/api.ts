@@ -11,6 +11,7 @@ export interface GitHubInstallation {
   account_id: number;
   status: GitHubInstallationStatus;
   permissions_snapshot: Record<string, string> | null;
+  verified_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -44,5 +45,26 @@ export async function registerInstallation(
   payload: RegisterInstallationPayload,
 ): Promise<GitHubInstallation> {
   const response = await apiClient.post(`/workspaces/${workspaceId}/installations`, payload);
+  return await parseSuccess<GitHubInstallation>(response);
+}
+
+export interface ConnectInstallationResponse {
+  install_url: string;
+}
+
+export async function connectInstallation(
+  workspaceId: string,
+): Promise<ConnectInstallationResponse> {
+  const response = await apiClient.post(`/workspaces/${workspaceId}/installations/connect`);
+  return await parseSuccess<ConnectInstallationResponse>(response);
+}
+
+export async function verifyInstallation(
+  workspaceId: string,
+  installationId: string,
+): Promise<GitHubInstallation> {
+  const response = await apiClient.post(
+    `/workspaces/${workspaceId}/installations/${installationId}/verify`,
+  );
   return await parseSuccess<GitHubInstallation>(response);
 }

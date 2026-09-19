@@ -560,12 +560,51 @@
     "subtitle": "Piesaistiet GitHub App instalācijas šai darbvietai.",
     "empty": "Vēl nav GitHub instalāciju.",
     "noWorkspace": "Izvēlieties darbvietu, lai skatītu instalācijas.",
+    "connect": {
+      "title": "Savienot GitHub",
+      "install": "Instalēt Revy",
+      "installing": "Atver GitHub…",
+      "cards": {
+        "orgOwner": {
+          "title": "Var būt nepieciešams organizācijas īpašnieks",
+          "body": "Instalējot organizācijā, GitHub App apstiprināšanai var būt vajadzīgs organizācijas īpašnieks."
+        },
+        "sso": {
+          "title": "SSO organizācijas",
+          "body": "Ja organizācija izmanto SAML SSO, pirms instalēšanas pabeidziet GitHub SSO."
+        },
+        "selectRepos": {
+          "title": "Only select repositories",
+          "body": "Izvēlieties Only select repositories un piešķiriet repo, kurus Revy vajadzētu recenzēt."
+        },
+        "authorizeVsInstall": {
+          "title": "Autorizācija nav instalācija",
+          "body": "GitHub piekļuves apstiprināšana nav tas pats, kas App instalācija. Pabeidziet Install GitHub."
+        }
+      }
+    },
+    "setupError": {
+      "invalid_state": "GitHub savienojumu neizdevās pabeigt. Sāciet Instalēt Revy vēlreiz.",
+      "not_configured": "GitHub App nav konfigurēts. Palūdziet operatoram pabeigt iestatīšanu.",
+      "oauth_denied": "GitHub autorizācija tika atcelta. Varat sākt vēlreiz, kad esat gatavs.",
+      "github_installer_mismatch": "GitHub konts, kas autorizēja, nav tas, kas instalēja App.",
+      "conflict": "Šī GitHub instalācija jau ir piesaistīta citai darbvietai.",
+      "not_found": "Šīs instalācijas darbvieta vairs nav pieejama.",
+      "github_unavailable": "GitHub nebija sasniedzams. Mēģiniet vēlreiz pēc dažām minūtēm.",
+      "plan_upgrade_required": "Lai savienotu GitHub, jauniniet uz Pro.",
+      "unknown": "GitHub savienojums netika pabeigts. Sāciet Instalēt Revy vēlreiz."
+    },
     "table": {
       "account": "Konts",
       "type": "Tips",
       "installationId": "Instalācijas ID",
       "status": "Statuss",
+      "verified": "Verificēts",
       "created": "Izveidots"
+    },
+    "verified": {
+      "yes": "Verificēts",
+      "configure": "Konfigurēt GitHub"
     },
     "accountType": {
       "organization": "Organizācija",
@@ -577,8 +616,9 @@
       "removed": "Noņemts"
     },
     "register": {
-      "title": "Reģistrēt instalāciju",
-      "description": "Tikai izstrādei — manuāla reģistrācija līdz webhook fāzei.",
+      "title": "Reģistrēt instalāciju manuāli",
+      "description": "Administratora/izstrādes rezerves ceļš, ja GitHub nevar atgriezties Revy. Kontrolsaraksts paliek nepabeigts, līdz Revy verificē vismaz vienu piešķirtu repo.",
+      "fallbackSummary": "Manuāls instalācijas ID (administratora/izstrādes rezerve)",
       "installationId": "GitHub instalācijas ID",
       "accountLogin": "Konta login",
       "accountId": "GitHub konta ID",

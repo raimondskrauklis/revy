@@ -8,11 +8,11 @@ description: >-
 
 # Babysit Revy PR
 
-Post-push loop for **Revy** on our own PRs (`integrations.revy: true`). Mirrors `babysit-pr` (Greptile) but gates on the **Revy** check and `revybot` comments.
+Post-push loop for **Revy** on our own PRs (`integrations.revy: true`). Gates on the **Revy** check and `revybot` comments.
 
 **Command:** `.cursor/commands/babysit-revy-pr.md` · **Ship gate:** [ship-changes](../ship-changes/SKILL.md) · **Orchestration:** [ORCHESTRATION.md](../../docs/review-pipeline/agents/ORCHESTRATION.md)
 
-**Not:** merge, CI triage, Greptile threads (use `babysit-pr`), or push while Revy is running.
+**Not:** merge, CI triage, or push while Revy is running. Greptile is off — do not invoke `babysit-pr`.
 
 ---
 

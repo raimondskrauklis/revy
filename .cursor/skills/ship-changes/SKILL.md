@@ -12,7 +12,7 @@ description: >-
 
 **Config:** read `.agent/manifest.json` for `test_commands`, `integrations`, and active program `scope` (from `.revy/review-context.json` SSOT, mirrored in `.agent/review-context.json`).
 
-**Not:** merge, deploy, or default-branch commits. **Not:** auto Greptile babysit.
+**Not:** merge, deploy, or default-branch commits. **Not:** Greptile babysit (`integrations.greptile` is false).
 
 ---
 
@@ -45,7 +45,7 @@ Update existing PR title when scope grows: `gh pr edit <N> --title "…"`.
 
 Skip step 7 if user said **no pr**.
 
-**Greptile:** do **not** invoke `babysit-pr` unless user explicitly asks **and** `integrations.greptile: true`.
+**Revy:** do **not** invoke `babysit-pr`. Greptile is off. Use `babysit-revy-pr` for post-push Revy comments.
 
 **Output:** branch, commit sha, PR URL (or compare URL if `gh pr create` failed).
 

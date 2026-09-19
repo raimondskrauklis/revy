@@ -28,6 +28,7 @@ export function InstallationsTable({ installations }: InstallationsTableProps) {
             <th className="px-4 py-3 text-left font-medium">{t('installations.table.type')}</th>
             <th className="px-4 py-3 text-left font-medium">{t('installations.table.installationId')}</th>
             <th className="px-4 py-3 text-left font-medium">{t('installations.table.status')}</th>
+            <th className="px-4 py-3 text-left font-medium">{t('installations.table.verified')}</th>
             <th className="px-4 py-3 text-left font-medium">{t('installations.table.created')}</th>
           </tr>
         </thead>
@@ -58,6 +59,22 @@ export function InstallationsTable({ installations }: InstallationsTableProps) {
                 >
                   {t(`installations.status.${installation.status}`)}
                 </QuietChipStatus>
+              </td>
+              <td className="px-4 py-3">
+                {installation.verified_at ? (
+                  <span className="text-[color:var(--app-text-muted)]">
+                    {t('installations.verified.yes')}
+                  </span>
+                ) : (
+                  <a
+                    href={`https://github.com/settings/installations/${installation.github_installation_id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm text-[color:var(--app-link)] hover:underline focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
+                  >
+                    {t('installations.verified.configure')}
+                  </a>
+                )}
               </td>
               <td className="px-4 py-3 text-[color:var(--app-text-muted)]">
                 {formatDateTime(installation.created_at)}

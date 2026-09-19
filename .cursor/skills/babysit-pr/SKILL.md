@@ -8,7 +8,9 @@ description: >-
 
 # Babysit PR
 
-Thin project wrapper around the Greptile PR review loop. Full command text: `.cursor/commands/babysit-pr.md`.
+**This repo does not use Greptile.** `integrations.greptile` is false. **Stop** — do not fetch Greptile threads or run this loop. Use [`babysit-revy-pr`](../babysit-revy-pr/SKILL.md) for Revy comments.
+
+Thin project wrapper around the Greptile PR review loop (unused here). Full command text: `.cursor/commands/babysit-pr.md`.
 
 ## When
 

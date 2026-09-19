@@ -15,7 +15,7 @@ Thin routers for **smart agents with good context**. Verbose prompts are not the
 | Re-pasting long Custom Instructions every gate | [PHASES.md](./PHASES.md) — one distilled block per RQn |
 | Thinking trace is gold, final line is not | [chain_of_thoughts/](../chain_of_thoughts/) — archive UI exports; distill rows in [DOGFOOD](../../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md) |
 
-**Wiring:** `.cursor/BUGBOT.md` → contract docs + [CURSOR_AGENT_WORKFLOW.md](../../../utils/CURSOR_AGENT_WORKFLOW.md). Greptile → `.greptile/files.json`.
+**Wiring:** `.cursor/BUGBOT.md` → contract docs + [CURSOR_AGENT_WORKFLOW.md](../../../utils/CURSOR_AGENT_WORKFLOW.md). Moonshot inject → `.revy/review-context.json`.
 
 ---
 
@@ -33,7 +33,7 @@ Thin routers for **smart agents with good context**. Verbose prompts are not the
 ```
 
 **Implementer (Composer):** reads EXECUTION § RQn, writes code, runs pytest/ruff.  
-**Reviewer (Bugbot):** diff + BUGBOT.md + OUTPUT_FORMAT + (`PHASES § RQn` for FIND, Greptile thread for VALIDATE).
+**Reviewer (Bugbot):** diff + BUGBOT.md + OUTPUT_FORMAT + (`PHASES § RQn` for FIND, Revy thread for VALIDATE).
 
 ---
 
@@ -42,7 +42,7 @@ Thin routers for **smart agents with good context**. Verbose prompts are not the
 | Track | When you say… | Bugbot verb | Your question |
 |-------|---------------|-------------|---------------|
 | **Phase LOOP** | "RQn done, gate it" | FIND → CLOSE | What did I break? |
-| **Babysit** | "/babysit-pr" | VALIDATE → CLOSE | Is Greptile's fix real? |
+| **Babysit** | "/babysit-revy-pr" | VALIDATE → CLOSE | Is Revy's fix real? |
 
 Agent won't infer the track — master must set VERB in the brief. Wrong verb = wrong job (RC-D17).
 
@@ -54,24 +54,24 @@ Fix blockers
 Pass 2 — CLOSE    Verify pass 1 closed; master reads thinking if answer thin
 Fix blockers (if any)
 Pass 3+ — repeat until clean
-commit → push → Greptile (post-push, different axis)
+commit → push → Revy (post-push)
 ```
 
 See RC-D14 in [DOGFOOD_PR50 § RQ4 pass 2](../../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md#rq4-bugbot-pass-2--closure-vs-thinking-trace-rc-d14). RC-D23: context over format — [OUTPUT_FORMAT](./OUTPUT_FORMAT.md).
 
 ---
 
-## Greptile babysit (master shallow + Bugbot VALIDATE)
+## Revy babysit (master + Bugbot VALIDATE)
 
-**Skill:** [babysit-pr](../../../.cursor/skills/babysit-pr/SKILL.md) · **Roles:** [ROLES.md](./ROLES.md) · RC-D16, RC-D17 in [DOGFOOD](../../review-quality/REVIEW_QUALITY_DOGFOOD_PR50.md)
+**Skill:** [babysit-revy-pr](../../../.cursor/skills/babysit-revy-pr/SKILL.md) · **Roles:** [ROLES.md](./ROLES.md)
 
 ```text
-Master: fix open threads → pytest + ruff
-Bugbot pass 1: VALIDATE (Greptile verbatim + named failure path)
+Master: fix open revybot threads → pytest + ruff
+Bugbot pass 1: VALIDATE (verbatim + named failure path)
 Bugbot pass 2: CLOSE; re-CLOSE until clean → commit → push
 ```
 
-Greptile = post-push contract. Bugbot = pre-push adversarial. Never skip Bugbot because Greptile ran.
+Revy = post-push product review. Bugbot = pre-push adversarial. Never skip Bugbot because Revy ran. Do not babysit Greptile.
 
 ---
 
