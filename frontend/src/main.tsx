@@ -31,8 +31,8 @@ createRoot(document.getElementById('root')!).render(
       <QueryClientProvider client={queryClient}>
         <App />
         <Toaster
+          theme="dark"
           position="bottom-center"
-          richColors
           closeButton
           toastOptions={{ style: { zIndex: 'var(--z-toast)' } }}
         />

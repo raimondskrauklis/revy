@@ -25,6 +25,6 @@ export function applyTheme(mode: ThemeMode): void {
     localStorage.setItem(STORAGE_KEY, mode);
   }
   if (typeof document !== 'undefined') {
-    document.documentElement.classList.toggle('dark', resolveDarkMode(mode));
+    document.documentElement.classList.add('dark');
   }
 }

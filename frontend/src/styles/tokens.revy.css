@@ -1,22 +1,106 @@
-/* product/revy/frontend/tokens.revy.css */
-/* Revy brand overrides — import after styles/tokens.css in index.css */
+/* frontend/src/styles/tokens.revy.css */
+/* Revy brand overlay — import after styles/tokens.css in index.css */
+
+/*
+ * Contrast record (P0 measure). WCAG 2.2 AA floor + APCA Lc ≥ 75 (prefer 90).
+ *
+ * Pair                  | FG      | BG      | WCAG  | APCA Lc (approx)
+ * canvas / body         | #B3D0AE | #07140C | 11.26 | ~85
+ * canvas / accent       | #9ECF7A | #07140C | 10.46 | ~82
+ * CTA fg / bg           | #07140C | #9ECF7A | 10.46 | ~82
+ * info on canvas        | #6AA3C4 | #07140C |  6.86 | ~75
+ *
+ * Forbidden recipes not used as body/primary: #00FF00, #28E99F, #39d353.
+ */
 
 :root {
-  --rv-primary: #6366f1;
-  --rv-primary-dark: #818cf8;
+  --rv-canvas: #f3f7f2;
+  --rv-surface: #ffffff;
+  --rv-ring: #c5d4c6;
+  --rv-ring-strong: #9bb59c;
+  --rv-input-border: #6f8f72;
+  --rv-text-strong: #0c1c14;
+  --rv-text: #24362a;
+  --rv-text-muted: #4d6652;
+  --rv-text-subtle: #7a917c;
+  --rv-chip: #e8f0e8;
+  --rv-chip-active: #d4e4d4;
+  --rv-primary: #3d7a48;
+  --rv-info: #2b6f8f;
+  --rv-warning: #b07a1a;
+  --rv-danger: #c04545;
+  --rv-success: #3d7a48;
+  --rv-cta-bg: #3d7a48;
+  --rv-cta-fg: #f3f7f2;
 
-  /* Map product tokens to app semantic tokens */
+  --app-canvas: var(--rv-canvas);
+  --app-surface: var(--rv-surface);
+  --app-ring: var(--rv-ring);
+  --app-ring-strong: var(--rv-ring-strong);
+  --app-input-border: var(--rv-input-border);
+  --app-text-strong: var(--rv-text-strong);
+  --app-text: var(--rv-text);
+  --app-text-muted: var(--rv-text-muted);
+  --app-text-subtle: var(--rv-text-subtle);
+  --app-chip: var(--rv-chip);
+  --app-chip-active: var(--rv-chip-active);
+  --app-chip-hover: color-mix(in oklab, var(--app-chip) 88%, var(--app-text) 7%);
+  --app-table-row: var(--app-surface);
+  --app-table-row-alt: var(--app-chip);
   --app-primary: var(--rv-primary);
   --app-link: var(--rv-primary);
-  --app-info: var(--rv-primary);
-  --app-cta-bg: var(--rv-primary);
-  --app-cta-fg: #ffffff;
+  --app-info: var(--rv-info);
+  --app-warning: var(--rv-warning);
+  --app-danger: var(--rv-danger);
+  --app-success: var(--rv-success);
+  --app-cta-bg: var(--rv-cta-bg);
+  --app-cta-fg: var(--rv-cta-fg);
+  --app-radius-sm: 0px;
+  --app-radius-md: 4px;
 }
 
 html.dark {
-  --app-primary: var(--rv-primary-dark);
-  --app-link: var(--rv-primary-dark);
-  --app-info: var(--rv-primary-dark);
-  --app-cta-bg: var(--rv-primary-dark);
-  --app-cta-fg: #ffffff;
+  --rv-canvas: #07140c;
+  --rv-surface: #0d1c14;
+  --rv-ring: #1e3a28;
+  --rv-ring-strong: #2f5840;
+  --rv-input-border: #4a7a5c;
+  --rv-text-strong: #d5ead0;
+  --rv-text: #b3d0ae;
+  --rv-text-muted: #86a882;
+  --rv-text-subtle: #5e7c5c;
+  --rv-chip: #132418;
+  --rv-chip-active: #1b3322;
+  --rv-primary: #9ecf7a;
+  --rv-info: #6aa3c4;
+  --rv-warning: #d4a84b;
+  --rv-danger: #e06b6b;
+  --rv-success: #9ecf7a;
+  --rv-cta-bg: #9ecf7a;
+  --rv-cta-fg: #07140c;
+
+  --app-canvas: var(--rv-canvas);
+  --app-surface: var(--rv-surface);
+  --app-ring: var(--rv-ring);
+  --app-ring-strong: var(--rv-ring-strong);
+  --app-input-border: var(--rv-input-border);
+  --app-text-strong: var(--rv-text-strong);
+  --app-text: var(--rv-text);
+  --app-text-muted: var(--rv-text-muted);
+  --app-text-subtle: var(--rv-text-subtle);
+  --app-chip: var(--rv-chip);
+  --app-chip-active: var(--rv-chip-active);
+  --app-chip-hover: color-mix(in oklab, var(--app-chip) 85%, var(--app-text) 10%);
+  --app-table-row: var(--app-surface);
+  --app-table-row-alt: var(--app-chip);
+  --app-primary: var(--rv-primary);
+  --app-link: var(--rv-primary);
+  --app-info: var(--rv-info);
+  --app-warning: var(--rv-warning);
+  --app-danger: var(--rv-danger);
+  --app-success: var(--rv-success);
+  --app-cta-bg: var(--rv-cta-bg);
+  --app-cta-fg: var(--rv-cta-fg);
+  --app-radius-sm: 0px;
+  --app-radius-md: 4px;
 }

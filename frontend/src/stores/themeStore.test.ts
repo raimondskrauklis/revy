@@ -32,11 +32,11 @@ describe('themeStore', () => {
     expect(useThemeStore.getState().mode).toBe('dark');
   });
 
-  it('removes dark class for light theme', () => {
+  it('keeps html.dark for stored light (console-only paint)', () => {
     document.documentElement.classList.add('dark');
     useThemeStore.getState().setMode('light');
 
     expect(localStorage.getItem('app-theme')).toBe('light');
-    expect(document.documentElement.classList.contains('dark')).toBe(false);
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
   });
 });

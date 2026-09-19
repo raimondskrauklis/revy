@@ -183,7 +183,7 @@
       "body": "Password, multi-factor authentication, and session management will be available in Revy later. Contact your workspace admin if you need to change how you sign in."
     },
     "appearance": {
-      "body": "Choose how the app looks on this device. Theme preference is stored locally in your browser.",
+      "body": "This product is a console-only operator surface. Light and system themes stay in the store for a later revert; they are not a working choice here.",
       "themeLabel": "Theme"
     },
     "workspace": {

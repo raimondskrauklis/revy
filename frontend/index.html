@@ -4,15 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Revy</title>
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
     <script>
       (function () {
-        const stored = localStorage.getItem('app-theme');
-        const mode =
-          stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system';
-        const dark =
-          mode === 'dark' ||
-          (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        if (dark) document.documentElement.classList.add('dark');
+        document.documentElement.classList.add('dark');
       })();
     </script>
   </head>

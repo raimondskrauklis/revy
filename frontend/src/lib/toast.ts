@@ -1,6 +1,6 @@
 // frontend/src/lib/toast.ts
 /**
- * Toast utility — Sonner wrapper with platform defaults (duration, richColors).
+ * Toast utility — Sonner wrapper with platform defaults (duration).
  *
  * **features/** — prefer this for success / info / warning / neutral feedback.
  * API / domain failures → `showDomainErrorToast` / `notify` (@/shared/errors/toasts).
@@ -13,24 +13,22 @@
  */
 import { toast as sonnerToast } from 'sonner';
 
-const defaults = { richColors: true as const };
-
 export const toast = {
   success(message: string, description?: string) {
-    sonnerToast.success(message, { description, duration: 3000, ...defaults });
+    sonnerToast.success(message, { description, duration: 3000 });
   },
   error(message: string, description?: string) {
-    sonnerToast.error(message, { description, duration: Infinity, ...defaults });
+    sonnerToast.error(message, { description, duration: Infinity });
   },
   warning(message: string, description?: string) {
-    sonnerToast.warning(message, { description, duration: 5000, ...defaults });
+    sonnerToast.warning(message, { description, duration: 5000 });
   },
   info(message: string, description?: string) {
-    sonnerToast.info(message, { description, duration: 3000, ...defaults });
+    sonnerToast.info(message, { description, duration: 3000 });
   },
   /** Neutral toast — no success/error icon (Sonner `toast.message`). */
   message(message: string, description?: string) {
-    sonnerToast.message(message, { description, duration: 3000, ...defaults });
+    sonnerToast.message(message, { description, duration: 3000 });
   },
   dismiss: sonnerToast.dismiss,
 };
