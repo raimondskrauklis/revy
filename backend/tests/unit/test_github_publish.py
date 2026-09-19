@@ -1033,21 +1033,13 @@ async def test_close_active_groups_for_fingerprints_closes_addressed_absent():
         "app.services.github_finding_closure._this_run_finding_counts_by_file_category",
         AsyncMock(return_value={}),
     ):
-        with patch(
-            "app.services.github_finding_closure._resolve_absent_paths",
-            AsyncMock(return_value=set()),
-        ):
-            with patch(
-                "app.services.github_finding_closure._bound_group_ids_this_run",
-                AsyncMock(return_value=set()),
-            ):
-                closed = await github_publish._close_active_groups_for_fingerprints(
-                    session,
-                    pull_request_id=pull_request_id,
-                    revision_id=revision_id,
-                    review_run_id=review_run_id,
-                    fingerprints={str(group.id)},
-                )
+        closed = await github_publish._close_active_groups_for_fingerprints(
+            session,
+            pull_request_id=pull_request_id,
+            revision_id=revision_id,
+            review_run_id=review_run_id,
+            fingerprints={str(group.id)},
+        )
     assert closed == 1
     assert group.state == GitHubFindingGroupState.resolved
     assert group.resolution_method == ResolutionMethod.absent_and_addressed

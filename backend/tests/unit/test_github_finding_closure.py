@@ -1404,4 +1404,3 @@ async def test_p1_path_gone_closes():
     assert closed == 1
     assert group.state == GitHubFindingGroupState.resolved
     assert group.resolution_method == ResolutionMethod.absent_and_addressed
-

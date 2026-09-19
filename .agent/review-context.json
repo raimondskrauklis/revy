@@ -6,8 +6,8 @@
       "scope": ["backend/**", "frontend/**"],
       "paths": [
         {
-          "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_P5_EXECUTION.md",
-          "description": "Resolution honesty P5 — dogfood gates, gap pass, doc-sync + changelog"
+          "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_P0_EXECUTION.md",
+          "description": "Resolution honesty P0 — persistent identity cutover (claim_slot, continuation, inline keys)"
         },
         {
           "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_FINDINGS.md",

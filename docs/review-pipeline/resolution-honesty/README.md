@@ -21,7 +21,7 @@
 
 | Phase | Focus | File | Status |
 |-------|--------|------|--------|
-| P0 | Persistent identity cutover (`claim_slot`, continuation, retire peer supersede, inline keys) | [RESOLUTION_HONESTY_P0_EXECUTION.md](./RESOLUTION_HONESTY_P0_EXECUTION.md) | done (`98a3523`) |
+P0 | Persistent identity cutover (`claim_slot`, continuation, retire peer supersede, inline keys) | [RESOLUTION_HONESTY_P0_EXECUTION.md](./RESOLUTION_HONESTY_P0_EXECUTION.md) | done (`98a3523`) |
 | P1 | Honest H2 closure (Pass 2 without `addressed`; skip ambiguous leftovers) | [RESOLUTION_HONESTY_P1_EXECUTION.md](./RESOLUTION_HONESTY_P1_EXECUTION.md) | done (`6c674d0`) |
 | P2 | This-push prior set = last published group ids; empty denom → N/A | [RESOLUTION_HONESTY_P2_EXECUTION.md](./RESOLUTION_HONESTY_P2_EXECUTION.md) | done (`5825547`) |
 | P3 | Lifetime rollup / PSR-Q15 on new PRs | [RESOLUTION_HONESTY_P3_EXECUTION.md](./RESOLUTION_HONESTY_P3_EXECUTION.md) | done (`9c4d989`) |
