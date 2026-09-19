@@ -14,6 +14,7 @@ export function getStoredTheme(): ThemeMode {
   return 'system';
 }
 
+/** Kept for console-only revert plumbing. Do not call for DOM paint — `applyTheme` always sets `html.dark`. */
 export function resolveDarkMode(mode: ThemeMode): boolean {
   if (mode === 'dark') return true;
   if (mode === 'light') return false;

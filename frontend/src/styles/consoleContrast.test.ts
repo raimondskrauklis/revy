@@ -24,6 +24,37 @@ function contrastRatio(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
+/** APCA W3 0.0.98G-4g (absolute Lc). */
+function srgbToY(hex: string): number {
+  const h = hex.replace('#', '');
+  const exp = (channel: number) => (channel / 255) ** 2.4;
+  const r = Number.parseInt(h.slice(0, 2), 16);
+  const g = Number.parseInt(h.slice(2, 4), 16);
+  const b = Number.parseInt(h.slice(4, 6), 16);
+  return 0.2126729 * exp(r) + 0.7151522 * exp(g) + 0.072175 * exp(b);
+}
+
+function apcaLc(fg: string, bg: string): number {
+  const blkThs = 0.022;
+  const blkClmp = 1.414;
+  const clampY = (y: number) => (y > blkThs ? y : y + (blkThs - y) ** blkClmp);
+  const txtY = clampY(srgbToY(fg));
+  const bgY = clampY(srgbToY(bg));
+  if (Math.abs(bgY - txtY) < 0.0005) {
+    return 0;
+  }
+  let sapc: number;
+  let output: number;
+  if (bgY > txtY) {
+    sapc = (bgY ** 0.56 - txtY ** 0.57) * 1.14;
+    output = sapc < 0.1 ? 0 : sapc - 0.027;
+  } else {
+    sapc = (bgY ** 0.65 - txtY ** 0.62) * 1.14;
+    output = sapc > -0.1 ? 0 : sapc + 0.027;
+  }
+  return Math.abs(output * 100);
+}
+
 function parseDarkVars(css: string): Record<string, string> {
   const block = css.match(/html\.dark\s*\{([\s\S]*?)\n\}/);
   if (!block) {
@@ -80,7 +111,7 @@ describe('console contrast overlay', () => {
     expect(assigned.toUpperCase()).not.toMatch(/#00FF00|#28E99F|#39D353/);
   });
 
-  it('meets WCAG 2.2 AA on named pairs', () => {
+  it('meets WCAG 2.2 AA and APCA Lc ≥ 75 on named pairs', () => {
     const canvas = resolveHex(vars, '--app-canvas');
     const body = resolveHex(vars, '--app-text');
     const accent = resolveHex(vars, '--app-primary');
@@ -91,5 +122,9 @@ describe('console contrast overlay', () => {
     expect(contrastRatio(accent, canvas)).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(ctaFg, ctaBg)).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(info, canvas)).toBeGreaterThanOrEqual(4.5);
+    expect(apcaLc(body, canvas)).toBeGreaterThanOrEqual(75);
+    expect(apcaLc(accent, canvas)).toBeGreaterThanOrEqual(75);
+    expect(apcaLc(ctaFg, ctaBg)).toBeGreaterThanOrEqual(75);
+    expect(apcaLc(info, canvas)).toBeGreaterThanOrEqual(75);
   });
 });

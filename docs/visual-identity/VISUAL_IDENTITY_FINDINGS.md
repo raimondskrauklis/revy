@@ -290,8 +290,8 @@ Hard fail: default purple/indigo gradient blob; 3 identical feature cards; Lucid
 - Architecture peer review pass 3 complete (**BLOCK create-execution-plan: no**).
 - Execution peer review pass 1 highs applied: overlay remaps surface/text-strong/chip; one-repo hop hides `ReviewerLayout` back link and does not auto-Navigate when `installations.length > 1`.
 - Named `--rv-*` hex (html.dark, P0 measure; calibration closed):
-  - canvas `#07140C` · body `#B3D0AE` · accent/primary/CTA bg `#9ECF7A` · CTA fg `#07140C` · info `#6AA3C4`
-  - surface `#0D1C14` · chip `#132418` · warning `#D4A84B` · danger `#E06B6B` · success `#9ECF7A`
+  - canvas `#07140C` · body `#C5E0B8` · accent/primary/CTA bg `#A8DC84` · CTA fg `#07140C` · info `#A8D4E8`
+  - surface `#0D1C14` · chip `#132418` · warning `#D4A84B` · danger `#E06B6B` · success `#A8DC84`
   - Avoid Greptile `#28E99F` and GitHub `#39d353` recipes without dropping phosphor.
 
 ---

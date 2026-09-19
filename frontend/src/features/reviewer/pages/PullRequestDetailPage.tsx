@@ -166,13 +166,13 @@ export function PullRequestDetailPage() {
           <table className="min-w-full table-fixed text-left text-sm">
             <thead className="bg-[color:var(--app-chip)] text-[color:var(--app-text-muted)]">
               <tr>
-                <th className="px-3 py-2 font-medium">{t('reviewer.findings.severity')}</th>
-                <th className="px-3 py-2 font-medium">{t('reviewer.findings.category')}</th>
-                <th className="px-3 py-2 font-medium">{t('reviewer.findings.state')}</th>
-                <th className="px-3 py-2 font-medium">{t('reviewer.findings.title')}</th>
-                <th className="px-3 py-2 font-medium">{t('reviewer.findings.file')}</th>
-                <th className="px-3 py-2 font-medium">{t('reviewer.findings.message')}</th>
-                <th className="px-3 py-2 font-medium">{t('reviewer.findings.actions')}</th>
+                <th className="w-[12%] px-3 py-2 font-medium">{t('reviewer.findings.severity')}</th>
+                <th className="w-[10%] px-3 py-2 font-medium">{t('reviewer.findings.category')}</th>
+                <th className="w-[12%] px-3 py-2 font-medium">{t('reviewer.findings.state')}</th>
+                <th className="w-[20%] px-3 py-2 font-medium">{t('reviewer.findings.title')}</th>
+                <th className="w-[16%] px-3 py-2 font-medium">{t('reviewer.findings.file')}</th>
+                <th className="w-[22%] px-3 py-2 font-medium">{t('reviewer.findings.message')}</th>
+                <th className="w-[8%] px-3 py-2 font-medium">{t('reviewer.findings.actions')}</th>
               </tr>
             </thead>
             <tbody>

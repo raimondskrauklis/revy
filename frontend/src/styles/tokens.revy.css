@@ -2,13 +2,13 @@
 /* Revy brand overlay — import after styles/tokens.css in index.css */
 
 /*
- * Contrast record (P0 measure). WCAG 2.2 AA floor + APCA Lc ≥ 75 (prefer 90).
+ * Contrast record (html.dark). WCAG 2.2 AA floor + APCA W3 0.0.98G-4g Lc ≥ 75.
  *
- * Pair                  | FG      | BG      | WCAG  | APCA Lc (approx)
- * canvas / body         | #B3D0AE | #07140C | 11.26 | ~85
- * canvas / accent       | #9ECF7A | #07140C | 10.46 | ~82
- * CTA fg / bg           | #07140C | #9ECF7A | 10.46 | ~82
- * info on canvas        | #6AA3C4 | #07140C |  6.86 | ~75
+ * Pair                  | FG      | BG      | WCAG  | APCA Lc
+ * canvas / body         | #C5E0B8 | #07140C | 13.22 | 82.4
+ * canvas / accent       | #A8DC84 | #07140C | 11.88 | 75.9
+ * CTA fg / bg           | #07140C | #A8DC84 | 11.88 | 76.5
+ * info on canvas        | #A8D4E8 | #07140C | 11.89 | 75.9
  *
  * Forbidden recipes not used as body/primary: #00FF00, #28E99F, #39d353.
  */
@@ -66,17 +66,17 @@ html.dark {
   --rv-ring-strong: #2f5840;
   --rv-input-border: #4a7a5c;
   --rv-text-strong: #d5ead0;
-  --rv-text: #b3d0ae;
+  --rv-text: #c5e0b8;
   --rv-text-muted: #86a882;
   --rv-text-subtle: #5e7c5c;
   --rv-chip: #132418;
   --rv-chip-active: #1b3322;
-  --rv-primary: #9ecf7a;
-  --rv-info: #6aa3c4;
+  --rv-primary: #a8dc84;
+  --rv-info: #a8d4e8;
   --rv-warning: #d4a84b;
   --rv-danger: #e06b6b;
-  --rv-success: #9ecf7a;
-  --rv-cta-bg: #9ecf7a;
+  --rv-success: #a8dc84;
+  --rv-cta-bg: #a8dc84;
   --rv-cta-fg: #07140c;
 
   --app-canvas: var(--rv-canvas);

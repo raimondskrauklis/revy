@@ -1,6 +1,6 @@
 // frontend/src/features/marketing/pages/LandingPage.test.tsx
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LandingPage } from '@/features/marketing/pages/LandingPage';
 
@@ -32,21 +32,23 @@ describe('LandingPage', () => {
     expect(screen.queryByRole('heading', { name: /github-native/i })).not.toBeInTheDocument();
   });
 
-  it('replaces authenticated users to reviewer', () => {
-    const replace = vi.fn();
-    vi.stubGlobal('location', { replace });
+  it('replaces authenticated users to reviewer', async () => {
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
     } as unknown as ReturnType<typeof useAuth>);
 
     render(
-      <MemoryRouter>
-        <LandingPage />
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/reviewer" element={<div>Reviewer</div>} />
+        </Routes>
       </MemoryRouter>,
     );
 
-    expect(replace).toHaveBeenCalledWith('/reviewer');
-    vi.unstubAllGlobals();
+    await waitFor(() => {
+      expect(screen.getByText('Reviewer')).toBeInTheDocument();
+    });
   });
 });
