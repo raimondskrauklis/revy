@@ -58,3 +58,13 @@ export async function connectInstallation(
   const response = await apiClient.post(`/workspaces/${workspaceId}/installations/connect`);
   return await parseSuccess<ConnectInstallationResponse>(response);
 }
+
+export async function verifyInstallation(
+  workspaceId: string,
+  installationId: string,
+): Promise<GitHubInstallation> {
+  const response = await apiClient.post(
+    `/workspaces/${workspaceId}/installations/${installationId}/verify`,
+  );
+  return await parseSuccess<GitHubInstallation>(response);
+}

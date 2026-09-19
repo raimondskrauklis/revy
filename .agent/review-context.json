@@ -6,8 +6,8 @@
       "scope": ["backend/**", "frontend/**"],
       "paths": [
         {
-          "path": "docs/github-onboarding/GITHUB_ONBOARDING_P2_EXECUTION.md",
-          "description": "GitHub onboarding P2 — start-connect JWT API and connect wizard UI"
+          "path": "docs/github-onboarding/GITHUB_ONBOARDING_P3_EXECUTION.md",
+          "description": "GitHub onboarding P3 — live ≥1-repo verify sets verified_at"
         },
         {
           "path": "docs/github-onboarding/GITHUB_ONBOARDING_FINDINGS.md",

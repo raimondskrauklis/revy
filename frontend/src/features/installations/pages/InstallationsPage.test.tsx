@@ -14,6 +14,7 @@ vi.mock('@/features/installations/api', () => ({
   fetchInstallations: vi.fn(),
   registerInstallation: vi.fn(),
   connectInstallation: vi.fn(),
+  verifyInstallation: vi.fn(),
 }));
 
 vi.mock('@/shared/errors', () => ({
@@ -29,6 +30,7 @@ import {
   connectInstallation,
   fetchInstallations,
   registerInstallation,
+  verifyInstallation,
 } from '@/features/installations/api';
 import { mapApiError } from '@/shared/errors';
 import { showDomainErrorToast } from '@/shared/errors/toasts';
@@ -137,5 +139,49 @@ describe('InstallationsPage', () => {
       expect(showDomainErrorToast).toHaveBeenCalledWith(domainError);
     });
     expect(registerInstallation).not.toHaveBeenCalled();
+  });
+
+  it('verifies after admin/dev fallback register', async () => {
+    const user = userEvent.setup();
+    vi.mocked(useAuth).mockReturnValue(adminUser());
+    vi.mocked(registerInstallation).mockResolvedValue({
+      id: 'inst-1',
+      workspace_id: 'ws-1',
+      github_installation_id: 12345,
+      account_login: 'acme',
+      account_type: 'organization',
+      account_id: 7,
+      status: 'active',
+      permissions_snapshot: null,
+      verified_at: null,
+      created_at: '2026-09-19T10:00:00.000Z',
+      updated_at: '2026-09-19T10:00:00.000Z',
+    });
+    vi.mocked(verifyInstallation).mockResolvedValue({
+      id: 'inst-1',
+      workspace_id: 'ws-1',
+      github_installation_id: 12345,
+      account_login: 'acme',
+      account_type: 'organization',
+      account_id: 7,
+      status: 'active',
+      permissions_snapshot: null,
+      verified_at: null,
+      created_at: '2026-09-19T10:00:00.000Z',
+      updated_at: '2026-09-19T10:00:00.000Z',
+    });
+
+    renderPage();
+    await screen.findByRole('button', { name: /install revy/i });
+    await user.click(screen.getByText(/manual installation id/i));
+    await user.type(screen.getByLabelText(/github installation id/i), '12345');
+    await user.type(screen.getByLabelText(/account login/i), 'acme');
+    await user.type(screen.getByLabelText(/github account id/i), '99');
+    await user.click(screen.getByRole('button', { name: /register installation/i }));
+
+    await waitFor(() => {
+      expect(registerInstallation).toHaveBeenCalled();
+    });
+    expect(verifyInstallation).toHaveBeenCalledWith('ws-1', 'inst-1');
   });
 });

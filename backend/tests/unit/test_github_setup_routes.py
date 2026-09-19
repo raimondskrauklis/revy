@@ -159,6 +159,10 @@ def test_get_callback_commits_then_enqueues():
                 AsyncMock(return_value=bound),
             ) as bind_mock,
             patch(
+                "app.api.v1.github_setup.verify_granted_repositories",
+                AsyncMock(return_value=bound),
+            ) as verify_mock,
+            patch(
                 "app.api.v1.github_setup.enqueue_installation_repository_sync",
                 side_effect=lambda *_args, **_kwargs: order.append("enqueue"),
             ),
@@ -174,7 +178,8 @@ def test_get_callback_commits_then_enqueues():
     assert callback.status_code == 302
     assert "setup_error=" not in callback.headers["location"]
     bind_mock.assert_awaited_once()
-    assert order == ["commit", "enqueue"]
+    verify_mock.assert_awaited_once()
+    assert order == ["commit", "enqueue", "commit"]
 
 
 def test_get_callback_github_http_error_redirects_to_spa():
@@ -217,3 +222,194 @@ def test_get_callback_github_http_error_redirects_to_spa():
     assert "setup_error=github_unavailable" in callback.headers["location"]
     bind_mock.assert_not_called()
     session.commit.assert_not_called()
+
+
+def test_get_callback_update_hop_verifies():
+    from app.constants.enums import GitHubAccountType
+    from app.integrations.github_api import AppInstallationAccount
+
+    workspace_id = uuid4()
+    user_id = uuid4()
+    bound = MagicMock()
+    bound.id = uuid4()
+    bound.verified_at = None
+    session = AsyncMock()
+    session.commit = AsyncMock()
+    with _state_settings(), _settings():
+        install_token = mint_install_state(workspace_id=workspace_id, user_id=user_id)
+        client = _client(session=session)
+        setup = client.get(
+            "/api/v1/github/setup",
+            params={"state": install_token, "installation_id": "12345", "setup_action": "update"},
+        )
+        oauth_state = parse_qs(urlparse(setup.headers["location"]).query)["state"][0]
+        with (
+            patch(
+                "app.api.v1.github_setup.exchange_oauth_code",
+                AsyncMock(return_value="ghu_test"),
+            ),
+            patch("app.api.v1.github_setup.require_user_installation", AsyncMock()),
+            patch(
+                "app.api.v1.github_setup.get_app_installation",
+                AsyncMock(
+                    return_value=AppInstallationAccount(
+                        github_installation_id=12345,
+                        account_login="acme",
+                        account_type=GitHubAccountType.organization,
+                        account_id=7,
+                    )
+                ),
+            ),
+            patch(
+                "app.api.v1.github_setup.bind_github_installation",
+                AsyncMock(return_value=bound),
+            ) as bind_mock,
+            patch(
+                "app.api.v1.github_setup.verify_granted_repositories",
+                AsyncMock(return_value=bound),
+            ) as verify_mock,
+            patch("app.api.v1.github_setup.enqueue_installation_repository_sync"),
+            patch("app.api.v1.github_setup.httpx.AsyncClient") as http_client_cls,
+        ):
+            http_client_cls.return_value.__aenter__ = AsyncMock(return_value=MagicMock())
+            http_client_cls.return_value.__aexit__ = AsyncMock(return_value=None)
+            callback = client.get(
+                "/api/v1/github/callback",
+                params={"code": "abc", "state": oauth_state},
+                cookies=setup.cookies,
+            )
+    assert callback.status_code == 302
+    assert "setup_error=" not in callback.headers["location"]
+    bind_mock.assert_awaited_once()
+    verify_mock.assert_awaited_once()
+
+
+def test_get_callback_empty_repo_list_keeps_verified_at_null():
+    from app.constants.enums import GitHubAccountType
+    from app.integrations.github_api import AppInstallationAccount
+
+    workspace_id = uuid4()
+    user_id = uuid4()
+    bound = MagicMock()
+    bound.id = uuid4()
+    bound.github_installation_id = 12345
+    bound.verified_at = None
+    session = AsyncMock()
+    session.commit = AsyncMock()
+    session.flush = AsyncMock()
+    with _state_settings(), _settings():
+        install_token = mint_install_state(workspace_id=workspace_id, user_id=user_id)
+        client = _client(session=session)
+        setup = client.get(
+            "/api/v1/github/setup",
+            params={"state": install_token, "installation_id": "12345", "setup_action": "install"},
+        )
+        oauth_state = parse_qs(urlparse(setup.headers["location"]).query)["state"][0]
+        with (
+            patch(
+                "app.api.v1.github_setup.exchange_oauth_code",
+                AsyncMock(return_value="ghu_test"),
+            ),
+            patch("app.api.v1.github_setup.require_user_installation", AsyncMock()),
+            patch(
+                "app.api.v1.github_setup.get_app_installation",
+                AsyncMock(
+                    return_value=AppInstallationAccount(
+                        github_installation_id=12345,
+                        account_login="acme",
+                        account_type=GitHubAccountType.organization,
+                        account_id=7,
+                    )
+                ),
+            ),
+            patch(
+                "app.api.v1.github_setup.bind_github_installation",
+                AsyncMock(return_value=bound),
+            ),
+            patch(
+                "app.services.github_installations.list_installation_repositories",
+                AsyncMock(return_value=[]),
+            ),
+            patch("app.api.v1.github_setup.enqueue_installation_repository_sync"),
+            patch("app.api.v1.github_setup.httpx.AsyncClient") as http_client_cls,
+        ):
+            http_client_cls.return_value.__aenter__ = AsyncMock(return_value=MagicMock())
+            http_client_cls.return_value.__aexit__ = AsyncMock(return_value=None)
+            callback = client.get(
+                "/api/v1/github/callback",
+                params={"code": "abc", "state": oauth_state},
+                cookies=setup.cookies,
+            )
+    assert callback.status_code == 302
+    assert "setup_error=" not in callback.headers["location"]
+    assert bound.verified_at is None
+
+
+def test_get_callback_verify_http_error_still_persists_bind():
+    import httpx
+
+    from app.constants.enums import GitHubAccountType
+    from app.integrations.github_api import AppInstallationAccount
+
+    workspace_id = uuid4()
+    user_id = uuid4()
+    bound = MagicMock()
+    bound.id = uuid4()
+    bound.verified_at = None
+    session = AsyncMock()
+    session.commit = AsyncMock()
+    with _state_settings(), _settings():
+        install_token = mint_install_state(workspace_id=workspace_id, user_id=user_id)
+        client = _client(session=session)
+        setup = client.get(
+            "/api/v1/github/setup",
+            params={"state": install_token, "installation_id": "12345", "setup_action": "install"},
+        )
+        oauth_state = parse_qs(urlparse(setup.headers["location"]).query)["state"][0]
+        with (
+            patch(
+                "app.api.v1.github_setup.exchange_oauth_code",
+                AsyncMock(return_value="ghu_test"),
+            ),
+            patch("app.api.v1.github_setup.require_user_installation", AsyncMock()),
+            patch(
+                "app.api.v1.github_setup.get_app_installation",
+                AsyncMock(
+                    return_value=AppInstallationAccount(
+                        github_installation_id=12345,
+                        account_login="acme",
+                        account_type=GitHubAccountType.organization,
+                        account_id=7,
+                    )
+                ),
+            ),
+            patch(
+                "app.api.v1.github_setup.bind_github_installation",
+                AsyncMock(return_value=bound),
+            ) as bind_mock,
+            patch(
+                "app.api.v1.github_setup.verify_granted_repositories",
+                AsyncMock(
+                    side_effect=httpx.HTTPStatusError(
+                        "upstream",
+                        request=MagicMock(),
+                        response=MagicMock(status_code=503),
+                    )
+                ),
+            ),
+            patch("app.api.v1.github_setup.enqueue_installation_repository_sync") as enqueue_mock,
+            patch("app.api.v1.github_setup.httpx.AsyncClient") as http_client_cls,
+        ):
+            http_client_cls.return_value.__aenter__ = AsyncMock(return_value=MagicMock())
+            http_client_cls.return_value.__aexit__ = AsyncMock(return_value=None)
+            callback = client.get(
+                "/api/v1/github/callback",
+                params={"code": "abc", "state": oauth_state},
+                cookies=setup.cookies,
+            )
+    assert callback.status_code == 302
+    assert "setup_error=" not in callback.headers["location"]
+    bind_mock.assert_awaited_once()
+    session.commit.assert_awaited()
+    enqueue_mock.assert_called_once_with(bound.id)
+    assert bound.verified_at is None

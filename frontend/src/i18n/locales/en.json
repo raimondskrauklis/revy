@@ -599,7 +599,12 @@
       "type": "Type",
       "installationId": "Installation ID",
       "status": "Status",
+      "verified": "Verified",
       "created": "Created"
+    },
+    "verified": {
+      "yes": "Verified",
+      "configure": "Configure on GitHub"
     },
     "accountType": {
       "organization": "Organization",

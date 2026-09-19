@@ -16,6 +16,7 @@ from app.services.github_installations import (
     bind_github_installation,
     create_github_installation,
     list_github_installations,
+    verify_granted_repositories,
 )
 
 
@@ -219,3 +220,51 @@ async def test_bind_github_installation_other_workspace_conflicts():
                 account_type=GitHubAccountType.organization,
                 account_id=99,
             )
+
+
+def _unverified_row(workspace_id: uuid.UUID) -> GitHubInstallationORM:
+    row = GitHubInstallationORM(
+        workspace_id=workspace_id,
+        github_installation_id=12345,
+        account_login="acme-corp",
+        account_type=GitHubAccountType.organization,
+        account_id=99,
+        status=GitHubInstallationStatus.active,
+    )
+    row.id = uuid.uuid4()
+    row.verified_at = None
+    return row
+
+
+@pytest.mark.asyncio
+async def test_verify_granted_repositories_sets_verified_at_when_repos_exist():
+    session = AsyncMock()
+    session.flush = AsyncMock()
+    row = _unverified_row(uuid.uuid4())
+    client = MagicMock()
+
+    with patch(
+        "app.services.github_installations.list_installation_repositories",
+        AsyncMock(return_value=[{"id": 1, "full_name": "acme/app"}]),
+    ):
+        result = await verify_granted_repositories(session, installation=row, client=client)
+
+    assert result.verified_at is not None
+    session.flush.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_verify_granted_repositories_empty_list_leaves_verified_at_null():
+    session = AsyncMock()
+    session.flush = AsyncMock()
+    row = _unverified_row(uuid.uuid4())
+    client = MagicMock()
+
+    with patch(
+        "app.services.github_installations.list_installation_repositories",
+        AsyncMock(return_value=[]),
+    ):
+        result = await verify_granted_repositories(session, installation=row, client=client)
+
+    assert result.verified_at is None
+    session.flush.assert_awaited_once()

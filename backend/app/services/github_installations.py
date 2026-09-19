@@ -2,9 +2,11 @@
 """GitHub installations — REVY_PRODUCT_SLICE.md."""
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+import httpx
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +22,7 @@ from app.core.pagination import (
     encode_cursor,
 )
 from app.core.plan_gates import workspace_has_feature
+from app.integrations.github_api import list_installation_repositories
 from app.models.github_installation import GitHubInstallationORM
 from app.models.workspaces import WorkspaceORM
 from app.schemas.github_installation import GitHubInstallationCreate, GitHubInstallationResponse
@@ -178,6 +181,24 @@ async def bind_github_installation(
                 return raced
             raise _installation_conflict(raced, workspace_id=workspace_id) from exc
         raise ConflictError(message="GitHub installation already registered") from exc
+    return installation
+
+
+async def verify_granted_repositories(
+    session: AsyncSession,
+    *,
+    installation: GitHubInstallationORM,
+    client: httpx.AsyncClient,
+) -> GitHubInstallationORM:
+    repos = await list_installation_repositories(
+        client,
+        github_installation_id=installation.github_installation_id,
+    )
+    if repos:
+        installation.verified_at = datetime.now(UTC)
+    else:
+        installation.verified_at = None
+    await session.flush()
     return installation
 
 

@@ -599,7 +599,12 @@
       "type": "Tips",
       "installationId": "Instalācijas ID",
       "status": "Statuss",
+      "verified": "Verificēts",
       "created": "Izveidots"
+    },
+    "verified": {
+      "yes": "Verificēts",
+      "configure": "Konfigurēt GitHub"
     },
     "accountType": {
       "organization": "Organizācija",

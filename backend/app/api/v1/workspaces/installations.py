@@ -4,6 +4,7 @@ from typing import Annotated
 from urllib.parse import urlencode
 from uuid import UUID
 
+import httpx
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
@@ -25,7 +26,12 @@ from app.schemas.github_installation import (
     GitHubInstallationResponse,
 )
 from app.services.github_install_state import mint_install_state
-from app.services.github_installations import create_github_installation, list_github_installations
+from app.services.github_installations import (
+    create_github_installation,
+    get_github_installation,
+    list_github_installations,
+    verify_granted_repositories,
+)
 
 router = APIRouter(prefix="/{workspace_id}/installations", tags=["github-installations"])
 
@@ -102,3 +108,30 @@ async def post_workspace_installation_connect(
         f"https://github.com/apps/{slug}/installations/new?{urlencode({'state': state})}"
     )
     return SuccessResponse(data=GitHubConnectResponse(install_url=install_url))
+
+
+@router.post(
+    "/{installation_id}/verify",
+    response_model=SuccessResponse[GitHubInstallationResponse],
+)
+async def post_workspace_installation_verify(
+    workspace_id: UUID,
+    installation_id: UUID,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    _: Annotated[None, Depends(require_plan_feature("installations.create"))] = None,
+) -> SuccessResponse[GitHubInstallationResponse]:
+    require_permission(current_user, Permission.admin_users)
+    require_same_workspace(current_user, workspace_id)
+    if current_user.user_id is None:
+        raise ForbiddenError(message="User not provisioned")
+
+    row = await get_github_installation(
+        session,
+        workspace_id=workspace_id,
+        installation_id=installation_id,
+    )
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        await verify_granted_repositories(session, installation=row, client=client)
+    await session.commit()
+    return SuccessResponse(data=GitHubInstallationResponse.model_validate(row))

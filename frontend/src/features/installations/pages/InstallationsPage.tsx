@@ -7,6 +7,7 @@ import {
   connectInstallation,
   fetchInstallations,
   registerInstallation,
+  verifyInstallation,
   type GitHubInstallation,
   type RegisterInstallationPayload,
 } from '@/features/installations/api';
@@ -77,7 +78,12 @@ export function InstallationsPage() {
     if (!workspaceId) return;
     setSubmitting(true);
     try {
-      await registerInstallation(workspaceId, payload);
+      const created = await registerInstallation(workspaceId, payload);
+      try {
+        await verifyInstallation(workspaceId, created.id);
+      } catch (error) {
+        showDomainErrorToast(mapApiError(error));
+      }
       await loadInstallations();
     } catch (error) {
       showDomainErrorToast(mapApiError(error));

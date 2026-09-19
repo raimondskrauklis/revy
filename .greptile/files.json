@@ -1,8 +1,8 @@
 {
   "files": [
     {
-      "path": "docs/github-onboarding/GITHUB_ONBOARDING_P2_EXECUTION.md",
-      "description": "GitHub onboarding P2 \u2014 start-connect JWT API and connect wizard UI",
+      "path": "docs/github-onboarding/GITHUB_ONBOARDING_P3_EXECUTION.md",
+      "description": "GitHub onboarding P3 \u2014 live \u22651-repo verify sets verified_at",
       "scope": [
         "backend/**",
         "frontend/**"

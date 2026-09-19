@@ -35,7 +35,7 @@ from app.services.github_install_state import (
     verify_oauth_state,
     verify_setup_stash,
 )
-from app.services.github_installations import bind_github_installation
+from app.services.github_installations import bind_github_installation, verify_granted_repositories
 from app.services.github_repositories import enqueue_installation_repository_sync
 
 router = APIRouter(prefix="/github", tags=["github-setup"])
@@ -141,16 +141,21 @@ async def get_github_callback(
                 )
             finally:
                 del user_token
-        row = await bind_github_installation(
-            session,
-            workspace_id=stash.workspace_id,
-            github_installation_id=account.github_installation_id,
-            account_login=account.account_login,
-            account_type=account.account_type,
-            account_id=account.account_id,
-        )
-        await session.commit()
-        enqueue_installation_repository_sync(row.id)
+            row = await bind_github_installation(
+                session,
+                workspace_id=stash.workspace_id,
+                github_installation_id=account.github_installation_id,
+                account_login=account.account_login,
+                account_type=account.account_type,
+                account_id=account.account_id,
+            )
+            await session.commit()
+            enqueue_installation_repository_sync(row.id)
+            try:
+                await verify_granted_repositories(session, installation=row, client=client)
+                await session.commit()
+            except (httpx.HTTPError, ServiceUnavailableError):
+                pass
         return _clear_stash(_spa_redirect())
     except ForbiddenError as exc:
         code_name = exc.error_code or "forbidden"
