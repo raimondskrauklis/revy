@@ -52,6 +52,9 @@ docs/review-pipeline/
       FINDING_RESOLUTION_P0_EXECUTION.md … P5
   finding-resolution-dogfood/            ← post-PSA FR-DG* validation (Revy repo)
     README.md
+  resolution-honesty/                    ← lifetime vs this-push vs GitHub outdated (dogfood #1)
+    README.md
+    RESOLUTION_HONESTY_FINDINGS.md
   revy-review-dogfood/                   ← cross-repo staging dogfood — RR-W1 complete (Revy #80)
     README.md
     REVY_REVIEW_DOGFOOD_FINDINGS.md

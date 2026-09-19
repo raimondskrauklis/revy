@@ -1,12 +1,12 @@
 # Bugbot — review pipeline contract
 
-**Active program:** visual-identity — PR operator console (phosphor field, in-app UX rebuild).
+**Active program:** resolution-honesty — GitHub comment resolved / still open / this-push numbers match reality.
 
-When reviewing **frontend** changes for visual identity, treat these as authoritative:
+When reviewing **backend** (and later changelog) changes for this program, treat these as authoritative:
 
-- [VISUAL_IDENTITY_P0_EXECUTION.md](../docs/visual-identity/VISUAL_IDENTITY_P0_EXECUTION.md) — P0 LOOP (overlay, type, force-dark, mark, toasts)
-- [VISUAL_IDENTITY_FINDINGS.md](../docs/visual-identity/VISUAL_IDENTITY_FINDINGS.md) — VI-Q0–Q10
-- [VISUAL_IDENTITY_GENERAL_PLAN.md](../docs/visual-identity/VISUAL_IDENTITY_GENERAL_PLAN.md) — P0–P4 goals
+- [RESOLUTION_HONESTY_P0_EXECUTION.md](../docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_P0_EXECUTION.md) — P0 LOOP (claim_slot, continuation, retire peer supersede, inline keys)
+- [RESOLUTION_HONESTY_FINDINGS.md](../docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_FINDINGS.md) — RH-Q1–Q12
+- [RESOLUTION_HONESTY_GENERAL_PLAN.md](../docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_GENERAL_PLAN.md) — P0–P5 goals
 
 **Agent workflow:**
 

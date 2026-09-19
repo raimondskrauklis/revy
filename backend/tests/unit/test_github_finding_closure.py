@@ -1,7 +1,7 @@
 # backend/tests/unit/test_github_finding_closure.py
 """Finding group closure rules — P0 pure functions."""
 import uuid
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -509,6 +509,9 @@ async def test_apply_pass2_closure_after_file_deletion_pass1_stamp():
     session.scalar = AsyncMock(side_effect=[published_prior])
     session.scalars = AsyncMock(return_value=[group])
     session.flush = AsyncMock()
+    publish_rows = MagicMock()
+    publish_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=publish_rows)
 
     with patch(
         "app.services.github_resolution_metrics._fetch_compare_patches",
@@ -875,4 +878,81 @@ async def test_verification_judge_slots_remaining_accounts_for_prior_outcomes():
         review_run_id=uuid.uuid4(),
     )
     assert remaining == 0
+
+
+@pytest.mark.asyncio
+async def test_fingerprints_in_review_run_uses_bound_group_not_current_title():
+    """Continuation keeps birth claim_slot; Pass 2 must treat that group as present."""
+    from app.constants.enums import ReviewProfile
+    from app.services.github_finding_closure import _fingerprints_in_review_run
+    from app.services.github_finding_reconcile import claim_slot_key, compute_fingerprint
+
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    group_id = uuid.uuid4()
+
+    run = GitHubReviewRunORM(
+        revision_id=revision_id,
+        workspace_id=workspace_id,
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    run.id = review_run_id
+    revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=2,
+        head_sha="def",
+    )
+    revision.id = revision_id
+
+    birth_fp = compute_fingerprint(
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        file_path="app/eval.py",
+        category=FindingCategory.security,
+        claim_slot=claim_slot_key("INFO eval"),
+    )
+    current_fp = compute_fingerprint(
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        file_path="app/eval.py",
+        category=FindingCategory.security,
+        claim_slot=claim_slot_key("CRITICAL eval"),
+    )
+    group = GitHubFindingGroupORM(
+        id=group_id,
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint=birth_fp,
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="CRITICAL eval",
+        message="unsafe",
+        file_path="app/eval.py",
+        claim_slot=claim_slot_key("INFO eval"),
+        last_seen_revision_id=revision_id,
+        resolution_status=ResolutionStatus.addressed,
+    )
+    finding = GitHubFindingORM(
+        review_run_id=review_run_id,
+        workspace_id=workspace_id,
+        group_id=group_id,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="CRITICAL eval",
+        message="unsafe",
+        file_path="app/eval.py",
+        start_line=10,
+    )
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, revision, group])
+    session.scalars = AsyncMock(return_value=[finding])
+
+    fps = await _fingerprints_in_review_run(session, review_run_id=review_run_id)
+    assert birth_fp in fps
+    assert current_fp not in fps
 

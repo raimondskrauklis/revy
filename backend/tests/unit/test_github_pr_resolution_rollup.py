@@ -33,6 +33,7 @@ from app.services.github_publish_formatter import (
 
 def _group(**kwargs) -> GitHubFindingGroupORM:
     defaults = {
+        "id": uuid.uuid4(),
         "workspace_id": uuid.uuid4(),
         "pull_request_id": uuid.uuid4(),
         "fingerprint": f"fp-{uuid.uuid4().hex[:8]}",
@@ -75,7 +76,7 @@ def test_build_pr_resolution_rollup_revision_one():
         review_count=1,
         computed_at_revision_id=uuid.uuid4(),
         raw_pr_active_groups=[generation],
-        publishable_fingerprints={"gen-1"},
+        publishable_fingerprints={str(generation.id)},
         collapsed_fingerprints=set(),
         prior_revision_ids_by_resolve_revision={},
     )
@@ -99,7 +100,7 @@ def test_build_pr_resolution_rollup_legacy_pr_disclosure():
         review_count=1,
         computed_at_revision_id=uuid.uuid4(),
         raw_pr_active_groups=[prior, generation],
-        publishable_fingerprints={"gen-new"},
+        publishable_fingerprints={str(generation.id)},
         collapsed_fingerprints=set(),
         prior_revision_ids_by_resolve_revision={},
     )
@@ -118,7 +119,7 @@ def test_still_open_display_matches_block_two_row_count():
         review_count=2,
         computed_at_revision_id=uuid.uuid4(),
         raw_pr_active_groups=filtered,
-        publishable_fingerprints={"gen-1"},
+        publishable_fingerprints={str(generation.id)},
         collapsed_fingerprints=set(),
         prior_revision_ids_by_resolve_revision={},
     )
@@ -138,7 +139,7 @@ def test_still_open_prior_matches_display_still_open_prior_count():
         review_count=2,
         computed_at_revision_id=uuid.uuid4(),
         raw_pr_active_groups=filtered,
-        publishable_fingerprints={"gen-1"},
+        publishable_fingerprints={str(generation.id)},
         collapsed_fingerprints=set(),
         prior_revision_ids_by_resolve_revision={},
     )
@@ -222,10 +223,10 @@ def test_compute_filter_snapshot_collapsed_hidden():
     snapshot = compute_filter_snapshot(
         raw,
         filtered,
-        publishable_fingerprints={"gen-1"},
-        collapsed_fingerprints={"collapsed-fp"},
-        generation_fingerprints={"gen-1"},
-        ever_inlined_fingerprints={"collapsed-fp"},
+        publishable_fingerprints={str(generation.id)},
+        collapsed_fingerprints={str(collapsed.id)},
+        generation_fingerprints={str(generation.id)},
+        ever_inlined_fingerprints={str(collapsed.id)},
     )
     assert snapshot["collapsed_hidden"] == 1
     assert snapshot["raw_active_before_filters"] == 2
@@ -246,8 +247,8 @@ def test_post_collapse_rollup_matches_filtered_ctx():
         check,
         issue,
         ctx,
-        publishable_fingerprints={"gen-1"},
-        collapsed_fingerprints={"prior-collapsed"},
+        publishable_fingerprints={str(generation.id)},
+        collapsed_fingerprints={str(prior.id)},
     )
     filtered = [generation]
     filtered_ctx = PublishFormatContext(
@@ -266,8 +267,8 @@ def test_post_collapse_rollup_matches_filtered_ctx():
         review_count=2,
         computed_at_revision_id=revision_id,
         raw_pr_active_groups=raw_pr_active,
-        publishable_fingerprints={"gen-1"},
-        collapsed_fingerprints={"prior-collapsed"},
+        publishable_fingerprints={str(generation.id)},
+        collapsed_fingerprints={str(prior.id)},
         prior_revision_ids_by_resolve_revision={},
     )
     actual = build_pr_resolution_rollup(
@@ -276,8 +277,8 @@ def test_post_collapse_rollup_matches_filtered_ctx():
         review_count=2,
         computed_at_revision_id=revision_id,
         raw_pr_active_groups=raw_pr_active,
-        publishable_fingerprints={"gen-1"},
-        collapsed_fingerprints={"prior-collapsed"},
+        publishable_fingerprints={str(generation.id)},
+        collapsed_fingerprints={str(prior.id)},
         prior_revision_ids_by_resolve_revision={},
     )
     assert actual["still_open_display"] == expected["still_open_display"] == 1

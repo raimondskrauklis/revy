@@ -170,7 +170,7 @@ async def _load_prior_revision(
 
 
 async def _fingerprints_in_review_run(session: AsyncSession, *, review_run_id: UUID) -> set[str]:
-    from app.services.github_finding_reconcile import compute_fingerprint
+    from app.services.github_finding_reconcile import claim_slot_key, compute_fingerprint
 
     run = await session.get(GitHubReviewRunORM, review_run_id)
     if run is None:
@@ -187,14 +187,18 @@ async def _fingerprints_in_review_run(session: AsyncSession, *, review_run_id: U
     )
     fingerprints: set[str] = set()
     for finding in findings:
+        if finding.group_id is not None:
+            group = await session.get(GitHubFindingGroupORM, finding.group_id)
+            if group is not None and group.fingerprint:
+                fingerprints.add(group.fingerprint)
+                continue
         fingerprints.add(
             compute_fingerprint(
                 workspace_id=run.workspace_id,
                 pull_request_id=revision.pull_request_id,
                 file_path=finding.file_path,
                 category=finding.category,
-                title=finding.title,
-                start_line=finding.start_line,
+                claim_slot=claim_slot_key(finding.title),
             )
         )
     return fingerprints

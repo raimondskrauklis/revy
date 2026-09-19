@@ -24,6 +24,7 @@ from app.services.github_finding_closure_rules import (
 from app.services.github_publish_formatter import (
     PublishFormatContext,
     display_still_open_prior_count,
+    group_identity_key,
     verdict_groups,
 )
 
@@ -174,7 +175,7 @@ def compute_filter_snapshot(
     publish surface (excludes ``resolution_status=addressed`` — those are
     already surfaced as addressed, not hidden by collapse/orphan/compare filters).
     """
-    filtered_fingerprints = {group.fingerprint for group in filtered_groups}
+    filtered_ids = {group_identity_key(group) for group in filtered_groups}
     raw_active = [
         group
         for group in raw_pr_active_groups
@@ -186,19 +187,20 @@ def compute_filter_snapshot(
     compare_failed_hidden = 0
 
     for group in raw_active:
-        if group.fingerprint in filtered_fingerprints:
+        identity = group_identity_key(group)
+        if identity in filtered_ids:
             continue
         if (
-            group.fingerprint in collapsed_fingerprints
-            and group.fingerprint not in publishable_fingerprints
-            and group.fingerprint not in generation_fingerprints
+            identity in collapsed_fingerprints
+            and identity not in publishable_fingerprints
+            and identity not in generation_fingerprints
         ):
             collapsed_hidden += 1
             continue
         if (
             ever_inlined_fingerprints is not None
-            and group.fingerprint not in ever_inlined_fingerprints
-            and group.fingerprint not in generation_fingerprints
+            and identity not in ever_inlined_fingerprints
+            and identity not in generation_fingerprints
         ):
             orphan_hidden += 1
             continue
@@ -243,7 +245,7 @@ def build_pr_resolution_rollup(
     lifetime_rate = (
         round(100.0 * resolved_count / denominator, 1) if denominator > 0 else None
     )
-    generation_fingerprints = {group.fingerprint for group in ctx.groups}
+    generation_fingerprints = {group_identity_key(group) for group in ctx.groups}
     ever_inlined = (
         set(ctx.ever_inlined_fingerprints)
         if ctx.ever_inlined_fingerprints is not None

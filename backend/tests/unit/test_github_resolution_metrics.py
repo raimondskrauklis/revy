@@ -239,6 +239,9 @@ async def test_apply_resolution_status_for_synchronize_updates_prior_groups():
     session.scalar = AsyncMock(side_effect=[prior_revision])
     session.scalars = AsyncMock(return_value=[group])
     session.flush = AsyncMock()
+    empty_rows = MagicMock()
+    empty_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=empty_rows)
 
     compare = CompareCommitsResult(
         files=(
@@ -340,6 +343,9 @@ async def test_apply_resolution_status_for_synchronize_stamps_compare_failed():
     session.scalar = AsyncMock(side_effect=[prior_revision])
     session.scalars = AsyncMock(return_value=[group])
     session.flush = AsyncMock()
+    empty_rows = MagicMock()
+    empty_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=empty_rows)
 
     failed_result = type(
         "CompareResult",
@@ -426,6 +432,9 @@ async def test_apply_resolution_status_for_synchronize_stamps_addressed_on_file_
     session.scalar = AsyncMock(side_effect=[prior_revision])
     session.scalars = AsyncMock(return_value=[group])
     session.flush = AsyncMock()
+    empty_rows = MagicMock()
+    empty_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=empty_rows)
 
     with patch(
         "app.services.github_resolution_metrics._fetch_compare_patches",
@@ -750,6 +759,9 @@ async def test_apply_resolution_status_for_synchronize_skipped_not_head_uses_las
     session = AsyncMock()
     session.scalars = AsyncMock(return_value=[group])
     session.flush = AsyncMock()
+    empty_rows = MagicMock()
+    empty_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=empty_rows)
 
     with patch(
         "app.services.github_resolution_metrics.get_last_published_prior_revision",
@@ -847,6 +859,9 @@ async def test_apply_resolution_status_hygiene_aged_cohort_empty_pairing():
     session.scalar = AsyncMock(side_effect=[published_prior])
     session.scalars = AsyncMock(return_value=[aged_group])
     session.flush = AsyncMock()
+    empty_rows = MagicMock()
+    empty_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=empty_rows)
 
     compare_result = type(
         "CompareResult",
@@ -939,6 +954,9 @@ async def test_apply_resolution_status_head_fail_closed():
     session.scalar = AsyncMock(side_effect=[prior_revision])
     session.scalars = AsyncMock(return_value=[group])
     session.flush = AsyncMock()
+    empty_rows = MagicMock()
+    empty_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=empty_rows)
 
     with patch(
         "app.services.github_resolution_metrics._fetch_compare_patches",
@@ -1027,6 +1045,9 @@ async def test_apply_resolution_status_head_fail_closed_when_compare_failed():
     session.scalar = AsyncMock(side_effect=[prior_revision])
     session.scalars = AsyncMock(return_value=[aged_group])
     session.flush = AsyncMock()
+    empty_rows = MagicMock()
+    empty_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=empty_rows)
 
     failed_result = type(
         "CompareResult",
@@ -1115,6 +1136,9 @@ async def test_apply_resolution_status_compare_failed_path_gone_still_open():
     session.scalar = AsyncMock(side_effect=[prior_revision])
     session.scalars = AsyncMock(return_value=[aged_group])
     session.flush = AsyncMock()
+    empty_rows = MagicMock()
+    empty_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=empty_rows)
 
     failed_result = type(
         "CompareResult",
@@ -1204,6 +1228,9 @@ async def test_apply_resolution_status_clears_stale_compare_failed_on_success():
     session.scalar = AsyncMock(side_effect=[prior_revision])
     session.scalars = AsyncMock(return_value=[aged_group])
     session.flush = AsyncMock()
+    empty_rows = MagicMock()
+    empty_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=empty_rows)
 
     compare_ok = type(
         "CompareResult",
@@ -1298,6 +1325,9 @@ async def test_apply_resolution_status_clears_stale_compare_failed_in_cohort():
     session.scalar = AsyncMock(side_effect=[prior_revision])
     session.scalars = AsyncMock(return_value=[cohort_group])
     session.flush = AsyncMock()
+    empty_rows = MagicMock()
+    empty_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=empty_rows)
 
     compare_ok = type(
         "CompareResult",
@@ -1413,6 +1443,9 @@ async def test_apply_resolution_status_pairing_repair_includes_published_earlier
     )
     session.get = AsyncMock(return_value=gap_revision)
     session.flush = AsyncMock()
+    empty_rows = MagicMock()
+    empty_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=empty_rows)
 
     compare_ok = type(
         "CompareResult",
@@ -1604,8 +1637,9 @@ async def test_get_fingerprint_published_revision_ids_includes_review_run_findin
     )
     publish_rows = MagicMock()
     publish_rows.all = lambda: [row]
+    group_id = uuid.uuid4()
     finding_rows = MagicMock()
-    finding_rows.__iter__ = lambda self: iter([(review_run_id, "issue-comment-fp")])
+    finding_rows.__iter__ = lambda self: iter([(review_run_id, group_id)])
 
     session = AsyncMock()
     session.execute = AsyncMock(side_effect=[publish_rows, finding_rows])
@@ -1616,7 +1650,7 @@ async def test_get_fingerprint_published_revision_ids_includes_review_run_findin
         current_revision=current_revision,
     )
 
-    assert published == {"issue-comment-fp": revision_id}
+    assert published == {str(group_id): revision_id}
 
 
 def test_build_resolution_pass_manifest_hygiene_count_outside_stamp_cohort():

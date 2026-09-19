@@ -40,10 +40,16 @@ from app.services.github_finding_closure_rules import (
 logger = get_logger(__name__)
 
 _FINGERPRINT_SEP = "\x1f"
+_CLAIM_SLOT_HEX_LEN = 32
 
 
 def start_line_key(start_line: int | None) -> str:
     return str(start_line) if start_line is not None else "0"
+
+
+def claim_slot_key(title: str) -> str:
+    """Frozen claim identity: first 32 hex chars of sha256(title.strip())."""
+    return hashlib.sha256(title.strip().encode("utf-8")).hexdigest()[:_CLAIM_SLOT_HEX_LEN]
 
 
 def compute_fingerprint(
@@ -52,50 +58,185 @@ def compute_fingerprint(
     pull_request_id: UUID,
     file_path: str | None,
     category: FindingCategory | str,
-    title: str,
-    start_line: int | None,
+    claim_slot: str,
 ) -> str:
-    """D10 identity key (message excluded). Deploy supersede pass in 0026 per D10-M."""
-    normalized_title = title.strip()
+    """Persistent identity: workspace + PR + path + category + claim_slot (not title/line)."""
     payload = _FINGERPRINT_SEP.join(
         [
             str(workspace_id),
             str(pull_request_id),
             file_path or "",
             stored_enum_value(category),
-            normalized_title,
+            claim_slot,
+        ]
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def compute_legacy_d10_fingerprint(
+    *,
+    workspace_id: UUID,
+    pull_request_id: UUID,
+    file_path: str | None,
+    category: FindingCategory | str,
+    title: str,
+    start_line: int | None,
+) -> str:
+    """One-generation D10 hash (title + start_line) for dual lookup after cutover."""
+    payload = _FINGERPRINT_SEP.join(
+        [
+            str(workspace_id),
+            str(pull_request_id),
+            file_path or "",
+            stored_enum_value(category),
+            title.strip(),
             start_line_key(start_line),
         ]
     )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
-async def _mark_superseded_peers(
+async def _load_group_by_fingerprint(
+    session: AsyncSession,
+    *,
+    pull_request_id: UUID,
+    fingerprint: str,
+) -> GitHubFindingGroupORM | None:
+    return await session.scalar(
+        select(GitHubFindingGroupORM).where(
+            GitHubFindingGroupORM.pull_request_id == pull_request_id,
+            GitHubFindingGroupORM.fingerprint == fingerprint,
+        )
+    )
+
+
+async def _continuation_candidate(
     session: AsyncSession,
     *,
     pull_request_id: UUID,
     file_path: str | None,
-    category: FindingCategory,
-    revision_id: UUID,
-    exclude_group_id: UUID,
-) -> None:
+    category: FindingCategory | str,
+    bound_this_run: set[UUID],
+) -> GitHubFindingGroupORM | None:
+    """Nearby = same file_path. Bind only when exactly one unbound active leftover."""
     if not file_path:
-        return
-
-    peers = list(
-        await session.scalars(
-            select(GitHubFindingGroupORM).where(
-                GitHubFindingGroupORM.pull_request_id == pull_request_id,
-                GitHubFindingGroupORM.file_path == file_path,
-                GitHubFindingGroupORM.category == category,
-                GitHubFindingGroupORM.state == GitHubFindingGroupState.active,
-                GitHubFindingGroupORM.id != exclude_group_id,
-            )
-        )
+        return None
+    stmt = select(GitHubFindingGroupORM).where(
+        GitHubFindingGroupORM.pull_request_id == pull_request_id,
+        GitHubFindingGroupORM.file_path == file_path,
+        GitHubFindingGroupORM.category == category,
+        GitHubFindingGroupORM.state == GitHubFindingGroupState.active,
     )
-    for peer in peers:
-        if peer.last_seen_revision_id != revision_id:
-            peer.state = GitHubFindingGroupState.superseded
+    if bound_this_run:
+        stmt = stmt.where(GitHubFindingGroupORM.id.notin_(tuple(bound_this_run)))
+    candidates = list(await session.scalars(stmt))
+    if len(candidates) != 1:
+        return None
+    return candidates[0]
+
+
+def _copy_finding_attributes(
+    group: GitHubFindingGroupORM,
+    finding: GitHubFindingORM,
+    *,
+    revision_id: UUID,
+) -> None:
+    group.last_seen_revision_id = revision_id
+    group.severity = finding.severity
+    group.category = finding.category
+    group.title = finding.title
+    group.message = finding.message
+    group.file_path = finding.file_path
+    group.start_line = finding.start_line
+
+
+async def _bind_group_for_finding(
+    session: AsyncSession,
+    *,
+    run: GitHubReviewRunORM,
+    pull_request_id: UUID,
+    revision_id: UUID,
+    finding: GitHubFindingORM,
+    bound_this_run: set[UUID],
+) -> GitHubFindingGroupORM:
+    finding_claim_slot = claim_slot_key(finding.title)
+    fingerprint = compute_fingerprint(
+        workspace_id=run.workspace_id,
+        pull_request_id=pull_request_id,
+        file_path=finding.file_path,
+        category=finding.category,
+        claim_slot=finding_claim_slot,
+    )
+    group = await _load_group_by_fingerprint(
+        session,
+        pull_request_id=pull_request_id,
+        fingerprint=fingerprint,
+    )
+    bound_via = "new"
+    if group is None:
+        legacy = compute_legacy_d10_fingerprint(
+            workspace_id=run.workspace_id,
+            pull_request_id=pull_request_id,
+            file_path=finding.file_path,
+            category=finding.category,
+            title=finding.title,
+            start_line=finding.start_line,
+        )
+        group = await _load_group_by_fingerprint(
+            session,
+            pull_request_id=pull_request_id,
+            fingerprint=legacy,
+        )
+        bound_via = "legacy"
+    if group is None:
+        group = await _continuation_candidate(
+            session,
+            pull_request_id=pull_request_id,
+            file_path=finding.file_path,
+            category=finding.category,
+            bound_this_run=bound_this_run,
+        )
+        bound_via = "continuation"
+
+    if group is None:
+        group = GitHubFindingGroupORM(
+            workspace_id=run.workspace_id,
+            pull_request_id=pull_request_id,
+            fingerprint=fingerprint,
+            state=GitHubFindingGroupState.active,
+            severity=finding.severity,
+            category=finding.category,
+            title=finding.title,
+            message=finding.message,
+            file_path=finding.file_path,
+            start_line=finding.start_line,
+            claim_slot=finding_claim_slot,
+            last_seen_revision_id=revision_id,
+        )
+        session.add(group)
+        await session.flush()
+        return group
+
+    if should_skip_resolved_group_on_reconcile(
+        state=group.state,
+        resolution_method=group.resolution_method,
+    ):
+        return group
+
+    if should_reopen_absent_and_addressed(
+        state=group.state,
+        resolution_method=group.resolution_method,
+        fingerprint_in_current_run=True,
+    ):
+        for key, value in reopen_fields_for_re_report().items():
+            setattr(group, key, value)
+    else:
+        group.state = GitHubFindingGroupState.active
+
+    _copy_finding_attributes(group, finding, revision_id=revision_id)
+    if bound_via == "legacy" and group.claim_slot is None:
+        group.claim_slot = finding_claim_slot
+    return group
 
 
 async def reconcile_review_run(session: AsyncSession, *, review_run_id: UUID) -> list[UUID]:
@@ -119,91 +260,19 @@ async def reconcile_review_run(session: AsyncSession, *, review_run_id: UUID) ->
     )
 
     linked_group_ids: list[UUID] = []
+    bound_this_run: set[UUID] = set()
     for finding in findings:
-        fingerprint = compute_fingerprint(
-            workspace_id=run.workspace_id,
+        group = await _bind_group_for_finding(
+            session,
+            run=run,
             pull_request_id=pull_request_id,
-            file_path=finding.file_path,
-            category=finding.category,
-            title=finding.title,
-            start_line=finding.start_line,
+            revision_id=revision.id,
+            finding=finding,
+            bound_this_run=bound_this_run,
         )
-
-        group = await session.scalar(
-            select(GitHubFindingGroupORM).where(
-                GitHubFindingGroupORM.pull_request_id == pull_request_id,
-                GitHubFindingGroupORM.fingerprint == fingerprint,
-            )
-        )
-
-        if group is None:
-            group = GitHubFindingGroupORM(
-                workspace_id=run.workspace_id,
-                pull_request_id=pull_request_id,
-                fingerprint=fingerprint,
-                state=GitHubFindingGroupState.active,
-                severity=finding.severity,
-                category=finding.category,
-                title=finding.title,
-                message=finding.message,
-                file_path=finding.file_path,
-                last_seen_revision_id=revision.id,
-            )
-            session.add(group)
-            await session.flush()
-            await _mark_superseded_peers(
-                session,
-                pull_request_id=pull_request_id,
-                file_path=finding.file_path,
-                category=finding.category,
-                revision_id=revision.id,
-                exclude_group_id=group.id,
-            )
-        elif should_reopen_absent_and_addressed(
-            state=group.state,
-            resolution_method=group.resolution_method,
-            fingerprint_in_current_run=True,
-        ):
-            for key, value in reopen_fields_for_re_report().items():
-                setattr(group, key, value)
-            group.last_seen_revision_id = revision.id
-            group.severity = finding.severity
-            group.category = finding.category
-            group.title = finding.title
-            group.message = finding.message
-            group.file_path = finding.file_path
-            await _mark_superseded_peers(
-                session,
-                pull_request_id=pull_request_id,
-                file_path=finding.file_path,
-                category=finding.category,
-                revision_id=revision.id,
-                exclude_group_id=group.id,
-            )
-        elif should_skip_resolved_group_on_reconcile(
-            state=group.state,
-            resolution_method=group.resolution_method,
-        ):
-            pass
-        else:
-            group.last_seen_revision_id = revision.id
-            group.severity = finding.severity
-            group.category = finding.category
-            group.title = finding.title
-            group.message = finding.message
-            group.file_path = finding.file_path
-            group.state = GitHubFindingGroupState.active
-            await _mark_superseded_peers(
-                session,
-                pull_request_id=pull_request_id,
-                file_path=finding.file_path,
-                category=finding.category,
-                revision_id=revision.id,
-                exclude_group_id=group.id,
-            )
-
         finding.group_id = group.id
         linked_group_ids.append(group.id)
+        bound_this_run.add(group.id)
 
     await session.flush()
     return linked_group_ids

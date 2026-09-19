@@ -428,6 +428,11 @@ def _active_groups(groups: list[GitHubFindingGroupORM]) -> list[GitHubFindingGro
     return [g for g in groups if g.state == GitHubFindingGroupState.active]
 
 
+def group_identity_key(group: GitHubFindingGroupORM) -> str:
+    """Inline-thread / summary identity — ``str(group.id)`` (RH-Q11)."""
+    return str(group.id)
+
+
 def filter_pr_active_groups_for_summary(
     groups: list[GitHubFindingGroupORM],
     *,
@@ -438,7 +443,7 @@ def filter_pr_active_groups_for_summary(
 ) -> list[GitHubFindingGroupORM]:
     """PR-wide still-open rows aligned with GH-1v2 inline thread collapse.
 
-    Active groups whose fingerprint was successfully collapsed on GitHub and is
+    Active groups whose identity was successfully collapsed on GitHub and is
     absent from this generation's publishable set should not appear as still open.
     Generation-scoped groups stay visible even when judge-gated off inline publish.
     Summary-only orphans (never received an inline comment, not in this generation)
@@ -446,22 +451,23 @@ def filter_pr_active_groups_for_summary(
     """
     filtered: list[GitHubFindingGroupORM] = []
     for group in groups:
+        identity = group_identity_key(group)
         if group.resolution_status == ResolutionStatus.addressed:
             continue
         if (
-            group.fingerprint in collapsed_fingerprints
-            and group.fingerprint not in publishable_fingerprints
+            identity in collapsed_fingerprints
+            and identity not in publishable_fingerprints
             and (
                 generation_fingerprints is None
-                or group.fingerprint not in generation_fingerprints
+                or identity not in generation_fingerprints
             )
         ):
             continue
         if (
             ever_inlined_fingerprints is not None
             and generation_fingerprints is not None
-            and group.fingerprint not in ever_inlined_fingerprints
-            and group.fingerprint not in generation_fingerprints
+            and identity not in ever_inlined_fingerprints
+            and identity not in generation_fingerprints
         ):
             continue
         filtered.append(group)
@@ -470,11 +476,11 @@ def filter_pr_active_groups_for_summary(
 
 def display_still_open_prior_count(ctx: PublishFormatContext) -> int:
     """Prior-revision actives visible on the publish surface (post summary filters)."""
-    generation_fingerprints = {group.fingerprint for group in ctx.groups}
+    generation_ids = {group_identity_key(group) for group in ctx.groups}
     return sum(
         1
         for group in _active_groups(verdict_groups(ctx))
-        if group.fingerprint not in generation_fingerprints
+        if group_identity_key(group) not in generation_ids
     )
 
 
@@ -1093,7 +1099,7 @@ def apply_publish_summary_thread_collapse(
             summary_json=_build_summary_json(ctx),
         )
     pr_active = ctx.pr_active_groups or []
-    generation_fingerprints = {group.fingerprint for group in ctx.groups}
+    generation_fingerprints = {group_identity_key(group) for group in ctx.groups}
     filtered = filter_pr_active_groups_for_summary(
         pr_active,
         publishable_fingerprints=publishable_fingerprints,

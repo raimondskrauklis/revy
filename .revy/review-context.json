@@ -1,21 +1,21 @@
 {
-  "active_program": "visual-identity",
+  "active_program": "resolution-honesty",
   "programs": [
     {
-      "id": "visual-identity",
-      "scope": ["frontend/**"],
+      "id": "resolution-honesty",
+      "scope": ["backend/**", "frontend/**"],
       "paths": [
         {
-          "path": "docs/visual-identity/VISUAL_IDENTITY_P0_EXECUTION.md",
-          "description": "Visual identity P0 — overlay, type, force-dark, mark, toasts"
+          "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_P0_EXECUTION.md",
+          "description": "Resolution honesty P0 — persistent identity cutover (claim_slot, continuation, inline keys)"
         },
         {
-          "path": "docs/visual-identity/VISUAL_IDENTITY_FINDINGS.md",
-          "description": "Visual identity baseline — VI-Q0–Q10"
+          "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_FINDINGS.md",
+          "description": "Resolution honesty baseline — RH-Q1–Q12"
         },
         {
-          "path": "docs/visual-identity/VISUAL_IDENTITY_GENERAL_PLAN.md",
-          "description": "Visual identity general plan — P0–P4"
+          "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_GENERAL_PLAN.md",
+          "description": "Resolution honesty general plan — P0–P5"
         }
       ]
     }

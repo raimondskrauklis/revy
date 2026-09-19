@@ -45,6 +45,7 @@ from app.services.github_publish_formatter import (
 
 def _group(*, state=GitHubFindingGroupState.active, severity=FindingSeverity.warning, **kwargs):
     defaults = {
+        "id": uuid.uuid4(),
         "workspace_id": uuid.uuid4(),
         "pull_request_id": uuid.uuid4(),
         "fingerprint": "fp",
@@ -415,10 +416,10 @@ def test_filter_pr_active_groups_for_summary_excludes_collapsed_inline():
     current = _group(severity=FindingSeverity.info, fingerprint="new-fp")
     filtered = filter_pr_active_groups_for_summary(
         [stale, current],
-        publishable_fingerprints={"new-fp"},
-        collapsed_fingerprints={"stale-fp"},
+        publishable_fingerprints={str(current.id)},
+        collapsed_fingerprints={str(stale.id)},
     )
-    assert [g.fingerprint for g in filtered] == ["new-fp"]
+    assert [g.id for g in filtered] == [current.id]
 
 
 def test_filter_pr_active_groups_for_summary_keeps_addressed_pending_pass2_out():
@@ -453,9 +454,9 @@ def test_filter_pr_active_groups_for_summary_excludes_never_inlined_orphan():
         publishable_fingerprints=set(),
         collapsed_fingerprints=set(),
         generation_fingerprints=set(),
-        ever_inlined_fingerprints={"inlined-fp"},
+        ever_inlined_fingerprints={str(inlined.id)},
     )
-    assert [g.fingerprint for g in filtered] == ["inlined-fp"]
+    assert [g.id for g in filtered] == [inlined.id]
 
 
 def test_filter_pr_active_groups_for_summary_keeps_never_inlined_in_generation():
@@ -466,12 +467,29 @@ def test_filter_pr_active_groups_for_summary_keeps_never_inlined_in_generation()
     )
     filtered = filter_pr_active_groups_for_summary(
         [orphan],
-        publishable_fingerprints={"orphan-fp"},
+        publishable_fingerprints={str(orphan.id)},
         collapsed_fingerprints=set(),
-        generation_fingerprints={"orphan-fp"},
+        generation_fingerprints={str(orphan.id)},
         ever_inlined_fingerprints=set(),
     )
-    assert [g.fingerprint for g in filtered] == ["orphan-fp"]
+    assert [g.id for g in filtered] == [orphan.id]
+
+
+def test_filter_pr_active_groups_for_summary_uuid_sets_do_not_hide_inlined_active():
+    active = _group(
+        severity=FindingSeverity.warning,
+        fingerprint="still-open-fp",
+        file_path="app/main.py",
+    )
+    identity = str(active.id)
+    filtered = filter_pr_active_groups_for_summary(
+        [active],
+        publishable_fingerprints={identity},
+        collapsed_fingerprints=set(),
+        generation_fingerprints={identity},
+        ever_inlined_fingerprints={identity},
+    )
+    assert filtered == [active]
 
 
 def test_filter_pr_active_groups_for_summary_keeps_orphan_when_generation_scope_unknown():
@@ -640,7 +658,7 @@ def test_apply_publish_summary_thread_collapse_literal_merge_replacement():
         issue,
         ctx,
         publishable_fingerprints=set(),
-        collapsed_fingerprints={"stale-fp"},
+        collapsed_fingerprints={str(stale.id)},
     )
     assert "app/legacy.py" not in result.issue_comment
     assert "**Merge recommendation:**" in result.issue_comment
