@@ -82,6 +82,6 @@
 
 ---
 
-**Open (calibration only):** exact `--rv-*` hex after P0 measure (not an identity fork).
+**Open (calibration only):** none — named `--rv-*` hex recorded in findings parking after P0 measure.
 
-**Next:** `execution-peer-review` on this folder, then `phase-execution`.
+**Next:** none (P0–P4 shipped).

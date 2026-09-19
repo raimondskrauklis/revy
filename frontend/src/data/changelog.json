@@ -1,5 +1,11 @@
 [
   {
+    "id": "visual-identity-console",
+    "date": "2026-09-20",
+    "title": "Operator console and reviewer home",
+    "summary": "Phosphor console identity (Plex pair, wordmark + wedge, force-dark), dense in-app chrome, and reviewer as the default home with scannable finding rows and a one-repo hop."
+  },
+  {
     "id": "finding-resolution-reviewer",
     "date": "2026-07-28",
     "title": "Finding resolution in reviewer",

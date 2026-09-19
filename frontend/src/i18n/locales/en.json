@@ -635,6 +635,8 @@
     "installation": "GitHub installation",
     "repositories": {
       "empty": "No repositories synced for this installation.",
+      "loading": "Loading repositories…",
+      "error": "Could not load repositories.",
       "name": "Repository",
       "fullName": "Full name",
       "actions": "Actions",
@@ -642,6 +644,8 @@
     },
     "pullRequests": {
       "empty": "No pull requests ingested for this repository yet.",
+      "loading": "Loading pull requests…",
+      "error": "Could not load pull requests.",
       "number": "#",
       "title": "Title",
       "headSha": "Head SHA",

@@ -162,8 +162,8 @@ export function PullRequestDetailPage() {
       ) : reconciledFindings.length === 0 ? (
         <p className="text-sm text-[color:var(--app-text-muted)]">{t('reviewer.findings.empty')}</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg ring-1 ring-[color:var(--app-ring)]">
-          <table className="min-w-full text-left text-sm">
+        <div className="overflow-x-auto rounded-[var(--app-radius-sm)] shadow-[inset_0_0_0_1px_var(--app-ring)]">
+          <table className="min-w-full table-fixed text-left text-sm">
             <thead className="bg-[color:var(--app-chip)] text-[color:var(--app-text-muted)]">
               <tr>
                 <th className="px-3 py-2 font-medium">{t('reviewer.findings.severity')}</th>

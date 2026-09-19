@@ -2,7 +2,7 @@
 
 # Visual identity
 
-**Status:** findings **baseline-ready**. General plan P0–P4. Execution pass 2: **BLOCK phase-execution: no**.
+**Status:** shipped P0–P4. Execution pass 2: **BLOCK phase-execution: no**.
 
 **Authority:** [VISUAL_IDENTITY_FINDINGS.md](./VISUAL_IDENTITY_FINDINGS.md) VI-Q0–Q10 · [VISUAL_IDENTITY_GENERAL_PLAN.md](./VISUAL_IDENTITY_GENERAL_PLAN.md)
 
@@ -25,10 +25,10 @@ Linear for `phase-execution` (P2 depends only on P0; still after P1 by number).
 
 | Phase | Focus | File | Status |
 |-------|-------|------|--------|
-| P0 | Overlay, type `@theme`, force-dark, mark, toasts | [VISUAL_IDENTITY_P0_EXECUTION.md](./VISUAL_IDENTITY_P0_EXECUTION.md) | done |
-| P1 | Public landing + login split + voice | [VISUAL_IDENTITY_P1_EXECUTION.md](./VISUAL_IDENTITY_P1_EXECUTION.md) | done |
-| P2 | Shell, settings/admin, connect chrome | [VISUAL_IDENTITY_P2_EXECUTION.md](./VISUAL_IDENTITY_P2_EXECUTION.md) | done |
-| P3 | Operator home `/reviewer` + dest retarget | [VISUAL_IDENTITY_P3_EXECUTION.md](./VISUAL_IDENTITY_P3_EXECUTION.md) | done |
-| P4 | Reviewer scan, one-repo hop, doc-sync | [VISUAL_IDENTITY_P4_EXECUTION.md](./VISUAL_IDENTITY_P4_EXECUTION.md) | pending |
+| P0 | Overlay, type `@theme`, force-dark, mark, toasts | [VISUAL_IDENTITY_P0_EXECUTION.md](./VISUAL_IDENTITY_P0_EXECUTION.md) | done `fb9615b` |
+| P1 | Public landing + login split + voice | [VISUAL_IDENTITY_P1_EXECUTION.md](./VISUAL_IDENTITY_P1_EXECUTION.md) | done `2520e68` |
+| P2 | Shell, settings/admin, connect chrome | [VISUAL_IDENTITY_P2_EXECUTION.md](./VISUAL_IDENTITY_P2_EXECUTION.md) | done `436c8a1` |
+| P3 | Operator home `/reviewer` + dest retarget | [VISUAL_IDENTITY_P3_EXECUTION.md](./VISUAL_IDENTITY_P3_EXECUTION.md) | done `3ee2dda` |
+| P4 | Reviewer scan, one-repo hop, doc-sync | [VISUAL_IDENTITY_P4_EXECUTION.md](./VISUAL_IDENTITY_P4_EXECUTION.md) | done |
 
 **Depends:** P1 → P0 · P2 → P0 · P3 → P0+P2 · P4 → P0+P3.

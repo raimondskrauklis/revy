@@ -19,6 +19,37 @@ const baseFinding: ReconciledFinding = {
 };
 
 describe('FindingRow', () => {
+  it.each([
+    ['info', 'Info'],
+    ['warning', 'Warning'],
+    ['error', 'Error'],
+    ['critical', 'Critical'],
+  ] as const)('renders %s severity label and shape', (severity, label) => {
+    const { container } = render(
+      <table>
+        <tbody>
+          <FindingRow finding={{ ...baseFinding, severity }} />
+        </tbody>
+      </table>,
+    );
+    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(container.querySelector(`[data-severity-shape="${severity}"]`)).not.toBeNull();
+  });
+
+  it('truncates long finding messages', () => {
+    const message = `${'word '.repeat(80)}end`;
+    render(
+      <table>
+        <tbody>
+          <FindingRow finding={{ ...baseFinding, message }} />
+        </tbody>
+      </table>,
+    );
+    const cell = screen.getByTitle(message);
+    expect(cell).toHaveClass('truncate');
+    expect(cell).toHaveClass('font-sans');
+  });
+
   it('renders resolution method badge', () => {
     render(
       <table>

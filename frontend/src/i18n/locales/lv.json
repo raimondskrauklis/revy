@@ -635,6 +635,8 @@
     "installation": "GitHub instalācija",
     "repositories": {
       "empty": "Šai instalācijai nav sinhronizētu repozitoriju.",
+      "loading": "Ielādē repozitorijus…",
+      "error": "Neizdevās ielādēt repozitorijus.",
       "name": "Repozitorijs",
       "fullName": "Pilnais nosaukums",
       "actions": "Darbības",
@@ -642,6 +644,8 @@
     },
     "pullRequests": {
       "empty": "Šim repozitorijam vēl nav importētu pull request.",
+      "loading": "Ielādē pull request…",
+      "error": "Neizdevās ielādēt pull request.",
       "number": "#",
       "title": "Nosaukums",
       "headSha": "Head SHA",

@@ -3,7 +3,7 @@
 # Visual identity — findings
 
 **Date:** 2026-09-19
-**Status:** **baseline-ready.** VI-Q0–Q10 locked. Architecture [pass 3](./reviews/architecture-peer-review/pass-03-2026-09-19.md) **BLOCK create-execution-plan: no.** General plan + execution files exist.
+**Status:** shipped (P0–P4). VI-Q0–Q10 locked. Architecture [pass 3](./reviews/architecture-peer-review/pass-03-2026-09-19.md) **BLOCK create-execution-plan: no.** Execution [pass 2](./reviews/execution-peer-review/pass-02-2026-09-19.md) **BLOCK phase-execution: no.**
 **Purpose:** Baseline for a **PR operator console**: identity (tokens, type, mark) **and** in-app UX rebuilt for logic and usability — not a green paint job. **No execution steps.**
 **Evidence:** frontend code on current tree. Greptile look: local captures `misc/image.png` (app) and `misc/image copy.png` (hero) — paths only, gitignored, not inlined. No production Revy screenshot pass.
 
@@ -34,7 +34,7 @@
 | **Product chrome** | Authenticated shell: sidebar, header, dashboard, settings, admin, installations. |
 | **Reviewer** | `/reviewer/**` — findings, PRs, merge readiness. Highest-density surface. |
 | **`--app-*`** | Semantic tokens (`tokens.css`). Light `:root` **kept in code** (VI-Q2 dormant). Shipped UI always uses the console (`html.dark`). |
-| **`--rv-*`** | Product overlay (`tokens.revy.css`). Today indigo only. |
+| **`--rv-*`** | Product overlay (`tokens.revy.css`). Shipped phosphor console (named hex in parking). |
 | **Two intensities (VI-Q1 B)** | Same token system. Public may be theatrical (prompt-line, cursor). Product chrome and reviewer stay dense, flat, no overlay effects. |
 | **Thin costume (VI-Q3)** | Public only: prompt-line header + block cursor (off under `prefers-reduced-motion`). **No** scanlines, boot, flicker, rain, or `#00FF00` glow. None of that on app/reviewer. |
 | **In-app UX rebuild (VI-Q9)** | Restructure operator flows for scanability and task logic. Not a GitHub.com clone (no in-app diff viewer in this program). |
@@ -289,7 +289,10 @@ Hard fail: default purple/indigo gradient blob; 3 identical feature cards; Lucid
 
 - Architecture peer review pass 3 complete (**BLOCK create-execution-plan: no**).
 - Execution peer review pass 1 highs applied: overlay remaps surface/text-strong/chip; one-repo hop hides `ReviewerLayout` back link and does not auto-Navigate when `installations.length > 1`.
-- Named `--rv-*` hex — **P0 deliverable** (canvas/body/accent **and** CTA fg/bg **and** info-on-canvas; AA + APCA). Avoid Greptile `#28E99F` and GitHub `#39d353` recipes without dropping phosphor.
+- Named `--rv-*` hex (html.dark, P0 measure; calibration closed):
+  - canvas `#07140C` · body `#B3D0AE` · accent/primary/CTA bg `#9ECF7A` · CTA fg `#07140C` · info `#6AA3C4`
+  - surface `#0D1C14` · chip `#132418` · warning `#D4A84B` · danger `#E06B6B` · success `#9ECF7A`
+  - Avoid Greptile `#28E99F` and GitHub `#39d353` recipes without dropping phosphor.
 
 ---
 

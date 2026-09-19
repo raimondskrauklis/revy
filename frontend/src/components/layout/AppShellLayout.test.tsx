@@ -29,6 +29,7 @@ describe('AppShellLayout', () => {
     );
 
     expect(screen.getByText('revy')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /revy/i })).toHaveAttribute('href', '/reviewer');
     const navHtml = container.querySelector('nav')?.innerHTML ?? '';
     expect(navHtml).toContain('--app-radius-md');
     expect(navHtml).not.toContain('rounded-xl');
