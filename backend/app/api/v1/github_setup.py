@@ -58,6 +58,47 @@ def _spa_redirect(*, error: str | None = None) -> RedirectResponse:
     return RedirectResponse(url=_spa_installations_url(error=error), status_code=302)
 
 
+_SPA_SETUP_ERRORS = frozenset(
+    {
+        "conflict",
+        "github_installer_mismatch",
+        "github_unavailable",
+        "invalid_state",
+        "not_configured",
+        "not_found",
+        "oauth_denied",
+        "plan_upgrade_required",
+    }
+)
+_GITHUB_UNAVAILABLE_CODES = frozenset(
+    {
+        "github_api_disabled",
+        "github_api_error",
+        "github_rate_limited",
+        "rate_limited",
+        "service_unavailable",
+    }
+)
+_NOT_CONFIGURED_CODES = frozenset(
+    {
+        "app_public_url_missing",
+        "github_app_not_configured",
+        "github_client_secret_missing",
+    }
+)
+
+
+def _callback_setup_error(exc: PlatformException) -> str:
+    code = exc.error_code or ""
+    if code in _SPA_SETUP_ERRORS:
+        return code
+    if code in _NOT_CONFIGURED_CODES:
+        return "not_configured"
+    if isinstance(exc, ServiceUnavailableError) or code in _GITHUB_UNAVAILABLE_CODES:
+        return "github_unavailable"
+    return "invalid_state"
+
+
 def _clear_stash(response: RedirectResponse) -> RedirectResponse:
     response.delete_cookie(SETUP_STASH_COOKIE, path="/api/v1/github")
     return response
@@ -166,5 +207,7 @@ async def get_github_callback(
         return _clear_stash(_spa_redirect(error="not_found"))
     except httpx.HTTPError:
         return _clear_stash(_spa_redirect(error="github_unavailable"))
-    except (ValidationError, ServiceUnavailableError, PlatformException):
+    except ValidationError:
         return _clear_stash(_spa_redirect(error="invalid_state"))
+    except PlatformException as exc:
+        return _clear_stash(_spa_redirect(error=_callback_setup_error(exc)))

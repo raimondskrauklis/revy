@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { InstallationsPage } from '@/features/installations/pages/InstallationsPage';
-import { AppRole } from '@/shared/types/enums';
+import { AppRole, GitHubAccountType, GitHubInstallationStatus } from '@/shared/types/enums';
 
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: vi.fn(),
@@ -149,9 +149,9 @@ describe('InstallationsPage', () => {
       workspace_id: 'ws-1',
       github_installation_id: 12345,
       account_login: 'acme',
-      account_type: 'organization',
+      account_type: GitHubAccountType.organization,
       account_id: 7,
-      status: 'active',
+      status: GitHubInstallationStatus.active,
       permissions_snapshot: null,
       verified_at: null,
       created_at: '2026-09-19T10:00:00.000Z',
@@ -162,9 +162,9 @@ describe('InstallationsPage', () => {
       workspace_id: 'ws-1',
       github_installation_id: 12345,
       account_login: 'acme',
-      account_type: 'organization',
+      account_type: GitHubAccountType.organization,
       account_id: 7,
-      status: 'active',
+      status: GitHubInstallationStatus.active,
       permissions_snapshot: null,
       verified_at: null,
       created_at: '2026-09-19T10:00:00.000Z',

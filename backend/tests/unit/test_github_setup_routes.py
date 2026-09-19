@@ -224,6 +224,53 @@ def test_get_callback_github_http_error_redirects_to_spa():
     session.commit.assert_not_called()
 
 
+def test_get_callback_github_api_disabled_is_not_invalid_state():
+    from app.core.exceptions import ServiceUnavailableError
+
+    workspace_id = uuid4()
+    user_id = uuid4()
+    session = AsyncMock()
+    session.commit = AsyncMock()
+    with _state_settings(), _settings():
+        install_token = mint_install_state(workspace_id=workspace_id, user_id=user_id)
+        client = _client(session=session)
+        setup = client.get(
+            "/api/v1/github/setup",
+            params={"state": install_token, "installation_id": "12345", "setup_action": "install"},
+        )
+        oauth_state = parse_qs(urlparse(setup.headers["location"]).query)["state"][0]
+        with (
+            patch(
+                "app.api.v1.github_setup.exchange_oauth_code",
+                AsyncMock(return_value="ghu_test"),
+            ),
+            patch("app.api.v1.github_setup.require_user_installation", AsyncMock()),
+            patch(
+                "app.api.v1.github_setup.get_app_installation",
+                AsyncMock(
+                    side_effect=ServiceUnavailableError(
+                        message="GitHub App API is not configured",
+                        error_code="github_api_disabled",
+                    )
+                ),
+            ),
+            patch("app.api.v1.github_setup.bind_github_installation") as bind_mock,
+            patch("app.api.v1.github_setup.httpx.AsyncClient") as http_client_cls,
+        ):
+            http_client_cls.return_value.__aenter__ = AsyncMock(return_value=MagicMock())
+            http_client_cls.return_value.__aexit__ = AsyncMock(return_value=None)
+            callback = client.get(
+                "/api/v1/github/callback",
+                params={"code": "abc", "state": oauth_state},
+                cookies=setup.cookies,
+            )
+    assert callback.status_code == 302
+    assert "setup_error=github_unavailable" in callback.headers["location"]
+    assert "setup_error=invalid_state" not in callback.headers["location"]
+    bind_mock.assert_not_called()
+    session.commit.assert_not_called()
+
+
 def test_get_callback_update_hop_verifies():
     from app.constants.enums import GitHubAccountType
     from app.integrations.github_api import AppInstallationAccount
