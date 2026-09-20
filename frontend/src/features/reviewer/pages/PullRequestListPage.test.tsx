@@ -50,7 +50,7 @@ describe('PullRequestListPage', () => {
     } as unknown as ReturnType<typeof useAuth>);
   });
 
-  it('shows loading copy', () => {
+  it('shows loading skeleton', () => {
     vi.mocked(usePullRequests).mockReturnValue({
       items: [],
       isLoading: true,
@@ -58,8 +58,8 @@ describe('PullRequestListPage', () => {
       ref: vi.fn(),
     } as unknown as ReturnType<typeof usePullRequests>);
 
-    renderList();
-    expect(screen.getByText(/loading pull requests/i)).toBeInTheDocument();
+    const { container } = renderList();
+    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
   });
 
   it('shows empty copy', () => {

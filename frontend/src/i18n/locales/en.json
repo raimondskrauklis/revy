@@ -685,6 +685,45 @@
       "skipped": "Judge skipped",
       "skippedUnavailable": "Judge unavailable"
     },
+    "summary": {
+      "criticalCount": "{{count}} Critical",
+      "criticalCount_plural": "{{count}} Critical",
+      "errorCount": "{{count}} Error",
+      "errorCount_plural": "{{count}} Error",
+      "warningCount": "{{count}} Warning",
+      "warningCount_plural": "{{count}} Warning",
+      "infoCount": "{{count}} Info",
+      "infoCount_plural": "{{count}} Info",
+      "dismissedCount": "· {{count}} dismissed",
+      "dismissedCount_plural": "· {{count}} dismissed",
+      "noFindings": "No findings for this PR.",
+      "nextAction": {
+        "blocked": "Blocked — dismiss or resolve {{blocking}} Critical/Error findings to unblock",
+        "needsReview": "Needs review — {{blocking}} Warning findings to review",
+        "ready": "Ready to merge — all findings resolved"
+      }
+    },
+    "toolbar": {
+      "searchPlaceholder": "Search findings…",
+      "resultCount": "{{count}} finding",
+      "resultCount_plural": "{{count}} findings",
+      "severity": "Severity",
+      "category": "Category",
+      "state": "State",
+      "sort": "Sort",
+      "clearFilters": "Clear filters",
+      "sort.severity": "Severity",
+      "sort.file_path": "File",
+      "sort.updated_at": "Date"
+    },
+    "detail": {
+      "file": "File",
+      "message": "Description",
+      "suggestion": "Suggestion",
+      "history": "History",
+      "firstSeen": "First seen in revision {{revision}}",
+      "dismiss": "Dismiss finding"
+    },
     "widget": {
       "title": "Code review",
       "body": "Browse PR findings and merge readiness in Revy.",

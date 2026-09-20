@@ -1,12 +1,16 @@
 // frontend/src/features/reviewer/pages/PullRequestDetailPage.tsx
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { dismissFindingGroup } from '@/features/reviewer/api';
 import { FindingRow } from '@/features/reviewer/components/FindingRow';
+import { FindingsSummaryBar } from '@/features/reviewer/components/FindingsSummaryBar';
+import { FindingsToolbar } from '@/features/reviewer/components/FindingsToolbar';
+import { FindingDetailSheet } from '@/features/reviewer/components/FindingDetailSheet';
 import { JudgeSkippedBadge } from '@/features/reviewer/components/JudgeSkippedBadge';
+import { TableSkeleton } from '@/components/ui/TableSkeleton';
 import { MergeReadinessBadge } from '@/features/reviewer/components/MergeReadinessBadge';
 import { PullRequestStateBadge } from '@/features/reviewer/components/PullRequestStateBadge';
 import { ReviewTriggerBar } from '@/features/reviewer/components/ReviewTriggerBar';
@@ -88,6 +92,10 @@ export function PullRequestDetailPage() {
     [reconciledFindings],
   );
 
+  const [selectedFinding, setSelectedFinding] = useState<typeof reconciledFindings[0] | null>(null);
+
+  const clearSelectedFinding = useCallback(() => setSelectedFinding(null), []);
+
   const published = publishJob?.status === 'completed';
 
   useEffect(() => {
@@ -157,38 +165,64 @@ export function PullRequestDetailPage() {
         ) : null}
       </div>
 
+      {/* Findings summary bar */}
+      {!loadingFindings && reconciledFindings.length > 0 && (
+        <FindingsSummaryBar findings={reconciledFindings} conclusion={mergeConclusion} />
+      )}
+
+      {!loadingFindings && reconciledFindings.length > 0 && (
+        <FindingsToolbar findings={reconciledFindings}>
+          {(filteredFindings) => (
+            <div className="overflow-x-auto rounded-[var(--app-radius-sm)] shadow-[inset_0_0_0_1px_var(--app-ring)]">
+              <table className="min-w-full table-fixed text-left text-sm">
+                <thead className="bg-[color:var(--app-chip)] text-[color:var(--app-text-muted)]">
+                  <tr>
+                    <th className="w-[12%] px-3 py-2 font-medium">{t('reviewer.findings.severity')}</th>
+                    <th className="w-[10%] px-3 py-2 font-medium">{t('reviewer.findings.category')}</th>
+                    <th className="w-[12%] px-3 py-2 font-medium">{t('reviewer.findings.state')}</th>
+                    <th className="w-[20%] px-3 py-2 font-medium">{t('reviewer.findings.title')}</th>
+                    <th className="w-[16%] px-3 py-2 font-medium">{t('reviewer.findings.file')}</th>
+                    <th className="w-[22%] px-3 py-2 font-medium">{t('reviewer.findings.message')}</th>
+                    <th className="w-[8%] px-3 py-2 font-medium">{t('reviewer.findings.actions')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredFindings.map((finding) => (
+                    <FindingRow
+                      key={finding.id}
+                      finding={finding}
+                      canDismiss={canDismiss}
+                      dismissPending={dismissMutation.isPending}
+                      onDismiss={(groupId) => dismissMutation.mutate(groupId)}
+                      onClick={() => setSelectedFinding(finding)}
+                    />
+                  ))}
+                </tbody>
+              </table>
+              <div ref={ref} className="h-4" />
+            </div>
+          )}
+        </FindingsToolbar>
+      )}
+
       {loadingFindings ? (
-        <p className="text-sm text-[color:var(--app-text-muted)]">{t('common.loading')}</p>
+        <TableSkeleton rows={4} columns={7} />
       ) : reconciledFindings.length === 0 ? (
         <p className="text-sm text-[color:var(--app-text-muted)]">{t('reviewer.findings.empty')}</p>
-      ) : (
-        <div className="overflow-x-auto rounded-[var(--app-radius-sm)] shadow-[inset_0_0_0_1px_var(--app-ring)]">
-          <table className="min-w-full table-fixed text-left text-sm">
-            <thead className="bg-[color:var(--app-chip)] text-[color:var(--app-text-muted)]">
-              <tr>
-                <th className="w-[12%] px-3 py-2 font-medium">{t('reviewer.findings.severity')}</th>
-                <th className="w-[10%] px-3 py-2 font-medium">{t('reviewer.findings.category')}</th>
-                <th className="w-[12%] px-3 py-2 font-medium">{t('reviewer.findings.state')}</th>
-                <th className="w-[20%] px-3 py-2 font-medium">{t('reviewer.findings.title')}</th>
-                <th className="w-[16%] px-3 py-2 font-medium">{t('reviewer.findings.file')}</th>
-                <th className="w-[22%] px-3 py-2 font-medium">{t('reviewer.findings.message')}</th>
-                <th className="w-[8%] px-3 py-2 font-medium">{t('reviewer.findings.actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reconciledFindings.map((finding) => (
-                <FindingRow
-                  key={finding.id}
-                  finding={finding}
-                  canDismiss={canDismiss}
-                  dismissPending={dismissMutation.isPending}
-                  onDismiss={(groupId) => dismissMutation.mutate(groupId)}
-                />
-              ))}
-            </tbody>
-          </table>
-          <div ref={ref} className="h-4" />
-        </div>
+      ) : null}
+    {/* Finding detail sheet */}
+      {selectedFinding && (
+        <FindingDetailSheet
+          finding={selectedFinding}
+          workspaceId={workspaceId}
+          repoId={repoId}
+          prId={prId}
+          revisionId={revisionId}
+          onClose={clearSelectedFinding}
+          canDismiss={canDismiss}
+          dismissPending={dismissMutation.isPending}
+          onDismiss={(groupId) => dismissMutation.mutate(groupId)}
+        />
       )}
     </div>
   );

@@ -21,10 +21,16 @@ function finding(
 }
 
 describe('deriveMergeConclusion', () => {
-  it('returns neutral when active critical finding exists', () => {
+  it('returns failure when active critical finding exists', () => {
     expect(
       deriveMergeConclusion([finding({ severity: 'critical', state: 'active' })]),
-    ).toBe('neutral');
+    ).toBe('failure');
+  });
+
+  it('returns failure when active error finding exists', () => {
+    expect(
+      deriveMergeConclusion([finding({ severity: 'error', state: 'active' })]),
+    ).toBe('failure');
   });
 
   it('returns neutral when only warnings remain active', () => {
@@ -33,18 +39,24 @@ describe('deriveMergeConclusion', () => {
     ).toBe('neutral');
   });
 
+  it('returns success when only info is active', () => {
+    expect(
+      deriveMergeConclusion([finding({ severity: 'info', state: 'active' })]),
+    ).toBe('success');
+  });
+
   it('returns success when no active findings', () => {
     expect(
       deriveMergeConclusion([finding({ severity: 'error', state: 'resolved' })]),
     ).toBe('success');
   });
 
-  it('returns neutral for unknown active severity', () => {
+  it('returns success for unknown active severity (treated as non-blocking)', () => {
     expect(
       deriveMergeConclusion([
         finding({ severity: 'bogus' as ReconciledFinding['severity'], state: 'active' }),
       ]),
-    ).toBe('neutral');
+    ).toBe('success');
   });
 });
 

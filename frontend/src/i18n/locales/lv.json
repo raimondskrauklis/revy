@@ -685,6 +685,45 @@
       "skipped": "Tiesnesis izlaists",
       "skippedUnavailable": "Tiesnesis nav pieejams"
     },
+    "summary": {
+      "criticalCount": "{{count}} Kritisks",
+      "criticalCount_plural": "{{count}} Kritiski",
+      "errorCount": "{{count}} Kļūda",
+      "errorCount_plural": "{{count}} Kļūdas",
+      "warningCount": "{{count}} Brīdinājums",
+      "warningCount_plural": "{{count}} Brīdinājumi",
+      "infoCount": "{{count}} Info",
+      "infoCount_plural": "{{count}} Info",
+      "dismissedCount": "· {{count}} noraidīts",
+      "dismissedCount_plural": "· {{count}} noraidīti",
+      "noFindings": "Šim PR nav atradumu.",
+      "nextAction": {
+        "blocked": "Bloķēts — noraidiet vai atrisiniet {{blocking}} Kritisko/Kļūdu atradumus, lai atbloķētu",
+        "needsReview": "Nepieciešama pārskatīšana — {{blocking}} Brīdinājumu atradumi jāpārskata",
+        "ready": "Gatavs sapludināšanai — visi atradumi atrisināti"
+      }
+    },
+    "toolbar": {
+      "searchPlaceholder": "Meklēt atradumus…",
+      "resultCount": "{{count}} atradums",
+      "resultCount_plural": "{{count}} atradumi",
+      "severity": "Smagums",
+      "category": "Kategorija",
+      "state": "Stāvoklis",
+      "sort": "Kārtot",
+      "clearFilters": "Notīrīt filtrus",
+      "sort.severity": "Smagums",
+      "sort.file_path": "Fails",
+      "sort.updated_at": "Datums"
+    },
+    "detail": {
+      "file": "Fails",
+      "message": "Apraksts",
+      "suggestion": "Ieteikums",
+      "history": "Vēsture",
+      "firstSeen": "Pirmo reizi redzēts revīzijā {{revision}}",
+      "dismiss": "Noraidīt atradumu"
+    },
     "widget": {
       "title": "Koda recenzija",
       "body": "Pārlūkojiet PR atradumus un sapludināšanas gatavību Revy.",

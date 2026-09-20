@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { TableSkeleton } from '@/components/ui/TableSkeleton';
 import {
   QuietSelect,
   QuietSelectContent,
@@ -93,7 +94,7 @@ export function ReviewerHomePage() {
       {listError ? (
         <p className="text-sm text-[color:var(--app-danger)]">{t('reviewer.repositories.error')}</p>
       ) : hopLoading || isLoadingInstallations || loadingRepos ? (
-        <p className="text-sm text-[color:var(--app-text-muted)]">{t('reviewer.repositories.loading')}</p>
+        <TableSkeleton rows={3} columns={3} />
       ) : repositories.length === 0 ? (
         <p className="text-sm text-[color:var(--app-text-muted)]">{t('reviewer.repositories.empty')}</p>
       ) : (

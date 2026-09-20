@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { TableSkeleton } from '@/components/ui/TableSkeleton';
 import { PullRequestStateBadge } from '@/features/reviewer/components/PullRequestStateBadge';
 import { usePullRequests } from '@/features/reviewer/hooks';
 import { mapApiError } from '@/shared/errors';
@@ -35,9 +36,7 @@ export function PullRequestListPage() {
   }
 
   if (isLoading) {
-    return (
-      <p className="text-sm text-[color:var(--app-text-muted)]">{t('reviewer.pullRequests.loading')}</p>
-    );
+    return <TableSkeleton rows={3} columns={5} />;
   }
 
   if (pullRequests.length === 0) {

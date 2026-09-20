@@ -7,6 +7,7 @@ interface FindingRowProps {
   canDismiss?: boolean;
   onDismiss?: (groupId: string) => void;
   dismissPending?: boolean;
+  onClick?: () => void;
 }
 
 const SEVERITY_SHAPE_CLASS: Record<FindingSeverity, string> = {
@@ -32,6 +33,7 @@ export function FindingRow({
   canDismiss = false,
   onDismiss,
   dismissPending = false,
+  onClick,
 }: FindingRowProps) {
   const { t } = useTranslation();
   const resolutionKey = resolutionBadgeKey(finding);
@@ -39,7 +41,22 @@ export function FindingRow({
     canDismiss && finding.state === 'active' && typeof onDismiss === 'function';
 
   return (
-    <tr className="border-t border-[color:var(--app-ring)]">
+    <tr
+      className={`border-t border-[color:var(--app-ring)] ${onClick ? 'cursor-pointer hover:bg-[color:var(--app-chip)]' : ''}`}
+      onClick={onClick}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+      tabIndex={onClick ? 0 : undefined}
+      role={onClick ? 'button' : undefined}
+    >
       <td className="px-3 py-2 text-sm text-[color:var(--app-text-strong)]">
         <span className="inline-flex items-center gap-2">
           <span
