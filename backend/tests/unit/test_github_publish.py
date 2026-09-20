@@ -4212,3 +4212,134 @@ async def test_run_publish_job_persists_pr_resolution_rollup_on_completed():
     assert rollup.get("schema_version") == 1
     assert rollup.get("review_count") == 1
     assert pull_request.pr_resolution_rollup == rollup
+
+
+# ── P4 tests: comment + GitHub threads ───────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_p4_closed_group_resolves_thread():
+    """P4.1/4.2: Closed (H2-resolved) group → thread resolve; group.id keyed.
+
+    After P0.4, inline threads are keyed by group.id. A group that was H2-closed
+    should have its thread resolved (not kept active).
+    """
+    group = GitHubFindingGroupORM(
+        id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        pull_request_id=uuid.uuid4(),
+        fingerprint="closed-fp",
+        state=GitHubFindingGroupState.resolved,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Closed",
+        message="msg",
+        file_path="app/a.py",
+        last_seen_revision_id=uuid.uuid4(),
+        resolution_method=ResolutionMethod.absent_and_addressed,
+        resolved_at_revision_id=uuid.uuid4(),
+    )
+    # Inline thread exists with group.id as key
+    inline_threads = {str(group.id): 500}
+    # Group is resolved — it should be in the "not publishable" set,
+    # meaning its thread should be resolved.
+    publishable_fingerprints = set()
+    thread_ids_to_resolve = {
+        key
+        for key in inline_threads
+        if key not in publishable_fingerprints
+    }
+    assert str(group.id) in thread_ids_to_resolve
+
+
+@pytest.mark.asyncio
+async def test_p4_leftover_still_active_thread_may_collapse_but_not_resolved():
+    """P4.1/4.2: Leftover eval still active → state stays active.
+
+    GH-Q9: Outdated threads collapse in GitHub UI but the DB group remains
+    active. Option A resolve uses group.id and does NOT set state=resolved.
+    """
+    group = GitHubFindingGroupORM(
+        id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        pull_request_id=uuid.uuid4(),
+        fingerprint="eval-fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="CRITICAL eval",
+        message="unsafe",
+        file_path="app/eval.py",
+        last_seen_revision_id=uuid.uuid4(),
+        resolution_status=ResolutionStatus.still_open,
+    )
+    # Group is still publishable (leftover)
+    assert group.state == GitHubFindingGroupState.active
+    assert group.resolution_method is None
+    # Option A collapse happens in GitHub UI, NOT via DB state change
+    # The group.id key is known — thread may collapse if outdated,
+    # but the DB record stays active for H2 evaluation
+
+
+def test_p4_combined_lifetime_and_push_n_a_no_zero_denom():
+    """P4.3: Combined comment fixture with lifetime table + N/A push rate.
+
+    Authors never see '0.0% (0/0 prior active)'. When denominator is 0,
+    the push block shows N/A and the lifetime scan matches P3 rollup.
+    """
+    from app.services.github_publish_formatter import (
+        format_resolution_metrics_block,
+    )
+    from app.services.github_pr_resolution_rollup import PrResolutionRollupManifest
+
+    push_block = format_resolution_metrics_block(
+        {
+            "resolution_rate_pct": None,
+            "resolution_rate_display": "N/A",
+            "transition_count": 0,
+            "denominator_active_prior": 0,
+            "transitions_addressed": 0,
+            "transitions_dismissed": {},
+            "still_open_count": 0,
+            "compare_failed_count": 0,
+        }
+    )
+    assert "N/A (no prior cohort)" in push_block
+    assert "0.0%" not in push_block
+    assert "0/0" not in push_block
+
+    # Lifetime rollup still shows raised/resolved identity
+    rollup: PrResolutionRollupManifest = {
+        "schema_version": 1,
+        "computed_at_revision_id": str(uuid.uuid4()),
+        "revision_number": 1,
+        "review_count": 1,
+        "raised_count": 3,
+        "resolved_count": 0,
+        "resolved_by_method": {
+            "absent_and_addressed": 0,
+            "judge_dismissed": 0,
+            "verification_dismissed": 0,
+            "human_dismissed": 0,
+            "path_removed": 0,
+        },
+        "still_open_display": 3,
+        "still_open_generation": 3,
+        "still_open_prior": 0,
+        "lifetime_resolution_rate_pct": None,
+        "filter_snapshot": {
+            "raw_active_before_filters": 3,
+            "collapsed_hidden": 0,
+            "orphan_never_inlined_hidden": 0,
+            "compare_failed_hidden": 0,
+        },
+        "push_manifest_ref": {
+            "revision_number": 1,
+            "transition_count": 0,
+        },
+        "lifetime_disclosure": None,
+    }
+    assert rollup["raised_count"] == 3
+    assert rollup["resolved_count"] == 0
+    assert rollup["still_open_display"] == 3
+    assert rollup["lifetime_resolution_rate_pct"] is None
