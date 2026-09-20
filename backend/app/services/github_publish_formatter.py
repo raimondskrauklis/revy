@@ -219,14 +219,17 @@ def format_resolution_metrics_block(
     denominator = int(manifest.get("denominator_active_prior") or 0)
     transition_count = int(manifest.get("transition_count") or 0)
     compare_failed = int(manifest.get("compare_failed_count") or 0)
-    rate = manifest.get("resolution_rate_pct", 0.0)
+    resolution_rate_display = manifest.get("resolution_rate_display", "N/A")
     if (
         display_still_open_prior is not None
         and display_still_open_prior != manifest_still_open
     ):
         hidden_still_open = max(manifest_still_open - display_still_open_prior, 0)
         denominator = max(denominator - hidden_still_open, 0)
-        rate = round((transition_count / denominator) * 100, 1) if denominator else 0.0
+        if denominator:
+            resolution_rate_display = f"{round((transition_count / denominator) * 100, 1)}%"
+        else:
+            resolution_rate_display = "N/A"
 
     dismissed_parts: list[str] = []
     if isinstance(dismissed, dict):
@@ -239,10 +242,15 @@ def format_resolution_metrics_block(
             if isinstance(count, int) and count > 0:
                 dismissed_parts.append(f"{count} by {label}")
 
+    rate_line = (
+        "**Resolution rate:** N/A (no prior cohort)"
+        if resolution_rate_display == "N/A"
+        else f"**Resolution rate:** {resolution_rate_display} ({transition_count}/{denominator} prior active)"
+    )
     lines = [
         "### Resolution metrics (this push)",
         "",
-        f"- **Resolution rate:** {rate}% ({transition_count}/{denominator} prior active)",
+        rate_line,
         f"- **Closed as fixed:** {addressed}",
     ]
     if dismissed_parts:

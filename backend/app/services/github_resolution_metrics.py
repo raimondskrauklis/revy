@@ -791,7 +791,12 @@ def build_resolution_pass_manifest(
     }
     transition_count = len(rate_transitions)
     denominator = len(denominator_groups)
-    resolution_rate_pct = round(100.0 * transition_count / denominator, 1) if denominator else 0.0
+    if denominator:
+        resolution_rate_pct = round(100.0 * transition_count / denominator, 1)
+        resolution_rate_display = f"{resolution_rate_pct}%"
+    else:
+        resolution_rate_pct = None
+        resolution_rate_display = "N/A"
     still_open_count = sum(
         1
         for group in denominator_groups
@@ -804,6 +809,7 @@ def build_resolution_pass_manifest(
         "transition_count": transition_count,
         "denominator_active_prior": denominator,
         "resolution_rate_pct": resolution_rate_pct,
+        "resolution_rate_display": resolution_rate_display,
         "compare_failed_count": compare_failed_count,
         "head_check_failed_count": head_check_failed_count,
         "hygiene_path_removed_count": hygiene_path_removed_count,

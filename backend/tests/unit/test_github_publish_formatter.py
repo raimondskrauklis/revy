@@ -287,6 +287,7 @@ def test_format_resolution_metrics_block():
     block = format_resolution_metrics_block(
         {
             "resolution_rate_pct": 50.0,
+            "resolution_rate_display": "50.0%",
             "transition_count": 1,
             "denominator_active_prior": 2,
             "transitions_addressed": 1,
@@ -300,10 +301,30 @@ def test_format_resolution_metrics_block():
     assert "Still open" in block
 
 
+def test_format_resolution_metrics_block_empty_denom_is_na():
+    """P2.2: empty denominator → N/A (no prior cohort), never 0.0% or 0/0."""
+    block = format_resolution_metrics_block(
+        {
+            "resolution_rate_pct": None,
+            "resolution_rate_display": "N/A",
+            "transition_count": 0,
+            "denominator_active_prior": 0,
+            "transitions_addressed": 0,
+            "transitions_dismissed": {},
+            "still_open_count": 0,
+            "compare_failed_count": 0,
+        }
+    )
+    assert "N/A (no prior cohort)" in block
+    assert "0.0%" not in block
+    assert "0/0" not in block
+
+
 def test_format_resolution_metrics_block_path_removed_line():
     block = format_resolution_metrics_block(
         {
             "resolution_rate_pct": 50.0,
+            "resolution_rate_display": "50.0%",
             "transition_count": 1,
             "denominator_active_prior": 2,
             "transitions_addressed": 1,
@@ -513,6 +534,7 @@ def test_format_resolution_metrics_block_display_still_open_override():
     block = format_resolution_metrics_block(
         {
             "resolution_rate_pct": 50.0,
+            "resolution_rate_display": "50.0%",
             "transition_count": 1,
             "denominator_active_prior": 2,
             "transitions_addressed": 1,
@@ -530,6 +552,7 @@ def test_format_resolution_metrics_block_display_override_includes_compare_faile
     block = format_resolution_metrics_block(
         {
             "resolution_rate_pct": 50.0,
+            "resolution_rate_display": "50.0%",
             "transition_count": 1,
             "denominator_active_prior": 2,
             "transitions_addressed": 1,
@@ -547,6 +570,7 @@ def test_format_resolution_metrics_block_display_override_caps_hidden_still_open
     block = format_resolution_metrics_block(
         {
             "resolution_rate_pct": 50.0,
+            "resolution_rate_display": "50.0%",
             "transition_count": 1,
             "denominator_active_prior": 2,
             "transitions_addressed": 1,
@@ -557,6 +581,26 @@ def test_format_resolution_metrics_block_display_override_caps_hidden_still_open
         display_still_open_prior=1,
     )
     assert "50.0% (1/2 prior active)" in block
+
+
+def test_format_resolution_metrics_block_display_override_denom_zero_is_na():
+    """P2.2: display override drives denominator to 0 → N/A (no prior cohort)."""
+    block = format_resolution_metrics_block(
+        {
+            "resolution_rate_pct": 50.0,
+            "resolution_rate_display": "50.0%",
+            "transition_count": 0,
+            "denominator_active_prior": 1,
+            "transitions_addressed": 0,
+            "transitions_dismissed": {},
+            "still_open_count": 1,
+            "compare_failed_count": 0,
+        },
+        display_still_open_prior=0,
+    )
+    assert "N/A (no prior cohort)" in block
+    assert "0.0%" not in block
+    assert "0/0" not in block
 
 
 def test_build_g9_resolution_prose_from_manifest_display_still_open_override():

@@ -4,7 +4,7 @@
 
 When reviewing **backend** (and later changelog) changes for this program, treat these as authoritative:
 
-- [RESOLUTION_HONESTY_P1_EXECUTION.md](../docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_P1_EXECUTION.md) — P1 LOOP (honest H2 closure, no addressed, findings-count gate)
+- [RESOLUTION_HONESTY_P2_EXECUTION.md](../docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_P2_EXECUTION.md) — P2 LOOP (this-push metrics N/A, formatter N/A, fix-some prior cohort)
 - [RESOLUTION_HONESTY_FINDINGS.md](../docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_FINDINGS.md) — RH-Q1–Q12
 - [RESOLUTION_HONESTY_GENERAL_PLAN.md](../docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_GENERAL_PLAN.md) — P0–P5 goals
 
