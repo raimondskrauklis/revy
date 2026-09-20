@@ -17,7 +17,7 @@ export function CompleteProfilePage() {
   const [submitting, setSubmitting] = useState(false);
 
   if (!isLoading && !isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   if (user?.status === 'active') {

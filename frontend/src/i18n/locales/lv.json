@@ -458,35 +458,15 @@
     "close": "Aizvērt izvēlni"
   },
   "landing": {
-    "nav": {
-      "signIn": "Pierakstīties"
-    },
     "hero": {
-      "eyebrow": "PR operatora konsole",
+      "eyebrow": "Builder konsole",
       "title": "Atradumi pirms apvienošanas",
-      "subtitle": "Savienojiet GitHub. Pārskatiet atradumus konsolē. Apvienojiet, kad lampas ir zaļas.",
-      "cta": "Atvērt konsoli",
-      "secondary": "Jau ir konts?"
-    },
-    "footer": "Operatora konsole GitHub pull request pārskatam."
+      "subtitle": "Savienojiet GitHub. Pārskatiet atradumus. Apvienojiet, kad lampas kļūst zaļas.",
+      "cta": "Atvērt konsoli"
+    }
   },
   "auth": {
     "loading": "Ielādē…",
-    "login": {
-      "title": "Pierakstīties",
-      "body": "Turpiniet ar organizācijas SSO. Sesiju nodrošina Keycloak.",
-      "action": "Turpināt ar SSO",
-      "hint": "Jūs tiksit novirzīts uz identitātes nodrošinātāju, lai pierakstītos.",
-      "backHome": "Atpakaļ uz sākumu",
-      "panel": {
-        "eyebrow": "revy",
-        "title": "PR operatora konsole",
-        "subtitle": "Atradumi, smaguma lampas un apvienošanas verdikti — ne sveiciena panelis.",
-        "bullet1": "Savienojiet GitHub lietotni",
-        "bullet2": "Skenējiet atradumus pirms apvienošanas",
-        "bullet3": "Instalācijas un piekļuve paliek darba vidē"
-      }
-    },
     "sessionExpired": {
       "title": "Sesija beigusies",
       "body": "Lūdzu, pierakstieties vēlreiz."
