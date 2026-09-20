@@ -6,7 +6,6 @@ export function PlanSummaryWidget() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const workspaceId = user?.workspace_id ?? null;
-  const plan = user?.workspace_plan ?? 'free';
 
   if (!user || !workspaceId) {
     return null;
@@ -18,7 +17,7 @@ export function PlanSummaryWidget() {
         {t('dashboard.planSummary.title')}
       </h2>
       <p className="text-sm text-[color:var(--app-text-muted)]">
-        {t('dashboard.planSummary.free', { plan: t(`settings.billing.plans.${plan}`) })}
+        {t('dashboard.planSummary.free')}
       </p>
     </section>
   );
