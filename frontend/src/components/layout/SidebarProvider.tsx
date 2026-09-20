@@ -53,8 +53,8 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const closeMobile = useCallback(() => {
-    setState('expanded');
-    localStorage.setItem(STORAGE_KEY, 'false');
+    const stored = localStorage.getItem(STORAGE_KEY);
+    setState(stored === 'true' ? 'collapsed' : 'expanded');
   }, []);
 
   useEffect(() => {

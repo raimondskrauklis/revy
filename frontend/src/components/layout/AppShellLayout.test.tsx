@@ -1,8 +1,10 @@
 // frontend/src/components/layout/AppShellLayout.test.tsx
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppShellLayout } from '@/components/layout/AppShellLayout';
+
+const storage = new Map<string, string>();
 
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({
@@ -17,6 +19,22 @@ vi.mock('@/platform/extensions/hooks', () => ({
 }));
 
 describe('AppShellLayout', () => {
+  beforeEach(() => {
+    storage.clear();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        storage.set(key, value);
+      },
+      removeItem: (key: string) => {
+        storage.delete(key);
+      },
+      clear: () => {
+        storage.clear();
+      },
+    });
+  });
+
   it('renders wordmark and radius token on nav, not rounded-xl', () => {
     const { container } = render(
       <MemoryRouter initialEntries={['/dashboard']}>

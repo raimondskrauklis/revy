@@ -107,7 +107,7 @@ describe('SidebarProvider', () => {
     expect(localStorage.getItem('app-sidebar-collapsed')).toBe('false');
   });
 
-  it('closeMobile also clears localStorage', () => {
+  it('closeMobile preserves collapse preference', () => {
     const { result } = renderHook(() => useSidebar(), { wrapper: makeWrapper() });
 
     act(() => result.current.collapse());
@@ -115,7 +115,9 @@ describe('SidebarProvider', () => {
 
     act(() => result.current.openMobile());
     act(() => result.current.closeMobile());
-    expect(localStorage.getItem('app-sidebar-collapsed')).toBe('false');
+    // closeMobile respects user's previous collapse preference
+    expect(result.current.state).toBe('collapsed');
+    expect(localStorage.getItem('app-sidebar-collapsed')).toBe('true');
   });
 
   it('throws when used outside provider', () => {
