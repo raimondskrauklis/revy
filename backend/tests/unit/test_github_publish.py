@@ -4287,10 +4287,10 @@ def test_p4_combined_lifetime_and_push_n_a_no_zero_denom():
     Authors never see '0.0% (0/0 prior active)'. When denominator is 0,
     the push block shows N/A and the lifetime scan matches P3 rollup.
     """
-    from app.services.github_pr_resolution_rollup import PrResolutionRollupManifest
     from app.services.github_publish_formatter import (
         format_resolution_metrics_block,
     )
+    from app.services.github_pr_resolution_rollup import PrResolutionRollupManifest
 
     push_block = format_resolution_metrics_block(
         {

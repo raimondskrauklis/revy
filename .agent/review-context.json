@@ -6,8 +6,8 @@
       "scope": ["backend/**", "frontend/**"],
       "paths": [
         {
-          "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_P3_EXECUTION.md",
-          "description": "Resolution honesty P3 — lifetime rollup (raised/resolved identity, PSR-Q15, superseded residual)"
+          "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_P4_EXECUTION.md",
+          "description": "Resolution honesty P4 — comment + GitHub threads (Outdated collapse, Option A group.id, lifetime copy)"
         },
         {
           "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_FINDINGS.md",
