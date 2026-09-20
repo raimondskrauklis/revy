@@ -6,7 +6,7 @@
  */
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LayoutDashboard, Plug, Settings } from 'lucide-react';
+import { LayoutDashboard, Plug, Settings, GitPullRequest } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { ImpersonationBanner } from '@/features/admin/components/ImpersonationBanner';
 import { StackShell } from '@/components/layout/StackShell';
@@ -23,6 +23,7 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'nav.dashboard', icon: LayoutDashboard },
+  { href: '/reviewer', label: 'nav.reviewer', icon: GitPullRequest },
   { href: '/installations', label: 'nav.installations', icon: Plug },
   { href: '/settings', label: 'nav.settings', icon: Settings },
 ];

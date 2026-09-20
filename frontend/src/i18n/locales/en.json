@@ -62,20 +62,10 @@
       "connectIntegration": "Connect a GitHub installation",
       "setupBilling": "Set up billing"
     },
-    "quickActions": {
-      "title": "Quick actions",
-      "settings": "Settings",
-      "installations": "Installations",
-      "inviteTeammate": "Invite teammate"
-    },
-    "activity": {
-      "title": "Recent activity",
-      "empty": "No recent activity yet.",
-      "workspace.updated": "{{email}} updated the workspace",
-      "workspace_member.role_changed": "{{email}} changed a member role",
-      "workspace_member.removed": "{{email}} removed a member",
-      "workspace_invitation.created": "{{email}} sent an invitation",
-      "workspace_invitation.revoked": "{{email}} revoked an invitation"
+    "devNotice": {
+      "title": "Revy is in active development",
+      "body": "We're shipping fast. Some things may move around. Report bugs, rough edges, or missing features — your feedback shapes the product.",
+      "feedback": "Leave feedback"
     },
     "installationsSummary": {
       "title": "GitHub installations",
@@ -86,8 +76,7 @@
     },
     "planSummary": {
       "title": "Plan",
-      "current": "Current plan: {{plan}}",
-      "manage": "Manage billing"
+      "free": "Free tier — up to 25 review runs per workspace."
     }
   },
   "header": {

@@ -6,7 +6,7 @@ export function SettingsLayout() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6 md:flex-row">
       <SettingsSidebar />
-      <div className="min-w-0 flex-1">
+      <div className="mx-auto max-w-lg min-w-0 flex-1">
         <Outlet />
       </div>
     </div>

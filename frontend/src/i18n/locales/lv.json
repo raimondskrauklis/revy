@@ -62,20 +62,10 @@
       "connectIntegration": "Pievienojiet GitHub instalāciju",
       "setupBilling": "Iestatiet norēķinus"
     },
-    "quickActions": {
-      "title": "Ātrās darbības",
-      "settings": "Iestatījumi",
-      "installations": "Instalācijas",
-      "inviteTeammate": "Uzaicināt komandas biedru"
-    },
-    "activity": {
-      "title": "Nesenā aktivitāte",
-      "empty": "Vēl nav nesenas aktivitātes.",
-      "workspace.updated": "{{email}} atjaunināja darba vidi",
-      "workspace_member.role_changed": "{{email}} mainīja dalībnieka lomu",
-      "workspace_member.removed": "{{email}} noņēma dalībnieku",
-      "workspace_invitation.created": "{{email}} nosūtīja uzaicinājumu",
-      "workspace_invitation.revoked": "{{email}} atcēla uzaicinājumu"
+    "devNotice": {
+      "title": "Revy ir aktīvā izstrādē",
+      "body": "Izdodam ātri. Dažas lietas var pārvietoties. Ziņojiet par kļūdām, nelīdzenumiem vai trūkstošām funkcijām — jūsu atsauksmes veido produktu.",
+      "feedback": "Atstāt atsauksmi"
     },
     "installationsSummary": {
       "title": "GitHub instalācijas",
@@ -86,8 +76,7 @@
     },
     "planSummary": {
       "title": "Plāns",
-      "current": "Pašreizējais plāns: {{plan}}",
-      "manage": "Pārvaldīt norēķinus"
+      "free": "Bezmaksas līmenis — līdz 25 pārskatu reizēm darba vidē."
     }
   },
   "header": {

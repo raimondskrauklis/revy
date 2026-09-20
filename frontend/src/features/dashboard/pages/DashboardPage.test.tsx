@@ -73,7 +73,7 @@ describe('DashboardPage', () => {
     renderPage();
 
     expect(screen.getByText(/select a workspace/i)).toBeInTheDocument();
-    expect(screen.queryByText(/quick actions/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/in development/i)).not.toBeInTheDocument();
   });
 
   it('renders workspace widgets when workspace is selected', () => {
@@ -103,7 +103,7 @@ describe('DashboardPage', () => {
 
     expect(screen.queryByText(/welcome, admin/i)).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /dashboard/i })).toBeInTheDocument();
-    expect(screen.getByText(/quick actions/i)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /recent activity/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /active development/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /get started/i })).toBeInTheDocument();
   });
 });

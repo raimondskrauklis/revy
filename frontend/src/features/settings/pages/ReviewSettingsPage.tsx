@@ -66,7 +66,6 @@ export function ReviewSettingsPage() {
     reviewer_critical: PLATFORM_DEFAULT,
     judge: PLATFORM_DEFAULT,
   });
-  const [savingModels, setSavingModels] = useState(false);
 
   useEffect(() => {
     if (workspaceSettings.data) {
@@ -101,7 +100,6 @@ export function ReviewSettingsPage() {
 
   async function handleSaveModels() {
     if (!workspaceId || !modelPolicy.data) return;
-    setSavingModels(true);
     const payload: Partial<Record<ModelPolicyRole, ModelPolicyEntry | null>> = {};
     for (const role of MODEL_ROLES) {
       const nextValue = selections[role];
@@ -110,7 +108,6 @@ export function ReviewSettingsPage() {
       payload[role] = entryFromKey(nextValue);
     }
     if (Object.keys(payload).length === 0) {
-      setSavingModels(false);
       return;
     }
     try {
@@ -118,8 +115,6 @@ export function ReviewSettingsPage() {
       notify.success(t('settings.review.modelsSaveSuccess'));
     } catch (error) {
       showDomainErrorToast(mapApiError(error));
-    } finally {
-      setSavingModels(false);
     }
   }
 
@@ -189,7 +184,7 @@ export function ReviewSettingsPage() {
               onValueChange={(value) =>
                 setSelections((current) => ({ ...current, [role]: value }))
               }
-              disabled={savingModels || modelPolicy.isLoading || modelCatalog.isLoading}
+              disabled
             >
               <QuietSelectTrigger fullWidth>
                 <QuietSelectValue />
@@ -201,7 +196,7 @@ export function ReviewSettingsPage() {
 
         <button
           type="button"
-          disabled={savingModels || modelPolicy.isLoading}
+          disabled
           onClick={() => void handleSaveModels()}
           className="min-h-11 rounded-lg bg-[color:var(--app-cta-bg)] px-4 text-sm font-medium text-[color:var(--app-cta-fg)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)] disabled:opacity-50"
         >

@@ -1,6 +1,6 @@
 // frontend/src/features/marketing/pages/LandingPage.tsx
 import { useTranslation } from 'react-i18next';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 /* Cover-the-name / viewport (non-gate): 375 width and ~700–800 height usable. */
@@ -8,6 +8,8 @@ import { useAuth } from '@/contexts/AuthContext';
 export function LandingPage() {
   const { t } = useTranslation();
   const { isAuthenticated, isLoading, login } = useAuth();
+  const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from ?? '/reviewer';
 
   if (!isLoading && isAuthenticated) {
     return <Navigate to="/reviewer" replace />;
@@ -33,7 +35,7 @@ export function LandingPage() {
           <div className="mt-8">
             <button
               type="button"
-              onClick={() => login()}
+              onClick={() => login(from)}
               className="inline-flex min-h-11 min-w-44 items-center justify-center rounded-[var(--app-radius-md)] bg-[color:var(--app-cta-bg)] px-6 text-sm font-medium text-[color:var(--app-cta-fg)] hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
             >
               {t('landing.hero.cta')}

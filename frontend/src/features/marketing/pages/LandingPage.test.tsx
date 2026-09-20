@@ -42,7 +42,19 @@ describe('LandingPage', () => {
     );
 
     await user.click(screen.getByRole('button', { name: /enter console/i }));
-    expect(mockLogin).toHaveBeenCalled();
+    expect(mockLogin).toHaveBeenCalledWith('/reviewer');
+  });
+
+  it('passes redirect from ProtectedRoute location state', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/', state: { from: '/settings/profile' } }]}>
+        <LandingPage />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: /enter console/i }));
+    expect(mockLogin).toHaveBeenCalledWith('/settings/profile');
   });
 
   it('replaces authenticated users to reviewer', () => {
