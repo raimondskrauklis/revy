@@ -185,24 +185,23 @@ async def _bound_group_ids_this_run(
 async def _this_run_finding_counts_by_file_category(
     session: AsyncSession, *, review_run_id: UUID
 ) -> dict[tuple[str, str], int]:
-    """Count this-run findings per (file_path, category) key via SQL GROUP BY."""
-    rows = await session.execute(
-        select(
-            GitHubFindingORM.file_path,
-            GitHubFindingORM.category,
-            func.count(),
+    """Count this-run findings per (file_path, category) key."""
+    findings = list(
+        await session.scalars(
+            select(GitHubFindingORM).where(GitHubFindingORM.review_run_id == review_run_id)
         )
-        .where(GitHubFindingORM.review_run_id == review_run_id)
-        .group_by(GitHubFindingORM.file_path, GitHubFindingORM.category)
     )
-    return {(row.file_path or "", row.category): row.count for row in rows}
+    counts: dict[tuple[str, str], int] = {}
+    for f in findings:
+        key = (f.file_path or "", f.category)
+        counts[key] = counts.get(key, 0) + 1
+    return counts
 
 
 async def _resolve_absent_paths(
     session: AsyncSession,
     *,
     revision: GitHubPullRequestRevisionORM,
-    file_paths: frozenset[str] = frozenset(),
 ) -> set[str]:
     """Paths that have been removed or are absent at HEAD.
 
@@ -210,8 +209,6 @@ async def _resolve_absent_paths(
     deletion pushes. Returns empty set when compare fails (safe: compare
     failure is caught by closure_blocked_reason at the call site).
     """
-    if not file_paths:
-        return set()
     from app.services.github_path_hygiene import paths_absent_at_head
 
     pull_request = await session.get(GitHubPullRequestORM, revision.pull_request_id)
@@ -221,12 +218,14 @@ async def _resolve_absent_paths(
         session,
         pull_request=pull_request,
         head_sha=revision.head_sha,
-        file_paths=file_paths,
+        file_paths=frozenset(),
     )
     return {path for path, gone in absent.items() if gone}
 
 
 async def _fingerprints_in_review_run(session: AsyncSession, *, review_run_id: UUID) -> set[str]:
+    from app.services.github_finding_reconcile import claim_slot_key, compute_fingerprint
+
     run = await session.get(GitHubReviewRunORM, review_run_id)
     if run is None:
         return set()
@@ -241,22 +240,21 @@ async def _fingerprints_in_review_run(session: AsyncSession, *, review_run_id: U
         )
     )
     fingerprints: set[str] = set()
-    group_ids: list[UUID] = [f.group_id for f in findings if f.group_id is not None]
-    group_map: dict[UUID, str] = {}
-    if group_ids:
-        group_result = await session.execute(
-            select(GitHubFindingGroupORM.id, GitHubFindingGroupORM.fingerprint)
-            .where(GitHubFindingGroupORM.id.in_(set(group_ids)))
-        )
-        for row in group_result:
-            if row.fingerprint:
-                group_map[row.id] = row.fingerprint
-
     for finding in findings:
         if finding.group_id is not None:
-            fp = group_map.get(finding.group_id)
-            if fp:
-                fingerprints.add(fp)
+            group = await session.get(GitHubFindingGroupORM, finding.group_id)
+            if group is not None and group.fingerprint:
+                fingerprints.add(group.fingerprint)
+                continue
+        fingerprints.add(
+            compute_fingerprint(
+                workspace_id=run.workspace_id,
+                pull_request_id=revision.pull_request_id,
+                file_path=finding.file_path,
+                category=finding.category,
+                claim_slot=claim_slot_key(finding.title),
+            )
+        )
     return fingerprints
 
 
@@ -297,6 +295,7 @@ async def apply_pass2_closure_for_review_run(
     counts_by_key = await _this_run_finding_counts_by_file_category(
         session, review_run_id=review_run_id
     )
+    path_gone_paths = await _resolve_absent_paths(session, revision=revision)
 
     groups = list(
         await session.scalars(
@@ -309,10 +308,6 @@ async def apply_pass2_closure_for_review_run(
                 ),
             )
         )
-    )
-    group_file_paths = frozenset({g.file_path for g in groups if g.file_path})
-    path_gone_paths = await _resolve_absent_paths(
-        session, revision=revision, file_paths=group_file_paths
     )
 
     closed = 0

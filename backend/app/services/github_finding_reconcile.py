@@ -226,7 +226,7 @@ async def _bind_group_for_finding(
     if should_reopen_absent_and_addressed(
         state=group.state,
         resolution_method=group.resolution_method,
-bound_this_run=True,
+        bound_this_run=True,
     ):
         for key, value in reopen_fields_for_re_report().items():
             setattr(group, key, value)

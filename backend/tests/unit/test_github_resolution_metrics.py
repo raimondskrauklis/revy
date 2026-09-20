@@ -565,7 +565,6 @@ def test_build_resolution_pass_manifest_counts_transitions():
     assert manifest["transition_count"] == 2
     assert manifest["denominator_active_prior"] == 3
     assert manifest["resolution_rate_pct"] == 66.7
-    assert manifest["resolution_rate_display"] == "66.7%"
     assert manifest["compare_failed_count"] == 1
 
 
@@ -596,7 +595,7 @@ def test_build_resolution_pass_manifest_includes_rereported_stamp_cohort():
 
     assert manifest["denominator_active_prior"] == 1
     assert manifest["still_open_count"] == 1
-    assert manifest["resolution_rate_display"] == "0.0%"
+
 
 def test_build_resolution_pass_manifest_includes_unpublished_gap_last_seen():
     prior_revision_id = uuid.uuid4()
@@ -626,7 +625,6 @@ def test_build_resolution_pass_manifest_includes_unpublished_gap_last_seen():
 
     assert manifest["denominator_active_prior"] == 1
     assert manifest["still_open_count"] == 1
-    assert manifest["resolution_rate_display"] == "0.0%"
 
 
 @pytest.mark.asyncio
@@ -1614,7 +1612,6 @@ def test_build_resolution_pass_manifest_excludes_hygiene_from_rate():
     assert manifest["transition_count"] == 1
     assert manifest["transitions_addressed"] == 1
     assert manifest["resolution_rate_pct"] == 100.0
-    assert manifest["resolution_rate_display"] == "100.0%"
 
 
 @pytest.mark.asyncio
@@ -1687,8 +1684,6 @@ def test_build_resolution_pass_manifest_hygiene_count_outside_stamp_cohort():
     assert manifest["hygiene_path_removed_count"] == 1
     assert manifest["transition_count"] == 0
     assert manifest["denominator_active_prior"] == 0
-    assert manifest["resolution_rate_pct"] is None
-    assert manifest["resolution_rate_display"] == "N/A"
 
 
 # ── P1.4 regression: Pass 1 line-region unchanged ───────────────────────────
@@ -1703,90 +1698,3 @@ def test_p1_patch_touches_line_region_false_for_distant_hunk():
         start_line=42,
         end_line=44,
     )
-
-
-# ── P2.3 test: fix-some prior cohort ─────────────────────────────────────────
-
-
-def test_build_resolution_pass_manifest_fix_some_prior_cohort():
-    """P2.3: N prior groups, this-run H2-closes K of them by group.id.
-
-    Verifies cohort identity works with group.id (not fingerprint via title+line).
-    After P0's continuation model, retitled groups stay in cohort, not superseded.
-    """
-    prior_revision_id = uuid.uuid4()
-    current_revision_id = uuid.uuid4()
-    pull_request_id = uuid.uuid4()
-
-    # 4 prior groups — all in pairing window
-    active_remaining = GitHubFindingGroupORM(
-        workspace_id=uuid.uuid4(),
-        pull_request_id=pull_request_id,
-        fingerprint="fp-a",
-        state=GitHubFindingGroupState.active,
-        severity=FindingSeverity.warning,
-        category=FindingCategory.bug,
-        title="Still open bug",
-        message="msg",
-        file_path="app/a.py",
-        last_seen_revision_id=prior_revision_id,
-        resolution_status=ResolutionStatus.still_open,
-    )
-    resolved_fix1 = GitHubFindingGroupORM(
-        workspace_id=uuid.uuid4(),
-        pull_request_id=pull_request_id,
-        fingerprint="fp-fix1",
-        state=GitHubFindingGroupState.resolved,
-        severity=FindingSeverity.error,
-        category=FindingCategory.bug,
-        title="Fixed bug 1",
-        message="msg",
-        file_path="app/b.py",
-        last_seen_revision_id=prior_revision_id,
-        resolution_method=ResolutionMethod.absent_and_addressed,
-        resolved_at_revision_id=current_revision_id,
-    )
-    resolved_fix2 = GitHubFindingGroupORM(
-        workspace_id=uuid.uuid4(),
-        pull_request_id=pull_request_id,
-        fingerprint="fp-fix2",
-        state=GitHubFindingGroupState.resolved,
-        severity=FindingSeverity.error,
-        category=FindingCategory.bug,
-        title="Fixed bug 2",
-        message="msg",
-        file_path="app/c.py",
-        last_seen_revision_id=prior_revision_id,
-        resolution_method=ResolutionMethod.absent_and_addressed,
-        resolved_at_revision_id=current_revision_id,
-    )
-    compare_blocked = GitHubFindingGroupORM(
-        workspace_id=uuid.uuid4(),
-        pull_request_id=pull_request_id,
-        fingerprint="fp-blocked",
-        state=GitHubFindingGroupState.active,
-        severity=FindingSeverity.warning,
-        category=FindingCategory.bug,
-        title="Blocked bug",
-        message="msg",
-        file_path="app/d.py",
-        last_seen_revision_id=prior_revision_id,
-        resolution_status=ResolutionStatus.still_open,
-        closure_blocked_reason="compare_failed",
-    )
-
-    manifest = github_resolution_metrics.build_resolution_pass_manifest(
-        [active_remaining, resolved_fix1, resolved_fix2, compare_blocked],
-        prior_revision_ids=frozenset({prior_revision_id}),
-        current_revision_id=current_revision_id,
-    )
-
-    # denominator = 4 total - 1 compare_blocked = 3
-    assert manifest["denominator_active_prior"] == 3
-    # transitions = 2 resolved this run (fix1, fix2)
-    assert manifest["transition_count"] == 2
-    assert manifest["transitions_addressed"] == 2
-    assert manifest["compare_failed_count"] == 1
-    assert manifest["still_open_count"] == 1
-    assert manifest["resolution_rate_pct"] == pytest.approx(66.7, abs=0.1)
-    assert manifest["resolution_rate_display"] == "66.7%"

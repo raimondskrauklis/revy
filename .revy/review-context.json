@@ -6,8 +6,8 @@
       "scope": ["backend/**", "frontend/**"],
       "paths": [
         {
-          "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_P0_EXECUTION.md",
-          "description": "Resolution honesty P0 — persistent identity cutover (claim_slot, continuation, inline keys)"
+          "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_P1_EXECUTION.md",
+          "description": "Resolution honesty P1 — honest H2 closure (no addressed requirement, findings-count gate)"
         },
         {
           "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_FINDINGS.md",
