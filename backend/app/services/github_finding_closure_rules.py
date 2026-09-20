@@ -8,7 +8,6 @@ from app.constants.enums import (
     GitHubFindingGroupState,
     GitHubJudgeOutcome,
     ResolutionMethod,
-    ResolutionStatus,
 )
 
 COMPARE_FAILED_REASON = "compare_failed"
@@ -18,16 +17,22 @@ HEAD_CHECK_FAILED_REASON = "head_check_failed"
 def should_close_absent_and_addressed(
     *,
     state: GitHubFindingGroupState,
-    fingerprint_in_current_run: bool,
-    resolution_status: ResolutionStatus | None,
+    bound_this_run: bool,
+    this_run_finding_count: int,
+    path_gone: bool,
     closure_blocked_reason: str | None,
 ) -> bool:
-    """FR-Q3: absent fingerprint + addressed on prior revision, compare succeeded."""
+    """H2: close active unbound group when path gone or zero findings remain in file+category.
+
+    P1 replaces the old ``addressed`` requirement with a count-based gate:
+    close iff not bound this run AND (path_gone or this_run_finding_count == 0).
+    ``this_run_finding_count >= 1`` (leftovers still reported) → stay open.
+    """
     if state != GitHubFindingGroupState.active:
         return False
-    if fingerprint_in_current_run:
+    if bound_this_run:
         return False
-    if resolution_status != ResolutionStatus.addressed:
+    if not (path_gone or this_run_finding_count == 0):
         return False
     return closure_blocked_reason is None
 
@@ -91,14 +96,14 @@ def should_reopen_absent_and_addressed(
     *,
     state: GitHubFindingGroupState,
     resolution_method: ResolutionMethod | None,
-    fingerprint_in_current_run: bool,
+    bound_this_run: bool,
 ) -> bool:
-    """FR-Q13: re-report same fingerprint after heuristic-only closure."""
+    """FR-Q13: re-raise resolved group that is bound again (same identity reappeared after H2 closure)."""
     if state != GitHubFindingGroupState.resolved:
         return False
     if resolution_method != ResolutionMethod.absent_and_addressed:
         return False
-    return fingerprint_in_current_run
+    return bound_this_run
 
 
 def reopen_fields_for_re_report() -> dict[str, object]:

@@ -169,6 +169,60 @@ async def _load_prior_revision(
     )
 
 
+async def _bound_group_ids_this_run(
+    session: AsyncSession, *, revision_id: UUID
+) -> set[UUID]:
+    """Group ids bound (last seen) at this revision via P0 reconcile."""
+    result = await session.scalars(
+        select(GitHubFindingGroupORM.id).where(
+            GitHubFindingGroupORM.last_seen_revision_id == revision_id
+        )
+    )
+    rows = list(result)
+    return {row.id if hasattr(row, "id") else row for row in rows}
+
+
+async def _this_run_finding_counts_by_file_category(
+    session: AsyncSession, *, review_run_id: UUID
+) -> dict[tuple[str, str], int]:
+    """Count this-run findings per (file_path, category) key."""
+    findings = list(
+        await session.scalars(
+            select(GitHubFindingORM).where(GitHubFindingORM.review_run_id == review_run_id)
+        )
+    )
+    counts: dict[tuple[str, str], int] = {}
+    for f in findings:
+        key = (f.file_path or "", f.category)
+        counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
+async def _resolve_absent_paths(
+    session: AsyncSession,
+    *,
+    revision: GitHubPullRequestRevisionORM,
+) -> set[str]:
+    """Paths that have been removed or are absent at HEAD.
+
+    Reuses the same resolution metrics path that Pass 1 stamps for
+    deletion pushes. Returns empty set when compare fails (safe: compare
+    failure is caught by closure_blocked_reason at the call site).
+    """
+    from app.services.github_path_hygiene import paths_absent_at_head
+
+    pull_request = await session.get(GitHubPullRequestORM, revision.pull_request_id)
+    if pull_request is None:
+        return set()
+    absent = await paths_absent_at_head(
+        session,
+        pull_request=pull_request,
+        head_sha=revision.head_sha,
+        file_paths=frozenset(),
+    )
+    return {path for path, gone in absent.items() if gone}
+
+
 async def _fingerprints_in_review_run(session: AsyncSession, *, review_run_id: UUID) -> set[str]:
     from app.services.github_finding_reconcile import claim_slot_key, compute_fingerprint
 
@@ -209,7 +263,7 @@ async def apply_pass2_closure_for_review_run(
     *,
     review_run_id: UUID,
 ) -> int:
-    """Pass 2: close groups absent from run with resolution_status=addressed."""
+    """Pass 2: H2-closure (P1) — close active groups when not bound this run and (path gone or zero findings in file+category)."""
     run = await session.get(GitHubReviewRunORM, review_run_id)
     if run is None or run.status != GitHubReviewRunStatus.completed:
         return 0
@@ -237,7 +291,12 @@ async def apply_pass2_closure_for_review_run(
         intermediate_revision_ids=intermediate_revision_ids,
     )
 
-    fingerprints_in_run = await _fingerprints_in_review_run(session, review_run_id=review_run_id)
+    bound_group_ids = await _bound_group_ids_this_run(session, revision_id=revision.id)
+    counts_by_key = await _this_run_finding_counts_by_file_category(
+        session, review_run_id=review_run_id
+    )
+    path_gone_paths = await _resolve_absent_paths(session, revision=revision)
+
     groups = list(
         await session.scalars(
             select(GitHubFindingGroupORM).where(
@@ -253,10 +312,12 @@ async def apply_pass2_closure_for_review_run(
 
     closed = 0
     for group in groups:
+        file_key = (group.file_path or "", group.category)
         if not should_close_absent_and_addressed(
             state=group.state,
-            fingerprint_in_current_run=group.fingerprint in fingerprints_in_run,
-            resolution_status=group.resolution_status,
+            bound_this_run=group.id in bound_group_ids,
+            this_run_finding_count=counts_by_key.get(file_key, 0),
+            path_gone=file_key[0] in path_gone_paths,
             closure_blocked_reason=group.closure_blocked_reason,
         ):
             continue

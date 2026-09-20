@@ -1684,3 +1684,17 @@ def test_build_resolution_pass_manifest_hygiene_count_outside_stamp_cohort():
     assert manifest["hygiene_path_removed_count"] == 1
     assert manifest["transition_count"] == 0
     assert manifest["denominator_active_prior"] == 0
+
+
+# ── P1.4 regression: Pass 1 line-region unchanged ───────────────────────────
+
+
+def test_p1_patch_touches_line_region_false_for_distant_hunk():
+    """P1.4: A hunk elsewhere in the same file does NOT stamp addressed."""
+    # Finding is at lines 42-44. Hunk affects lines 10-12 only.
+    patch = "@@ -10,3 +10,4 @@\n def bar():\n-    old()\n+    new()\n     pass\n"
+    assert not github_resolution_metrics.patch_touches_line_region(
+        patch,
+        start_line=42,
+        end_line=44,
+    )

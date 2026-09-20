@@ -1548,9 +1548,20 @@ async def _close_active_groups_for_fingerprints(
     if not group_ids:
         return 0
     # Circular import: github_finding_closure → github_resolution_metrics → github_publish.
-    from app.services.github_finding_closure import _fingerprints_in_review_run
+    from app.services.github_finding_closure import (
+        _bound_group_ids_this_run,
+        _resolve_absent_paths,
+        _this_run_finding_counts_by_file_category,
+    )
 
-    fingerprints_in_run = await _fingerprints_in_review_run(session, review_run_id=review_run_id)
+    bound_group_ids = await _bound_group_ids_this_run(session, revision_id=revision_id)
+    counts_by_key = await _this_run_finding_counts_by_file_category(
+        session, review_run_id=review_run_id
+    )
+    absent_paths = await _resolve_absent_paths(
+        session,
+        revision=await session.get(GitHubPullRequestRevisionORM, revision_id),
+    )
     groups = list(
         await session.scalars(
             select(GitHubFindingGroupORM).where(
@@ -1562,10 +1573,12 @@ async def _close_active_groups_for_fingerprints(
     )
     closed = 0
     for group in groups:
+        file_key = (group.file_path or "", group.category)
         if not should_close_absent_and_addressed(
             state=group.state,
-            fingerprint_in_current_run=group.fingerprint in fingerprints_in_run,
-            resolution_status=group.resolution_status,
+            bound_this_run=group.id in bound_group_ids,
+            this_run_finding_count=counts_by_key.get(file_key, 0),
+            path_gone=file_key[0] in absent_paths,
             closure_blocked_reason=group.closure_blocked_reason,
         ):
             continue
