@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import time
 from dataclasses import dataclass, replace
@@ -74,12 +75,14 @@ from app.services.github_publish_formatter import (
     apply_rollup_to_publish_surfaces,
     build_publish_format_result_async,
     filter_pr_active_groups_for_summary,
+    group_identity_key,
 )
 from app.services.github_suggestion import is_publishable_suggestion
 
 logger = get_logger(__name__)
 
 _COLLAPSED_INLINE_FINGERPRINTS_KEY = "collapsed_inline_fingerprints"
+_SHA256_HEX_RE = re.compile(r"^[0-9a-f]{64}$")
 
 THREAD_RESOLVE_SKIP_ALREADY_RESOLVED = "already_resolved"
 THREAD_RESOLVE_SKIP_THREAD_ID_NOT_FOUND = "thread_id_not_found"
@@ -529,6 +532,120 @@ async def get_latest_publish_job_for_revision(
     )
 
 
+def _parse_group_id_key(key: str) -> UUID | None:
+    try:
+        return UUID(key)
+    except ValueError:
+        return None
+
+
+async def _fingerprint_to_group_id_map(
+    session: AsyncSession,
+    *,
+    pull_request_id: UUID,
+    fingerprints: list[str],
+) -> dict[str, str]:
+    if not fingerprints:
+        return {}
+    groups = list(
+        await session.scalars(
+            select(GitHubFindingGroupORM).where(
+                GitHubFindingGroupORM.pull_request_id == pull_request_id,
+                GitHubFindingGroupORM.fingerprint.in_(fingerprints),
+            )
+        )
+    )
+    return {group.fingerprint: group_identity_key(group) for group in groups}
+
+
+def _rekey_loaded_identity(
+    key: str,
+    *,
+    fp_to_id: dict[str, str],
+) -> str:
+    parsed = _parse_group_id_key(key)
+    if parsed is not None:
+        return str(parsed)
+    mapped = fp_to_id.get(key)
+    if mapped is not None:
+        return mapped
+    return key
+
+
+async def rekey_identity_keys_to_group_ids(
+    session: AsyncSession,
+    *,
+    pull_request_id: UUID,
+    keys: set[str] | frozenset[str],
+) -> set[str]:
+    hex_keys = [key for key in keys if _SHA256_HEX_RE.fullmatch(key)]
+    fp_to_id = await _fingerprint_to_group_id_map(
+        session,
+        pull_request_id=pull_request_id,
+        fingerprints=hex_keys,
+    )
+    return {_rekey_loaded_identity(key, fp_to_id=fp_to_id) for key in keys}
+
+
+async def rekey_inline_thread_map_to_group_ids(
+    session: AsyncSession,
+    *,
+    pull_request_id: UUID,
+    comment_map: dict[str, int],
+) -> dict[str, int]:
+    """Dual-read 64-hex fingerprint keys; persist one entry per ``group.id``."""
+    hex_keys = [key for key in comment_map if _SHA256_HEX_RE.fullmatch(key)]
+    fp_to_id = await _fingerprint_to_group_id_map(
+        session,
+        pull_request_id=pull_request_id,
+        fingerprints=hex_keys,
+    )
+    rekeyed: dict[str, int] = {}
+    for key, comment_id in comment_map.items():
+        if _SHA256_HEX_RE.fullmatch(key):
+            identity = fp_to_id.get(key)
+            if identity is None:
+                continue
+            rekeyed.setdefault(identity, comment_id)
+    for key, comment_id in comment_map.items():
+        parsed = _parse_group_id_key(key)
+        if parsed is None:
+            if not _SHA256_HEX_RE.fullmatch(key):
+                rekeyed[key] = comment_id
+            continue
+        rekeyed[str(parsed)] = comment_id
+    return rekeyed
+
+
+async def _rekey_v2_inline_map_to_group_ids(
+    session: AsyncSession,
+    *,
+    pull_request_id: UUID,
+    prior: dict[str, dict[str, int | str]],
+) -> dict[str, dict[str, int | str]]:
+    hex_keys = [key for key in prior if _SHA256_HEX_RE.fullmatch(key)]
+    fp_to_id = await _fingerprint_to_group_id_map(
+        session,
+        pull_request_id=pull_request_id,
+        fingerprints=hex_keys,
+    )
+    rekeyed: dict[str, dict[str, int | str]] = {}
+    for key, value in prior.items():
+        if _SHA256_HEX_RE.fullmatch(key):
+            identity = fp_to_id.get(key)
+            if identity is None:
+                continue
+            rekeyed.setdefault(identity, value)
+    for key, value in prior.items():
+        parsed = _parse_group_id_key(key)
+        if parsed is None:
+            if not _SHA256_HEX_RE.fullmatch(key):
+                rekeyed[key] = value
+            continue
+        rekeyed[str(parsed)] = value
+    return rekeyed
+
+
 def deserialize_inline_thread_map(raw: object) -> dict[str, int]:
     """Read legacy int or v2 {comment_id, thread_id?} entries into a comment-id map."""
     if not isinstance(raw, dict):
@@ -671,7 +788,11 @@ async def _load_prior_inline_thread_map(
     pull_request_id: UUID,
 ) -> dict[str, int]:
     jobs = await _fetch_prior_reusable_publish_jobs(session, pull_request_id=pull_request_id)
-    return _load_inline_thread_map(jobs)
+    return await rekey_inline_thread_map_to_group_ids(
+        session,
+        pull_request_id=pull_request_id,
+        comment_map=_load_inline_thread_map(jobs),
+    )
 
 
 async def _publishable_fingerprints_for_run(
@@ -704,7 +825,7 @@ async def _publishable_fingerprints_for_run(
             and group.state != GitHubFindingGroupState.resolved
         ):
             continue
-        fingerprints.add(group.fingerprint)
+        fingerprints.add(group_identity_key(group))
     return fingerprints
 
 
@@ -732,8 +853,12 @@ async def _fingerprints_to_resolve_inline_threads(
             if comment_id in outdated_comment_ids:
                 fingerprints_to_resolve.add(fingerprint)
 
-    tracked_fingerprints = tuple(inline_threads.keys())
-    if tracked_fingerprints:
+    tracked_ids: list[UUID] = []
+    for key in inline_threads:
+        parsed = _parse_group_id_key(key)
+        if parsed is not None:
+            tracked_ids.append(parsed)
+    if tracked_ids:
         groups = list(
             await session.scalars(
                 select(GitHubFindingGroupORM).where(
@@ -746,7 +871,7 @@ async def _fingerprints_to_resolve_inline_threads(
                             )
                         ),
                         and_(
-                            GitHubFindingGroupORM.fingerprint.in_(tracked_fingerprints),
+                            GitHubFindingGroupORM.id.in_(tracked_ids),
                             GitHubFindingGroupORM.resolution_status == ResolutionStatus.addressed,
                         ),
                     ),
@@ -754,10 +879,11 @@ async def _fingerprints_to_resolve_inline_threads(
             )
         )
         # v2 (post GH-Q2): collapse when Pass 1 stamped addressed even if Moonshot
-        # re-reports the same fingerprint — avoids stale open threads on fix pushes.
+        # re-reports the same identity — avoids stale open threads on fix pushes.
         for group in groups:
-            if group.fingerprint in inline_threads:
-                fingerprints_to_resolve.add(group.fingerprint)
+            identity = group_identity_key(group)
+            if identity in inline_threads:
+                fingerprints_to_resolve.add(identity)
     return fingerprints_to_resolve, publishable
 
 
@@ -1415,25 +1541,62 @@ async def _close_active_groups_for_fingerprints(
     """
     if not fingerprints:
         return 0
+    group_ids: list[UUID] = []
+    non_uuid_keys: list[str] = []
+    for key in fingerprints:
+        parsed = _parse_group_id_key(key)
+        if parsed is not None:
+            group_ids.append(parsed)
+        else:
+            non_uuid_keys.append(key)
+    if non_uuid_keys:
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            "_close_active_groups_for_fingerprints: %d legacy non-UUID keys ignored "
+            "(first: %s)",
+            len(non_uuid_keys),
+            non_uuid_keys[0],
+        )
+    if not group_ids:
+        return 0
     # Circular import: github_finding_closure → github_resolution_metrics → github_publish.
-    from app.services.github_finding_closure import _fingerprints_in_review_run
+    from app.services.github_finding_closure import (
+        _bound_group_ids_this_run,
+        _resolve_absent_paths,
+        _this_run_finding_counts_by_file_category,
+    )
 
-    fingerprints_in_run = await _fingerprints_in_review_run(session, review_run_id=review_run_id)
+    revision = await session.get(GitHubPullRequestRevisionORM, revision_id)
+    if revision is None:
+        return 0
+
+    bound_group_ids = await _bound_group_ids_this_run(session, revision_id=revision_id)
+    counts_by_key = await _this_run_finding_counts_by_file_category(
+        session, review_run_id=review_run_id
+    )
     groups = list(
         await session.scalars(
             select(GitHubFindingGroupORM).where(
                 GitHubFindingGroupORM.pull_request_id == pull_request_id,
-                GitHubFindingGroupORM.fingerprint.in_(fingerprints),
+                GitHubFindingGroupORM.id.in_(group_ids),
                 GitHubFindingGroupORM.state == GitHubFindingGroupState.active,
             )
         )
     )
+    group_file_paths = frozenset({g.file_path for g in groups if g.file_path})
+    absent_paths = await _resolve_absent_paths(
+        session,
+        revision=revision,
+        file_paths=group_file_paths,
+    )
     closed = 0
     for group in groups:
+        file_key = (group.file_path or "", group.category)
         if not should_close_absent_and_addressed(
             state=group.state,
-            fingerprint_in_current_run=group.fingerprint in fingerprints_in_run,
-            resolution_status=group.resolution_status,
+            bound_this_run=group.id in bound_group_ids,
+            this_run_finding_count=counts_by_key.get(file_key, 0),
+            path_gone=file_key[0] in absent_paths,
             closure_blocked_reason=group.closure_blocked_reason,
         ):
             continue
@@ -1464,8 +1627,16 @@ async def _build_publish_surface(
         session,
         pull_request_id=pull_request.id,
     )
-    inline_threads = _load_inline_thread_map(prior_jobs)
-    prior_v2_inline = _load_v2_inline_thread_map(prior_jobs)
+    inline_threads = await rekey_inline_thread_map_to_group_ids(
+        session,
+        pull_request_id=pull_request.id,
+        comment_map=_load_inline_thread_map(prior_jobs),
+    )
+    prior_v2_inline = await _rekey_v2_inline_map_to_group_ids(
+        session,
+        pull_request_id=pull_request.id,
+        prior=_load_v2_inline_thread_map(prior_jobs),
+    )
     pr_active_groups = await _load_pr_active_groups(
         session,
         pull_request_id=pull_request.id,
@@ -1475,15 +1646,27 @@ async def _build_publish_surface(
         review_run_id=job.review_run_id,
         pull_request_id=pull_request.id,
     )
-    prior_collapsed = _load_prior_collapsed_inline_fingerprints(
-        prior_jobs,
-        current_job_summary=job.summary_json,
+    prior_collapsed = await rekey_identity_keys_to_group_ids(
+        session,
+        pull_request_id=pull_request.id,
+        keys=_load_prior_collapsed_inline_fingerprints(
+            prior_jobs,
+            current_job_summary=job.summary_json,
+        ),
     )
-    ever_inlined = _load_ever_inlined_fingerprints(
-        prior_jobs,
-        current_job_summary=job.summary_json,
+    ever_inlined = frozenset(
+        await rekey_identity_keys_to_group_ids(
+            session,
+            pull_request_id=pull_request.id,
+            keys=set(
+                _load_ever_inlined_fingerprints(
+                    prior_jobs,
+                    current_job_summary=job.summary_json,
+                )
+            ),
+        )
     )
-    generation_fingerprints = {group.fingerprint for group in groups}
+    generation_fingerprints = {group_identity_key(group) for group in groups}
     filtered_pr_active = filter_pr_active_groups_for_summary(
         pr_active_groups,
         publishable_fingerprints=publishable_fingerprints,
@@ -1590,7 +1773,7 @@ async def _build_publish_surface(
                 InlinePostSpec(
                     finding_id=finding.id,
                     group_id=group.id,
-                    group_fingerprint=group.fingerprint,
+                    group_fingerprint=group_identity_key(group),
                     file_path=finding.file_path,
                     start_line=finding.start_line,
                     title=finding.title,
@@ -1644,7 +1827,11 @@ async def _flush_publish_surface(
     run: GitHubReviewRunORM,
 ) -> PublishFlushResult:
     inline_threads = dict(build.inline_threads)
-    retry_posted = retry_posted_inline or {}
+    retry_posted = await rekey_inline_thread_map_to_group_ids(
+        session,
+        pull_request_id=pull_request.id,
+        comment_map=retry_posted_inline or {},
+    )
     inline_threads.update(retry_posted)
 
     skipped_at_flush_start = await _recheck_publish_authority_before_flush(
@@ -1739,7 +1926,7 @@ async def _flush_publish_surface(
             format_ctx_for_rollup = build.format_ctx
             if effective_collapsed:
                 generation_fingerprints = {
-                    group.fingerprint for group in build.format_ctx.groups
+                    group_identity_key(group) for group in build.format_ctx.groups
                 }
                 filtered_pr_active = filter_pr_active_groups_for_summary(
                     raw_pr_active_groups,
@@ -2130,8 +2317,12 @@ async def run_publish_job(
     job.error_message = None
     await session.flush()
 
-    retry_posted_inline = deserialize_inline_thread_map(
-        (job.summary_json or {}).get("github_inline_threads")
+    retry_posted_inline = await rekey_inline_thread_map_to_group_ids(
+        session,
+        pull_request_id=pull_request.id,
+        comment_map=deserialize_inline_thread_map(
+            (job.summary_json or {}).get("github_inline_threads")
+        ),
     )
 
     try:

@@ -45,6 +45,7 @@ from app.services.github_publish_formatter import (
 
 def _group(*, state=GitHubFindingGroupState.active, severity=FindingSeverity.warning, **kwargs):
     defaults = {
+        "id": uuid.uuid4(),
         "workspace_id": uuid.uuid4(),
         "pull_request_id": uuid.uuid4(),
         "fingerprint": "fp",
@@ -286,6 +287,7 @@ def test_format_resolution_metrics_block():
     block = format_resolution_metrics_block(
         {
             "resolution_rate_pct": 50.0,
+            "resolution_rate_display": "50.0%",
             "transition_count": 1,
             "denominator_active_prior": 2,
             "transitions_addressed": 1,
@@ -299,10 +301,30 @@ def test_format_resolution_metrics_block():
     assert "Still open" in block
 
 
+def test_format_resolution_metrics_block_empty_denom_is_na():
+    """P2.2: empty denominator → N/A (no prior cohort), never 0.0% or 0/0."""
+    block = format_resolution_metrics_block(
+        {
+            "resolution_rate_pct": None,
+            "resolution_rate_display": "N/A",
+            "transition_count": 0,
+            "denominator_active_prior": 0,
+            "transitions_addressed": 0,
+            "transitions_dismissed": {},
+            "still_open_count": 0,
+            "compare_failed_count": 0,
+        }
+    )
+    assert "N/A (no prior cohort)" in block
+    assert "0.0%" not in block
+    assert "0/0" not in block
+
+
 def test_format_resolution_metrics_block_path_removed_line():
     block = format_resolution_metrics_block(
         {
             "resolution_rate_pct": 50.0,
+            "resolution_rate_display": "50.0%",
             "transition_count": 1,
             "denominator_active_prior": 2,
             "transitions_addressed": 1,
@@ -415,10 +437,10 @@ def test_filter_pr_active_groups_for_summary_excludes_collapsed_inline():
     current = _group(severity=FindingSeverity.info, fingerprint="new-fp")
     filtered = filter_pr_active_groups_for_summary(
         [stale, current],
-        publishable_fingerprints={"new-fp"},
-        collapsed_fingerprints={"stale-fp"},
+        publishable_fingerprints={str(current.id)},
+        collapsed_fingerprints={str(stale.id)},
     )
-    assert [g.fingerprint for g in filtered] == ["new-fp"]
+    assert [g.id for g in filtered] == [current.id]
 
 
 def test_filter_pr_active_groups_for_summary_keeps_addressed_pending_pass2_out():
@@ -453,9 +475,9 @@ def test_filter_pr_active_groups_for_summary_excludes_never_inlined_orphan():
         publishable_fingerprints=set(),
         collapsed_fingerprints=set(),
         generation_fingerprints=set(),
-        ever_inlined_fingerprints={"inlined-fp"},
+        ever_inlined_fingerprints={str(inlined.id)},
     )
-    assert [g.fingerprint for g in filtered] == ["inlined-fp"]
+    assert [g.id for g in filtered] == [inlined.id]
 
 
 def test_filter_pr_active_groups_for_summary_keeps_never_inlined_in_generation():
@@ -466,12 +488,29 @@ def test_filter_pr_active_groups_for_summary_keeps_never_inlined_in_generation()
     )
     filtered = filter_pr_active_groups_for_summary(
         [orphan],
-        publishable_fingerprints={"orphan-fp"},
+        publishable_fingerprints={str(orphan.id)},
         collapsed_fingerprints=set(),
-        generation_fingerprints={"orphan-fp"},
+        generation_fingerprints={str(orphan.id)},
         ever_inlined_fingerprints=set(),
     )
-    assert [g.fingerprint for g in filtered] == ["orphan-fp"]
+    assert [g.id for g in filtered] == [orphan.id]
+
+
+def test_filter_pr_active_groups_for_summary_uuid_sets_do_not_hide_inlined_active():
+    active = _group(
+        severity=FindingSeverity.warning,
+        fingerprint="still-open-fp",
+        file_path="app/main.py",
+    )
+    identity = str(active.id)
+    filtered = filter_pr_active_groups_for_summary(
+        [active],
+        publishable_fingerprints={identity},
+        collapsed_fingerprints=set(),
+        generation_fingerprints={identity},
+        ever_inlined_fingerprints={identity},
+    )
+    assert filtered == [active]
 
 
 def test_filter_pr_active_groups_for_summary_keeps_orphan_when_generation_scope_unknown():
@@ -495,6 +534,7 @@ def test_format_resolution_metrics_block_display_still_open_override():
     block = format_resolution_metrics_block(
         {
             "resolution_rate_pct": 50.0,
+            "resolution_rate_display": "50.0%",
             "transition_count": 1,
             "denominator_active_prior": 2,
             "transitions_addressed": 1,
@@ -512,6 +552,7 @@ def test_format_resolution_metrics_block_display_override_includes_compare_faile
     block = format_resolution_metrics_block(
         {
             "resolution_rate_pct": 50.0,
+            "resolution_rate_display": "50.0%",
             "transition_count": 1,
             "denominator_active_prior": 2,
             "transitions_addressed": 1,
@@ -529,6 +570,7 @@ def test_format_resolution_metrics_block_display_override_caps_hidden_still_open
     block = format_resolution_metrics_block(
         {
             "resolution_rate_pct": 50.0,
+            "resolution_rate_display": "50.0%",
             "transition_count": 1,
             "denominator_active_prior": 2,
             "transitions_addressed": 1,
@@ -539,6 +581,26 @@ def test_format_resolution_metrics_block_display_override_caps_hidden_still_open
         display_still_open_prior=1,
     )
     assert "50.0% (1/2 prior active)" in block
+
+
+def test_format_resolution_metrics_block_display_override_denom_zero_is_na():
+    """P2.2: display override drives denominator to 0 → N/A (no prior cohort)."""
+    block = format_resolution_metrics_block(
+        {
+            "resolution_rate_pct": 50.0,
+            "resolution_rate_display": "50.0%",
+            "transition_count": 0,
+            "denominator_active_prior": 1,
+            "transitions_addressed": 0,
+            "transitions_dismissed": {},
+            "still_open_count": 1,
+            "compare_failed_count": 0,
+        },
+        display_still_open_prior=0,
+    )
+    assert "N/A (no prior cohort)" in block
+    assert "0.0%" not in block
+    assert "0/0" not in block
 
 
 def test_build_g9_resolution_prose_from_manifest_display_still_open_override():
@@ -640,7 +702,7 @@ def test_apply_publish_summary_thread_collapse_literal_merge_replacement():
         issue,
         ctx,
         publishable_fingerprints=set(),
-        collapsed_fingerprints={"stale-fp"},
+        collapsed_fingerprints={str(stale.id)},
     )
     assert "app/legacy.py" not in result.issue_comment
     assert "**Merge recommendation:**" in result.issue_comment

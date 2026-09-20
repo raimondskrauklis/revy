@@ -1,7 +1,7 @@
 # backend/tests/unit/test_github_finding_closure.py
 """Finding group closure rules — P0 pure functions."""
 import uuid
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -38,11 +38,53 @@ from app.services.github_finding_closure_rules import (
 )
 
 
-def test_should_close_absent_and_addressed_when_addressed_and_absent():
+def test_should_close_absent_and_addressed_when_path_gone():
     assert should_close_absent_and_addressed(
         state=GitHubFindingGroupState.active,
-        fingerprint_in_current_run=False,
-        resolution_status=ResolutionStatus.addressed,
+        bound_this_run=False,
+        this_run_finding_count=0,
+        path_gone=True,
+        closure_blocked_reason=None,
+    )
+
+
+def test_should_close_absent_and_addressed_when_zero_findings():
+    assert should_close_absent_and_addressed(
+        state=GitHubFindingGroupState.active,
+        bound_this_run=False,
+        this_run_finding_count=0,
+        path_gone=False,
+        closure_blocked_reason=None,
+    )
+
+
+def test_should_not_close_when_leftovers_remain():
+    assert not should_close_absent_and_addressed(
+        state=GitHubFindingGroupState.active,
+        bound_this_run=False,
+        this_run_finding_count=1,
+        path_gone=False,
+        closure_blocked_reason=None,
+    )
+
+
+def test_should_close_when_two_fixes_zero_findings():
+    """Two same-file fixes leave zero findings → both H2-close."""
+    assert should_close_absent_and_addressed(
+        state=GitHubFindingGroupState.active,
+        bound_this_run=False,
+        this_run_finding_count=0,
+        path_gone=False,
+        closure_blocked_reason=None,
+    )
+
+
+def test_should_not_close_when_bound_this_run():
+    assert not should_close_absent_and_addressed(
+        state=GitHubFindingGroupState.active,
+        bound_this_run=True,
+        this_run_finding_count=0,
+        path_gone=True,
         closure_blocked_reason=None,
     )
 
@@ -50,17 +92,9 @@ def test_should_close_absent_and_addressed_when_addressed_and_absent():
 def test_should_not_close_when_group_already_resolved():
     assert not should_close_absent_and_addressed(
         state=GitHubFindingGroupState.resolved,
-        fingerprint_in_current_run=False,
-        resolution_status=ResolutionStatus.addressed,
-        closure_blocked_reason=None,
-    )
-
-
-def test_should_not_close_when_fingerprint_in_run():
-    assert not should_close_absent_and_addressed(
-        state=GitHubFindingGroupState.active,
-        fingerprint_in_current_run=True,
-        resolution_status=ResolutionStatus.addressed,
+        bound_this_run=False,
+        this_run_finding_count=0,
+        path_gone=True,
         closure_blocked_reason=None,
     )
 
@@ -68,9 +102,20 @@ def test_should_not_close_when_fingerprint_in_run():
 def test_should_not_close_when_compare_failed():
     assert not should_close_absent_and_addressed(
         state=GitHubFindingGroupState.active,
-        fingerprint_in_current_run=False,
-        resolution_status=ResolutionStatus.addressed,
+        bound_this_run=False,
+        this_run_finding_count=0,
+        path_gone=True,
         closure_blocked_reason=COMPARE_FAILED_REASON,
+    )
+
+
+def test_should_not_close_when_neither_path_gone_nor_zero_findings():
+    assert not should_close_absent_and_addressed(
+        state=GitHubFindingGroupState.active,
+        bound_this_run=False,
+        this_run_finding_count=1,
+        path_gone=False,
+        closure_blocked_reason=None,
     )
 
 
@@ -86,8 +131,9 @@ def test_closure_fields_for_absent_and_addressed():
 def test_should_not_close_when_other_block_reason():
     assert not should_close_absent_and_addressed(
         state=GitHubFindingGroupState.active,
-        fingerprint_in_current_run=False,
-        resolution_status=ResolutionStatus.addressed,
+        bound_this_run=False,
+        this_run_finding_count=0,
+        path_gone=True,
         closure_blocked_reason="judge_failed",
     )
 
@@ -132,7 +178,7 @@ def test_should_reopen_absent_and_addressed_on_re_report():
     assert should_reopen_absent_and_addressed(
         state=GitHubFindingGroupState.resolved,
         resolution_method=ResolutionMethod.absent_and_addressed,
-        fingerprint_in_current_run=True,
+        bound_this_run=True,
     )
 
 
@@ -140,7 +186,7 @@ def test_should_not_reopen_when_group_active():
     assert not should_reopen_absent_and_addressed(
         state=GitHubFindingGroupState.active,
         resolution_method=ResolutionMethod.absent_and_addressed,
-        fingerprint_in_current_run=True,
+        bound_this_run=True,
     )
 
 
@@ -148,7 +194,7 @@ def test_should_not_reopen_judge_dismissed():
     assert not should_reopen_absent_and_addressed(
         state=GitHubFindingGroupState.resolved,
         resolution_method=ResolutionMethod.judge_dismissed,
-        fingerprint_in_current_run=True,
+        bound_this_run=True,
     )
 
 
@@ -352,7 +398,13 @@ async def test_apply_pass2_closure_closes_absent_addressed_group():
             AsyncMock(return_value=frozenset()),
         ):
             with patch(
-                "app.services.github_finding_closure._fingerprints_in_review_run",
+                "app.services.github_finding_closure._this_run_finding_counts_by_file_category",
+                AsyncMock(return_value={}),
+            ), patch(
+                "app.services.github_finding_closure._resolve_absent_paths",
+                AsyncMock(return_value=set()),
+            ), patch(
+                "app.services.github_finding_closure._bound_group_ids_this_run",
                 AsyncMock(return_value=set()),
             ):
                 closed = await apply_pass2_closure_for_review_run(
@@ -440,7 +492,13 @@ async def test_apply_pass2_closure_e2e_aged_group_outside_pairing():
             AsyncMock(return_value=frozenset()),
         ):
             with patch(
-                "app.services.github_finding_closure._fingerprints_in_review_run",
+                "app.services.github_finding_closure._this_run_finding_counts_by_file_category",
+                AsyncMock(return_value={}),
+            ), patch(
+                "app.services.github_finding_closure._resolve_absent_paths",
+                AsyncMock(return_value=set()),
+            ), patch(
+                "app.services.github_finding_closure._bound_group_ids_this_run",
                 AsyncMock(return_value=set()),
             ):
                 closed = await apply_pass2_closure_for_review_run(
@@ -509,6 +567,9 @@ async def test_apply_pass2_closure_after_file_deletion_pass1_stamp():
     session.scalar = AsyncMock(side_effect=[published_prior])
     session.scalars = AsyncMock(return_value=[group])
     session.flush = AsyncMock()
+    publish_rows = MagicMock()
+    publish_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=publish_rows)
 
     with patch(
         "app.services.github_resolution_metrics._fetch_compare_patches",
@@ -570,7 +631,13 @@ async def test_apply_pass2_closure_after_file_deletion_pass1_stamp():
             AsyncMock(return_value=frozenset()),
         ):
             with patch(
-                "app.services.github_finding_closure._fingerprints_in_review_run",
+                "app.services.github_finding_closure._this_run_finding_counts_by_file_category",
+                AsyncMock(return_value={}),
+            ), patch(
+                "app.services.github_finding_closure._resolve_absent_paths",
+                AsyncMock(return_value=set()),
+            ), patch(
+                "app.services.github_finding_closure._bound_group_ids_this_run",
                 AsyncMock(return_value=set()),
             ):
                 closed = await apply_pass2_closure_for_review_run(
@@ -875,4 +942,466 @@ async def test_verification_judge_slots_remaining_accounts_for_prior_outcomes():
         review_run_id=uuid.uuid4(),
     )
     assert remaining == 0
+
+
+@pytest.mark.asyncio
+async def test_fingerprints_in_review_run_uses_bound_group_not_current_title():
+    """Continuation keeps birth claim_slot; Pass 2 must treat that group as present."""
+    from app.constants.enums import ReviewProfile
+    from app.services.github_finding_closure import _fingerprints_in_review_run
+    from app.services.github_finding_reconcile import claim_slot_key, compute_fingerprint
+
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    revision_id = uuid.uuid4()
+    group_id = uuid.uuid4()
+
+    run = GitHubReviewRunORM(
+        revision_id=revision_id,
+        workspace_id=workspace_id,
+        status=GitHubReviewRunStatus.completed,
+        profile=ReviewProfile.standard,
+        provider="moonshot",
+    )
+    run.id = review_run_id
+    revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=2,
+        head_sha="def",
+    )
+    revision.id = revision_id
+
+    birth_fp = compute_fingerprint(
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        file_path="app/eval.py",
+        category=FindingCategory.security,
+        claim_slot=claim_slot_key("INFO eval"),
+    )
+    current_fp = compute_fingerprint(
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        file_path="app/eval.py",
+        category=FindingCategory.security,
+        claim_slot=claim_slot_key("CRITICAL eval"),
+    )
+    group = GitHubFindingGroupORM(
+        id=group_id,
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint=birth_fp,
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="CRITICAL eval",
+        message="unsafe",
+        file_path="app/eval.py",
+        claim_slot=claim_slot_key("INFO eval"),
+        last_seen_revision_id=revision_id,
+        resolution_status=ResolutionStatus.addressed,
+    )
+    finding = GitHubFindingORM(
+        review_run_id=review_run_id,
+        workspace_id=workspace_id,
+        group_id=group_id,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="CRITICAL eval",
+        message="unsafe",
+        file_path="app/eval.py",
+        start_line=10,
+    )
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, revision, group])
+    session.scalars = AsyncMock(return_value=[finding])
+    # _fingerprints_in_review_run now batches group lookups via execute.
+    # Return the group with its birth fingerprint so the recomputed title
+    # fallback is skipped — the test asserts birth_fp is used.
+    batch_row = MagicMock()
+    batch_row.id = group_id
+    batch_row.fingerprint = birth_fp
+    session.execute = AsyncMock(return_value=[batch_row])
+
+    fps = await _fingerprints_in_review_run(session, review_run_id=review_run_id)
+    assert birth_fp in fps
+    assert current_fp not in fps
+
+
+# ── P1.3 tests ──────────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_p1_bound_group_not_closed_by_h2():
+    """P1.3(1): Continuation-bound group stays open — Pass 2 must not close it."""
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    prior_revision_id = uuid.uuid4()
+    current_revision_id = uuid.uuid4()
+
+    run = GitHubReviewRunORM(
+        workspace_id=workspace_id,
+        revision_id=current_revision_id,
+        status=GitHubReviewRunStatus.completed,
+    )
+    run.id = review_run_id
+
+    published_prior = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="published",
+        base_sha="base",
+    )
+    published_prior.id = prior_revision_id
+
+    current_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=2,
+        head_sha="head",
+        base_sha="base",
+    )
+    current_revision.id = current_revision_id
+
+    group = GitHubFindingGroupORM(
+        id=uuid.uuid4(),
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="eval-fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="CRITICAL eval",
+        message="unsafe",
+        file_path="app/eval.py",
+        last_seen_revision_id=current_revision_id,  # BOUND this run
+        resolution_status=ResolutionStatus.addressed,
+    )
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, current_revision])
+    session.scalars = AsyncMock(return_value=[group])
+    session.scalar = AsyncMock(return_value=published_prior)
+    session.flush = AsyncMock()
+    publish_rows = MagicMock()
+    publish_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=publish_rows)
+
+    with patch(
+        "app.services.github_finding_closure.get_last_published_prior_revision",
+        AsyncMock(return_value=published_prior),
+    ):
+        with patch(
+            "app.services.github_finding_closure.get_intermediate_revision_ids_between",
+            AsyncMock(return_value=frozenset()),
+        ):
+            with patch(
+                "app.services.github_finding_closure._this_run_finding_counts_by_file_category",
+                AsyncMock(return_value={("app/eval.py", FindingCategory.security): 0}),
+            ):
+                with patch(
+                    "app.services.github_finding_closure._resolve_absent_paths",
+                    AsyncMock(return_value=set()),
+                ):
+                    with patch(
+                        "app.services.github_finding_closure._bound_group_ids_this_run",
+                        AsyncMock(return_value={group.id}),
+                    ):
+                        closed = await apply_pass2_closure_for_review_run(
+                            session, review_run_id=review_run_id
+                        )
+
+    assert closed == 0
+    assert group.state == GitHubFindingGroupState.active
+
+
+@pytest.mark.asyncio
+async def test_p1_two_leftovers_stay_open():
+    """P1.3(2): Two leftover claims same file+category (count≥1) → neither H2-closed."""
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    prior_revision_id = uuid.uuid4()
+    current_revision_id = uuid.uuid4()
+
+    run = GitHubReviewRunORM(
+        workspace_id=workspace_id,
+        revision_id=current_revision_id,
+        status=GitHubReviewRunStatus.completed,
+    )
+    run.id = review_run_id
+
+    published_prior = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="published",
+        base_sha="base",
+    )
+    published_prior.id = prior_revision_id
+
+    current_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=2,
+        head_sha="head",
+        base_sha="base",
+    )
+    current_revision.id = current_revision_id
+
+    group_a = GitHubFindingGroupORM(
+        id=uuid.uuid4(),
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="leftover-a",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="PAT",
+        message="msg",
+        file_path="app/page.tsx",
+        last_seen_revision_id=prior_revision_id,  # NOT bound this run
+        resolution_status=ResolutionStatus.addressed,
+    )
+    group_b = GitHubFindingGroupORM(
+        id=uuid.uuid4(),
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="leftover-b",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="innerHTML-class",
+        message="msg",
+        file_path="app/page.tsx",
+        last_seen_revision_id=prior_revision_id,
+        resolution_status=ResolutionStatus.addressed,
+    )
+
+    groups = [group_a, group_b]
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, current_revision])
+    session.scalars = AsyncMock(return_value=groups)
+    session.scalar = AsyncMock(return_value=published_prior)
+    session.flush = AsyncMock()
+    publish_rows = MagicMock()
+    publish_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=publish_rows)
+
+    with patch(
+        "app.services.github_finding_closure.get_last_published_prior_revision",
+        AsyncMock(return_value=published_prior),
+    ):
+        with patch(
+            "app.services.github_finding_closure.get_intermediate_revision_ids_between",
+            AsyncMock(return_value=frozenset()),
+        ):
+            with patch(
+                "app.services.github_finding_closure._this_run_finding_counts_by_file_category",
+                AsyncMock(
+                    return_value={
+                        ("app/page.tsx", FindingCategory.bug): 1  # one leftover
+                    }
+                ),
+            ):
+                with patch(
+                    "app.services.github_finding_closure._resolve_absent_paths",
+                    AsyncMock(return_value=set()),
+                ):
+                    with patch(
+                        "app.services.github_finding_closure._bound_group_ids_this_run",
+                        AsyncMock(return_value=set()),
+                    ):
+                        closed = await apply_pass2_closure_for_review_run(
+                            session, review_run_id=review_run_id
+                        )
+
+    assert closed == 0
+    assert group_a.state == GitHubFindingGroupState.active
+    assert group_b.state == GitHubFindingGroupState.active
+
+
+@pytest.mark.asyncio
+async def test_p1_zero_findings_both_resolve():
+    """P1.3(3): Zero this-run findings in file+category → both unbound groups resolve."""
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    prior_revision_id = uuid.uuid4()
+    current_revision_id = uuid.uuid4()
+
+    run = GitHubReviewRunORM(
+        workspace_id=workspace_id,
+        revision_id=current_revision_id,
+        status=GitHubReviewRunStatus.completed,
+    )
+    run.id = review_run_id
+
+    published_prior = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="published",
+        base_sha="base",
+    )
+    published_prior.id = prior_revision_id
+
+    current_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=2,
+        head_sha="head",
+        base_sha="base",
+    )
+    current_revision.id = current_revision_id
+
+    group_a = GitHubFindingGroupORM(
+        id=uuid.uuid4(),
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="fix-a",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="PAT fix",
+        message="msg",
+        file_path="app/page.tsx",
+        last_seen_revision_id=prior_revision_id,
+        resolution_status=ResolutionStatus.addressed,
+    )
+    group_b = GitHubFindingGroupORM(
+        id=uuid.uuid4(),
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="fix-b",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="innerHTML-class fix",
+        message="msg",
+        file_path="app/page.tsx",
+        last_seen_revision_id=prior_revision_id,
+        resolution_status=ResolutionStatus.addressed,
+    )
+
+    groups = [group_a, group_b]
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, current_revision])
+    session.scalars = AsyncMock(return_value=groups)
+    session.scalar = AsyncMock(return_value=published_prior)
+    session.flush = AsyncMock()
+    publish_rows = MagicMock()
+    publish_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=publish_rows)
+
+    with patch(
+        "app.services.github_finding_closure.get_last_published_prior_revision",
+        AsyncMock(return_value=published_prior),
+    ):
+        with patch(
+            "app.services.github_finding_closure.get_intermediate_revision_ids_between",
+            AsyncMock(return_value=frozenset()),
+        ):
+            with patch(
+                "app.services.github_finding_closure._this_run_finding_counts_by_file_category",
+                AsyncMock(return_value={}),  # zero findings
+            ):
+                with patch(
+                    "app.services.github_finding_closure._resolve_absent_paths",
+                    AsyncMock(return_value=set()),
+                ):
+                    with patch(
+                        "app.services.github_finding_closure._bound_group_ids_this_run",
+                        AsyncMock(return_value=set()),
+                    ):
+                        closed = await apply_pass2_closure_for_review_run(
+                            session, review_run_id=review_run_id
+                        )
+
+    assert closed == 2
+    assert group_a.state == GitHubFindingGroupState.resolved
+    assert group_a.resolution_method == ResolutionMethod.absent_and_addressed
+    assert group_b.state == GitHubFindingGroupState.resolved
+    assert group_b.resolution_method == ResolutionMethod.absent_and_addressed
+
+
+@pytest.mark.asyncio
+async def test_p1_path_gone_closes():
+    """P1.3(4): Path gone → unbound group resolves with absent_and_addressed."""
+    review_run_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+    prior_revision_id = uuid.uuid4()
+    current_revision_id = uuid.uuid4()
+
+    run = GitHubReviewRunORM(
+        workspace_id=workspace_id,
+        revision_id=current_revision_id,
+        status=GitHubReviewRunStatus.completed,
+    )
+    run.id = review_run_id
+
+    published_prior = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=1,
+        head_sha="published",
+        base_sha="base",
+    )
+    published_prior.id = prior_revision_id
+
+    current_revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=2,
+        head_sha="head",
+        base_sha="base",
+    )
+    current_revision.id = current_revision_id
+
+    group = GitHubFindingGroupORM(
+        id=uuid.uuid4(),
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint="deleted-fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Deleted file bug",
+        message="msg",
+        file_path="backend/probe/deleted.py",
+        last_seen_revision_id=prior_revision_id,
+        resolution_status=ResolutionStatus.addressed,
+    )
+
+    session = AsyncMock()
+    session.get = AsyncMock(side_effect=[run, current_revision])
+    session.scalars = AsyncMock(return_value=[group])
+    session.scalar = AsyncMock(return_value=published_prior)
+    session.flush = AsyncMock()
+    publish_rows = MagicMock()
+    publish_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=publish_rows)
+
+    with patch(
+        "app.services.github_finding_closure.get_last_published_prior_revision",
+        AsyncMock(return_value=published_prior),
+    ):
+        with patch(
+            "app.services.github_finding_closure.get_intermediate_revision_ids_between",
+            AsyncMock(return_value=frozenset()),
+        ):
+            with patch(
+                "app.services.github_finding_closure._this_run_finding_counts_by_file_category",
+                AsyncMock(return_value={}),  # zero findings
+            ):
+                with patch(
+                    "app.services.github_finding_closure._resolve_absent_paths",
+                    AsyncMock(return_value={"backend/probe/deleted.py"}),
+                ):
+                    with patch(
+                        "app.services.github_finding_closure._bound_group_ids_this_run",
+                        AsyncMock(return_value=set()),
+                    ):
+                        closed = await apply_pass2_closure_for_review_run(
+                            session, review_run_id=review_run_id
+                        )
+
+    assert closed == 1
+    assert group.state == GitHubFindingGroupState.resolved
+    assert group.resolution_method == ResolutionMethod.absent_and_addressed
 

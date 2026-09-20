@@ -239,6 +239,9 @@ async def test_apply_resolution_status_for_synchronize_updates_prior_groups():
     session.scalar = AsyncMock(side_effect=[prior_revision])
     session.scalars = AsyncMock(return_value=[group])
     session.flush = AsyncMock()
+    empty_rows = MagicMock()
+    empty_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=empty_rows)
 
     compare = CompareCommitsResult(
         files=(
@@ -340,6 +343,9 @@ async def test_apply_resolution_status_for_synchronize_stamps_compare_failed():
     session.scalar = AsyncMock(side_effect=[prior_revision])
     session.scalars = AsyncMock(return_value=[group])
     session.flush = AsyncMock()
+    empty_rows = MagicMock()
+    empty_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=empty_rows)
 
     failed_result = type(
         "CompareResult",
@@ -426,6 +432,9 @@ async def test_apply_resolution_status_for_synchronize_stamps_addressed_on_file_
     session.scalar = AsyncMock(side_effect=[prior_revision])
     session.scalars = AsyncMock(return_value=[group])
     session.flush = AsyncMock()
+    empty_rows = MagicMock()
+    empty_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=empty_rows)
 
     with patch(
         "app.services.github_resolution_metrics._fetch_compare_patches",
@@ -556,6 +565,7 @@ def test_build_resolution_pass_manifest_counts_transitions():
     assert manifest["transition_count"] == 2
     assert manifest["denominator_active_prior"] == 3
     assert manifest["resolution_rate_pct"] == 66.7
+    assert manifest["resolution_rate_display"] == "66.7%"
     assert manifest["compare_failed_count"] == 1
 
 
@@ -586,7 +596,7 @@ def test_build_resolution_pass_manifest_includes_rereported_stamp_cohort():
 
     assert manifest["denominator_active_prior"] == 1
     assert manifest["still_open_count"] == 1
-
+    assert manifest["resolution_rate_display"] == "0.0%"
 
 def test_build_resolution_pass_manifest_includes_unpublished_gap_last_seen():
     prior_revision_id = uuid.uuid4()
@@ -616,6 +626,7 @@ def test_build_resolution_pass_manifest_includes_unpublished_gap_last_seen():
 
     assert manifest["denominator_active_prior"] == 1
     assert manifest["still_open_count"] == 1
+    assert manifest["resolution_rate_display"] == "0.0%"
 
 
 @pytest.mark.asyncio
@@ -750,6 +761,9 @@ async def test_apply_resolution_status_for_synchronize_skipped_not_head_uses_las
     session = AsyncMock()
     session.scalars = AsyncMock(return_value=[group])
     session.flush = AsyncMock()
+    empty_rows = MagicMock()
+    empty_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=empty_rows)
 
     with patch(
         "app.services.github_resolution_metrics.get_last_published_prior_revision",
@@ -847,6 +861,9 @@ async def test_apply_resolution_status_hygiene_aged_cohort_empty_pairing():
     session.scalar = AsyncMock(side_effect=[published_prior])
     session.scalars = AsyncMock(return_value=[aged_group])
     session.flush = AsyncMock()
+    empty_rows = MagicMock()
+    empty_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=empty_rows)
 
     compare_result = type(
         "CompareResult",
@@ -939,6 +956,9 @@ async def test_apply_resolution_status_head_fail_closed():
     session.scalar = AsyncMock(side_effect=[prior_revision])
     session.scalars = AsyncMock(return_value=[group])
     session.flush = AsyncMock()
+    empty_rows = MagicMock()
+    empty_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=empty_rows)
 
     with patch(
         "app.services.github_resolution_metrics._fetch_compare_patches",
@@ -1027,6 +1047,9 @@ async def test_apply_resolution_status_head_fail_closed_when_compare_failed():
     session.scalar = AsyncMock(side_effect=[prior_revision])
     session.scalars = AsyncMock(return_value=[aged_group])
     session.flush = AsyncMock()
+    empty_rows = MagicMock()
+    empty_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=empty_rows)
 
     failed_result = type(
         "CompareResult",
@@ -1115,6 +1138,9 @@ async def test_apply_resolution_status_compare_failed_path_gone_still_open():
     session.scalar = AsyncMock(side_effect=[prior_revision])
     session.scalars = AsyncMock(return_value=[aged_group])
     session.flush = AsyncMock()
+    empty_rows = MagicMock()
+    empty_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=empty_rows)
 
     failed_result = type(
         "CompareResult",
@@ -1204,6 +1230,9 @@ async def test_apply_resolution_status_clears_stale_compare_failed_on_success():
     session.scalar = AsyncMock(side_effect=[prior_revision])
     session.scalars = AsyncMock(return_value=[aged_group])
     session.flush = AsyncMock()
+    empty_rows = MagicMock()
+    empty_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=empty_rows)
 
     compare_ok = type(
         "CompareResult",
@@ -1298,6 +1327,9 @@ async def test_apply_resolution_status_clears_stale_compare_failed_in_cohort():
     session.scalar = AsyncMock(side_effect=[prior_revision])
     session.scalars = AsyncMock(return_value=[cohort_group])
     session.flush = AsyncMock()
+    empty_rows = MagicMock()
+    empty_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=empty_rows)
 
     compare_ok = type(
         "CompareResult",
@@ -1413,6 +1445,9 @@ async def test_apply_resolution_status_pairing_repair_includes_published_earlier
     )
     session.get = AsyncMock(return_value=gap_revision)
     session.flush = AsyncMock()
+    empty_rows = MagicMock()
+    empty_rows.all.return_value = []
+    session.execute = AsyncMock(return_value=empty_rows)
 
     compare_ok = type(
         "CompareResult",
@@ -1579,6 +1614,7 @@ def test_build_resolution_pass_manifest_excludes_hygiene_from_rate():
     assert manifest["transition_count"] == 1
     assert manifest["transitions_addressed"] == 1
     assert manifest["resolution_rate_pct"] == 100.0
+    assert manifest["resolution_rate_display"] == "100.0%"
 
 
 @pytest.mark.asyncio
@@ -1604,8 +1640,9 @@ async def test_get_fingerprint_published_revision_ids_includes_review_run_findin
     )
     publish_rows = MagicMock()
     publish_rows.all = lambda: [row]
+    group_id = uuid.uuid4()
     finding_rows = MagicMock()
-    finding_rows.__iter__ = lambda self: iter([(review_run_id, "issue-comment-fp")])
+    finding_rows.__iter__ = lambda self: iter([(review_run_id, group_id)])
 
     session = AsyncMock()
     session.execute = AsyncMock(side_effect=[publish_rows, finding_rows])
@@ -1616,7 +1653,7 @@ async def test_get_fingerprint_published_revision_ids_includes_review_run_findin
         current_revision=current_revision,
     )
 
-    assert published == {"issue-comment-fp": revision_id}
+    assert published == {str(group_id): revision_id}
 
 
 def test_build_resolution_pass_manifest_hygiene_count_outside_stamp_cohort():
@@ -1650,3 +1687,106 @@ def test_build_resolution_pass_manifest_hygiene_count_outside_stamp_cohort():
     assert manifest["hygiene_path_removed_count"] == 1
     assert manifest["transition_count"] == 0
     assert manifest["denominator_active_prior"] == 0
+    assert manifest["resolution_rate_pct"] is None
+    assert manifest["resolution_rate_display"] == "N/A"
+
+
+# ── P1.4 regression: Pass 1 line-region unchanged ───────────────────────────
+
+
+def test_p1_patch_touches_line_region_false_for_distant_hunk():
+    """P1.4: A hunk elsewhere in the same file does NOT stamp addressed."""
+    # Finding is at lines 42-44. Hunk affects lines 10-12 only.
+    patch = "@@ -10,3 +10,4 @@\n def bar():\n-    old()\n+    new()\n     pass\n"
+    assert not github_resolution_metrics.patch_touches_line_region(
+        patch,
+        start_line=42,
+        end_line=44,
+    )
+
+
+# ── P2.3 test: fix-some prior cohort ─────────────────────────────────────────
+
+
+def test_build_resolution_pass_manifest_fix_some_prior_cohort():
+    """P2.3: N prior groups, this-run H2-closes K of them by group.id.
+
+    Verifies cohort identity works with group.id (not fingerprint via title+line).
+    After P0's continuation model, retitled groups stay in cohort, not superseded.
+    """
+    prior_revision_id = uuid.uuid4()
+    current_revision_id = uuid.uuid4()
+    pull_request_id = uuid.uuid4()
+
+    # 4 prior groups — all in pairing window
+    active_remaining = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint="fp-a",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Still open bug",
+        message="msg",
+        file_path="app/a.py",
+        last_seen_revision_id=prior_revision_id,
+        resolution_status=ResolutionStatus.still_open,
+    )
+    resolved_fix1 = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint="fp-fix1",
+        state=GitHubFindingGroupState.resolved,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Fixed bug 1",
+        message="msg",
+        file_path="app/b.py",
+        last_seen_revision_id=prior_revision_id,
+        resolution_method=ResolutionMethod.absent_and_addressed,
+        resolved_at_revision_id=current_revision_id,
+    )
+    resolved_fix2 = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint="fp-fix2",
+        state=GitHubFindingGroupState.resolved,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Fixed bug 2",
+        message="msg",
+        file_path="app/c.py",
+        last_seen_revision_id=prior_revision_id,
+        resolution_method=ResolutionMethod.absent_and_addressed,
+        resolved_at_revision_id=current_revision_id,
+    )
+    compare_blocked = GitHubFindingGroupORM(
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint="fp-blocked",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Blocked bug",
+        message="msg",
+        file_path="app/d.py",
+        last_seen_revision_id=prior_revision_id,
+        resolution_status=ResolutionStatus.still_open,
+        closure_blocked_reason="compare_failed",
+    )
+
+    manifest = github_resolution_metrics.build_resolution_pass_manifest(
+        [active_remaining, resolved_fix1, resolved_fix2, compare_blocked],
+        prior_revision_ids=frozenset({prior_revision_id}),
+        current_revision_id=current_revision_id,
+    )
+
+    # denominator = 4 total - 1 compare_blocked = 3
+    assert manifest["denominator_active_prior"] == 3
+    # transitions = 2 resolved this run (fix1, fix2)
+    assert manifest["transition_count"] == 2
+    assert manifest["transitions_addressed"] == 2
+    assert manifest["compare_failed_count"] == 1
+    assert manifest["still_open_count"] == 1
+    assert manifest["resolution_rate_pct"] == pytest.approx(66.7, abs=0.1)
+    assert manifest["resolution_rate_display"] == "66.7%"

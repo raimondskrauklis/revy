@@ -336,7 +336,7 @@ async def _fingerprints_by_review_run_ids(
     if not review_run_ids:
         return {}
     rows = await session.execute(
-        select(GitHubFindingORM.review_run_id, GitHubFindingGroupORM.fingerprint)
+        select(GitHubFindingORM.review_run_id, GitHubFindingGroupORM.id)
         .join(
             GitHubFindingGroupORM,
             GitHubFindingGroupORM.id == GitHubFindingORM.group_id,
@@ -347,10 +347,10 @@ async def _fingerprints_by_review_run_ids(
         )
     )
     grouped: dict[UUID, set[str]] = {}
-    for review_run_id, fingerprint in rows:
-        if review_run_id is None or not isinstance(fingerprint, str) or not fingerprint:
+    for review_run_id, group_id in rows:
+        if review_run_id is None or group_id is None:
             continue
-        grouped.setdefault(review_run_id, set()).add(fingerprint)
+        grouped.setdefault(review_run_id, set()).add(str(group_id))
     return {run_id: frozenset(fingerprints) for run_id, fingerprints in grouped.items()}
 
 
@@ -455,7 +455,9 @@ async def _build_synchronize_cohort_groups(
             group.last_seen_revision_id,
             group.last_seen_revision_id,
         )
-        published_revision_id = fingerprint_published_revision_ids.get(group.fingerprint)
+        published_revision_id = fingerprint_published_revision_ids.get(
+            str(group.id)
+        ) or fingerprint_published_revision_ids.get(group.fingerprint)
         in_cohort = _group_in_synchronize_cohort(
             group,
             pairing_revision_ids=pairing_revision_ids,
@@ -789,7 +791,12 @@ def build_resolution_pass_manifest(
     }
     transition_count = len(rate_transitions)
     denominator = len(denominator_groups)
-    resolution_rate_pct = round(100.0 * transition_count / denominator, 1) if denominator else 0.0
+    if denominator:
+        resolution_rate_pct = round(100.0 * transition_count / denominator, 1)
+        resolution_rate_display = f"{resolution_rate_pct}%"
+    else:
+        resolution_rate_pct = None
+        resolution_rate_display = "N/A"
     still_open_count = sum(
         1
         for group in denominator_groups
@@ -802,6 +809,7 @@ def build_resolution_pass_manifest(
         "transition_count": transition_count,
         "denominator_active_prior": denominator,
         "resolution_rate_pct": resolution_rate_pct,
+        "resolution_rate_display": resolution_rate_display,
         "compare_failed_count": compare_failed_count,
         "head_check_failed_count": head_check_failed_count,
         "hygiene_path_removed_count": hygiene_path_removed_count,

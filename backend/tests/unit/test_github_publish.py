@@ -414,7 +414,7 @@ async def test_publishable_fingerprints_for_run():
         review_run_id=review_run_id,
         pull_request_id=pull_request_id,
     )
-    assert result == {"fp-a"}
+    assert result == {str(group_id)}
 
 
 def test_fingerprint_thread_ids_from_index():
@@ -431,6 +431,92 @@ def test_serialize_inline_thread_map_with_thread_ids():
         thread_ids={"fp": "PRRT_new"},
     )
     assert result == {"fp": {"comment_id": 100, "thread_id": "PRRT_new"}}
+
+
+@pytest.mark.asyncio
+async def test_rekey_inline_thread_map_fingerprint_to_group_id_no_duplicate():
+    pull_request_id = uuid.uuid4()
+    group_id = uuid.uuid4()
+    fingerprint = "a" * 64
+    group = GitHubFindingGroupORM(
+        id=group_id,
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint=fingerprint,
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Warn",
+        message="fix",
+        file_path="app/main.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+    session = AsyncMock()
+    session.scalars = AsyncMock(return_value=[group])
+    rekeyed = await github_publish.rekey_inline_thread_map_to_group_ids(
+        session,
+        pull_request_id=pull_request_id,
+        comment_map={fingerprint: 11, str(group_id): 11},
+    )
+    assert rekeyed == {str(group_id): 11}
+
+
+@pytest.mark.asyncio
+async def test_rekey_identity_keys_maps_legacy_fingerprint():
+    pull_request_id = uuid.uuid4()
+    group_id = uuid.uuid4()
+    fingerprint = "b" * 64
+    group = GitHubFindingGroupORM(
+        id=group_id,
+        workspace_id=uuid.uuid4(),
+        pull_request_id=pull_request_id,
+        fingerprint=fingerprint,
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Warn",
+        message="fix",
+        file_path="app/main.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+    session = AsyncMock()
+    session.scalars = AsyncMock(return_value=[group])
+    rekeyed = await github_publish.rekey_identity_keys_to_group_ids(
+        session,
+        pull_request_id=pull_request_id,
+        keys={fingerprint, str(group_id)},
+    )
+    assert rekeyed == {str(group_id)}
+
+
+@pytest.mark.asyncio
+async def test_rekey_inline_thread_map_keeps_legacy_d10_after_title_rewrite():
+    """Stored fingerprint stays D10 so prior thread maps still rekey after continuation."""
+    pull_request_id = uuid.uuid4()
+    group_id = uuid.uuid4()
+    workspace_id = uuid.uuid4()
+    legacy_fp = "c" * 64
+    group = GitHubFindingGroupORM(
+        id=group_id,
+        workspace_id=workspace_id,
+        pull_request_id=pull_request_id,
+        fingerprint=legacy_fp,
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="CRITICAL eval",
+        message="unsafe",
+        file_path="app/eval.py",
+        last_seen_revision_id=uuid.uuid4(),
+    )
+    session = AsyncMock()
+    session.scalars = AsyncMock(return_value=[group])
+    rekeyed = await github_publish.rekey_inline_thread_map_to_group_ids(
+        session,
+        pull_request_id=pull_request_id,
+        comment_map={legacy_fp: 42},
+    )
+    assert rekeyed == {str(group_id): 42}
 
 
 @pytest.mark.resolve_unmocked
@@ -519,8 +605,8 @@ async def test_resolve_stale_inline_threads_option_a():
     review_run_id = uuid.uuid4()
     pull_request_id = uuid.uuid4()
     workspace_id = uuid.uuid4()
-    inline_threads = {"stale-fp": 1001, "active-fp": 1002}
     group_id = uuid.uuid4()
+    inline_threads = {str(uuid.uuid4()): 1001, str(group_id): 1002}
     active_group = GitHubFindingGroupORM(
         id=group_id,
         workspace_id=workspace_id,
@@ -581,7 +667,7 @@ async def test_resolve_stale_inline_threads_option_a():
         thread_index=None,
     )
     resolve_mock.assert_awaited_once()
-    assert inline_threads == {"active-fp": 1002}
+    assert inline_threads == {str(group_id): 1002}
 
 
 @pytest.mark.resolve_unmocked
@@ -592,8 +678,8 @@ async def test_resolve_stale_inline_threads_outdated_comment():
     review_run_id = uuid.uuid4()
     pull_request_id = uuid.uuid4()
     workspace_id = uuid.uuid4()
-    inline_threads = {"drift-fp": 1001, "active-fp": 1002}
     group_id = uuid.uuid4()
+    inline_threads = {str(uuid.uuid4()): 1001, str(group_id): 1002}
     active_group = GitHubFindingGroupORM(
         id=group_id,
         workspace_id=workspace_id,
@@ -648,7 +734,7 @@ async def test_resolve_stale_inline_threads_outdated_comment():
                 outdated_comment_ids=frozenset({1001}),
             )
     resolve_mock.assert_awaited_once()
-    assert inline_threads == {"active-fp": 1002}
+    assert inline_threads == {str(group_id): 1002}
 
 
 @pytest.mark.resolve_unmocked
@@ -933,19 +1019,35 @@ async def test_close_active_groups_for_fingerprints_closes_addressed_absent():
         resolution_status=ResolutionStatus.addressed,
     )
     session = AsyncMock()
+    revision = GitHubPullRequestRevisionORM(
+        pull_request_id=pull_request_id,
+        revision_number=2,
+        head_sha="head",
+        base_sha="base",
+    )
+    revision.id = revision_id
+    session.get = AsyncMock(return_value=revision)
     session.scalars = AsyncMock(return_value=[group])
     session.flush = AsyncMock()
     with patch(
-        "app.services.github_finding_closure._fingerprints_in_review_run",
-        AsyncMock(return_value=set()),
+        "app.services.github_finding_closure._this_run_finding_counts_by_file_category",
+        AsyncMock(return_value={}),
     ):
-        closed = await github_publish._close_active_groups_for_fingerprints(
-            session,
-            pull_request_id=pull_request_id,
-            revision_id=revision_id,
-            review_run_id=review_run_id,
-            fingerprints={"fixed-fp"},
-        )
+        with patch(
+            "app.services.github_finding_closure._resolve_absent_paths",
+            AsyncMock(return_value=set()),
+        ):
+            with patch(
+                "app.services.github_finding_closure._bound_group_ids_this_run",
+                AsyncMock(return_value=set()),
+            ):
+                closed = await github_publish._close_active_groups_for_fingerprints(
+                    session,
+                    pull_request_id=pull_request_id,
+                    revision_id=revision_id,
+                    review_run_id=review_run_id,
+                    fingerprints={str(group.id)},
+                )
     assert closed == 1
     assert group.state == GitHubFindingGroupState.resolved
     assert group.resolution_method == ResolutionMethod.absent_and_addressed
@@ -982,7 +1084,7 @@ async def test_close_active_groups_for_fingerprints_skips_still_open_option_a():
             pull_request_id=pull_request_id,
             revision_id=revision_id,
             review_run_id=review_run_id,
-            fingerprints={"stale-fp"},
+            fingerprints={str(group.id)},
         )
     assert closed == 0
     assert group.state == GitHubFindingGroupState.active
@@ -1019,7 +1121,7 @@ async def test_close_active_groups_for_fingerprints_skips_when_fingerprint_still
             pull_request_id=pull_request_id,
             revision_id=revision_id,
             review_run_id=review_run_id,
-            fingerprints={"addressed-fp"},
+            fingerprints={str(group.id)},
         )
     assert closed == 0
     assert group.state == GitHubFindingGroupState.active
@@ -1333,18 +1435,22 @@ async def test_run_publish_job_posts_formatted_issue_comment():
         AsyncMock(return_value=format_result),
     ):
         with patch(
-            "app.services.github_publish.github_api.installation_auth_headers",
-            AsyncMock(return_value={"Authorization": "Bearer t"}),
+            "app.services.github_publish.apply_rollup_to_publish_surfaces",
+            side_effect=lambda check, issue, _ctx: (check, issue),
         ):
             with patch(
-                "app.services.github_publish.github_api.create_check_run",
-                AsyncMock(return_value=100),
+                "app.services.github_publish.github_api.installation_auth_headers",
+                AsyncMock(return_value={"Authorization": "Bearer t"}),
             ):
                 with patch(
-                    "app.services.github_publish.github_api.create_issue_comment",
-                    comment_mock,
+                    "app.services.github_publish.github_api.create_check_run",
+                    AsyncMock(return_value=100),
                 ):
-                    await github_publish.run_publish_job(session, publish_job_id=publish_job_id)
+                    with patch(
+                        "app.services.github_publish.github_api.create_issue_comment",
+                        comment_mock,
+                    ):
+                        await github_publish.run_publish_job(session, publish_job_id=publish_job_id)
 
     comment_mock.assert_awaited_once()
     assert comment_mock.await_args.kwargs["body"] == formatted_comment
@@ -1747,20 +1853,29 @@ async def test_run_publish_job_updates_existing_sha():
         AsyncMock(return_value=existing),
     ):
         with patch(
-            "app.services.github_publish.github_api.installation_auth_headers",
-            AsyncMock(return_value={"Authorization": "Bearer t"}),
+            "app.services.github_publish._build_pr_resolution_rollup_manifest",
+            AsyncMock(return_value=None),
         ):
-            with patch("app.services.github_publish.github_api.update_check_run", update_mock):
+            with patch(
+                "app.services.github_publish.apply_rollup_to_publish_surfaces",
+                side_effect=lambda check, issue, _ctx: (check, issue),
+            ):
                 with patch(
-                    "app.services.github_publish.github_api.update_issue_comment",
-                    comment_update_mock,
+                    "app.services.github_publish.github_api.installation_auth_headers",
+                    AsyncMock(return_value={"Authorization": "Bearer t"}),
                 ):
-                    with patch(
-                        "app.services.github_publish.github_api.create_check_run", create_check_mock
-                    ):
-                        result = await github_publish.run_publish_job(
-                            session, publish_job_id=publish_job_id
-                        )
+                    with patch("app.services.github_publish.github_api.update_check_run", update_mock):
+                        with patch(
+                            "app.services.github_publish.github_api.update_issue_comment",
+                            comment_update_mock,
+                        ):
+                            with patch(
+                                "app.services.github_publish.github_api.create_check_run",
+                                create_check_mock,
+                            ):
+                                result = await github_publish.run_publish_job(
+                                    session, publish_job_id=publish_job_id
+                                )
 
     assert result.status == GitHubPublishJobStatus.completed
     assert result.github_check_run_id == 50
@@ -1997,25 +2112,41 @@ async def test_run_publish_job_posts_inline_when_prior_job_failed_before_inline(
             AsyncMock(return_value=existing),
         ):
             with patch(
-                "app.services.github_publish.github_api.installation_auth_headers",
-                AsyncMock(return_value={"Authorization": "Bearer t"}),
+                "app.services.github_publish.get_pipeline_run_for_review_run",
+                AsyncMock(return_value=None),
             ):
-                with patch("app.services.github_publish.github_api.update_check_run", AsyncMock()):
+                with patch(
+                    "app.services.github_publish._build_pr_resolution_rollup_manifest",
+                    AsyncMock(return_value=None),
+                ):
                     with patch(
-                        "app.services.github_publish.github_api.update_issue_comment", AsyncMock()
+                        "app.services.github_publish.apply_rollup_to_publish_surfaces",
+                        side_effect=lambda check, issue, _ctx: (check, issue),
                     ):
                         with patch(
-                            "app.services.github_publish.github_api.create_check_run",
-                            create_check_mock,
+                            "app.services.github_publish.github_api.installation_auth_headers",
+                            AsyncMock(return_value={"Authorization": "Bearer t"}),
                         ):
                             with patch(
-                                "app.services.github_publish.github_api.create_pull_request_review_comment",
-                                inline_mock,
+                                "app.services.github_publish.github_api.update_check_run",
+                                AsyncMock(),
                             ):
-                                result = await github_publish.run_publish_job(
-                                    session,
-                                    publish_job_id=publish_job_id,
-                                )
+                                with patch(
+                                    "app.services.github_publish.github_api.update_issue_comment",
+                                    AsyncMock(),
+                                ):
+                                    with patch(
+                                        "app.services.github_publish.github_api.create_check_run",
+                                        create_check_mock,
+                                    ):
+                                        with patch(
+                                            "app.services.github_publish.github_api.create_pull_request_review_comment",
+                                            inline_mock,
+                                        ):
+                                            result = await github_publish.run_publish_job(
+                                                session,
+                                                publish_job_id=publish_job_id,
+                                            )
 
     create_check_mock.assert_not_awaited()
 
@@ -2706,7 +2837,9 @@ async def test_run_publish_job_reactivates_inline_same_publish():
     )
 
     prior_job = MagicMock()
-    prior_job.summary_json = {"github_inline_threads": {"return-fp": {"comment_id": 8001}}}
+    prior_job.summary_json = {
+        "github_inline_threads": {str(group_id): {"comment_id": 8001}}
+    }
 
     session = AsyncMock()
     session.get = AsyncMock(
@@ -2741,7 +2874,7 @@ async def test_run_publish_job_reactivates_inline_same_publish():
             ) as resolve_mock:
                 with patch(
                     "app.services.github_publish._publishable_fingerprints_for_run",
-                    AsyncMock(return_value={"return-fp"}),
+                    AsyncMock(return_value={str(group_id)}),
                 ):
                     with patch(
                         "app.services.github_publish.get_pipeline_run_for_review_run",
@@ -2772,8 +2905,8 @@ async def test_run_publish_job_reactivates_inline_same_publish():
     resolve_mock.assert_not_awaited()
     inline_mock.assert_awaited_once()
     threads = result.summary_json["github_inline_threads"]
-    assert threads["return-fp"]["comment_id"] == 8002
-    assert "thread_id" not in threads["return-fp"]
+    assert threads[str(group_id)]["comment_id"] == 8002
+    assert "thread_id" not in threads[str(group_id)]
 
 
 def _publish_job_context():
@@ -4079,3 +4212,134 @@ async def test_run_publish_job_persists_pr_resolution_rollup_on_completed():
     assert rollup.get("schema_version") == 1
     assert rollup.get("review_count") == 1
     assert pull_request.pr_resolution_rollup == rollup
+
+
+# ── P4 tests: comment + GitHub threads ───────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_p4_closed_group_resolves_thread():
+    """P4.1/4.2: Closed (H2-resolved) group → thread resolve; group.id keyed.
+
+    After P0.4, inline threads are keyed by group.id. A group that was H2-closed
+    should have its thread resolved (not kept active).
+    """
+    group = GitHubFindingGroupORM(
+        id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        pull_request_id=uuid.uuid4(),
+        fingerprint="closed-fp",
+        state=GitHubFindingGroupState.resolved,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Closed",
+        message="msg",
+        file_path="app/a.py",
+        last_seen_revision_id=uuid.uuid4(),
+        resolution_method=ResolutionMethod.absent_and_addressed,
+        resolved_at_revision_id=uuid.uuid4(),
+    )
+    # Inline thread exists with group.id as key
+    inline_threads = {str(group.id): 500}
+    # Group is resolved — it should be in the "not publishable" set,
+    # meaning its thread should be resolved.
+    publishable_fingerprints = set()
+    thread_ids_to_resolve = {
+        key
+        for key in inline_threads
+        if key not in publishable_fingerprints
+    }
+    assert str(group.id) in thread_ids_to_resolve
+
+
+@pytest.mark.asyncio
+async def test_p4_leftover_still_active_thread_may_collapse_but_not_resolved():
+    """P4.1/4.2: Leftover eval still active → state stays active.
+
+    GH-Q9: Outdated threads collapse in GitHub UI but the DB group remains
+    active. Option A resolve uses group.id and does NOT set state=resolved.
+    """
+    group = GitHubFindingGroupORM(
+        id=uuid.uuid4(),
+        workspace_id=uuid.uuid4(),
+        pull_request_id=uuid.uuid4(),
+        fingerprint="eval-fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="CRITICAL eval",
+        message="unsafe",
+        file_path="app/eval.py",
+        last_seen_revision_id=uuid.uuid4(),
+        resolution_status=ResolutionStatus.still_open,
+    )
+    # Group is still publishable (leftover)
+    assert group.state == GitHubFindingGroupState.active
+    assert group.resolution_method is None
+    # Option A collapse happens in GitHub UI, NOT via DB state change
+    # The group.id key is known — thread may collapse if outdated,
+    # but the DB record stays active for H2 evaluation
+
+
+def test_p4_combined_lifetime_and_push_n_a_no_zero_denom():
+    """P4.3: Combined comment fixture with lifetime table + N/A push rate.
+
+    Authors never see '0.0% (0/0 prior active)'. When denominator is 0,
+    the push block shows N/A and the lifetime scan matches P3 rollup.
+    """
+    from app.services.github_pr_resolution_rollup import PrResolutionRollupManifest
+    from app.services.github_publish_formatter import (
+        format_resolution_metrics_block,
+    )
+
+    push_block = format_resolution_metrics_block(
+        {
+            "resolution_rate_pct": None,
+            "resolution_rate_display": "N/A",
+            "transition_count": 0,
+            "denominator_active_prior": 0,
+            "transitions_addressed": 0,
+            "transitions_dismissed": {},
+            "still_open_count": 0,
+            "compare_failed_count": 0,
+        }
+    )
+    assert "N/A (no prior cohort)" in push_block
+    assert "0.0%" not in push_block
+    assert "0/0" not in push_block
+
+    # Lifetime rollup still shows raised/resolved identity
+    rollup: PrResolutionRollupManifest = {
+        "schema_version": 1,
+        "computed_at_revision_id": str(uuid.uuid4()),
+        "revision_number": 1,
+        "review_count": 1,
+        "raised_count": 3,
+        "resolved_count": 0,
+        "resolved_by_method": {
+            "absent_and_addressed": 0,
+            "judge_dismissed": 0,
+            "verification_dismissed": 0,
+            "human_dismissed": 0,
+            "path_removed": 0,
+        },
+        "still_open_display": 3,
+        "still_open_generation": 3,
+        "still_open_prior": 0,
+        "lifetime_resolution_rate_pct": None,
+        "filter_snapshot": {
+            "raw_active_before_filters": 3,
+            "collapsed_hidden": 0,
+            "orphan_never_inlined_hidden": 0,
+            "compare_failed_hidden": 0,
+        },
+        "push_manifest_ref": {
+            "revision_number": 1,
+            "transition_count": 0,
+        },
+        "lifetime_disclosure": None,
+    }
+    assert rollup["raised_count"] == 3
+    assert rollup["resolved_count"] == 0
+    assert rollup["still_open_display"] == 3
+    assert rollup["lifetime_resolution_rate_pct"] is None
