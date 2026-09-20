@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import time
 from dataclasses import dataclass, replace
@@ -1541,10 +1542,21 @@ async def _close_active_groups_for_fingerprints(
     if not fingerprints:
         return 0
     group_ids: list[UUID] = []
+    non_uuid_keys: list[str] = []
     for key in fingerprints:
         parsed = _parse_group_id_key(key)
         if parsed is not None:
             group_ids.append(parsed)
+        else:
+            non_uuid_keys.append(key)
+    if non_uuid_keys:
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            "_close_active_groups_for_fingerprints: %d legacy non-UUID keys ignored "
+            "(first: %s)",
+            len(non_uuid_keys),
+            non_uuid_keys[0],
+        )
     if not group_ids:
         return 0
     # Circular import: github_finding_closure → github_resolution_metrics → github_publish.
@@ -1554,13 +1566,13 @@ async def _close_active_groups_for_fingerprints(
         _this_run_finding_counts_by_file_category,
     )
 
+    revision = await session.get(GitHubPullRequestRevisionORM, revision_id)
+    if revision is None:
+        return 0
+
     bound_group_ids = await _bound_group_ids_this_run(session, revision_id=revision_id)
     counts_by_key = await _this_run_finding_counts_by_file_category(
         session, review_run_id=review_run_id
-    )
-    absent_paths = await _resolve_absent_paths(
-        session,
-        revision=await session.get(GitHubPullRequestRevisionORM, revision_id),
     )
     groups = list(
         await session.scalars(
@@ -1570,6 +1582,12 @@ async def _close_active_groups_for_fingerprints(
                 GitHubFindingGroupORM.state == GitHubFindingGroupState.active,
             )
         )
+    )
+    group_file_paths = frozenset({g.file_path for g in groups if g.file_path})
+    absent_paths = await _resolve_absent_paths(
+        session,
+        revision=revision,
+        file_paths=group_file_paths,
     )
     closed = 0
     for group in groups:
