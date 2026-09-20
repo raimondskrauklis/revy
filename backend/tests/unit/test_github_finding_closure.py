@@ -1015,6 +1015,13 @@ async def test_fingerprints_in_review_run_uses_bound_group_not_current_title():
     session = AsyncMock()
     session.get = AsyncMock(side_effect=[run, revision, group])
     session.scalars = AsyncMock(return_value=[finding])
+    # _fingerprints_in_review_run now batches group lookups via execute.
+    # Return the group with its birth fingerprint so the recomputed title
+    # fallback is skipped — the test asserts birth_fp is used.
+    batch_row = MagicMock()
+    batch_row.id = group_id
+    batch_row.fingerprint = birth_fp
+    session.execute = AsyncMock(return_value=[batch_row])
 
     fps = await _fingerprints_in_review_run(session, review_run_id=review_run_id)
     assert birth_fp in fps
