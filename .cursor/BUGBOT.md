@@ -4,7 +4,7 @@
 
 When reviewing **backend** (and later changelog) changes for this program, treat these as authoritative:
 
-- [RESOLUTION_HONESTY_P4_EXECUTION.md](../docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_P4_EXECUTION.md) — P4 LOOP (comment + GitHub threads, Outdated collapse, Option A group.id)
+- [RESOLUTION_HONESTY_P5_EXECUTION.md](../docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_P5_EXECUTION.md) — P5 LOOP (dogfood gates, gap pass, doc-sync + changelog)
 - [RESOLUTION_HONESTY_FINDINGS.md](../docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_FINDINGS.md) — RH-Q1–Q12
 - [RESOLUTION_HONESTY_GENERAL_PLAN.md](../docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_GENERAL_PLAN.md) — P0–P5 goals
 

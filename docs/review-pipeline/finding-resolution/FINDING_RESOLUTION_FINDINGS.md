@@ -201,7 +201,7 @@ flowchart TD
 |----|----------|--------|------------|
 | FR-Q1 | What is the **product** resolution vocabulary? | **locked** | Addressed / Dismissed / Still open / Superseded — see general plan |
 | FR-Q2 | Should `addressed` set `group.state=resolved`? | **locked** | Yes, via Pass 2 rules (absent+addressed); not heuristic-only on sync |
-| FR-Q3 | Reconcile absent fingerprint → `resolved`? | **locked** | Yes when `resolution_status=addressed` |
+| FR-Q3 | Reconcile absent fingerprint → `resolved`? | **locked** | Yes when `resolution_status=addressed` · **Superseded by [resolution-honesty RH-Q9](../resolution-honesty/RESOLUTION_HONESTY_FINDINGS.md) — Pass 2 no longer requires `addressed`** |
 | FR-Q4 | Judge on next push for `still_open` escalation groups? | **locked** | Pass 3 verification judge, max 5/run |
 | FR-Q5 | Human dismiss scope (API only vs UI)? | **addressed** | P4 admin API + reviewer dismiss action (R7.6 full UX defer) |
 | FR-Q6 | Use judge vs diff-only for `addressed`? | **locked** | Layered: Pass 1 diff, Pass 3 judge for escalation still-open |

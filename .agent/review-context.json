@@ -6,8 +6,8 @@
       "scope": ["backend/**", "frontend/**"],
       "paths": [
         {
-          "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_P4_EXECUTION.md",
-          "description": "Resolution honesty P4 — comment + GitHub threads (Outdated collapse, Option A group.id, lifetime copy)"
+          "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_P5_EXECUTION.md",
+          "description": "Resolution honesty P5 — dogfood gates, gap pass, doc-sync + changelog"
         },
         {
           "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_FINDINGS.md",
