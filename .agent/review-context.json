@@ -1,21 +1,21 @@
 {
-  "active_program": "resolution-honesty",
+  "active_program": "console-ux-upgrade",
   "programs": [
     {
-      "id": "resolution-honesty",
-      "scope": ["backend/**", "frontend/**"],
+      "id": "console-ux-upgrade",
+      "scope": ["frontend/**"],
       "paths": [
         {
-          "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_P5_EXECUTION.md",
-          "description": "Resolution honesty P5 — dogfood gates, gap pass, doc-sync + changelog"
+          "path": "docs/visual-identity/console-ux-upgrade/CONSOLE_UX_UPGRADE_P0_EXECUTION.md",
+          "description": "Console UX + mobile/layout upgrade — P0 execution (shell, sidebar, responsive layout)"
         },
         {
-          "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_FINDINGS.md",
-          "description": "Resolution honesty baseline — RH-Q1–Q12"
+          "path": "docs/visual-identity/console-ux-upgrade/UIUX_CONSOLE_FINDINGS.md",
+          "description": "Console UX audit — 12 findings (C1–m4)"
         },
         {
-          "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_GENERAL_PLAN.md",
-          "description": "Resolution honesty general plan — P0–P5"
+          "path": "docs/visual-identity/console-ux-upgrade/UIUX_CONSOLE_GENERAL_PLAN.md",
+          "description": "Console UX + mobile/layout general plan — P0–P3"
         }
       ]
     }

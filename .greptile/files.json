@@ -1,26 +1,23 @@
 {
   "files": [
     {
-      "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_P0_EXECUTION.md",
-      "description": "Resolution honesty P0 \u2014 persistent identity cutover (claim_slot, continuation, inline keys)",
+      "path": "docs/visual-identity/console-ux-upgrade/CONSOLE_UX_UPGRADE_P0_EXECUTION.md",
+      "description": "Console UX + mobile/layout upgrade \u2014 P0 execution (shell, sidebar, responsive layout)",
       "scope": [
-        "backend/**",
         "frontend/**"
       ]
     },
     {
-      "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_FINDINGS.md",
-      "description": "Resolution honesty baseline \u2014 RH-Q1\u2013Q12",
+      "path": "docs/visual-identity/console-ux-upgrade/UIUX_CONSOLE_FINDINGS.md",
+      "description": "Console UX audit \u2014 12 findings (C1\u2013m4)",
       "scope": [
-        "backend/**",
         "frontend/**"
       ]
     },
     {
-      "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_GENERAL_PLAN.md",
-      "description": "Resolution honesty general plan \u2014 P0\u2013P5",
+      "path": "docs/visual-identity/console-ux-upgrade/UIUX_CONSOLE_GENERAL_PLAN.md",
+      "description": "Console UX + mobile/layout general plan \u2014 P0\u2013P3",
       "scope": [
-        "backend/**",
         "frontend/**"
       ]
     }
