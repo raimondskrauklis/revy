@@ -299,3 +299,191 @@ async def test_review_count_for_in_flight_publish_includes_current():
     session.scalar = AsyncMock(return_value=2)
     count = await review_count_for_in_flight_publish(session, pull_request_id=uuid.uuid4())
     assert count == 3
+
+
+# ── P3 tests: lifetime rollup ───────────────────────────────────────────────
+
+
+def test_p3_raised_does_not_shrink_on_rewrite():
+    """P3.1: Two revisions, second retitles leftover claims via continuation.
+    raised_count stays the unique claims; resolved_count only H2/dismiss.
+    No supersede rows are created after P0.
+    """
+    # First revision: two claims raised (security + bug)
+    claim_1 = _group(
+        id=uuid.uuid4(),
+        fingerprint="claim-1-fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="CRITICAL eval",
+        file_path="app/eval.py",
+    )
+    claim_2 = _group(
+        id=uuid.uuid4(),
+        fingerprint="claim-2-fp",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="PAT issue",
+        file_path="app/page.tsx",
+    )
+
+    # Second revision: claim_1 retitled via continuation (same group.id)
+    # claim_2 fixed (H2-closed)
+    claim_1_retitled = _group(
+        id=claim_1.id,
+        fingerprint=claim_1.fingerprint,
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.critical,
+        category=FindingCategory.security,
+        title="INFO eval",
+        file_path="app/eval.py",
+    )
+    claim_2_resolved = _group(
+        id=claim_2.id,
+        fingerprint=claim_2.fingerprint,
+        state=GitHubFindingGroupState.resolved,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="PAT issue",
+        file_path="app/page.tsx",
+        resolution_method=ResolutionMethod.absent_and_addressed,
+        resolved_at_revision_id=uuid.uuid4(),
+    )
+
+    all_pr_groups = [claim_1_retitled, claim_2_resolved]
+    ctx = _ctx([claim_1_retitled], pr_active_groups=[claim_1_retitled], revision_number=2)
+    rollup = build_pr_resolution_rollup(
+        ctx,
+        all_pr_groups,
+        review_count=2,
+        computed_at_revision_id=uuid.uuid4(),
+        raw_pr_active_groups=[claim_1_retitled],
+        publishable_fingerprints={str(claim_1_retitled.id)},
+        collapsed_fingerprints=set(),
+        prior_revision_ids_by_resolve_revision={},
+    )
+
+    assert rollup["raised_count"] == 2
+    assert rollup["resolved_count"] == 1
+    assert rollup["still_open_display"] == 1
+    assert rollup["resolved_by_method"]["absent_and_addressed"] == 1
+
+
+def test_p3_h2_resolved_psr_q15_identity():
+    """P3.2: N unique claims, K H2-closed, leftovers active.
+    Assert raised == resolved + still_open_display + hidden_total (PSR-Q15).
+    """
+    rev_id = uuid.uuid4()
+    claim_a = _group(
+        id=uuid.uuid4(),
+        fingerprint="fp-a",
+        state=GitHubFindingGroupState.resolved,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Fixed A",
+        file_path="app/a.py",
+        resolution_method=ResolutionMethod.absent_and_addressed,
+        resolved_at_revision_id=rev_id,
+    )
+    claim_b = _group(
+        id=uuid.uuid4(),
+        fingerprint="fp-b",
+        state=GitHubFindingGroupState.resolved,
+        severity=FindingSeverity.error,
+        category=FindingCategory.bug,
+        title="Fixed B",
+        file_path="app/b.py",
+        resolution_method=ResolutionMethod.judge_dismissed,
+        resolved_at_revision_id=rev_id,
+    )
+    leftover_c = _group(
+        id=uuid.uuid4(),
+        fingerprint="fp-c",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Leftover C",
+        file_path="app/c.py",
+    )
+    compare_blocked_d = _group(
+        id=uuid.uuid4(),
+        fingerprint="fp-d",
+        state=GitHubFindingGroupState.active,
+        severity=FindingSeverity.warning,
+        category=FindingCategory.bug,
+        title="Blocked D",
+        file_path="app/d.py",
+        closure_blocked_reason="compare_failed",
+    )
+
+    all_pr_groups = [claim_a, claim_b, leftover_c, compare_blocked_d]
+    ctx = _ctx([leftover_c], pr_active_groups=[leftover_c, compare_blocked_d], revision_number=2)
+    rollup = build_pr_resolution_rollup(
+        ctx,
+        all_pr_groups,
+        review_count=2,
+        computed_at_revision_id=uuid.uuid4(),
+        raw_pr_active_groups=[leftover_c, compare_blocked_d],
+        publishable_fingerprints={str(leftover_c.id)},
+        collapsed_fingerprints=set(),
+        prior_revision_ids_by_resolve_revision={},
+    )
+
+    raised = rollup["raised_count"]
+    resolved = rollup["resolved_count"]
+    still_open_display = rollup["still_open_display"]
+    hidden_total = (
+        rollup["filter_snapshot"]["collapsed_hidden"]
+        + rollup["filter_snapshot"]["orphan_never_inlined_hidden"]
+        + rollup["filter_snapshot"]["compare_failed_hidden"]
+    )
+
+    assert raised == 4
+    assert resolved == 2
+    assert raised == resolved + still_open_display + hidden_total
+    assert rollup["resolved_by_method"]["absent_and_addressed"] == 1
+    assert rollup["resolved_by_method"]["judge_dismissed"] == 1
+    assert rollup["resolved_by_method"]["path_removed"] == 0
+
+
+def test_p3_historical_superseded_residual():
+    """P3.3: 13 superseded + 10 active (dogfood #1 shape).
+    raised_count == 10, resolved_count == 0.
+    """
+    superseded = [
+        _group(
+            id=uuid.uuid4(),
+            fingerprint=f"superseded-{i}",
+            state=GitHubFindingGroupState.superseded,
+            title=f"Superseded {i}",
+        )
+        for i in range(13)
+    ]
+    active = [
+        _group(
+            id=uuid.uuid4(),
+            fingerprint=f"active-{i}",
+            state=GitHubFindingGroupState.active,
+            title=f"Active {i}",
+        )
+        for i in range(10)
+    ]
+
+    all_pr_groups = superseded + active
+    ctx = _ctx(active, pr_active_groups=active)
+    rollup = build_pr_resolution_rollup(
+        ctx,
+        all_pr_groups,
+        review_count=1,
+        computed_at_revision_id=uuid.uuid4(),
+        raw_pr_active_groups=active,
+        publishable_fingerprints={str(g.id) for g in active},
+        collapsed_fingerprints=set(),
+        prior_revision_ids_by_resolve_revision={},
+    )
+
+    assert rollup["raised_count"] == 10
+    assert rollup["resolved_count"] == 0
+    assert rollup["still_open_display"] == 10

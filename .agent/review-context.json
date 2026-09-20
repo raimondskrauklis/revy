@@ -6,8 +6,8 @@
       "scope": ["backend/**", "frontend/**"],
       "paths": [
         {
-          "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_P2_EXECUTION.md",
-          "description": "Resolution honesty P2 — this-push metrics (N/A denom, formatter N/A, fix-some prior cohort)"
+          "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_P3_EXECUTION.md",
+          "description": "Resolution honesty P3 — lifetime rollup (raised/resolved identity, PSR-Q15, superseded residual)"
         },
         {
           "path": "docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_FINDINGS.md",
