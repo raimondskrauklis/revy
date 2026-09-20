@@ -30,10 +30,10 @@ describe('LandingPage', () => {
     );
 
     expect(screen.getByRole('heading', { name: /catch cut corners before they bite/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /open console/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /enter console/i })).toBeInTheDocument();
   });
 
-  it('calls login on open console click', async () => {
+  it('calls login on enter console click', async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter>
@@ -41,7 +41,7 @@ describe('LandingPage', () => {
       </MemoryRouter>,
     );
 
-    await user.click(screen.getByRole('button', { name: /open console/i }));
+    await user.click(screen.getByRole('button', { name: /enter console/i }));
     expect(mockLogin).toHaveBeenCalled();
   });
 
