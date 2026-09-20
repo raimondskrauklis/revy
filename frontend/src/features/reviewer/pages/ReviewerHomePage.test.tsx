@@ -119,8 +119,8 @@ describe('ReviewerHomePage', () => {
 
     const { container } = renderHome();
 
-    expect(await screen.findByText('api')).toBeInTheDocument();
-    expect(screen.getByText('web')).toBeInTheDocument();
+    expect(await screen.findAllByText('api')).not.toHaveLength(0);
+    expect(screen.getAllByText('web').length).toBeGreaterThan(0);
     expect(screen.queryByText('PR list')).not.toBeInTheDocument();
     expect(container.querySelector('select')).toBeNull();
   });

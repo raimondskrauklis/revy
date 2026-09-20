@@ -26,8 +26,9 @@ describe('InstallationsTable', () => {
   it('links unverified rows to GitHub Configure', () => {
     render(<InstallationsTable installations={[installation()]} />);
 
-    const link = screen.getByRole('link', { name: /configure on github/i });
-    expect(link).toHaveAttribute('href', 'https://github.com/settings/installations/12345');
+    const links = screen.getAllByRole('link', { name: /configure on github/i });
+    expect(links.length).toBeGreaterThan(0);
+    expect(links[0]).toHaveAttribute('href', 'https://github.com/settings/installations/12345');
   });
 
   it('does not show Configure when verified_at is set', () => {

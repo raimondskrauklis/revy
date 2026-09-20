@@ -59,7 +59,7 @@ describe('TeamSettingsPage', () => {
 
     renderPage();
 
-    expect(await screen.findByText('viewer@example.com')).toBeInTheDocument();
+    expect(await screen.findAllByText('viewer@example.com')).not.toHaveLength(0);
     expect(screen.getByText(/role permissions/i)).toBeInTheDocument();
     expect(screen.queryByText(/invite member/i)).not.toBeInTheDocument();
     expect(fetchInvitations).not.toHaveBeenCalled();

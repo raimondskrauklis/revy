@@ -173,34 +173,61 @@ export function PullRequestDetailPage() {
       {!loadingFindings && reconciledFindings.length > 0 && (
         <FindingsToolbar findings={reconciledFindings}>
           {(filteredFindings) => (
-            <div className="overflow-x-auto rounded-[var(--app-radius-sm)] shadow-[inset_0_0_0_1px_var(--app-ring)]">
-              <table className="min-w-full table-fixed text-left text-sm">
-                <thead className="bg-[color:var(--app-chip)] text-[color:var(--app-text-muted)]">
-                  <tr>
-                    <th className="w-[12%] px-3 py-2 font-medium">{t('reviewer.findings.severity')}</th>
-                    <th className="w-[10%] px-3 py-2 font-medium">{t('reviewer.findings.category')}</th>
-                    <th className="w-[12%] px-3 py-2 font-medium">{t('reviewer.findings.state')}</th>
-                    <th className="w-[20%] px-3 py-2 font-medium">{t('reviewer.findings.title')}</th>
-                    <th className="w-[16%] px-3 py-2 font-medium">{t('reviewer.findings.file')}</th>
-                    <th className="w-[22%] px-3 py-2 font-medium">{t('reviewer.findings.message')}</th>
-                    <th className="w-[8%] px-3 py-2 font-medium">{t('reviewer.findings.actions')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredFindings.map((finding) => (
-                    <FindingRow
-                      key={finding.id}
-                      finding={finding}
-                      canDismiss={canDismiss}
-                      dismissPending={dismissMutation.isPending}
-                      onDismiss={(groupId) => dismissMutation.mutate(groupId)}
-                      onClick={() => setSelectedFinding(finding)}
-                    />
-                  ))}
-                </tbody>
-              </table>
-              <div ref={ref} className="h-4" />
-            </div>
+            <>
+              {/* Mobile cards */}
+              <div className="md:hidden flex flex-col gap-2">
+                {filteredFindings.map((finding) => (
+                  <button
+                    key={finding.id}
+                    type="button"
+                    onClick={() => setSelectedFinding(finding)}
+                    className="flex flex-col gap-1.5 rounded-[var(--app-radius-sm)] border border-[color:var(--app-ring)] bg-[color:var(--app-surface)] p-3 text-left shadow-[inset_0_0_0_1px_var(--app-ring)]"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-block shrink-0 ${finding.severity === 'critical' ? 'h-2.5 w-2.5 rotate-45 bg-[color:var(--app-danger)]' : finding.severity === 'error' ? 'h-2.5 w-2.5 bg-[color:var(--app-danger)]' : finding.severity === 'warning' ? 'h-0 w-0 border-x-[5px] border-x-transparent border-b-[9px] border-b-[color:var(--app-warning)]' : 'h-2.5 w-2.5 rounded-full bg-[color:var(--app-info)]'}`} />
+                      <span className="text-xs text-[color:var(--app-text-muted)]">
+                        {t(`reviewer.severity.${finding.severity}`)}
+                      </span>
+                      <span className="rounded-full bg-[color:var(--app-chip)] px-2 py-0.5 text-[10px] text-[color:var(--app-text-muted)]">
+                        {finding.state}
+                      </span>
+                    </div>
+                    <p className="text-sm font-medium text-[color:var(--app-text-strong)]">{finding.title}</p>
+                    <p className="font-mono text-xs text-[color:var(--app-text-muted)]">{finding.file_path ?? '—'}</p>
+                  </button>
+                ))}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto rounded-[var(--app-radius-sm)] shadow-[inset_0_0_0_1px_var(--app-ring)]">
+                <table className="min-w-full table-fixed text-left text-sm">
+                  <thead className="bg-[color:var(--app-chip)] text-[color:var(--app-text-muted)]">
+                    <tr>
+                      <th className="w-[12%] px-3 py-2 font-medium">{t('reviewer.findings.severity')}</th>
+                      <th className="w-[10%] px-3 py-2 font-medium">{t('reviewer.findings.category')}</th>
+                      <th className="w-[12%] px-3 py-2 font-medium">{t('reviewer.findings.state')}</th>
+                      <th className="w-[20%] px-3 py-2 font-medium">{t('reviewer.findings.title')}</th>
+                      <th className="w-[16%] px-3 py-2 font-medium">{t('reviewer.findings.file')}</th>
+                      <th className="w-[22%] px-3 py-2 font-medium">{t('reviewer.findings.message')}</th>
+                      <th className="w-[8%] px-3 py-2 font-medium">{t('reviewer.findings.actions')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredFindings.map((finding) => (
+                      <FindingRow
+                        key={finding.id}
+                        finding={finding}
+                        canDismiss={canDismiss}
+                        dismissPending={dismissMutation.isPending}
+                        onDismiss={(groupId) => dismissMutation.mutate(groupId)}
+                        onClick={() => setSelectedFinding(finding)}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+                <div ref={ref} className="h-4" />
+              </div>
+            </>
           )}
         </FindingsToolbar>
       )}

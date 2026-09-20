@@ -25,8 +25,8 @@ describe('MembersTable', () => {
       />,
     );
 
-    expect(screen.getByText('member@example.com')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /remove/i })).not.toBeInTheDocument();
+    expect(screen.getAllByText('member@example.com').length).toBeGreaterThan(0);
+    expect(screen.queryAllByRole('button', { name: /remove/i }).length).toBe(0);
   });
 
   it('confirms before removing a member', async () => {
@@ -43,8 +43,8 @@ describe('MembersTable', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: /remove/i }));
-    await user.click(screen.getByRole('button', { name: /confirm/i }));
+    await user.click(screen.getAllByRole('button', { name: /remove/i })[0]);
+    await user.click(screen.getAllByRole('button', { name: /confirm/i })[0]);
 
     expect(onRemove).toHaveBeenCalledWith('u-1');
   });
