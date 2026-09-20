@@ -15,7 +15,7 @@ function renderCallback() {
     <MemoryRouter initialEntries={['/auth/callback']}>
       <Routes>
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
-        <Route path="/login" element={<div>Login</div>} />
+        <Route path="/" element={<div>Home</div>} />
         <Route path="/reviewer" element={<div>Reviewer</div>} />
       </Routes>
     </MemoryRouter>,
@@ -27,7 +27,7 @@ describe('AuthCallbackPage', () => {
     vi.clearAllMocks();
   });
 
-  it('redirects to login when not authenticated', async () => {
+  it('redirects to home when not authenticated', async () => {
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: false,
       isLoading: false,
@@ -36,7 +36,7 @@ describe('AuthCallbackPage', () => {
 
     renderCallback();
     await waitFor(() => {
-      expect(screen.getByText('Login')).toBeInTheDocument();
+      expect(screen.getByText('Home')).toBeInTheDocument();
     });
   });
 

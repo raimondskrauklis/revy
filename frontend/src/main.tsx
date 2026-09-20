@@ -20,7 +20,7 @@ initSentry();
 
 configureErrorHandling({
   login: () => {
-    window.location.href = '/login';
+    window.location.href = '/';
   },
   unauthorizedPath: '/unauthorized',
 });

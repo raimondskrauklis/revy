@@ -12,7 +12,7 @@ export function AuthCallbackPage() {
   useEffect(() => {
     if (isLoading || isUserLoading) return;
     if (!isAuthenticated) {
-      navigate('/login', { replace: true });
+      navigate('/', { replace: true });
       return;
     }
     navigate('/reviewer', { replace: true });

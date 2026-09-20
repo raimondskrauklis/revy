@@ -62,20 +62,10 @@
       "connectIntegration": "Connect a GitHub installation",
       "setupBilling": "Set up billing"
     },
-    "quickActions": {
-      "title": "Quick actions",
-      "settings": "Settings",
-      "installations": "Installations",
-      "inviteTeammate": "Invite teammate"
-    },
-    "activity": {
-      "title": "Recent activity",
-      "empty": "No recent activity yet.",
-      "workspace.updated": "{{email}} updated the workspace",
-      "workspace_member.role_changed": "{{email}} changed a member role",
-      "workspace_member.removed": "{{email}} removed a member",
-      "workspace_invitation.created": "{{email}} sent an invitation",
-      "workspace_invitation.revoked": "{{email}} revoked an invitation"
+    "devNotice": {
+      "title": "Revy is in active development",
+      "body": "We're shipping fast. Some things may move around. Report bugs, rough edges, or missing features — your feedback shapes the product.",
+      "feedback": "Leave feedback"
     },
     "installationsSummary": {
       "title": "GitHub installations",
@@ -86,8 +76,7 @@
     },
     "planSummary": {
       "title": "Plan",
-      "current": "Current plan: {{plan}}",
-      "manage": "Manage billing"
+      "free": "Free tier — up to 25 review runs per workspace."
     }
   },
   "header": {
@@ -458,35 +447,15 @@
     "close": "Close menu"
   },
   "landing": {
-    "nav": {
-      "signIn": "Sign in"
-    },
     "hero": {
-      "eyebrow": "PR operator console",
-      "title": "Findings before you merge",
-      "subtitle": "Connect GitHub. Review findings in the console. Merge when the lamps say so.",
-      "cta": "Open console",
-      "secondary": "Already have an account?"
-    },
-    "footer": "Operator console for GitHub pull-request review."
+      "eyebrow": "Builder console",
+      "title": "Catch corners cut before they bite",
+      "subtitle": "Connect GitHub. Review findings. Merge when the lamps go green.",
+      "cta": "Enter console"
+    }
   },
   "auth": {
     "loading": "Loading…",
-    "login": {
-      "title": "Sign in",
-      "body": "Continue with your organization SSO. Keycloak handles the session.",
-      "action": "Continue with SSO",
-      "hint": "You will be redirected to your identity provider to sign in.",
-      "backHome": "Back to home",
-      "panel": {
-        "eyebrow": "revy",
-        "title": "PR operator console",
-        "subtitle": "Findings, severity lamps, and merge verdicts — not a greeting dashboard.",
-        "bullet1": "Connect the GitHub App",
-        "bullet2": "Scan findings before you merge",
-        "bullet3": "Keep installs and access in the workspace"
-      }
-    },
     "sessionExpired": {
       "title": "Session expired",
       "body": "Please sign in again."

@@ -62,20 +62,10 @@
       "connectIntegration": "Pievienojiet GitHub instalāciju",
       "setupBilling": "Iestatiet norēķinus"
     },
-    "quickActions": {
-      "title": "Ātrās darbības",
-      "settings": "Iestatījumi",
-      "installations": "Instalācijas",
-      "inviteTeammate": "Uzaicināt komandas biedru"
-    },
-    "activity": {
-      "title": "Nesenā aktivitāte",
-      "empty": "Vēl nav nesenas aktivitātes.",
-      "workspace.updated": "{{email}} atjaunināja darba vidi",
-      "workspace_member.role_changed": "{{email}} mainīja dalībnieka lomu",
-      "workspace_member.removed": "{{email}} noņēma dalībnieku",
-      "workspace_invitation.created": "{{email}} nosūtīja uzaicinājumu",
-      "workspace_invitation.revoked": "{{email}} atcēla uzaicinājumu"
+    "devNotice": {
+      "title": "Revy ir aktīvā izstrādē",
+      "body": "Izdodam ātri. Dažas lietas var pārvietoties. Ziņojiet par kļūdām, nelīdzenumiem vai trūkstošām funkcijām — jūsu atsauksmes veido produktu.",
+      "feedback": "Atstāt atsauksmi"
     },
     "installationsSummary": {
       "title": "GitHub instalācijas",
@@ -86,8 +76,7 @@
     },
     "planSummary": {
       "title": "Plāns",
-      "current": "Pašreizējais plāns: {{plan}}",
-      "manage": "Pārvaldīt norēķinus"
+      "free": "Bezmaksas līmenis — līdz 25 pārskatu reizēm darba vidē."
     }
   },
   "header": {
@@ -458,35 +447,15 @@
     "close": "Aizvērt izvēlni"
   },
   "landing": {
-    "nav": {
-      "signIn": "Pierakstīties"
-    },
     "hero": {
-      "eyebrow": "PR operatora konsole",
-      "title": "Atradumi pirms apvienošanas",
-      "subtitle": "Savienojiet GitHub. Pārskatiet atradumus konsolē. Apvienojiet, kad lampas ir zaļas.",
-      "cta": "Atvērt konsoli",
-      "secondary": "Jau ir konts?"
-    },
-    "footer": "Operatora konsole GitHub pull request pārskatam."
+      "eyebrow": "Builder konsole",
+      "title": "Noķer nogrieztos stūrus, pirms tie iekož",
+      "subtitle": "Savienojiet GitHub. Pārskatiet atradumus. Apvienojiet, kad lampas kļūst zaļas.",
+      "cta": "Ienākt konsolē"
+    }
   },
   "auth": {
     "loading": "Ielādē…",
-    "login": {
-      "title": "Pierakstīties",
-      "body": "Turpiniet ar organizācijas SSO. Sesiju nodrošina Keycloak.",
-      "action": "Turpināt ar SSO",
-      "hint": "Jūs tiksit novirzīts uz identitātes nodrošinātāju, lai pierakstītos.",
-      "backHome": "Atpakaļ uz sākumu",
-      "panel": {
-        "eyebrow": "revy",
-        "title": "PR operatora konsole",
-        "subtitle": "Atradumi, smaguma lampas un apvienošanas verdikti — ne sveiciena panelis.",
-        "bullet1": "Savienojiet GitHub lietotni",
-        "bullet2": "Skenējiet atradumus pirms apvienošanas",
-        "bullet3": "Instalācijas un piekļuve paliek darba vidē"
-      }
-    },
     "sessionExpired": {
       "title": "Sesija beigusies",
       "body": "Lūdzu, pierakstieties vēlreiz."

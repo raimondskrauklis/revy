@@ -45,7 +45,7 @@ export function resetKeycloak(): void {
 }
 
 export function getPostLogoutRedirectUri(): string {
-  return `${window.location.origin}/login`;
+  return `${window.location.origin}/`;
 }
 
 export function getKeycloakAccountUrl(): string {

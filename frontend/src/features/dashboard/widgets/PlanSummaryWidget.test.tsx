@@ -1,6 +1,5 @@
 // frontend/src/features/dashboard/widgets/PlanSummaryWidget.test.tsx
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { PlanSummaryWidget } from '@/features/dashboard/widgets/PlanSummaryWidget';
 import { AppRole } from '@/shared/types/enums';
@@ -12,7 +11,7 @@ vi.mock('@/contexts/AuthContext', () => ({
 import { useAuth } from '@/contexts/AuthContext';
 
 describe('PlanSummaryWidget', () => {
-  it('shows current plan and billing link', () => {
+  it('shows free plan with review run info', () => {
     vi.mocked(useAuth).mockReturnValue({
       user: {
         id: '1',
@@ -21,7 +20,7 @@ describe('PlanSummaryWidget', () => {
         status: 'active',
         platform_role: null,
         workspace_id: 'ws-1',
-        workspace_plan: 'pro',
+        workspace_plan: 'free',
         role: AppRole.admin,
         memberships: [],
         locale: 'en',
@@ -29,16 +28,18 @@ describe('PlanSummaryWidget', () => {
       },
     } as unknown as ReturnType<typeof useAuth>);
 
-    render(
-      <MemoryRouter>
-        <PlanSummaryWidget />
-      </MemoryRouter>,
-    );
+    render(<PlanSummaryWidget />);
 
-    expect(screen.getByText(/pro/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /manage billing/i })).toHaveAttribute(
-      'href',
-      '/settings/billing',
-    );
+    expect(screen.getByText(/free/i)).toBeInTheDocument();
+    expect(screen.getByText(/25/i)).toBeInTheDocument();
+  });
+
+  it('renders nothing without workspace', () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: null,
+    } as unknown as ReturnType<typeof useAuth>);
+
+    const { container } = render(<PlanSummaryWidget />);
+    expect(container.firstChild).toBeNull();
   });
 });

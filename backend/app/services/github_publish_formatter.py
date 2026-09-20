@@ -219,7 +219,11 @@ def format_resolution_metrics_block(
     denominator = int(manifest.get("denominator_active_prior") or 0)
     transition_count = int(manifest.get("transition_count") or 0)
     compare_failed = int(manifest.get("compare_failed_count") or 0)
-    resolution_rate_display = manifest.get("resolution_rate_display", "N/A")
+    resolution_rate_display = manifest.get("resolution_rate_display") or (
+        f"{manifest['resolution_rate_pct']}%"
+        if manifest.get("resolution_rate_pct") is not None
+        else "N/A"
+    )
     if (
         display_still_open_prior is not None
         and display_still_open_prior != manifest_still_open

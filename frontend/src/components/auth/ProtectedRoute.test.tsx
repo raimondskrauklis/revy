@@ -15,7 +15,7 @@ function renderProtectedRoute() {
   return render(
     <MemoryRouter initialEntries={['/dashboard']}>
       <Routes>
-        <Route path="/login" element={<div>Login</div>} />
+        <Route path="/" element={<div>Home</div>} />
         <Route path="/unauthorized" element={<div>Unauthorized</div>} />
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<div>Dashboard</div>} />
@@ -30,7 +30,7 @@ describe('ProtectedRoute', () => {
     vi.clearAllMocks();
   });
 
-  it('redirects to login when not authenticated', () => {
+  it('redirects to home when not authenticated', () => {
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: false,
       isLoading: false,
@@ -39,7 +39,7 @@ describe('ProtectedRoute', () => {
     } as unknown as ReturnType<typeof useAuth>);
 
     renderProtectedRoute();
-    expect(screen.getByText('Login')).toBeInTheDocument();
+    expect(screen.getByText('Home')).toBeInTheDocument();
   });
 
   it('redirects to unauthorized when authenticated but profile missing', () => {

@@ -4,7 +4,6 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { AppShellLayout } from '@/components/layout/AppShellLayout';
 import { NotFoundPage } from '@/components/errors/NotFoundPage';
 import { LandingPage } from '@/features/marketing/pages/LandingPage';
-import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { AuthCallbackPage } from '@/features/auth/pages/AuthCallbackPage';
 import { UnauthorizedPage } from '@/features/auth/pages/UnauthorizedPage';
 import { CompleteProfilePage } from '@/features/auth/pages/CompleteProfilePage';
@@ -30,7 +29,6 @@ import { adminRoutes } from '@/features/admin/routes';
 
 export const appRouter = createBrowserRouter([
   { path: '/', element: <LandingPage /> },
-  { path: '/login', element: <LoginPage /> },
   { path: '/auth/callback', element: <AuthCallbackPage /> },
   {
     path: '/auth/verify-email',

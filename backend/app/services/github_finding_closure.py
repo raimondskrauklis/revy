@@ -227,8 +227,6 @@ async def _resolve_absent_paths(
 
 
 async def _fingerprints_in_review_run(session: AsyncSession, *, review_run_id: UUID) -> set[str]:
-    from app.services.github_finding_reconcile import claim_slot_key, compute_fingerprint
-
     run = await session.get(GitHubReviewRunORM, review_run_id)
     if run is None:
         return set()
@@ -259,16 +257,6 @@ async def _fingerprints_in_review_run(session: AsyncSession, *, review_run_id: U
             fp = group_map.get(finding.group_id)
             if fp:
                 fingerprints.add(fp)
-                continue
-        fingerprints.add(
-            compute_fingerprint(
-                workspace_id=run.workspace_id,
-                pull_request_id=revision.pull_request_id,
-                file_path=finding.file_path,
-                category=finding.category,
-                claim_slot=claim_slot_key(finding.title),
-            )
-        )
     return fingerprints
 
 

@@ -6,14 +6,13 @@
  */
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LayoutDashboard, Plug, Settings } from 'lucide-react';
+import { LayoutDashboard, Plug, Settings, GitPullRequest } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { ImpersonationBanner } from '@/features/admin/components/ImpersonationBanner';
 import { StackShell } from '@/components/layout/StackShell';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher';
 import { UserMenu } from '@/components/layout/UserMenu';
-import { RevyLogo } from '@/components/auth/RevyLogo';
 import { useExtensions } from '@/platform/extensions/hooks';
 
 type NavItem = {
@@ -24,6 +23,7 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'nav.dashboard', icon: LayoutDashboard },
+  { href: '/reviewer', label: 'nav.reviewer', icon: GitPullRequest },
   { href: '/installations', label: 'nav.installations', icon: Plug },
   { href: '/settings', label: 'nav.settings', icon: Settings },
 ];
@@ -43,7 +43,20 @@ export function AppShellLayout() {
     <div className="flex h-screen min-h-0 overflow-hidden bg-[color:var(--app-canvas)]">
       <aside className="hidden md:flex w-56 shrink-0 flex-col border-r border-[color:var(--app-ring)] bg-[color:var(--app-surface)]">
         <div className="px-4 py-3">
-          <RevyLogo to="/reviewer" />
+          <Link
+            to="/reviewer"
+            className="inline-flex items-center gap-2 font-mono rounded-[var(--app-radius-md)] focus-visible:outline-none focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
+          >
+            <svg
+              aria-hidden
+              className="h-6 w-6 shrink-0 text-[color:var(--app-primary)]"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M4 3.5 20 12 4 20.5V15.2L12.4 12 4 8.8V3.5Z" />
+            </svg>
+            <span className="text-lg tracking-tight text-[color:var(--app-text-strong)]">revy</span>
+          </Link>
         </div>
         <nav className="flex-1 overflow-y-auto px-2 py-2" aria-label={t('sidebar.mainNav')}>
           <ul className="space-y-1">
