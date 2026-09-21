@@ -48,6 +48,8 @@ export function FindingsSummaryBar({ findings, conclusion }: FindingsSummaryBarP
     nextAction = t('reviewer.summary.nextAction.needsReview', {
       blocking: counts.warning,
     });
+  } else if (counts.info > 0 && counts.critical === 0 && counts.error === 0 && counts.warning === 0) {
+    nextAction = t('reviewer.summary.nextAction.infoOnly');
   } else {
     nextAction = t('reviewer.summary.nextAction.ready');
   }

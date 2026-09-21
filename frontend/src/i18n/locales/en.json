@@ -267,6 +267,9 @@
       "notConfigured": "Commercial plans are not available right now.",
       "checkoutSuccess": "Checkout completed. Your plan will update shortly.",
       "checkoutCancel": "Checkout was canceled.",
+      "stripeReturn": {
+        "success": "Your billing session completed. Changes will appear shortly."
+      },
       "plans": {
         "free": "Free",
         "pro": "Pro"
@@ -705,17 +708,18 @@
       "criticalCount": "{{count}} Critical",
       "criticalCount_plural": "{{count}} Critical",
       "errorCount": "{{count}} Error",
-      "errorCount_plural": "{{count}} Error",
+      "errorCount_plural": "{{count}} Errors",
       "warningCount": "{{count}} Warning",
-      "warningCount_plural": "{{count}} Warning",
+      "warningCount_plural": "{{count}} Warnings",
       "infoCount": "{{count}} Info",
-      "infoCount_plural": "{{count}} Info",
+      "infoCount_plural": "{{count}} Infos",
       "dismissedCount": "· {{count}} dismissed",
       "dismissedCount_plural": "· {{count}} dismissed",
       "noFindings": "No findings for this PR.",
       "nextAction": {
         "blocked": "Blocked — dismiss or resolve {{blocking}} Critical/Error findings to unblock",
         "needsReview": "Needs review — {{blocking}} Warning findings to review",
+        "infoOnly": "Ready to merge — Info findings present but none blocking",
         "ready": "Ready to merge — all findings resolved"
       }
     },

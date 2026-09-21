@@ -267,6 +267,9 @@
       "notConfigured": "Komerciālie plāni pašlaik nav pieejami.",
       "checkoutSuccess": "Maksājums pabeigts. Plāns drīz tiks atjaunināts.",
       "checkoutCancel": "Maksājums tika atcelts.",
+      "stripeReturn": {
+        "success": "Jūsu norēķinu sesija ir pabeigta. Izmaiņas parādīsies drīz."
+      },
       "plans": {
         "free": "Bezmaksas",
         "pro": "Pro"
@@ -716,6 +719,7 @@
       "nextAction": {
         "blocked": "Bloķēts — noraidiet vai atrisiniet {{blocking}} Kritisko/Kļūdu atradumus, lai atbloķētu",
         "needsReview": "Nepieciešama pārskatīšana — {{blocking}} Brīdinājumu atradumi jāpārskata",
+        "infoOnly": "Gatavs sapludināšanai — ir Info atradumi, bet neviens nebloķē",
         "ready": "Gatavs sapludināšanai — visi atradumi atrisināti"
       }
     },
