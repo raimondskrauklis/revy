@@ -80,7 +80,7 @@
       "usage": "{{completed}}/{{limit}} reviews used",
       "unlimited": "Unlimited",
       "limitReached": "Credit limit reached. Upgrade to Pro for unlimited reviews.",
-      "feedbackHint": "Share ideas and report bugs via the feedback form above."
+      "feedbackHint": "Share ideas and report bugs via the feedback form."
     }
   },
   "header": {

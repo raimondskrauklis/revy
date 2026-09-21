@@ -80,7 +80,7 @@
       "usage": "{{completed}}/{{limit}} pārskati izmantoti",
       "unlimited": "Neierobežots",
       "limitReached": "Kredītu limits sasniegts. Jauniniet uz Pro neierobežotiem pārskatiem.",
-      "feedbackHint": "Dalies ar idejām un ziņo par kļūdām, izmantojot augstāk esošo atsauksmju formu."
+      "feedbackHint": "Dalies ar idejām un ziņo par kļūdām, izmantojot atsauksmju formu."
     }
   },
   "header": {

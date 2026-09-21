@@ -23,7 +23,7 @@ export function registerRevyExtensions(): void {
     id: 'plan-summary',
     slot: 'dashboard_widget',
     component: PlanSummaryWidget,
-    permission: 'admin:users',
+    permission: 'items:view',
     order: 25,
   });
 }
