@@ -1,8 +1,7 @@
 # backend/app/core/plan_gates.py
 """Workspace plan feature gating — boolean features only in v1.
 
-Gated features (extend PLAN_FEATURES when adding pro-only APIs):
-- installations.create → requires pro plan
+Extend PLAN_FEATURES when adding pro-only APIs.
 """
 from __future__ import annotations
 
@@ -17,9 +16,7 @@ from app.core.exceptions import ForbiddenError, NotFoundError
 from app.models.workspaces import WorkspaceORM
 from app.services.billing import effective_plan
 
-PLAN_FEATURES: dict[str, str] = {
-    "installations.create": "pro",
-}
+PLAN_FEATURES: dict[str, str] = {}
 
 PLAN_RANK: dict[str, int] = {
     "free": 0,

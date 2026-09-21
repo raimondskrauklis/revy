@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.enums import GitHubAccountType, GitHubInstallationStatus
-from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError, ValidationError
+from app.core.exceptions import ConflictError, NotFoundError, ValidationError
 from app.core.pagination import (
     CursorMeta,
     CursorParams,
@@ -21,7 +21,6 @@ from app.core.pagination import (
     decode_cursor,
     encode_cursor,
 )
-from app.core.plan_gates import workspace_has_feature
 from app.integrations.github_api import list_installation_repositories
 from app.models.github_installation import GitHubInstallationORM
 from app.models.workspaces import WorkspaceORM
@@ -140,12 +139,6 @@ async def bind_github_installation(
     )
     if workspace is None:
         raise NotFoundError("Workspace not found")
-    if not workspace_has_feature(workspace, "installations.create"):
-        raise ForbiddenError(
-            message="Plan upgrade required",
-            error_code="plan_upgrade_required",
-            details={"feature": "installations.create", "required_plan": "pro"},
-        )
 
     existing = await _find_installation_by_github_id(session, github_installation_id)
     if existing is not None:

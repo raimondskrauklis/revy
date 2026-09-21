@@ -16,7 +16,6 @@ from app.core.exceptions import ForbiddenError, NotFoundError, ServiceUnavailabl
 from app.core.idempotency import idempotency_guard
 from app.core.pagination import CursorParams, CursorResponse, get_cursor_params
 from app.core.permissions import Permission, require_permission
-from app.core.plan_gates import require_plan_feature
 from app.core.tenancy import require_same_workspace
 from app.models.workspaces import WorkspaceORM
 from app.schemas.common import SuccessResponse
@@ -61,7 +60,6 @@ async def post_workspace_installation(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
     idempotent: Annotated[JSONResponse | None, Depends(idempotency_guard)] = None,
-    _: Annotated[None, Depends(require_plan_feature("installations.create"))] = None,
 ) -> SuccessResponse[GitHubInstallationResponse] | JSONResponse:
     if idempotent is not None:
         return idempotent
@@ -88,7 +86,6 @@ async def post_workspace_installation(
 async def post_workspace_installation_connect(
     workspace_id: UUID,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
-    _: Annotated[None, Depends(require_plan_feature("installations.create"))] = None,
 ) -> SuccessResponse[GitHubConnectResponse]:
     require_permission(current_user, Permission.admin_users)
     require_same_workspace(current_user, workspace_id)
@@ -119,7 +116,6 @@ async def post_workspace_installation_verify(
     installation_id: UUID,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-    _: Annotated[None, Depends(require_plan_feature("installations.create"))] = None,
 ) -> SuccessResponse[GitHubInstallationResponse]:
     require_permission(current_user, Permission.admin_users)
     require_same_workspace(current_user, workspace_id)

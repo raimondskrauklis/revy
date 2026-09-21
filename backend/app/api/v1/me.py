@@ -68,11 +68,15 @@ async def _build_current_me(
     if current_user.workspace_id is not None:
         workspace = await session.get(WorkspaceORM, current_user.workspace_id)
         workspace_plan = effective_plan(workspace) if workspace is not None else None
+        completed_review_runs = workspace.completed_review_runs if workspace is not None else 0
+        review_run_limit = workspace.review_run_limit if workspace is not None else None
         me = me.model_copy(
             update={
                 "workspace_id": current_user.workspace_id,
                 "role": current_user.role,
                 "workspace_plan": workspace_plan,
+                "completed_review_runs": completed_review_runs,
+                "review_run_limit": review_run_limit,
             }
         )
     if impersonation is not None and current_user.platform_role is not None:

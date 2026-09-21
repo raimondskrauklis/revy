@@ -2,7 +2,7 @@
 """Workspace (tenant) ORM — TimestampedModel; ops state via WorkspaceStatus."""
 from __future__ import annotations
 
-from sqlalchemy import Boolean, Enum, String
+from sqlalchemy import Boolean, Enum, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.constants.enums import WorkspaceStatus
@@ -27,3 +27,10 @@ class WorkspaceORM(TimestampedModel):
         default=True,
         server_default="true",
     )
+    completed_review_runs: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
+    )
+    review_run_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)

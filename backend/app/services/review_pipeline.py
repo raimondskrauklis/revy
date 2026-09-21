@@ -17,7 +17,7 @@ from app.constants.enums import (
     stored_enum_value,
 )
 from app.core.config import settings
-from app.core.exceptions import ConflictError, ServiceUnavailableError
+from app.core.exceptions import ConflictError, ForbiddenError, ServiceUnavailableError
 from app.core.logging import get_logger
 from app.models.github_index_job import GitHubIndexJobORM
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
@@ -280,6 +280,21 @@ async def prepare_review_after_index(
             repository_id=pull_request.repository_id,
             pull_request_id=pull_request.id,
             revision_id=job.revision_id,
+        )
+    except ForbiddenError as exc:
+        logger.info(
+            "pipeline_review_enqueue_skipped",
+            extra={
+                "index_job_id": str(job.id),
+                "revision_id": str(job.revision_id),
+                "reason": getattr(exc, "error_code", type(exc).__name__),
+            },
+        )
+        return ReviewAfterIndexOutcome(
+            fail_pipeline_check=True,
+            pipeline_check_summary="credit_limit_reached"
+            if getattr(exc, "error_code", None) == "credit_limit_reached"
+            else str(getattr(exc, "error_code", exc))[:2000],
         )
     except ConflictError as exc:
         logger.info(

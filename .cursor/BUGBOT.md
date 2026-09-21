@@ -1,12 +1,12 @@
 # Bugbot — review pipeline contract
 
-**Active program:** console-ux-upgrade — rebuild reviewer page as operator console, responsive shell, mobile support.
+**Active program:** free-plan-credits — credit tracking on workspaces (completed_review_runs + review_run_limit columns), open GitHub installation gate, atomic credit increment, frontend counter display.
 
-When reviewing **frontend** changes for this program, treat these as authoritative:
+When reviewing **backend** changes for this program, treat these as authoritative:
 
-- [CONSOLE_UX_UPGRADE_P0_EXECUTION.md](../docs/visual-identity/console-ux-upgrade/CONSOLE_UX_UPGRADE_P0_EXECUTION.md) — P0 LOOP (shell, sidebar, responsive layout)
-- [UIUX_CONSOLE_FINDINGS.md](../docs/visual-identity/console-ux-upgrade/UIUX_CONSOLE_FINDINGS.md) — 12 findings (C1–m4)
-- [UIUX_CONSOLE_GENERAL_PLAN.md](../docs/visual-identity/console-ux-upgrade/UIUX_CONSOLE_GENERAL_PLAN.md) — P0–P3 goals
+- [FREE_PLAN_CREDITS_P0_EXECUTION.md](../docs/free-plan-credits/FREE_PLAN_CREDITS_P0_EXECUTION.md) — P0 LOOP (schema, migration, open install gate)
+- [FREE_PLAN_CREDITS_FINDINGS.md](../docs/free-plan-credits/FREE_PLAN_CREDITS_FINDINGS.md) — DB snapshot, schema design, edge cases, decisions registry
+- [FREE_PLAN_CREDITS_GENERAL_PLAN.md](../docs/free-plan-credits/FREE_PLAN_CREDITS_GENERAL_PLAN.md) — P0–P2 goals and deliverables
 
 **Agent workflow:**
 
