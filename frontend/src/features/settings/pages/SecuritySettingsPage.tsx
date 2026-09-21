@@ -16,14 +16,6 @@ export function SecuritySettingsPage() {
         <p className="text-sm text-[color:var(--app-text-muted)]">
           {t('settings.security.body')}
         </p>
-        <a
-          href="https://github.com/raimondskrauklis/revy/issues/new"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm text-[color:var(--app-link)] hover:underline"
-        >
-          {t('dashboard.devNotice.feedback')}
-        </a>
       </div>
     </div>
   );

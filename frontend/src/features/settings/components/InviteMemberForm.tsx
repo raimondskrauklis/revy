@@ -19,13 +19,16 @@ const ROLE_OPTIONS = [AppRole.admin, AppRole.operator, AppRole.viewer] as const;
 interface InviteMemberFormProps {
   onInvite: (payload: { email: string; role: AppRole }) => Promise<void>;
   submitting?: boolean;
+  disabled?: boolean;
 }
 
-export function InviteMemberForm({ onInvite, submitting = false }: InviteMemberFormProps) {
+export function InviteMemberForm({ onInvite, submitting = false, disabled = false }: InviteMemberFormProps) {
   const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<AppRole>(AppRole.viewer);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const isDisabled = submitting || disabled;
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -65,7 +68,7 @@ export function InviteMemberForm({ onInvite, submitting = false }: InviteMemberF
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          disabled={submitting}
+          disabled={isDisabled}
           aria-invalid={fieldErrors.email != null}
           required
         />
@@ -77,7 +80,7 @@ export function InviteMemberForm({ onInvite, submitting = false }: InviteMemberF
         <span className="text-sm text-[color:var(--app-text-muted)]">
           {t('settings.team.invite.roleLabel')}
         </span>
-        <QuietSelect value={role} onValueChange={(value) => setRole(value as AppRole)} disabled={submitting}>
+        <QuietSelect value={role} onValueChange={(value) => setRole(value as AppRole)} disabled={isDisabled}>
           <QuietSelectTrigger fullWidth>
             <QuietSelectValue />
           </QuietSelectTrigger>
@@ -93,9 +96,14 @@ export function InviteMemberForm({ onInvite, submitting = false }: InviteMemberF
           <span className="text-sm text-[color:var(--app-danger)]">{fieldErrors.role}</span>
         ) : null}
       </label>
+      {disabled && (
+        <p className="text-xs text-[color:var(--app-text-muted)]">
+          {t('settings.team.invite.notAvailable')}
+        </p>
+      )}
       <button
         type="submit"
-        disabled={submitting}
+        disabled={isDisabled}
         className="min-h-11 rounded-lg bg-[color:var(--app-cta-bg)] px-4 text-sm font-medium text-[color:var(--app-cta-fg)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)] disabled:opacity-50"
       >
         {t('settings.team.invite.submit')}

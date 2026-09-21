@@ -39,6 +39,7 @@ export function MergeReadinessBadge({
         'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium',
         BADGE_CLASS[conclusion],
       ].join(' ')}
+      title={t('reviewer.glossary.mergeReadiness')}
     >
       {t(
         conclusion === 'success' && !prOpen

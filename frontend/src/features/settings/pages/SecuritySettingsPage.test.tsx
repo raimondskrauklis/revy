@@ -8,7 +8,7 @@ describe('SecuritySettingsPage', () => {
     render(<SecuritySettingsPage />);
 
     expect(screen.getByRole('heading', { name: /^security$/i })).toBeInTheDocument();
-    expect(screen.getByText(/will be available in Revy later/i)).toBeInTheDocument();
+    expect(screen.getByText(/not available yet/i)).toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
     expect(screen.queryByText(/keycloak/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/account console/i)).not.toBeInTheDocument();

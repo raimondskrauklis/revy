@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LogOut, Shield, User } from 'lucide-react';
+import { LogOut, Shield } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { isPlatformAdmin } from '@/lib/permissions';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -11,7 +11,11 @@ function displayName(email: string, fullName: string | null): string {
   return fullName?.trim() || email;
 }
 
-export function UserMenu() {
+interface UserMenuProps {
+  collapsed?: boolean;
+}
+
+export function UserMenu({ collapsed = false }: UserMenuProps) {
   const { t } = useTranslation();
   const { user, logout, isAuthenticated } = useAuth();
   const [open, setOpen] = useState(false);
@@ -25,10 +29,10 @@ export function UserMenu() {
       <button
         type="button"
         onClick={() => logout()}
-        className="flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-sm text-[color:var(--app-text-muted)] hover:bg-[color:var(--app-chip)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
+        className="flex min-h-11 items-center justify-center rounded-lg px-3 py-2 text-sm text-[color:var(--app-text-muted)] hover:bg-[color:var(--app-chip)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
+        aria-label={t('header.user.signOut')}
       >
         <LogOut className="h-4 w-4 shrink-0" aria-hidden />
-        <span>{t('header.user.signOut')}</span>
       </button>
     );
   }
@@ -41,13 +45,14 @@ export function UserMenu() {
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex max-w-[10rem] items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[color:var(--app-text-strong)] hover:bg-[color:var(--app-chip)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
+          className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[color:var(--app-text-strong)] hover:bg-[color:var(--app-chip)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
           aria-label={t('header.user.menu')}
+          title={collapsed ? name : undefined}
         >
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[color:var(--app-chip)] text-xs font-semibold">
             {name.charAt(0).toUpperCase()}
           </span>
-          <span className="hidden min-w-0 truncate sm:inline">{name}</span>
+          {!collapsed && <span className="min-w-0 truncate">{name}</span>}
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-52 p-1" align="end">
@@ -68,16 +73,6 @@ export function UserMenu() {
               </Link>
             </li>
           ) : null}
-          <li>
-            <Link
-              to="/settings/profile"
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[color:var(--app-text-muted)] hover:bg-[color:var(--app-chip)]"
-              onClick={() => setOpen(false)}
-            >
-              <User className="h-4 w-4" aria-hidden />
-              {t('header.user.profile')}
-            </Link>
-          </li>
           <li>
             <button
               type="button"

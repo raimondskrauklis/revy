@@ -64,7 +64,7 @@
     },
     "devNotice": {
       "title": "Revy ir aktīvā izstrādē",
-      "body": "Izdodam ātri. Dažas lietas var pārvietoties. Ziņojiet par kļūdām, nelīdzenumiem vai trūkstošām funkcijām — jūsu atsauksmes veido produktu.",
+      "body": "Ziņojiet par kļūdām vai trūkstošām funkcijām. Jūsu atsauksmes veido produktu.",
       "feedback": "Atstāt atsauksmi"
     },
     "installationsSummary": {
@@ -79,7 +79,8 @@
       "free": "Bezmaksas līmenis — līdz 25 pārskatu reizēm darba vidē.",
       "usage": "{{completed}}/{{limit}} pārskati izmantoti",
       "unlimited": "Neierobežots",
-      "limitReached": "Kredītu limits sasniegts. Jauniniet uz Pro neierobežotiem pārskatiem."
+      "limitReached": "Kredītu limits sasniegts. Jauniniet uz Pro neierobežotiem pārskatiem.",
+      "feedbackHint": "Dalies ar idejām un ziņo par kļūdām, izmantojot atsauksmju formu."
     }
   },
   "header": {
@@ -169,10 +170,10 @@
     },
     "security": {
       "heading": "Drīzumā",
-      "body": "Parole, daudzfaktoru autentifikācija un sesiju pārvaldība Revy būs pieejama vēlāk. Ja nepieciešams mainīt pierakstīšanos, sazinieties ar darbvietas administratoru."
+      "body": "Drošības iestatījumi vēl nav pieejami."
     },
     "appearance": {
-      "body": "Šis produkts ir tikai konsoles operatora virsma. Gaišā un sistēmas tēma paliek krātuvē vēlākai atgriešanai; šeit tās nav strādājoša izvēle.",
+      "body": "Tumšā un sistēmas tēma ir atspējotas. Aktīva tikai Revy tēma.",
       "themeLabel": "Tēma"
     },
     "workspace": {
@@ -188,6 +189,7 @@
       "autostartSaveSuccess": "Automātiskās pārskatīšanas iestatījums saglabāts",
       "modelsTitle": "Modeļi",
       "modelsBody": "Pārrakstiet platformas noklusējumus katram lomai. Izvēlieties Platformas noklusējums, lai mantotu vides konfigurāciju.",
+      "modelsProRequired": "Pielāgota modeļu izvēle ir pieejama tikai Pro plānā.",
       "modelsSaveSuccess": "Modeļu politika saglabāta",
       "platformDefault": "Platformas noklusējums",
       "roles": {
@@ -229,7 +231,8 @@
         "emailLabel": "E-pasts",
         "roleLabel": "Loma",
         "submit": "Nosūtīt uzaicinājumu",
-        "success": "Uzaicinājums nosūtīts"
+        "success": "Uzaicinājums nosūtīts",
+        "notAvailable": "Dalībnieku uzaicinājumi vēl nav pieejami."
       },
       "roles": {
         "admin": "Administrators",
@@ -455,7 +458,7 @@
   "landing": {
     "hero": {
       "eyebrow": "Builder konsole",
-      "title": "Uzmanies no kļūdām; maza sūce nogremdē lielu kuģi",
+      "title": "Uzmanies no kļūdām\nmaza kļūme var nogremdēt lielu kuģi",
       "subtitle": "Savienojiet GitHub. Pārskatiet atradumus. Apvienojiet, kad lampas kļūst zaļas.",
       "cta": "Ienākt konsolē"
     }
@@ -685,7 +688,8 @@
         "deep": "Dziļā recenzija",
         "critical": "Kritiskā recenzija"
       },
-      "creditLimitReached": "Kredītu limits sasniegts — jauniniet uz Pro, lai veiktu vairāk pārskatu."
+      "creditLimitReached": "Kredītu limits sasniegts — jauniniet uz Pro, lai veiktu vairāk pārskatu.",
+      "commentHint": "Raksti @revy review PR komentārā, lai atkārtoti iedarbinātu no GitHub."
     },
     "publish": {
       "status": "Publicēšana: {{status}}",
@@ -706,7 +710,10 @@
       "skippedUnavailable": "Tiesnesis nav pieejams"
     },
     "glossary": {
-      "judge": "LLM, kas atkārtoti izvērtē atzīmētos atradumus gala lēmumam — var nebūt pieejams ierobežotos plānos."
+      "judge": "LLM, kas atkārtoti izvērtē atzīmētos atradumus gala lēmumam — var nebūt pieejams ierobežotos plānos.",
+      "mergeReadiness": "Vai šo pull request var droši sapludināt, balstoties uz atlikušajiem atradumiem.",
+      "reviewRun": "Automatizēta analīze, kas skenē kodu un ģenerē atradumus.",
+      "publish": "Ievieto atradumus kā check run komentāru pull request."
     },
     "summary": {
       "criticalCount": "{{count}} Kritisks",
@@ -721,10 +728,10 @@
       "dismissedCount_plural": "· {{count}} noraidīti",
       "noFindings": "Šim PR nav atradumu.",
       "nextAction": {
-        "blocked": "Bloķēts — noraidiet vai atrisiniet {{blocking}} Kritisko/Kļūdu atradumus, lai atbloķētu",
-        "needsReview": "Nepieciešama pārskatīšana — {{blocking}} Brīdinājumu atradumi jāpārskata",
-        "infoOnly": "Gatavs sapludināšanai — ir Info atradumi, bet neviens nebloķē",
-        "ready": "Gatavs sapludināšanai — visi atradumi atrisināti"
+        "blocked": "Bloķēts. Jāatrisina {{blocking}} Kritiski vai Kļūdu atradumi.",
+        "needsReview": "Jāpārskata. {{blocking}} Brīdinājuma atradumi.",
+        "infoOnly": "Gatavs. Ir Info atradumi, bet neviens nebloķē.",
+        "ready": "Gatavs. Nav aktīvu atradumu."
       }
     },
     "toolbar": {

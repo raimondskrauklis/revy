@@ -23,11 +23,21 @@ export function PlanSummaryWidget() {
       <p className="text-sm text-[color:var(--app-text-muted)]">
         {isPro
           ? t('dashboard.planSummary.unlimited')
-          : t('dashboard.planSummary.usage', { completed, limit })}
+          : t('dashboard.planSummary.free')}
       </p>
+      {!isPro && (
+        <p className="text-sm text-[color:var(--app-text-muted)]">
+          {t('dashboard.planSummary.usage', { completed, limit })}
+        </p>
+      )}
       {!isPro && completed >= (limit ?? 0) && (
         <p className="text-sm text-[color:var(--app-warning)]">
           {t('dashboard.planSummary.limitReached')}
+        </p>
+      )}
+      {!isPro && completed < (limit ?? 0) && (
+        <p className="text-xs text-[color:var(--app-text-muted)]">
+          {t('dashboard.planSummary.feedbackHint')}
         </p>
       )}
     </section>

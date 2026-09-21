@@ -211,7 +211,7 @@ export function AppSidebar({ overlay = false }: { overlay?: boolean }) {
           )}
         </button>
         <WorkspaceSwitcher />
-        <UserMenu />
+        <UserMenu collapsed={collapsed} />
       </div>
     </aside>
   );

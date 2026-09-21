@@ -137,7 +137,7 @@ export function PullRequestDetailPage() {
           <JudgeSkippedBadge judgeStatus={reviewRun.judge_status} />
         ) : null}
         {reviewRun ? (
-          <span className="text-sm text-[color:var(--app-text-muted)]">
+          <span className="text-sm text-[color:var(--app-text-muted)]" title={t('reviewer.glossary.reviewRun')}>
             {t('reviewer.reviewRun.status', {
               status: t(`reviewer.reviewRun.${reviewRun.status}`),
             })}
@@ -149,7 +149,7 @@ export function PullRequestDetailPage() {
           </span>
         )}
         {publishJob ? (
-          <span className="text-sm text-[color:var(--app-text-muted)]">
+          <span className="text-sm text-[color:var(--app-text-muted)]" title={t('reviewer.glossary.publish')}>
             {t('reviewer.publish.status', {
               status: t(`reviewer.publish.${publishJob.status}`),
             })}
@@ -164,6 +164,11 @@ export function PullRequestDetailPage() {
             reviewInFlight={reviewInFlight}
           />
         ) : null}
+        {revisionId && (
+          <p className="text-xs text-[color:var(--app-text-muted)]">
+            {t('reviewer.reviewRun.commentHint')}
+          </p>
+        )}
       </div>
 
       {/* Findings summary bar */}

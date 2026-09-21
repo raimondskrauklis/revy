@@ -10,6 +10,6 @@ describe('AppearanceSettingsPage', () => {
     expect(screen.getByRole('heading', { name: /appearance/i })).toBeInTheDocument();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     expect(screen.queryByText(/^light$/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/console/i)).toBeInTheDocument();
+    expect(screen.getByText(/disabled/i)).toBeInTheDocument();
   });
 });
