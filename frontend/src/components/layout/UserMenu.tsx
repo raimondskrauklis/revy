@@ -57,7 +57,6 @@ export function UserMenu({ collapsed = false }: UserMenuProps) {
       </PopoverTrigger>
       <PopoverContent className="w-52 p-1" align="end">
         <div className="border-b border-[color:var(--app-ring)] px-3 py-2">
-          <p className="truncate text-sm font-medium text-[color:var(--app-text-strong)]">{name}</p>
           <p className="truncate text-xs text-[color:var(--app-text-muted)]">{user.email}</p>
         </div>
         <ul className="py-1">
