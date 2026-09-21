@@ -2,10 +2,11 @@
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { TableSkeleton } from '@/components/ui/TableSkeleton';
 import { PullRequestStateBadge } from '@/features/reviewer/components/PullRequestStateBadge';
-import { usePullRequests } from '@/features/reviewer/hooks';
+import { usePullRequests, reviewerQueryKeys } from '@/features/reviewer/hooks';
 import { mapApiError } from '@/shared/errors';
 import { showDomainErrorToast } from '@/shared/errors/toasts';
 
@@ -16,6 +17,13 @@ export function PullRequestListPage() {
   const { repoId } = useParams<{ repoId: string }>();
 
   const { items: pullRequests, isLoading, error, ref } = usePullRequests(workspaceId, repoId);
+  const queryClient = useQueryClient();
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({
+      queryKey: reviewerQueryKeys.pullRequests(workspaceId ?? '', repoId ?? ''),
+    });
+  };
 
   useEffect(() => {
     if (error) {
@@ -41,7 +49,29 @@ export function PullRequestListPage() {
 
   if (pullRequests.length === 0) {
     return (
-      <p className="text-sm text-[color:var(--app-text-muted)]">{t('reviewer.pullRequests.empty')}</p>
+      <div className="flex flex-col items-center gap-4 py-12 text-center">
+        <p className="text-sm font-medium text-[color:var(--app-text-strong)]">
+          {t('reviewer.pullRequests.empty')}
+        </p>
+        <p className="text-sm text-[color:var(--app-text-muted)]">
+          {t('reviewer.pullRequests.emptyHelp')}
+        </p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleRefresh}
+            className="inline-flex min-h-11 items-center justify-center rounded-[var(--app-radius-md)] bg-[color:var(--app-chip)] px-4 text-sm font-medium text-[color:var(--app-text-strong)] hover:bg-[color:var(--app-chip-active)]"
+          >
+            {t('reviewer.pullRequests.refresh')}
+          </button>
+          <Link
+            to="/installations"
+            className="inline-flex min-h-11 items-center justify-center rounded-[var(--app-radius-md)] bg-[color:var(--app-cta-bg)] px-4 text-sm font-medium text-[color:var(--app-cta-fg)] hover:opacity-95"
+          >
+            {t('reviewer.pullRequests.manageInstallations')}
+          </Link>
+        </div>
+      </div>
     );
   }
 

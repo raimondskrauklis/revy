@@ -16,7 +16,7 @@ export function DevNoticeWidget() {
         href="https://github.com/raimondskrauklis/revy/issues/new"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex min-h-11 items-center justify-center rounded-[var(--app-radius-md)] bg-[color:var(--app-primary)] px-4 text-sm font-medium text-[color:var(--app-on-accent)] hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
+        className="inline-flex min-h-11 items-center justify-center rounded-[var(--app-radius-md)] bg-[color:var(--app-cta-bg)] px-4 text-sm font-medium text-[color:var(--app-cta-fg)] hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
       >
         {t('dashboard.devNotice.feedback')}
       </a>

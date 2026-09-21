@@ -263,9 +263,7 @@
     },
     "billing": {
       "currentPlan": "Pašreizējais plāns",
-      "notConfigured": "Norēķini šai videi nav konfigurēti.",
-      "upgrade": "Jaunināt uz Pro",
-      "manage": "Pārvaldīt abonementu",
+      "notConfigured": "Komerciālie plāni pašlaik nav pieejami.",
       "checkoutSuccess": "Maksājums pabeigts. Plāns drīz tiks atjaunināts.",
       "checkoutCancel": "Maksājums tika atcelts.",
       "plans": {
@@ -582,6 +580,9 @@
     "installation": "GitHub instalācija",
     "repositories": {
       "empty": "Šai instalācijai nav sinhronizētu repozitoriju.",
+      "emptyHelp": "Repozitoriji parādās šeit pēc GitHub instalācijas pievienošanas.",
+      "refresh": "Atjaunot",
+      "manageInstallations": "Pārvaldīt instalācijas",
       "loading": "Ielādē repozitorijus…",
       "error": "Neizdevās ielādēt repozitorijus.",
       "name": "Repozitorijs",
@@ -591,6 +592,9 @@
     },
     "pullRequests": {
       "empty": "Šim repozitorijam vēl nav importētu pull request.",
+      "emptyHelp": "PR parādās šeit pēc recenzijas palaišanas no repozitorija.",
+      "refresh": "Atjaunot",
+      "manageInstallations": "Pārvaldīt instalācijas",
       "loading": "Ielādē pull request…",
       "error": "Neizdevās ielādēt pull request.",
       "number": "#",

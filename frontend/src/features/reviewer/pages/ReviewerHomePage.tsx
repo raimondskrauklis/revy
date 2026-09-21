@@ -1,7 +1,8 @@
 // frontend/src/features/reviewer/pages/ReviewerHomePage.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import { TableSkeleton } from '@/components/ui/TableSkeleton';
 import {
   QuietSelect,
@@ -34,6 +35,12 @@ export function ReviewerHomePage() {
   const [selectedInstallationId, setSelectedInstallationId] = useState<string | null>(null);
   const multiInstall = installations.length > 1;
   const activeInstallationId = selectedInstallationId ?? installations[0]?.id ?? null;
+
+  const queryClient = useQueryClient();
+  const handleRefresh = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['installations'] });
+    queryClient.invalidateQueries({ queryKey: ['repositories'] });
+  }, [queryClient]);
 
   const selectedReposQuery = useInstallationRepositories(
     workspaceId,
@@ -96,7 +103,29 @@ export function ReviewerHomePage() {
       ) : hopLoading || isLoadingInstallations || loadingRepos ? (
         <TableSkeleton rows={3} columns={3} />
       ) : repositories.length === 0 ? (
-        <p className="text-sm text-[color:var(--app-text-muted)]">{t('reviewer.repositories.empty')}</p>
+        <div className="flex flex-col items-center gap-4 py-12 text-center">
+          <p className="text-sm font-medium text-[color:var(--app-text-strong)]">
+            {t('reviewer.repositories.empty')}
+          </p>
+          <p className="text-sm text-[color:var(--app-text-muted)]">
+            {t('reviewer.repositories.emptyHelp')}
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleRefresh}
+              className="inline-flex min-h-11 items-center justify-center rounded-[var(--app-radius-md)] bg-[color:var(--app-chip)] px-4 text-sm font-medium text-[color:var(--app-text-strong)] hover:bg-[color:var(--app-chip-active)]"
+            >
+              {t('reviewer.repositories.refresh')}
+            </button>
+            <Link
+              to="/installations"
+              className="inline-flex min-h-11 items-center justify-center rounded-[var(--app-radius-md)] bg-[color:var(--app-cta-bg)] px-4 text-sm font-medium text-[color:var(--app-cta-fg)] hover:opacity-95"
+            >
+              {t('reviewer.repositories.manageInstallations')}
+            </Link>
+          </div>
+        </div>
       ) : (
         <>
           {/* Mobile cards */}

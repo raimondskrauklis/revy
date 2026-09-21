@@ -263,9 +263,7 @@
     },
     "billing": {
       "currentPlan": "Current plan",
-      "notConfigured": "Billing is not configured for this environment.",
-      "upgrade": "Upgrade to Pro",
-      "manage": "Manage subscription",
+      "notConfigured": "Commercial plans are not available right now.",
       "checkoutSuccess": "Checkout completed. Your plan will update shortly.",
       "checkoutCancel": "Checkout was canceled.",
       "plans": {
@@ -582,6 +580,9 @@
     "installation": "GitHub installation",
     "repositories": {
       "empty": "No repositories synced for this installation.",
+      "emptyHelp": "Repositories appear here after you connect a GitHub installation.",
+      "refresh": "Refresh",
+      "manageInstallations": "Manage installations",
       "loading": "Loading repositories…",
       "error": "Could not load repositories.",
       "name": "Repository",
@@ -591,6 +592,9 @@
     },
     "pullRequests": {
       "empty": "No pull requests ingested for this repository yet.",
+      "emptyHelp": "PRs appear here after a review is triggered from the repository.",
+      "refresh": "Refresh",
+      "manageInstallations": "Manage installations",
       "loading": "Loading pull requests…",
       "error": "Could not load pull requests.",
       "number": "#",
