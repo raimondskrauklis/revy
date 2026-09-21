@@ -24,7 +24,7 @@ export function MobileBottomNav() {
   return (
     <nav
       className="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-[color:var(--app-surface)] border-t border-[color:var(--app-ring)] z-40"
-      aria-label={t('sidebar.mainNav')}
+      aria-label={t('sidebar.mobileNav')}
     >
       <ul className="flex h-full">
         {TABS.map((tab) => {

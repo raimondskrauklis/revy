@@ -1,5 +1,5 @@
 // frontend/src/features/reviewer/components/FindingDetailSheet.tsx
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import type { ReconciledFinding, ReviewFinding } from '@/features/reviewer/types';
@@ -32,7 +32,7 @@ interface FindingDetailSheetProps {
   onClose: () => void;
   canDismiss: boolean;
   dismissPending: boolean;
-  onDismiss: (groupId: string) => void;
+  onDismiss: (groupId: string, reason?: string) => void;
 }
 
 export function FindingDetailSheet({
@@ -47,6 +47,7 @@ export function FindingDetailSheet({
   onDismiss,
 }: FindingDetailSheetProps) {
   const { t } = useTranslation();
+  const [dismissReason, setDismissReason] = useState<string>('human_dismissed');
 
   const { data: findings } = useRevisionFindings(
     finding ? workspaceId : null,
@@ -183,13 +184,28 @@ export function FindingDetailSheet({
             </div>
           )}
 
-          {/* Dismiss button */}
+          {/* Dismiss */}
           {canDismiss && finding.state === 'active' && (
-            <div>
+            <div className="space-y-2">
+              <div>
+                <label className="text-xs font-medium text-[color:var(--app-text-muted)]">
+                  {t('reviewer.resolution.reason.label')}
+                </label>
+                <select
+                  value={dismissReason}
+                  onChange={(e) => setDismissReason(e.target.value)}
+                  className="mt-1 w-full rounded-[var(--app-radius-sm)] border border-[color:var(--app-ring)] bg-[color:var(--app-surface)] px-3 py-2 text-sm text-[color:var(--app-text-strong)]"
+                >
+                  <option value="human_dismissed">{t('reviewer.resolution.reason.human_dismissed')}</option>
+                  <option value="absent_and_addressed">{t('reviewer.resolution.reason.absent_and_addressed')}</option>
+                  <option value="false_positive">{t('reviewer.resolution.reason.false_positive')}</option>
+                  <option value="superseded">{t('reviewer.resolution.reason.superseded')}</option>
+                </select>
+              </div>
               <button
                 type="button"
                 disabled={dismissPending}
-                onClick={() => onDismiss(finding.id)}
+                onClick={() => onDismiss(finding.id, dismissReason)}
                 className="w-full rounded-[var(--app-radius-md)] bg-[color:var(--app-danger)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
               >
                 {t('reviewer.detail.dismiss')}

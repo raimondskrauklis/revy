@@ -441,6 +441,7 @@
   },
   "sidebar": {
     "mainNav": "Main navigation",
+    "mobileNav": "Bottom navigation",
     "collapseHint": "Collapse sidebar",
     "expandHint": "Expand sidebar",
     "close": "Close menu"
@@ -626,6 +627,13 @@
         "judge_dismissed": "Dismissed by judge",
         "verification_dismissed": "Dismissed by verification",
         "human_dismissed": "Dismissed by admin"
+      },
+      "reason": {
+        "label": "Reason",
+        "human_dismissed": "Admin discretion",
+        "absent_and_addressed": "Fixed since last push",
+        "false_positive": "False positive",
+        "superseded": "Superseded by change"
       }
     },
     "findings": {

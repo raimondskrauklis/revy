@@ -441,6 +441,7 @@
   },
   "sidebar": {
     "mainNav": "Galvenā navigācija",
+    "mobileNav": "Apakšējā navigācija",
     "collapseHint": "Sakļaut sānjoslu",
     "expandHint": "Izvērst sānjoslu",
     "close": "Aizvērt izvēlni"
@@ -626,6 +627,13 @@
         "judge_dismissed": "Noraidīja tiesnesis",
         "verification_dismissed": "Noraidīja verifikācija",
         "human_dismissed": "Noraidīja administrators"
+      },
+      "reason": {
+        "label": "Iemesls",
+        "human_dismissed": "Administratora lēmums",
+        "absent_and_addressed": "Labots kopš pēdējā push",
+        "false_positive": "Kļūdains atradums",
+        "superseded": "Aizstāts ar izmaiņām"
       }
     },
     "findings": {

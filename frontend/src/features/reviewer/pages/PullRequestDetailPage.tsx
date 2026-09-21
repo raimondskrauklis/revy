@@ -45,8 +45,8 @@ export function PullRequestDetailPage() {
   );
 
   const dismissMutation = useMutation({
-    mutationFn: (groupId: string) =>
-      dismissFindingGroup(workspaceId!, repoId!, prId!, groupId),
+    mutationFn: ({ groupId, reason }: { groupId: string; reason?: string }) =>
+      dismissFindingGroup(workspaceId!, repoId!, prId!, groupId, reason),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: reviewerQueryKeys.reconciled(workspaceId ?? '', repoId ?? '', prId ?? ''),
@@ -220,7 +220,7 @@ export function PullRequestDetailPage() {
                         finding={finding}
                         canDismiss={canDismiss}
                         dismissPending={dismissMutation.isPending}
-                        onDismiss={(groupId) => dismissMutation.mutate(groupId)}
+                        onDismiss={(groupId) => dismissMutation.mutate({ groupId })}
                         onClick={() => setSelectedFinding(finding)}
                       />
                     ))}
@@ -251,7 +251,7 @@ export function PullRequestDetailPage() {
           onClose={clearSelectedFinding}
           canDismiss={canDismiss}
           dismissPending={dismissMutation.isPending}
-          onDismiss={(groupId) => dismissMutation.mutate(groupId)}
+          onDismiss={(groupId, reason) => dismissMutation.mutate({ groupId, reason })}
         />
       )}
     </div>
