@@ -2,12 +2,12 @@
 
 # Keycloak login theme — execution index
 
-| Phase | File | Status |
-|:---|:---|:---|
-| P0 — Inspector (read-only) | [KEYCLOAK_THEME_P0_EXECUTION.md](./KEYCLOAK_THEME_P0_EXECUTION.md) | pending |
-| P1 — Theme package + local loop | [KEYCLOAK_THEME_P1_EXECUTION.md](./KEYCLOAK_THEME_P1_EXECUTION.md) | pending |
-| P2 — Transport, apply, realm cutover | [KEYCLOAK_THEME_P2_EXECUTION.md](./KEYCLOAK_THEME_P2_EXECUTION.md) | pending |
-| P3 — Bake + docker-compose sync | [KEYCLOAK_THEME_P3_EXECUTION.md](./KEYCLOAK_THEME_P3_EXECUTION.md) | pending |
+| Phase | File | Status | SHA |
+|:---|:---|:---|:---|
+| P0 — Inspector (read-only) | [KEYCLOAK_THEME_P0_EXECUTION.md](./KEYCLOAK_THEME_P0_EXECUTION.md) | Done | `090b411` |
+| P1 — Theme package + local loop | [KEYCLOAK_THEME_P1_EXECUTION.md](./KEYCLOAK_THEME_P1_EXECUTION.md) | Done | `090b411` |
+| P2 — Transport, apply, realm cutover | [KEYCLOAK_THEME_P2_EXECUTION.md](./KEYCLOAK_THEME_P2_EXECUTION.md) | Done | (local) |
+| P3 — Bake + docker-compose sync | [KEYCLOAK_THEME_P3_EXECUTION.md](./KEYCLOAK_THEME_P3_EXECUTION.md) | Done | (local) |
 
 **LOOP order:** P0 → P1 → P2 → P3 (P3 optional, deferred).
 
