@@ -62,6 +62,8 @@ describe('WorkspaceSwitcher', () => {
       platform_role: null,
       workspace_id: 'ws-2',
       workspace_plan: null,
+      completed_review_runs: 0,
+      review_run_limit: 25,
       role: AppRole.viewer,
       memberships: [],
     });

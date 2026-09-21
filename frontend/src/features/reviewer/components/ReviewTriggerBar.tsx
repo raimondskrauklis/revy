@@ -2,6 +2,7 @@
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 import { reviewerQueryKeys } from '@/features/reviewer/hooks';
 import { IndexWaitError, triggerReviewWithFullIndexRetry } from '@/features/reviewer/triggerReview';
 import type { ReviewProfile } from '@/features/reviewer/types';
@@ -24,6 +25,11 @@ export function ReviewTriggerBar({
 }: ReviewTriggerBarProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  const completed = user?.completed_review_runs ?? 0;
+  const runLimit = user?.review_run_limit ?? null;
+  const creditExhausted = runLimit !== null && completed >= runLimit;
 
   const triggerMutation = useMutation({
     mutationFn: (profile: ReviewProfile) =>
@@ -85,7 +91,8 @@ export function ReviewTriggerBar({
           type="button"
           variant={profile === 'deep' ? 'default' : 'outline'}
           className="min-h-11"
-          disabled={busy}
+          disabled={busy || creditExhausted}
+          title={creditExhausted ? t('reviewer.reviewRun.creditLimitReached') : undefined}
           onClick={() => triggerMutation.mutate(profile)}
         >
           {triggerMutation.isPending && triggerMutation.variables === profile

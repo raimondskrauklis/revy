@@ -76,7 +76,10 @@
     },
     "planSummary": {
       "title": "Plan",
-      "free": "Free tier — up to 25 review runs per workspace."
+      "free": "Free tier — up to 25 review runs per workspace.",
+      "usage": "{completed}/{limit} reviews used",
+      "unlimited": "Unlimited",
+      "limitReached": "Credit limit reached. Upgrade to Pro for unlimited reviews."
     }
   },
   "header": {
@@ -681,7 +684,8 @@
       "trigger": {
         "deep": "Deep review",
         "critical": "Critical review"
-      }
+      },
+      "creditLimitReached": "Credit limit reached — upgrade to Pro to run more reviews."
     },
     "publish": {
       "status": "Publish: {{status}}",
@@ -761,6 +765,7 @@
     "unknown_error": "Something went wrong",
     "last_workspace_admin": "At least one workspace admin is required",
     "plan_upgrade_required": "Upgrade to Pro to use this feature",
+    "credit_limit_reached": "Credit limit reached. Upgrade to Pro for unlimited reviews.",
     "billing_disabled": "Billing is not configured",
     "subscription_active": "Cancel your subscription before deleting this workspace",
     "sole_workspace_admin": "Transfer admin role or delete the workspace before deleting your account",

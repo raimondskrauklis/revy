@@ -40,6 +40,8 @@ class MeResponse(BaseModel):
     timezone: str
     memberships: list[MeMembership]
     workspace_plan: str | None = None
+    completed_review_runs: int = 0
+    review_run_limit: int | None = None
     impersonation: MeImpersonationInfo | None = None
 
 

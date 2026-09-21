@@ -3,11 +3,11 @@
   "programs": [
     {
       "id": "free-plan-credits",
-      "scope": ["backend/**"],
+      "scope": ["backend/**", "frontend/**"],
       "paths": [
         {
-          "path": "docs/free-plan-credits/FREE_PLAN_CREDITS_P1_EXECUTION.md",
-          "description": "Free Plan Credits — P1 execution (credit check, atomic increment, autostart, Stripe webhook)"
+          "path": "docs/free-plan-credits/FREE_PLAN_CREDITS_P2_EXECUTION.md",
+          "description": "Free Plan Credits — P2 execution (me endpoint, counter display, trigger gate, i18n)"
         },
         {
           "path": "docs/free-plan-credits/FREE_PLAN_CREDITS_FINDINGS.md",
