@@ -22,9 +22,9 @@ function f(overrides: Partial<ReconciledFinding>): ReconciledFinding {
 }
 
 describe('FindingsSummaryBar', () => {
-  it('shows no findings message when empty', () => {
+  it('shows ready to merge when no active findings', () => {
     render(<FindingsSummaryBar findings={[]} conclusion="success" />);
-    expect(screen.getByText(/No findings/i)).toBeInTheDocument();
+    expect(screen.getByText(/Ready to merge/i)).toBeInTheDocument();
   });
 
   it('shows severity counts', () => {

@@ -50,14 +50,14 @@ describe('SidebarProvider', () => {
     expect(result.current.state).toBe('expanded');
   });
 
-  it('toggle is no-op on overlaid state', () => {
+  it('toggle on overlaid expands the sidebar', () => {
     const { result } = renderHook(() => useSidebar(), { wrapper: makeWrapper() });
 
     act(() => result.current.openMobile());
     expect(result.current.state).toBe('overlaid');
 
     act(() => result.current.toggle());
-    expect(result.current.state).toBe('overlaid');
+    expect(result.current.state).toBe('expanded');
   });
 
   it('expand sets expanded state', () => {

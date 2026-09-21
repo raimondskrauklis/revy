@@ -74,8 +74,11 @@ export function FindingDetailSheet({
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
     acquireScrollLock();
-    // Auto-focus the dialog on open
-    dialogRef.current?.focus();
+    // Auto-focus the first interactive element inside the dialog
+    const first = dialogRef.current?.querySelector<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+    first?.focus();
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       releaseScrollLock();

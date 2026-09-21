@@ -165,6 +165,7 @@
       }
     },
     "security": {
+      "heading": "Coming soon",
       "body": "Password, multi-factor authentication, and session management will be available in Revy later. Contact your workspace admin if you need to change how you sign in."
     },
     "appearance": {

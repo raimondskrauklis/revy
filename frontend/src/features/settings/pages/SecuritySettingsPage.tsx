@@ -10,6 +10,9 @@ export function SecuritySettingsPage() {
         {t('settings.nav.security')}
       </h1>
       <div className="flex flex-col items-center gap-4 rounded-[var(--app-radius-md)] border border-[color:var(--app-ring)] bg-[color:var(--app-surface)] p-8 text-center">
+        <span className="rounded-full bg-[color:var(--app-chip)] px-3 py-1 text-xs font-medium text-[color:var(--app-text-muted)]">
+          {t('settings.security.heading')}
+        </span>
         <p className="text-sm text-[color:var(--app-text-muted)]">
           {t('settings.security.body')}
         </p>

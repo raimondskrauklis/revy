@@ -165,6 +165,7 @@
       }
     },
     "security": {
+      "heading": "Drīzumā",
       "body": "Parole, daudzfaktoru autentifikācija un sesiju pārvaldība Revy būs pieejama vēlāk. Ja nepieciešams mainīt pierakstīšanos, sazinieties ar darbvietas administratoru."
     },
     "appearance": {

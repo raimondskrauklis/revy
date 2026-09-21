@@ -44,7 +44,7 @@ export function AppSidebar({ overlay = false }: { overlay?: boolean }) {
   const { t } = useTranslation();
   const location = useLocation();
   const navExtensions = useExtensions('nav_item');
-  const { state, toggle } = useSidebar();
+  const { state, toggle, expand } = useSidebar();
   const collapsed = state === 'collapsed';
   const { user } = useAuth();
 
@@ -118,7 +118,14 @@ export function AppSidebar({ overlay = false }: { overlay?: boolean }) {
           <li>
             <button
               type="button"
-              onClick={() => setSettingsOpen((prev) => !prev)}
+              onClick={() => {
+                if (collapsed) {
+                  expand();
+                  setSettingsOpen(true);
+                } else {
+                  setSettingsOpen((prev) => !prev);
+                }
+              }}
               className={[
                 'flex w-full min-h-11 items-center gap-2 px-3 py-2 text-sm',
                 NAV_LINK_RADIUS,

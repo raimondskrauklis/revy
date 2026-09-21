@@ -54,7 +54,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
 
   const toggle = useCallback(() => {
     setState((prev) => {
-      if (prev === 'overlaid') return prev;
+      if (prev === 'overlaid') return 'expanded';
       const next = prev === 'expanded' ? 'collapsed' : 'expanded';
       writeStored(STORAGE_KEY, next === 'collapsed' ? 'true' : 'false');
       return next;

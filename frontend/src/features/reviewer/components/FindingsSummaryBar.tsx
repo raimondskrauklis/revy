@@ -1,6 +1,6 @@
 // frontend/src/features/reviewer/components/FindingsSummaryBar.tsx
 import { useTranslation } from 'react-i18next';
-import type { ReconciledFinding } from '@/features/reviewer/types';
+import type { MergeConclusion, ReconciledFinding } from '@/features/reviewer/types';
 
 interface SeverityCounts {
   critical: number;
@@ -26,7 +26,7 @@ function computeCounts(findings: ReconciledFinding[]): SeverityCounts {
 
 interface FindingsSummaryBarProps {
   findings: ReconciledFinding[];
-  conclusion: string;
+  conclusion: MergeConclusion;
 }
 
 export function FindingsSummaryBar({ findings, conclusion }: FindingsSummaryBarProps) {
@@ -40,9 +40,7 @@ export function FindingsSummaryBar({ findings, conclusion }: FindingsSummaryBarP
   if (counts.info > 0) parts.push(t('reviewer.summary.infoCount', { count: counts.info }));
 
   let nextAction: string;
-  if (findings.length === 0) {
-    nextAction = t('reviewer.summary.noFindings');
-  } else if (conclusion === 'failure') {
+  if (conclusion === 'failure') {
     nextAction = t('reviewer.summary.nextAction.blocked', {
       blocking: counts.critical + counts.error,
     });
