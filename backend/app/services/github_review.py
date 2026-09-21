@@ -27,6 +27,7 @@ from app.constants.enums import (
 from app.core.config import settings
 from app.core.exceptions import (
     ConflictError,
+    ForbiddenError,
     NotFoundError,
     RateLimitedError,
     ServiceUnavailableError,
@@ -42,6 +43,7 @@ from app.models.github_installation import GitHubInstallationORM
 from app.models.github_pull_request import GitHubPullRequestORM, GitHubPullRequestRevisionORM
 from app.models.github_repository import GitHubRepositoryORM
 from app.models.github_review_run import GitHubReviewRunORM
+from app.models.workspaces import WorkspaceORM
 from app.schemas.github_indexing import GitHubChunkSearchResult
 from app.schemas.github_review import GitHubFindingListResponse, GitHubFindingResponse
 from app.services.engineering_context.pack import (
@@ -633,6 +635,19 @@ async def create_review_run(
         pull_request_id=pull_request_id,
         revision_id=revision_id,
     )
+
+    workspace = await session.get(WorkspaceORM, workspace_id)
+    if workspace is None:
+        raise NotFoundError("Workspace not found")
+    if workspace.review_run_limit is not None and workspace.completed_review_runs >= workspace.review_run_limit:
+            raise ForbiddenError(
+                message="Credit limit reached. Upgrade to Pro for unlimited reviews.",
+                error_code="credit_limit_reached",
+                details={
+                    "completed_runs": workspace.completed_review_runs,
+                    "run_limit": workspace.review_run_limit,
+                },
+            )
 
     if await index_job_in_progress(
         session,
@@ -1304,6 +1319,19 @@ async def run_review_run(session: AsyncSession, *, review_run_id: UUID) -> Revie
 
         run.status = GitHubReviewRunStatus.completed
         await session.flush()
+
+        # Atomic credit increment — only for workspaces with a limit set (free plan).
+        # Guard with completed_review_runs < review_run_limit to prevent exceeding cap under concurrency.
+        await session.execute(
+            update(WorkspaceORM)
+            .where(
+                WorkspaceORM.id == run.workspace_id,
+                WorkspaceORM.review_run_limit.isnot(None),
+                WorkspaceORM.completed_review_runs < WorkspaceORM.review_run_limit,
+            )
+            .values(completed_review_runs=WorkspaceORM.completed_review_runs + 1)
+        )
+
         return ReviewRunOutcome(
             run=run,
             context_pack=context_pack,

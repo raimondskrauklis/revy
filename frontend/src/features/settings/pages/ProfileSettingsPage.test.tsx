@@ -32,6 +32,8 @@ describe('ProfileSettingsPage', () => {
       platform_role: null,
       workspace_id: 'ws-1',
       workspace_plan: null,
+      completed_review_runs: 0,
+      review_run_limit: 25,
       role: AppRole.admin,
       memberships: [],
     });
@@ -46,6 +48,8 @@ describe('ProfileSettingsPage', () => {
         platform_role: null,
         workspace_id: 'ws-1',
         workspace_plan: null,
+      completed_review_runs: 0,
+      review_run_limit: 25,
         role: AppRole.admin,
         memberships: [],
       },
@@ -61,6 +65,8 @@ describe('ProfileSettingsPage', () => {
       platform_role: null,
       workspace_id: 'ws-1',
       workspace_plan: null,
+      completed_review_runs: 0,
+      review_run_limit: 25,
       role: AppRole.admin,
       memberships: [],
     });

@@ -17,7 +17,7 @@ description: >-
 
 **Not:** one monolithic file for all phases (legacy `FRAMEWORK_CALLOFF_EXECUTION_PLAN.md`).
 
-**Next step after full pass:** **`execution-peer-review`** → then user attaches plan folder + `phase-execution`.
+**Next step after full pass:** user attaches plan folder + `phase-execution`.
 
 ---
 
@@ -29,7 +29,7 @@ description: >-
 2. Read findings + general plan; list every `## P0` / `## C0` … phase block.
 3. **README first:** add or update execution table with **all phases**, linear LOOP order, wave column if helpful.
 4. **For each phase in order:** write `<TOPIC>_P0_EXECUTION.md` … (one file per phase).
-5. **Peer review:** run **`execution-peer-review`** on the full set (one file at a time) before baseline-ready; fix findings, then re-review changed files only.
+5. **Peer review:** **execution-peer-review** runs separately from `create-execution-plan` — do not run it here.
 6. Each file: 3–6 subphases, phase gate, locked decisions, out of scope, **Next** link. All decisions locked — no options, no TBDs. Unit tests only (`tests/unit/`).
 7. If general plan names a scope authority, link it in README + headers as `**Authority:**` (domain doc — not hardcoded in this skill).
 8. **Exit criteria** — list remaining gaps explicitly; do not defer mandatory GA items as “optional follow-up”.
@@ -239,7 +239,6 @@ P0…Pn-1: README status row only when that phase ships.
 - [ ] Human gate marked where ops/sign-off required
 - [ ] **Code + docs in one PR:** first phase includes SSOT (`.revy/review-context.json`) + `.cursor/BUGBOT.md` + `test_engineering_context_manifest.py` gate — see `phase-execution` skill
 - [ ] **Final phase:** doc-sync subphase (+ `changelog.json` if user-facing); optional `post-finish-gap-pass`
-- [ ] **`execution-peer-review`** on all files (one-by-one report) — no critical/high open
 ```
 
 **Invoke with:**

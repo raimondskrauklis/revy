@@ -1,12 +1,12 @@
 # backend/tests/unit/test_plan_gates.py
-"""Plan feature gating — installations.create requires pro."""
+"""Plan feature gating — installations.create gate removed."""
 import uuid
 from unittest.mock import AsyncMock
 
 import pytest
 
 from app.constants.enums import WorkspaceStatus
-from app.core.exceptions import ForbiddenError, NotFoundError
+from app.core.exceptions import NotFoundError
 from app.core.plan_gates import (
     PLAN_FEATURES,
     require_plan_feature,
@@ -26,13 +26,14 @@ def _workspace(*, plan: str | None) -> WorkspaceORM:
     return workspace
 
 
-def test_plan_features_maps_installations_create_to_pro():
-    assert PLAN_FEATURES["installations.create"] == "pro"
+def test_plan_features_is_empty():
+    assert PLAN_FEATURES == {}
 
 
-def test_workspace_has_feature_free_denied():
+def test_workspace_has_feature_free_allowed():
+    """Free-plan workspaces can install when no plan gate exists."""
     workspace = _workspace(plan=None)
-    assert workspace_has_feature(workspace, "installations.create") is False
+    assert workspace_has_feature(workspace, "installations.create") is True
 
 
 def test_workspace_has_feature_pro_allowed():
@@ -41,7 +42,8 @@ def test_workspace_has_feature_pro_allowed():
 
 
 @pytest.mark.asyncio
-async def test_require_plan_feature_raises_for_free_plan():
+async def test_require_plan_feature_allows_free_plan():
+    """require_plan_feature is a no-op when PLAN_FEATURES is empty."""
     workspace_id = uuid.uuid4()
     workspace = _workspace(plan=None)
     workspace.id = workspace_id
@@ -49,14 +51,8 @@ async def test_require_plan_feature_raises_for_free_plan():
     session.get = AsyncMock(return_value=workspace)
     dependency = require_plan_feature("installations.create")
 
-    with pytest.raises(ForbiddenError) as exc:
-        await dependency(workspace_id=workspace_id, session=session)
-
-    assert exc.value.error_code == "plan_upgrade_required"
-    assert exc.value.details == {
-        "feature": "installations.create",
-        "required_plan": "pro",
-    }
+    # Should not raise — empty PLAN_FEATURES means all features allowed
+    await dependency(workspace_id=workspace_id, session=session)
 
 
 @pytest.mark.asyncio
