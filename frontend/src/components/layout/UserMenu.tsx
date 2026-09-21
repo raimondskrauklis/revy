@@ -47,7 +47,7 @@ export function UserMenu() {
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[color:var(--app-chip)] text-xs font-semibold">
             {name.charAt(0).toUpperCase()}
           </span>
-          <span className="hidden truncate sm:inline">{name}</span>
+          <span className="hidden min-w-0 truncate sm:inline">{name}</span>
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-52 p-1" align="end">

@@ -77,7 +77,7 @@
     "planSummary": {
       "title": "Plāns",
       "free": "Bezmaksas līmenis — līdz 25 pārskatu reizēm darba vidē.",
-      "usage": "{completed}/{limit} pārskati izmantoti",
+      "usage": "{{completed}}/{{limit}} pārskati izmantoti",
       "unlimited": "Neierobežots",
       "limitReached": "Kredītu limits sasniegts. Jauniniet uz Pro neierobežotiem pārskatiem."
     }
@@ -455,7 +455,7 @@
   "landing": {
     "hero": {
       "eyebrow": "Builder konsole",
-      "title": "Maza sūce nogremdē lielu kuģi",
+      "title": "Uzmanies no kļūdām; maza sūce nogremdē lielu kuģi",
       "subtitle": "Savienojiet GitHub. Pārskatiet atradumus. Apvienojiet, kad lampas kļūst zaļas.",
       "cta": "Ienākt konsolē"
     }
