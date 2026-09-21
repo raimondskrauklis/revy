@@ -30,7 +30,12 @@ export function FindingDetailSheet({
 }: FindingDetailSheetProps) {
   const { t } = useTranslation();
 
-  const { data: findings } = useRevisionFindings(workspaceId, repoId, prId, revisionId);
+  const { data: findings } = useRevisionFindings(
+    finding ? workspaceId : null,
+    finding ? repoId : null,
+    finding ? prId : null,
+    finding ? revisionId : null,
+  );
   const detail: ReviewFinding | undefined = finding
     ? findings?.find((d) => d.id === finding.id)
     : undefined;
@@ -136,7 +141,7 @@ export function FindingDetailSheet({
               </p>
               <p className="mt-1 text-sm text-[color:var(--app-text-muted)]">
                 {t('reviewer.detail.firstSeen', {
-                  revision: detail.id.slice(0, 7),
+                  revision: revisionId ? revisionId.slice(0, 7) : '—',
                 })}
               </p>
             </div>
@@ -149,7 +154,7 @@ export function FindingDetailSheet({
                 type="button"
                 disabled={dismissPending}
                 onClick={() => onDismiss(finding.id)}
-                className="w-full rounded-[var(--app-radius-md)] bg-[color:var(--app-red)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                className="w-full rounded-[var(--app-radius-md)] bg-[color:var(--app-danger)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
               >
                 {t('reviewer.detail.dismiss')}
               </button>

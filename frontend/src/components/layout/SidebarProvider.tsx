@@ -18,10 +18,18 @@ const MOBILE_MQ = '(max-width: 1023px)';
 const SidebarContext = createContext<SidebarContextValue | null>(null);
 
 function readInitialState(): SidebarState {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === 'true') return 'collapsed';
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === 'true') return 'collapsed';
+  } catch {
+    // localStorage unavailable — use matchMedia fallback
+  }
 
-  if (window.matchMedia(MOBILE_MQ).matches) return 'overlaid';
+  try {
+    if (window.matchMedia(MOBILE_MQ).matches) return 'overlaid';
+  } catch {
+    // matchMedia unavailable — default
+  }
 
   return 'expanded';
 }
@@ -60,6 +68,11 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
+        // Don't toggle inside text inputs / contentEditable
+        const tag = (e.target as HTMLElement)?.tagName ?? '';
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) {
+          return;
+        }
         e.preventDefault();
         toggle();
       }

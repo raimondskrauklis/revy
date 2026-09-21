@@ -61,9 +61,28 @@ export function MembersTable({
                 <span className="text-sm font-medium text-[color:var(--app-text-strong)]">
                   {member.full_name ?? '—'}
                 </span>
-                <span className="text-xs text-[color:var(--app-text-muted)]">
-                  {t(`settings.team.roles.${member.role}`)}
-                </span>
+                {canManage ? (
+                  <QuietSelect
+                    value={member.role}
+                    onValueChange={(value) => void onRoleChange(member.user_id, value as AppRole)}
+                    disabled={isBusy}
+                  >
+                    <QuietSelectTrigger className="min-w-32">
+                      <QuietSelectValue />
+                    </QuietSelectTrigger>
+                    <QuietSelectContent>
+                      {ROLE_OPTIONS.map((role) => (
+                        <QuietSelectItem key={role} value={role}>
+                          {t(`settings.team.roles.${role}`)}
+                        </QuietSelectItem>
+                      ))}
+                    </QuietSelectContent>
+                  </QuietSelect>
+                ) : (
+                  <span className="text-xs text-[color:var(--app-text-muted)]">
+                    {t(`settings.team.roles.${member.role}`)}
+                  </span>
+                )}
               </div>
               <span className="text-xs text-[color:var(--app-text-muted)]">{member.email}</span>
               {canManage && !isSelf && (

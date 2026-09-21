@@ -11,7 +11,7 @@ import {
   QuietSelectTrigger,
   QuietSelectValue,
 } from '@/components/ui/quiet-select';
-import { useInstallationRepositories } from '@/features/reviewer/hooks';
+import { useInstallationRepositories, reviewerQueryKeys } from '@/features/reviewer/hooks';
 import { useReviewerRepoHop } from '@/features/reviewer/useReviewerRepoHop';
 import { mapApiError } from '@/shared/errors';
 import { showDomainErrorToast } from '@/shared/errors/toasts';
@@ -38,9 +38,11 @@ export function ReviewerHomePage() {
 
   const queryClient = useQueryClient();
   const handleRefresh = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['installations'] });
-    queryClient.invalidateQueries({ queryKey: ['repositories'] });
-  }, [queryClient]);
+    if (workspaceId) {
+      queryClient.invalidateQueries({ queryKey: reviewerQueryKeys.installations(workspaceId) });
+      queryClient.invalidateQueries({ queryKey: ['reviewer', 'repositories', workspaceId] });
+    }
+  }, [queryClient, workspaceId]);
 
   const selectedReposQuery = useInstallationRepositories(
     workspaceId,
