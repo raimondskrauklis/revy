@@ -231,7 +231,8 @@
         "emailLabel": "E-pasts",
         "roleLabel": "Loma",
         "submit": "Nosūtīt uzaicinājumu",
-        "success": "Uzaicinājums nosūtīts"
+        "success": "Uzaicinājums nosūtīts",
+        "notAvailable": "Dalībnieku uzaicinājumi vēl nav pieejami."
       },
       "roles": {
         "admin": "Administrators",
@@ -457,7 +458,7 @@
   "landing": {
     "hero": {
       "eyebrow": "Builder konsole",
-      "title": "Uzmanies no kļūdām\nmaza sūce nogremdē lielu kuģi",
+      "title": "Uzmanies no kļūdām\nmaza kļūme var nogremdēt lielu kuģi",
       "subtitle": "Savienojiet GitHub. Pārskatiet atradumus. Apvienojiet, kad lampas kļūst zaļas.",
       "cta": "Ienākt konsolē"
     }

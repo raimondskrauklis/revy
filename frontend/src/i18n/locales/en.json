@@ -231,7 +231,8 @@
         "emailLabel": "Email",
         "roleLabel": "Role",
         "submit": "Send invitation",
-        "success": "Invitation sent"
+        "success": "Invitation sent",
+        "notAvailable": "Member invitations are not available yet."
       },
       "roles": {
         "admin": "Admin",
@@ -457,7 +458,7 @@
   "landing": {
     "hero": {
       "eyebrow": "Builder console",
-      "title": "Beware of bugs\na small leak will sink a great ship.",
+      "title": "Beware of bugs\na small defect can sink a great ship.",
       "subtitle": "Connect GitHub. Review findings. Merge when the lamps go green.",
       "cta": "Enter console"
     }

@@ -127,7 +127,7 @@ export function TeamSettingsPage() {
             )}
           </section>
 
-          <InviteMemberForm onInvite={handleInvite} submitting={createInvitation.isPending} />
+          <InviteMemberForm onInvite={handleInvite} submitting={createInvitation.isPending} disabled />
         </>
       ) : null}
 
