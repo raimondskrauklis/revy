@@ -2,7 +2,7 @@
 
 # Console UX + mobile/layout upgrade
 
-**Status:** findings baselined, general plan written, architecture peer review complete, execution plans written, execution peer review pass 1 + pass 2 delta complete. Next: `phase-execution` LOOP.
+**Status:** shipped (P0–P3 done) + post-finish gap pass. Changelog entry added.
 
 This program rebuilds the reviewer page as a real operator console and makes the entire app shell responsive from phone to desktop. No new APIs. No diff viewer. No landing changes.
 
@@ -22,10 +22,10 @@ Linear LOOP order. Frontend-only, all 4 phases.
 
 | Phase | Focus | File | Status |
 |-------|-------|------|--------|
-| P0 | Shell, sidebar & responsive layout | [CONSOLE_UX_UPGRADE_P0_EXECUTION.md](./CONSOLE_UX_UPGRADE_P0_EXECUTION.md) | pending |
-| P1 | Findings UX & merge verdict | [CONSOLE_UX_UPGRADE_P1_EXECUTION.md](./CONSOLE_UX_UPGRADE_P1_EXECUTION.md) | pending |
-| P2 | Responsive tables | [CONSOLE_UX_UPGRADE_P2_EXECUTION.md](./CONSOLE_UX_UPGRADE_P2_EXECUTION.md) | pending |
-| P3 | Polish, empty states & bottom nav | [CONSOLE_UX_UPGRADE_P3_EXECUTION.md](./CONSOLE_UX_UPGRADE_P3_EXECUTION.md) | pending |
+| P0 | Shell, sidebar & responsive layout | [CONSOLE_UX_UPGRADE_P0_EXECUTION.md](./CONSOLE_UX_UPGRADE_P0_EXECUTION.md) | done |
+| P1 | Findings UX & merge verdict | [CONSOLE_UX_UPGRADE_P1_EXECUTION.md](./CONSOLE_UX_UPGRADE_P1_EXECUTION.md) | done |
+| P2 | Responsive tables | [CONSOLE_UX_UPGRADE_P2_EXECUTION.md](./CONSOLE_UX_UPGRADE_P2_EXECUTION.md) | done |
+| P3 | Polish, empty states & bottom nav | [CONSOLE_UX_UPGRADE_P3_EXECUTION.md](./CONSOLE_UX_UPGRADE_P3_EXECUTION.md) | done |
 
 ## Phase summary
 
@@ -58,4 +58,5 @@ P0 ──→ P1 ──→ P2
 ## Next
 
 1. ~~`execution-peer-review` on all 4 execution files~~ ✅ [pass 1](./reviews/execution-peer-review/pass-01-2026-09-20.md) + [pass 2 delta](./reviews/execution-peer-review/pass-02-2026-09-20-delta.md) complete — 0 critical, 0 high, BLOCK: no
-2. `phase-execution` LOOP (P0 → P1 → P2 → P3)
+2. ~~`phase-execution` LOOP (P0 → P1 → P2 → P3)~~ ✅ shipped
+3. ~~Post-finish gap pass~~ ✅ [pass 01](./reviews/post-finish-gap-pass/pass-01-2026-09-21.md) — landing hero split, tooltips, review models "coming soon" label

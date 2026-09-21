@@ -17,7 +17,7 @@ describe('UserMenu', () => {
     vi.clearAllMocks();
   });
 
-  it('links profile to settings and signs out', async () => {
+  it('shows account menu with sign out', async () => {
     const logout = vi.fn();
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: true,
@@ -43,8 +43,7 @@ describe('UserMenu', () => {
 
     await user.click(screen.getByRole('button', { name: /account menu/i }));
 
-    const profileLink = screen.getByRole('link', { name: /profile & settings/i });
-    expect(profileLink).toHaveAttribute('href', '/settings/profile');
+    expect(screen.queryByRole('link', { name: /profile/i })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /sign out/i }));
     expect(logout).toHaveBeenCalled();

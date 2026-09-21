@@ -26,7 +26,7 @@ export function LandingPage() {
               className="cursor-block inline-block h-4 w-2 bg-[color:var(--app-primary)]"
             />
           </p>
-          <h1 className="mt-4 text-3xl font-medium tracking-tight text-[color:var(--app-text-strong)] sm:text-4xl">
+          <h1 className="mt-4 text-3xl font-medium leading-snug tracking-tight whitespace-pre-line text-[color:var(--app-text-strong)] sm:text-4xl">
             {t('landing.hero.title')}
           </h1>
           <p className="mt-4 max-w-xl font-sans text-base leading-relaxed text-[color:var(--app-text-muted)]">

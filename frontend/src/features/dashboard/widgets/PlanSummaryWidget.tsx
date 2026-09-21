@@ -11,14 +11,35 @@ export function PlanSummaryWidget() {
     return null;
   }
 
+  const completed = user.completed_review_runs ?? 0;
+  const limit = user.review_run_limit ?? null;
+  const isPro = limit === null;
+
   return (
     <section className="space-y-3 rounded-lg bg-[color:var(--app-surface)] p-4 ring-1 ring-[color:var(--app-ring)]">
       <h2 className="text-base font-medium text-[color:var(--app-text-strong)]">
         {t('dashboard.planSummary.title')}
       </h2>
       <p className="text-sm text-[color:var(--app-text-muted)]">
-        {t('dashboard.planSummary.free')}
+        {isPro
+          ? t('dashboard.planSummary.unlimited')
+          : t('dashboard.planSummary.free')}
       </p>
+      {!isPro && (
+        <p className="text-sm text-[color:var(--app-text-muted)]">
+          {t('dashboard.planSummary.usage', { completed, limit })}
+        </p>
+      )}
+      {!isPro && completed >= (limit ?? 0) && (
+        <p className="text-sm text-[color:var(--app-warning)]">
+          {t('dashboard.planSummary.limitReached')}
+        </p>
+      )}
+      {!isPro && completed < (limit ?? 0) && (
+        <p className="text-xs text-[color:var(--app-text-muted)]">
+          {t('dashboard.planSummary.feedbackHint')}
+        </p>
+      )}
     </section>
   );
 }

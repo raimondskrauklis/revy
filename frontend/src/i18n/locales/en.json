@@ -64,7 +64,7 @@
     },
     "devNotice": {
       "title": "Revy is in active development",
-      "body": "We're shipping fast. Some things may move around. Report bugs, rough edges, or missing features — your feedback shapes the product.",
+      "body": "Report bugs or missing features. Your feedback shapes the product.",
       "feedback": "Leave feedback"
     },
     "installationsSummary": {
@@ -76,7 +76,11 @@
     },
     "planSummary": {
       "title": "Plan",
-      "free": "Free tier — up to 25 review runs per workspace."
+      "free": "Free tier — up to 25 review runs per workspace.",
+      "usage": "{{completed}}/{{limit}} reviews used",
+      "unlimited": "Unlimited",
+      "limitReached": "Credit limit reached. Upgrade to Pro for unlimited reviews.",
+      "feedbackHint": "Share ideas and report bugs via the feedback form above."
     }
   },
   "header": {
@@ -166,10 +170,10 @@
     },
     "security": {
       "heading": "Coming soon",
-      "body": "Password, multi-factor authentication, and session management will be available in Revy later. Contact your workspace admin if you need to change how you sign in."
+      "body": "Security settings are not available yet."
     },
     "appearance": {
-      "body": "This product is a console-only operator surface. Light and system themes stay in the store for a later revert; they are not a working choice here.",
+      "body": "Dark and system themes are disabled. Only the Revy theme is active.",
       "themeLabel": "Theme"
     },
     "workspace": {
@@ -185,6 +189,7 @@
       "autostartSaveSuccess": "Review autostart setting saved",
       "modelsTitle": "Models",
       "modelsBody": "Override platform defaults per pipeline role. Choose Platform default to inherit environment configuration.",
+      "modelsProRequired": "Custom model selection requires a Pro plan upgrade.",
       "modelsSaveSuccess": "Model policy saved",
       "platformDefault": "Platform default",
       "roles": {
@@ -452,7 +457,7 @@
   "landing": {
     "hero": {
       "eyebrow": "Builder console",
-      "title": "Beware of little expenses; a small leak will sink a great ship",
+      "title": "Beware of bugs\na small leak will sink a great ship.",
       "subtitle": "Connect GitHub. Review findings. Merge when the lamps go green.",
       "cta": "Enter console"
     }
@@ -681,7 +686,9 @@
       "trigger": {
         "deep": "Deep review",
         "critical": "Critical review"
-      }
+      },
+      "creditLimitReached": "Credit limit reached — upgrade to Pro to run more reviews.",
+      "commentHint": "Write @revy review in a PR comment to retrigger from GitHub."
     },
     "publish": {
       "status": "Publish: {{status}}",
@@ -702,7 +709,10 @@
       "skippedUnavailable": "Judge unavailable"
     },
     "glossary": {
-      "judge": "An LLM that re-evaluates flagged findings for final resolution — may be unavailable in limited plans."
+      "judge": "An LLM that re-evaluates flagged findings for final resolution — may be unavailable in limited plans.",
+      "mergeReadiness": "Whether this pull request is safe to merge based on outstanding findings.",
+      "reviewRun": "An automated analysis that scans the code and produces findings.",
+      "publish": "Posts findings as a check run comment on the pull request."
     },
     "summary": {
       "criticalCount": "{{count}} Critical",
@@ -717,10 +727,10 @@
       "dismissedCount_plural": "· {{count}} dismissed",
       "noFindings": "No findings for this PR.",
       "nextAction": {
-        "blocked": "Blocked — dismiss or resolve {{blocking}} Critical/Error findings to unblock",
-        "needsReview": "Needs review — {{blocking}} Warning findings to review",
-        "infoOnly": "Ready to merge — Info findings present but none blocking",
-        "ready": "Ready to merge — all findings resolved"
+        "blocked": "Blocked. {{blocking}} Critical or Error findings must be resolved.",
+        "needsReview": "Needs review. {{blocking}} Warning findings to review.",
+        "infoOnly": "Ready. Info findings present but none blocking.",
+        "ready": "Ready. No active findings."
       }
     },
     "toolbar": {
@@ -761,6 +771,7 @@
     "unknown_error": "Something went wrong",
     "last_workspace_admin": "At least one workspace admin is required",
     "plan_upgrade_required": "Upgrade to Pro to use this feature",
+    "credit_limit_reached": "Credit limit reached. Upgrade to Pro for unlimited reviews.",
     "billing_disabled": "Billing is not configured",
     "subscription_active": "Cancel your subscription before deleting this workspace",
     "sole_workspace_admin": "Transfer admin role or delete the workspace before deleting your account",

@@ -2,7 +2,6 @@
 import { InstallationsSummaryWidget } from '@/features/installations/InstallationsSummaryWidget';
 import { PlanSummaryWidget } from '@/features/dashboard/widgets/PlanSummaryWidget';
 import { RevyGitHubIntegrationCard } from '@/features/installations/RevyGitHubIntegrationCard';
-import { ReviewerSummaryWidget } from '@/features/reviewer/ReviewerSummaryWidget';
 import { registerExtension } from '@/platform/extensions/registry';
 
 export function registerRevyExtensions(): void {
@@ -21,17 +20,10 @@ export function registerRevyExtensions(): void {
     order: 20,
   });
   registerExtension({
-    id: 'reviewer-summary',
-    slot: 'dashboard_widget',
-    component: ReviewerSummaryWidget,
-    permission: 'items:view',
-    order: 25,
-  });
-  registerExtension({
     id: 'plan-summary',
     slot: 'dashboard_widget',
     component: PlanSummaryWidget,
     permission: 'admin:users',
-    order: 30,
+    order: 25,
   });
 }

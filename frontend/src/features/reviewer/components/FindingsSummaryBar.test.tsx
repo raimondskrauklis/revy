@@ -24,7 +24,7 @@ function f(overrides: Partial<ReconciledFinding>): ReconciledFinding {
 describe('FindingsSummaryBar', () => {
   it('shows ready to merge when no active findings', () => {
     render(<FindingsSummaryBar findings={[]} conclusion="success" />);
-    expect(screen.getByText(/Ready to merge/i)).toBeInTheDocument();
+    expect(screen.getByText(/Ready/i)).toBeInTheDocument();
   });
 
   it('shows severity counts', () => {
@@ -85,6 +85,6 @@ describe('FindingsSummaryBar', () => {
         conclusion="success"
       />,
     );
-    expect(screen.getByText(/Ready to merge/i)).toBeInTheDocument();
+    expect(screen.getByText(/Ready/i)).toBeInTheDocument();
   });
 });

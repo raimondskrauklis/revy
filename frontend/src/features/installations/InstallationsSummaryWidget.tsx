@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useChecklistContext } from '@/features/dashboard/hooks';
-import { GitHubInstallationStatus } from '@/shared/types/enums';
 
 export function InstallationsSummaryWidget() {
   const { t } = useTranslation();
@@ -28,13 +27,6 @@ export function InstallationsSummaryWidget() {
             ? t('common.loading')
             : t('dashboard.installationsSummary.count', { count })}
         </p>
-        {!isLoading && count > 0 ? (
-          <p className="text-sm text-[color:var(--app-text-muted)]">
-            {t('dashboard.installationsSummary.statusHint', {
-              status: t(`installations.status.${GitHubInstallationStatus.active}`),
-            })}
-          </p>
-        ) : null}
       </div>
       <Link
         to="/installations"

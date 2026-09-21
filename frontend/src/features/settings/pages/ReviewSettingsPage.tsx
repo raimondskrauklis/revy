@@ -172,6 +172,9 @@ export function ReviewSettingsPage() {
           <p className="text-sm text-[color:var(--app-text-muted)]">
             {t('settings.review.modelsBody')}
           </p>
+          <p className="text-xs text-[color:var(--app-text-muted)]">
+            {t('settings.review.modelsProRequired')}
+          </p>
         </div>
 
         {MODEL_ROLES.map((role) => (
