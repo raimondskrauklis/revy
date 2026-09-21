@@ -690,6 +690,9 @@
       "skipped": "Judge skipped",
       "skippedUnavailable": "Judge unavailable"
     },
+    "glossary": {
+      "judge": "An LLM that re-evaluates flagged findings for final resolution — may be unavailable in limited plans."
+    },
     "summary": {
       "criticalCount": "{{count}} Critical",
       "criticalCount_plural": "{{count}} Critical",

@@ -23,7 +23,7 @@ export function AppShellLayout() {
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <ImpersonationBanner />
           <AppHeader />
-          <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-16 md:pb-6">
+          <div data-scroll-lock-target className="flex-1 overflow-y-auto p-4 md:p-6 pb-16 md:pb-6">
             <div className="mx-auto max-w-[900px]">
               <Outlet />
             </div>

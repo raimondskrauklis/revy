@@ -690,6 +690,9 @@
       "skipped": "Tiesnesis izlaists",
       "skippedUnavailable": "Tiesnesis nav pieejams"
     },
+    "glossary": {
+      "judge": "LLM, kas atkārtoti izvērtē atzīmētos atradumus gala lēmumam — var nebūt pieejams ierobežotos plānos."
+    },
     "summary": {
       "criticalCount": "{{count}} Kritisks",
       "criticalCount_plural": "{{count}} Kritiski",

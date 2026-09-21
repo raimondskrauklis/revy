@@ -225,8 +225,10 @@ export function PullRequestDetailPage() {
                     ))}
                   </tbody>
                 </table>
-                <div ref={ref} className="h-4" />
               </div>
+
+              {/* Infinite-scroll sentinel — visible on both layouts */}
+              <div ref={ref} className="h-4" />
             </>
           )}
         </FindingsToolbar>

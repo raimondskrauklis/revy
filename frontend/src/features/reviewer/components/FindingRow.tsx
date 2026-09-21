@@ -41,22 +41,7 @@ export function FindingRow({
     canDismiss && finding.state === 'active' && typeof onDismiss === 'function';
 
   return (
-    <tr
-      className={`border-t border-[color:var(--app-ring)] ${onClick ? 'cursor-pointer hover:bg-[color:var(--app-chip)]' : ''}`}
-      onClick={onClick}
-      onKeyDown={
-        onClick
-          ? (e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onClick();
-              }
-            }
-          : undefined
-      }
-      tabIndex={onClick ? 0 : undefined}
-      role={onClick ? 'button' : undefined}
-    >
+    <tr className="border-t border-[color:var(--app-ring)]">
       <td className="px-3 py-2 text-sm text-[color:var(--app-text-strong)]">
         <span className="inline-flex items-center gap-2">
           <span
@@ -81,7 +66,17 @@ export function FindingRow({
         </div>
       </td>
       <td className="px-3 py-2 text-sm font-sans text-[color:var(--app-text-strong)]">
-        {finding.title}
+        {onClick ? (
+          <button
+            type="button"
+            onClick={onClick}
+            className="text-left hover:underline cursor-pointer"
+          >
+            {finding.title}
+          </button>
+        ) : (
+          finding.title
+        )}
       </td>
       <td className="px-3 py-2 text-sm font-mono text-[color:var(--app-text-muted)]">
         {finding.file_path ?? '—'}
@@ -98,7 +93,7 @@ export function FindingRow({
             type="button"
             className="text-[color:var(--app-link)] hover:underline disabled:opacity-50"
             disabled={dismissPending}
-            onClick={(e) => { e.stopPropagation(); onDismiss(finding.id); }}
+            onClick={() => onDismiss(finding.id)}
           >
             {t('reviewer.resolution.dismiss')}
           </button>

@@ -86,16 +86,14 @@ export function FindingsToolbar({ findings, children }: FindingsToolbarProps) {
 
   const toggleSort = useCallback(
     (field: SortField) => {
-      setSortField((prev) => {
-        if (prev === field) {
-          setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-          return prev;
-        }
+      if (sortField === field) {
+        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+      } else {
+        setSortField(field);
         setSortDir('asc');
-        return field;
-      });
+      }
     },
-    [],
+    [sortField],
   );
 
   const toggleFilter = useCallback(
@@ -175,7 +173,7 @@ export function FindingsToolbar({ findings, children }: FindingsToolbarProps) {
                   : 'border-[color:var(--app-ring)] text-[color:var(--app-text-muted)] hover:bg-[color:var(--app-chip)]'
               }`}
             >
-              {t(`reviewer.findings.${s}`)}
+              {t(`reviewer.severity.${s}`)}
             </button>
           ))}
         </div>
