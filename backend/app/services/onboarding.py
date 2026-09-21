@@ -49,7 +49,7 @@ async def activate_user_with_workspace(
 ) -> WorkspaceORM:
     """Create workspace + membership and set user active — Mode A auto or Mode B approve."""
     slug = _slugify_workspace_name(name, fallback="workspace")
-    workspace = WorkspaceORM(slug=slug, name=name)
+    workspace = WorkspaceORM(slug=slug, name=name, review_run_limit=25)
     session.add(workspace)
     await session.flush()
 

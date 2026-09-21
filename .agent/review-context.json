@@ -1,21 +1,21 @@
 {
-  "active_program": "console-ux-upgrade",
+  "active_program": "free-plan-credits",
   "programs": [
     {
-      "id": "console-ux-upgrade",
-      "scope": ["frontend/**"],
+      "id": "free-plan-credits",
+      "scope": ["backend/**"],
       "paths": [
         {
-          "path": "docs/visual-identity/console-ux-upgrade/CONSOLE_UX_UPGRADE_P0_EXECUTION.md",
-          "description": "Console UX + mobile/layout upgrade — P0 execution (shell, sidebar, responsive layout)"
+          "path": "docs/free-plan-credits/FREE_PLAN_CREDITS_P0_EXECUTION.md",
+          "description": "Free Plan Credits — P0 execution (schema, migration, open install gate)"
         },
         {
-          "path": "docs/visual-identity/console-ux-upgrade/UIUX_CONSOLE_FINDINGS.md",
-          "description": "Console UX audit — 12 findings (C1–m4)"
+          "path": "docs/free-plan-credits/FREE_PLAN_CREDITS_FINDINGS.md",
+          "description": "Free Plan Credits — findings (DB snapshot, schema, edge cases, decisions registry)"
         },
         {
-          "path": "docs/visual-identity/console-ux-upgrade/UIUX_CONSOLE_GENERAL_PLAN.md",
-          "description": "Console UX + mobile/layout general plan — P0–P3"
+          "path": "docs/free-plan-credits/FREE_PLAN_CREDITS_GENERAL_PLAN.md",
+          "description": "Free Plan Credits — general plan (P0–P2 goals and deliverables)"
         }
       ]
     }
