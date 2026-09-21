@@ -38,6 +38,7 @@ export function MobileBottomNav() {
             <li key={tab.href} className="flex-1">
               <Link
                 to={tab.href}
+                aria-current={isActive ? 'page' : undefined}
                 className={`flex flex-col items-center justify-center h-full gap-0.5 text-[10px] ${
                   isActive
                     ? 'text-[color:var(--app-primary)] font-medium'

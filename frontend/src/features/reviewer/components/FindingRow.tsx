@@ -98,7 +98,7 @@ export function FindingRow({
             type="button"
             className="text-[color:var(--app-link)] hover:underline disabled:opacity-50"
             disabled={dismissPending}
-            onClick={() => onDismiss(finding.id)}
+            onClick={(e) => { e.stopPropagation(); onDismiss(finding.id); }}
           >
             {t('reviewer.resolution.dismiss')}
           </button>

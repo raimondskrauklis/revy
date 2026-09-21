@@ -1,5 +1,5 @@
 // frontend/src/components/layout/SidebarProvider.tsx
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 type SidebarState = 'expanded' | 'collapsed' | 'overlaid';
 
@@ -10,6 +10,8 @@ interface SidebarContextValue {
   collapse: () => void;
   openMobile: () => void;
   closeMobile: () => void;
+  /** Ref to attach to the hamburger trigger — focus is returned here when the mobile sheet closes. */
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
 }
 
 const STORAGE_KEY = 'app-sidebar-collapsed';
@@ -17,13 +19,25 @@ const MOBILE_MQ = '(max-width: 1023px)';
 
 const SidebarContext = createContext<SidebarContextValue | null>(null);
 
-function readInitialState(): SidebarState {
+function readStored(key: string): string | null {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === 'true') return 'collapsed';
+    return localStorage.getItem(key);
   } catch {
-    // localStorage unavailable — use matchMedia fallback
+    return null;
   }
+}
+
+function writeStored(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // storage unavailable — no-op
+  }
+}
+
+function readInitialState(): SidebarState {
+  const stored = readStored(STORAGE_KEY);
+  if (stored === 'true') return 'collapsed';
 
   try {
     if (window.matchMedia(MOBILE_MQ).matches) return 'overlaid';
@@ -36,24 +50,25 @@ function readInitialState(): SidebarState {
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<SidebarState>(readInitialState);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const toggle = useCallback(() => {
     setState((prev) => {
       if (prev === 'overlaid') return prev;
       const next = prev === 'expanded' ? 'collapsed' : 'expanded';
-      localStorage.setItem(STORAGE_KEY, next === 'collapsed' ? 'true' : 'false');
+      writeStored(STORAGE_KEY, next === 'collapsed' ? 'true' : 'false');
       return next;
     });
   }, []);
 
   const expand = useCallback(() => {
     setState('expanded');
-    localStorage.setItem(STORAGE_KEY, 'false');
+    writeStored(STORAGE_KEY, 'false');
   }, []);
 
   const collapse = useCallback(() => {
     setState('collapsed');
-    localStorage.setItem(STORAGE_KEY, 'true');
+    writeStored(STORAGE_KEY, 'true');
   }, []);
 
   const openMobile = useCallback(() => {
@@ -61,7 +76,9 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const closeMobile = useCallback(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    // Return focus to the hamburger trigger
+    triggerRef.current?.focus();
+    const stored = readStored(STORAGE_KEY);
     setState(stored === 'true' ? 'collapsed' : 'expanded');
   }, []);
 
@@ -82,7 +99,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   }, [toggle]);
 
   const value = useMemo<SidebarContextValue>(
-    () => ({ state, toggle, expand, collapse, openMobile, closeMobile }),
+    () => ({ state, toggle, expand, collapse, openMobile, closeMobile, triggerRef }),
     [state, toggle, expand, collapse, openMobile, closeMobile],
   );
 

@@ -14,9 +14,9 @@ interface SeverityCounts {
 function computeCounts(findings: ReconciledFinding[]): SeverityCounts {
   const counts: SeverityCounts = { critical: 0, error: 0, warning: 0, info: 0, active: 0, dismissed: 0 };
   for (const f of findings) {
-    counts[f.severity]++;
     if (f.state === 'active') {
       counts.active++;
+      counts[f.severity]++;
     } else {
       counts.dismissed++;
     }

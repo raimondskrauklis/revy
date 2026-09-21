@@ -20,6 +20,9 @@ export const MAX_PULL_REQUEST_SCAN_PAGES = 50;
 export const reviewerQueryKeys = {
   installations: (workspaceId: string) =>
     ['reviewer', 'installations', workspaceId] as const,
+  /** Invalidates all repository queries for a workspace, regardless of installation. */
+  repositoriesAll: (workspaceId: string) =>
+    ['reviewer', 'repositories', workspaceId] as const,
   repositories: (workspaceId: string, installationId: string) =>
     ['reviewer', 'repositories', workspaceId, installationId] as const,
   pullRequests: (workspaceId: string, repositoryId: string) =>

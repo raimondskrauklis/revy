@@ -20,9 +20,11 @@ export function PullRequestListPage() {
   const queryClient = useQueryClient();
 
   const handleRefresh = () => {
-    queryClient.invalidateQueries({
-      queryKey: reviewerQueryKeys.pullRequests(workspaceId ?? '', repoId ?? ''),
-    });
+    if (workspaceId && repoId) {
+      queryClient.invalidateQueries({
+        queryKey: reviewerQueryKeys.pullRequests(workspaceId, repoId),
+      });
+    }
   };
 
   useEffect(() => {

@@ -40,7 +40,7 @@ export function ReviewerHomePage() {
   const handleRefresh = useCallback(() => {
     if (workspaceId) {
       queryClient.invalidateQueries({ queryKey: reviewerQueryKeys.installations(workspaceId) });
-      queryClient.invalidateQueries({ queryKey: ['reviewer', 'repositories', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: reviewerQueryKeys.repositoriesAll(workspaceId) });
     }
   }, [queryClient, workspaceId]);
 

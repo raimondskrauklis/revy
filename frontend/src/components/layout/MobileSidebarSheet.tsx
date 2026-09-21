@@ -6,6 +6,23 @@ import { useSidebar } from '@/components/layout/SidebarProvider';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { acquireScrollLock, releaseScrollLock } from '@/lib/scrollLock';
 
+function focusTrap(e: KeyboardEvent, container: HTMLElement): void {
+  if (e.key !== 'Tab') return;
+  const focusable = container.querySelectorAll<HTMLElement>(
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+  );
+  if (focusable.length === 0) return;
+  const first = focusable[0]!;
+  const last = focusable[focusable.length - 1]!;
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
+
 export function MobileSidebarSheet() {
   const { state, closeMobile } = useSidebar();
   const { t } = useTranslation();
@@ -13,20 +30,24 @@ export function MobileSidebarSheet() {
   const sheetRef = useRef<HTMLDivElement>(null);
   const isOpen = state === 'overlaid';
 
-  // Focus trap + close on route change
+  // Close on route change
   useEffect(() => {
     if (isOpen) closeMobile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
-  // Close on Escape
+  // Close on Escape + focus trap on Tab
   useEffect(() => {
     if (!isOpen) return;
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeMobile();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        closeMobile();
+        return;
+      }
+      if (sheetRef.current) focusTrap(e, sheetRef.current);
     };
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, closeMobile]);
 
   // Body scroll lock (ref-counted)

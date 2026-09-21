@@ -1,10 +1,27 @@
 // frontend/src/features/reviewer/components/FindingDetailSheet.tsx
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import type { ReconciledFinding, ReviewFinding } from '@/features/reviewer/types';
 import { useRevisionFindings } from '@/features/reviewer/hooks';
 import { acquireScrollLock, releaseScrollLock } from '@/lib/scrollLock';
+
+function focusTrap(e: KeyboardEvent, container: HTMLElement): void {
+  if (e.key !== 'Tab') return;
+  const focusable = container.querySelectorAll<HTMLElement>(
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+  );
+  if (focusable.length === 0) return;
+  const first = focusable[0]!;
+  const last = focusable[focusable.length - 1]!;
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
 
 interface FindingDetailSheetProps {
   finding: ReconciledFinding | null;
@@ -41,9 +58,15 @@ export function FindingDetailSheet({
     ? findings?.find((d) => d.id === finding.id)
     : undefined;
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (dialogRef.current) focusTrap(e, dialogRef.current);
     },
     [onClose],
   );
@@ -51,6 +74,8 @@ export function FindingDetailSheet({
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
     acquireScrollLock();
+    // Auto-focus the dialog on open
+    dialogRef.current?.focus();
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       releaseScrollLock();
@@ -65,7 +90,14 @@ export function FindingDetailSheet({
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} aria-hidden />
 
       {/* Sheet */}
-      <div className="relative w-full max-w-lg bg-[color:var(--app-surface)] shadow-xl overflow-y-auto">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={finding.title}
+        className="relative w-full max-w-lg bg-[color:var(--app-surface)] shadow-xl overflow-y-auto outline-none"
+        tabIndex={-1}
+      >
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[color:var(--app-ring)] bg-[color:var(--app-surface)] px-4 py-3">
           <h2 className="text-lg font-semibold text-[color:var(--app-text-strong)]">
             {finding.title}
