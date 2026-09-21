@@ -30,7 +30,7 @@ export function UserMenu({ collapsed = false }: UserMenuProps) {
         type="button"
         onClick={() => logout()}
         className="flex min-h-11 items-center justify-center rounded-lg px-3 py-2 text-sm text-[color:var(--app-text-muted)] hover:bg-[color:var(--app-chip)] focus-visible:ring-2 ring-[color:var(--app-ring-strong)]"
-        title={t('header.user.signOut')}
+        aria-label={t('header.user.signOut')}
       >
         <LogOut className="h-4 w-4 shrink-0" aria-hidden />
       </button>
