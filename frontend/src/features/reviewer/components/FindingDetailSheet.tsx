@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import type { ReconciledFinding, ReviewFinding } from '@/features/reviewer/types';
 import { useRevisionFindings } from '@/features/reviewer/hooks';
+import { acquireScrollLock, releaseScrollLock } from '@/lib/scrollLock';
 
 interface FindingDetailSheetProps {
   finding: ReconciledFinding | null;
@@ -49,10 +50,10 @@ export function FindingDetailSheet({
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
-    document.body.style.overflow = 'hidden';
+    acquireScrollLock();
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
+      releaseScrollLock();
     };
   }, [handleKeyDown]);
 

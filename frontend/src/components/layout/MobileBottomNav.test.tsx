@@ -32,6 +32,6 @@ describe('MobileBottomNav', () => {
         <MobileBottomNav />
       </MemoryRouter>,
     );
-    expect(screen.getByRole('link', { name: /settings/i })).toHaveAttribute('href', '/settings/profile');
+    expect(screen.getByRole('link', { name: /settings/i })).toHaveAttribute('href', '/settings');
   });
 });

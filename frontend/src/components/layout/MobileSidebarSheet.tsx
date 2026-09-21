@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSidebar } from '@/components/layout/SidebarProvider';
 import { AppSidebar } from '@/components/layout/AppSidebar';
+import { acquireScrollLock, releaseScrollLock } from '@/lib/scrollLock';
 
 export function MobileSidebarSheet() {
   const { state, closeMobile } = useSidebar();
@@ -28,16 +29,12 @@ export function MobileSidebarSheet() {
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, closeMobile]);
 
-  // Body scroll lock
+  // Body scroll lock (ref-counted)
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
+      acquireScrollLock();
+      return () => releaseScrollLock();
     }
-    return () => {
-      document.body.style.overflow = '';
-    };
   }, [isOpen]);
 
   // Focus the sheet panel when opened

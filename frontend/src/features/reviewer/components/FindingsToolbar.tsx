@@ -1,8 +1,9 @@
 // frontend/src/features/reviewer/components/FindingsToolbar.tsx
-import { useState, useMemo, useCallback, useDeferredValue } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search, X } from 'lucide-react';
-import type { FindingSeverity, ReconciledFinding } from '@/features/reviewer/types';
+import type { FindingSeverity, FindingCategory, FindingGroupState, ReconciledFinding } from '@/features/reviewer/types';
+import { useDebouncedValue } from '@/lib/useDebouncedValue';
 
 type SortField = 'severity' | 'file_path' | 'updated_at';
 type SortDir = 'asc' | 'desc';
@@ -23,20 +24,20 @@ interface FindingsToolbarProps {
 export function FindingsToolbar({ findings, children }: FindingsToolbarProps) {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
-  const deferredSearch = useDeferredValue(search);
+  const deferredSearch = useDebouncedValue(search, 300);
   const [severityFilter, setSeverityFilter] = useState<Set<FindingSeverity>>(new Set());
-  const [stateFilter, setStateFilter] = useState<Set<string>>(new Set());
-  const [categoryFilter, setCategoryFilter] = useState<Set<string>>(new Set());
+  const [stateFilter, setStateFilter] = useState<Set<FindingGroupState>>(new Set());
+  const [categoryFilter, setCategoryFilter] = useState<Set<FindingCategory>>(new Set());
   const [sortField, setSortField] = useState<SortField>('severity');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
 
   const allSeverities: FindingSeverity[] = ['critical', 'error', 'warning', 'info'];
-  const allCategories = useMemo(
-    () => [...new Set(findings.map((f) => f.category))].filter(Boolean).sort(),
+  const allCategories: FindingCategory[] = useMemo(
+    () => [...new Set(findings.map((f) => f.category))].filter((c): c is FindingCategory => Boolean(c)).sort(),
     [findings],
   );
-  const allStates = useMemo(
-    () => [...new Set(findings.map((f) => f.state))].filter(Boolean).sort(),
+  const allStates: FindingGroupState[] = useMemo(
+    () => [...new Set(findings.map((f) => f.state))].filter((s): s is FindingGroupState => Boolean(s)).sort(),
     [findings],
   );
 

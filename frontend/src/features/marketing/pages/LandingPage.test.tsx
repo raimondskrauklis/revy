@@ -29,7 +29,7 @@ describe('LandingPage', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { name: /catch corners cut before they bite/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /beware of little expenses/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /enter console/i })).toBeInTheDocument();
   });
 

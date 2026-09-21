@@ -14,7 +14,7 @@ const TABS: Tab[] = [
   { href: '/dashboard', label: 'nav.dashboard', icon: LayoutDashboard },
   { href: '/reviewer', label: 'nav.reviewer', icon: GitPullRequest },
   { href: '/installations', label: 'nav.installations', icon: Plug },
-  { href: '/settings/profile', label: 'nav.settings', icon: Settings },
+  { href: '/settings', label: 'nav.settings', icon: Settings },
 ];
 
 export function MobileBottomNav() {
