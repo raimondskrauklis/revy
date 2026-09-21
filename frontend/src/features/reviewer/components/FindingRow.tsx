@@ -59,7 +59,7 @@ export function FindingRow({
           <button
             type="button"
             onClick={onClick}
-            className="text-left hover:underline cursor-pointer"
+            className="text-left hover:underline cursor-pointer focus-visible:ring-2 ring-[color:var(--app-ring-strong)] rounded"
           >
             {finding.title}
           </button>

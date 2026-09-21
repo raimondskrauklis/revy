@@ -166,6 +166,7 @@ export function FindingsToolbar({ findings, children }: FindingsToolbarProps) {
             <button
               key={s}
               type="button"
+              aria-pressed={severityFilter.has(s)}
               onClick={() => toggleFilter(setSeverityFilter, s)}
               className={`rounded-full px-2 py-0.5 text-xs border ${
                 severityFilter.has(s)
@@ -187,6 +188,7 @@ export function FindingsToolbar({ findings, children }: FindingsToolbarProps) {
               <button
                 key={c}
                 type="button"
+                aria-pressed={categoryFilter.has(c)}
                 onClick={() => toggleFilter(setCategoryFilter, c)}
                 className={`rounded-full px-2 py-0.5 text-xs border ${
                   categoryFilter.has(c)
@@ -209,6 +211,7 @@ export function FindingsToolbar({ findings, children }: FindingsToolbarProps) {
               <button
                 key={s}
                 type="button"
+                aria-pressed={stateFilter.has(s)}
                 onClick={() => toggleFilter(setStateFilter, s)}
                 className={`rounded-full px-2 py-0.5 text-xs border ${
                   stateFilter.has(s)

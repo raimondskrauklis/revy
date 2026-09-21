@@ -220,7 +220,7 @@ export function PullRequestDetailPage() {
                         finding={finding}
                         canDismiss={canDismiss}
                         dismissPending={dismissMutation.isPending}
-                        onDismiss={(groupId) => dismissMutation.mutate({ groupId })}
+                        onDismiss={(groupId) => dismissMutation.mutate({ groupId, reason: undefined })}
                         onClick={() => setSelectedFinding(finding)}
                       />
                     ))}

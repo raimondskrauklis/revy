@@ -1,4 +1,5 @@
 // frontend/src/features/reviewer/components/FindingsSummaryBar.tsx
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { MergeConclusion, ReconciledFinding } from '@/features/reviewer/types';
 
@@ -31,7 +32,7 @@ interface FindingsSummaryBarProps {
 
 export function FindingsSummaryBar({ findings, conclusion }: FindingsSummaryBarProps) {
   const { t } = useTranslation();
-  const counts = computeCounts(findings);
+  const counts = useMemo(() => computeCounts(findings), [findings]);
 
   const parts: string[] = [];
   if (counts.critical > 0) parts.push(t('reviewer.summary.criticalCount', { count: counts.critical }));
