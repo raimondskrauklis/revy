@@ -20,8 +20,9 @@ export function deriveMergeConclusion(findings: ReconciledFinding[]): MergeConcl
     return 'neutral';
   }
 
-  // Only info findings active — treat as success (no warnings or above)
-  return 'success';
+  const hasInfo = active.some((f) => f.severity === 'info');
+  // Only info findings active — treat as success (no warnings or above); unknown → neutral
+  return hasInfo ? 'success' : 'neutral';
 }
 
 export function pickLatestRevisionId(findings: ReconciledFinding[]): string | null {

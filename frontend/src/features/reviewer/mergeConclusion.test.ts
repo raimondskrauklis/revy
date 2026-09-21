@@ -51,12 +51,12 @@ describe('deriveMergeConclusion', () => {
     ).toBe('success');
   });
 
-  it('returns success for unknown active severity (treated as non-blocking)', () => {
+  it('returns neutral for unknown active severity', () => {
     expect(
       deriveMergeConclusion([
         finding({ severity: 'bogus' as ReconciledFinding['severity'], state: 'active' }),
       ]),
-    ).toBe('success');
+    ).toBe('neutral');
   });
 });
 

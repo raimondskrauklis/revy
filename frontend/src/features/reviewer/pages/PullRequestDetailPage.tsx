@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { dismissFindingGroup } from '@/features/reviewer/api';
 import { FindingRow } from '@/features/reviewer/components/FindingRow';
+import { SeverityShape } from '@/features/reviewer/components/SeverityShape';
 import { FindingsSummaryBar } from '@/features/reviewer/components/FindingsSummaryBar';
 import { FindingsToolbar } from '@/features/reviewer/components/FindingsToolbar';
 import { FindingDetailSheet } from '@/features/reviewer/components/FindingDetailSheet';
@@ -184,7 +185,7 @@ export function PullRequestDetailPage() {
                     className="flex flex-col gap-1.5 rounded-[var(--app-radius-sm)] border border-[color:var(--app-ring)] bg-[color:var(--app-surface)] p-3 text-left shadow-[inset_0_0_0_1px_var(--app-ring)]"
                   >
                     <div className="flex items-center gap-2">
-                      <span className={`inline-block shrink-0 ${finding.severity === 'critical' ? 'h-2.5 w-2.5 rotate-45 bg-[color:var(--app-danger)]' : finding.severity === 'error' ? 'h-2.5 w-2.5 bg-[color:var(--app-danger)]' : finding.severity === 'warning' ? 'h-0 w-0 border-x-[5px] border-x-transparent border-b-[9px] border-b-[color:var(--app-warning)]' : 'h-2.5 w-2.5 rounded-full bg-[color:var(--app-info)]'}`} />
+                      <SeverityShape severity={finding.severity} />
                       <span className="text-xs text-[color:var(--app-text-muted)]">
                         {t(`reviewer.severity.${finding.severity}`)}
                       </span>

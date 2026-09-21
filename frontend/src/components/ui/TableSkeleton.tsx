@@ -14,7 +14,7 @@ export function TableSkeleton({ rows = 4, columns = 4 }: TableSkeletonProps) {
           <tr>
             {Array.from({ length: columns }).map((_, i) => (
               <th key={i} className="px-3 py-2">
-                <div className="h-4 w-16 animate-pulse rounded bg-[color:var(--app-chip)]" />
+                <div className="h-4 w-16 animate-pulse rounded bg-[color:var(--app-ring)]" />
               </th>
             ))}
           </tr>

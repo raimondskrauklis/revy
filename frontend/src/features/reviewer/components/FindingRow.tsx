@@ -1,6 +1,7 @@
 // frontend/src/features/reviewer/components/FindingRow.tsx
 import { useTranslation } from 'react-i18next';
-import type { FindingSeverity, ReconciledFinding } from '@/features/reviewer/types';
+import type { ReconciledFinding } from '@/features/reviewer/types';
+import { SeverityShape } from '@/features/reviewer/components/SeverityShape';
 
 interface FindingRowProps {
   finding: ReconciledFinding;
@@ -9,14 +10,6 @@ interface FindingRowProps {
   dismissPending?: boolean;
   onClick?: () => void;
 }
-
-const SEVERITY_SHAPE_CLASS: Record<FindingSeverity, string> = {
-  info: 'h-2.5 w-2.5 rounded-full bg-[color:var(--app-info)]',
-  warning:
-    'h-0 w-0 border-x-[5px] border-x-transparent border-b-[9px] border-b-[color:var(--app-warning)]',
-  error: 'h-2.5 w-2.5 bg-[color:var(--app-danger)]',
-  critical: 'h-2.5 w-2.5 rotate-45 bg-[color:var(--app-danger)]',
-};
 
 function resolutionBadgeKey(finding: ReconciledFinding): string | null {
   if (finding.resolution_method) {
@@ -44,11 +37,7 @@ export function FindingRow({
     <tr className="border-t border-[color:var(--app-ring)]">
       <td className="px-3 py-2 text-sm text-[color:var(--app-text-strong)]">
         <span className="inline-flex items-center gap-2">
-          <span
-            aria-hidden
-            data-severity-shape={finding.severity}
-            className={`inline-block shrink-0 ${SEVERITY_SHAPE_CLASS[finding.severity]}`}
-          />
+          <SeverityShape severity={finding.severity} />
           <span>{t(`reviewer.severity.${finding.severity}`)}</span>
         </span>
       </td>

@@ -130,14 +130,14 @@ export function FindingDetailSheet({
           </div>
 
           {/* File + line range */}
-          {detail?.file_path && (
+          {finding.file_path && (
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-[color:var(--app-text-muted)]">
                 {t('reviewer.detail.file')}
               </p>
               <code className="mt-1 block rounded-[var(--app-radius-sm)] bg-[color:var(--app-chip)] px-2 py-1 text-sm text-[color:var(--app-text-strong)]">
-                {detail.file_path}
-                {detail.start_line && detail.end_line && (
+                {finding.file_path}
+                {detail?.start_line && detail.end_line && (
                   <span className="text-[color:var(--app-text-muted)]">
                     {' '}
                     (L{detail.start_line}–L{detail.end_line})
