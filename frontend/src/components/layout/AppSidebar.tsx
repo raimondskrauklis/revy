@@ -67,7 +67,7 @@ export function AppSidebar({ overlay = false }: { overlay?: boolean }) {
   return (
     <aside
       className={`${overlay ? 'flex' : 'hidden md:flex'} shrink-0 flex-col border-r border-[color:var(--app-ring)] bg-[color:var(--app-surface)] transition-[width] duration-200 ease-in-out motion-reduce:transition-none`}
-      style={{ width: collapsed ? '3.5rem' : '14rem' }}
+      style={{ width: overlay ? '14rem' : (collapsed ? '3.5rem' : '14rem') }}
     >
       <div className="px-4 py-3">
         <Link
@@ -210,12 +210,8 @@ export function AppSidebar({ overlay = false }: { overlay?: boolean }) {
             <ChevronLeft className="h-4 w-4" />
           )}
         </button>
-        {!collapsed && (
-          <>
-            <WorkspaceSwitcher />
-            <UserMenu />
-          </>
-        )}
+        <WorkspaceSwitcher />
+        <UserMenu />
       </div>
     </aside>
   );

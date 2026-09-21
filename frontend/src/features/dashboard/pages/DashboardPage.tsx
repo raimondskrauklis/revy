@@ -14,7 +14,7 @@ export function DashboardPage() {
   const hasWorkspace = Boolean(user?.workspace_id);
 
   return (
-    <div className="mx-auto max-w-[900px] space-y-6">
+    <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold text-[color:var(--app-text-strong)]">
           {t('nav.dashboard')}
