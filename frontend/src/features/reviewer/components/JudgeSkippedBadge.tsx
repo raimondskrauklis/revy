@@ -24,7 +24,10 @@ export function JudgeSkippedBadge({ judgeStatus }: JudgeSkippedBadgeProps) {
       : 'reviewer.judge.skipped';
 
   return (
-    <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-[color:var(--app-warning-subtle)] text-[color:var(--app-warning)]">
+    <span
+      className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-[color:var(--app-warning-subtle)] text-[color:var(--app-warning)]"
+      title={t('reviewer.glossary.judge')}
+    >
       {t(labelKey)}
     </span>
   );

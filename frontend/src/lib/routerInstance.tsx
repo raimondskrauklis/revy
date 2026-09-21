@@ -10,7 +10,6 @@ import { CompleteProfilePage } from '@/features/auth/pages/CompleteProfilePage';
 import { StatusGatePage } from '@/features/auth/pages/StatusGatePage';
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
 import { RequirePermission } from '@/components/auth/RequirePermission';
-import { SettingsLayout } from '@/features/settings/layout/SettingsLayout';
 import { ProfileSettingsPage } from '@/features/settings/pages/ProfileSettingsPage';
 import { ReviewSettingsPage } from '@/features/settings/pages/ReviewSettingsPage';
 import { SecuritySettingsPage } from '@/features/settings/pages/SecuritySettingsPage';
@@ -120,29 +119,24 @@ export const appRouter = createBrowserRouter([
         path: '/settings',
         element: <AppShellLayout />,
         children: [
+          { index: true, element: <Navigate to="/settings/profile" replace /> },
+          { path: 'profile', element: <ProfileSettingsPage /> },
+          { path: 'security', element: <SecuritySettingsPage /> },
+          { path: 'appearance', element: <AppearanceSettingsPage /> },
           {
-            element: <SettingsLayout />,
+            element: <RequirePermission permission="admin:users" />,
             children: [
-              { index: true, element: <Navigate to="/settings/profile" replace /> },
-              { path: 'profile', element: <ProfileSettingsPage /> },
-              { path: 'security', element: <SecuritySettingsPage /> },
-              { path: 'appearance', element: <AppearanceSettingsPage /> },
-              {
-                element: <RequirePermission permission="admin:users" />,
-                children: [
-                  { path: 'workspace', element: <WorkspaceSettingsPage /> },
-                  { path: 'review', element: <ReviewSettingsPage /> },
-                ],
-              },
-              { path: 'team', element: <TeamSettingsPage /> },
-              { path: 'integrations', element: <IntegrationsSettingsPage /> },
-              {
-                element: <RequirePermission permission="admin:users" />,
-                children: [{ path: 'billing', element: <BillingSettingsPage /> }],
-              },
-              { path: 'danger', element: <DangerZonePage /> },
+              { path: 'workspace', element: <WorkspaceSettingsPage /> },
+              { path: 'review', element: <ReviewSettingsPage /> },
             ],
           },
+          { path: 'team', element: <TeamSettingsPage /> },
+          { path: 'integrations', element: <IntegrationsSettingsPage /> },
+          {
+            element: <RequirePermission permission="admin:users" />,
+            children: [{ path: 'billing', element: <BillingSettingsPage /> }],
+          },
+          { path: 'danger', element: <DangerZonePage /> },
         ],
       },
       adminRoutes,

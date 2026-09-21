@@ -165,6 +165,7 @@
       }
     },
     "security": {
+      "heading": "Drīzumā",
       "body": "Parole, daudzfaktoru autentifikācija un sesiju pārvaldība Revy būs pieejama vēlāk. Ja nepieciešams mainīt pierakstīšanos, sazinieties ar darbvietas administratoru."
     },
     "appearance": {
@@ -263,11 +264,12 @@
     },
     "billing": {
       "currentPlan": "Pašreizējais plāns",
-      "notConfigured": "Norēķini šai videi nav konfigurēti.",
-      "upgrade": "Jaunināt uz Pro",
-      "manage": "Pārvaldīt abonementu",
+      "notConfigured": "Komerciālie plāni pašlaik nav pieejami.",
       "checkoutSuccess": "Maksājums pabeigts. Plāns drīz tiks atjaunināts.",
       "checkoutCancel": "Maksājums tika atcelts.",
+      "stripeReturn": {
+        "success": "Jūsu norēķinu sesija ir pabeigta. Izmaiņas parādīsies drīz."
+      },
       "plans": {
         "free": "Bezmaksas",
         "pro": "Pro"
@@ -442,6 +444,7 @@
   },
   "sidebar": {
     "mainNav": "Galvenā navigācija",
+    "mobileNav": "Apakšējā navigācija",
     "collapseHint": "Sakļaut sānjoslu",
     "expandHint": "Izvērst sānjoslu",
     "close": "Aizvērt izvēlni"
@@ -449,7 +452,7 @@
   "landing": {
     "hero": {
       "eyebrow": "Builder konsole",
-      "title": "Noķer nogrieztos stūrus, pirms tie iekož",
+      "title": "Maza sūce nogremdē lielu kuģi",
       "subtitle": "Savienojiet GitHub. Pārskatiet atradumus. Apvienojiet, kad lampas kļūst zaļas.",
       "cta": "Ienākt konsolē"
     }
@@ -582,6 +585,9 @@
     "installation": "GitHub instalācija",
     "repositories": {
       "empty": "Šai instalācijai nav sinhronizētu repozitoriju.",
+      "emptyHelp": "Repozitoriji parādās šeit pēc GitHub instalācijas pievienošanas.",
+      "refresh": "Atjaunot",
+      "manageInstallations": "Pārvaldīt instalācijas",
       "loading": "Ielādē repozitorijus…",
       "error": "Neizdevās ielādēt repozitorijus.",
       "name": "Repozitorijs",
@@ -591,6 +597,9 @@
     },
     "pullRequests": {
       "empty": "Šim repozitorijam vēl nav importētu pull request.",
+      "emptyHelp": "PR parādās šeit pēc recenzijas palaišanas no repozitorija.",
+      "refresh": "Atjaunot",
+      "manageInstallations": "Pārvaldīt instalācijas",
       "loading": "Ielādē pull request…",
       "error": "Neizdevās ielādēt pull request.",
       "number": "#",
@@ -621,6 +630,13 @@
         "judge_dismissed": "Noraidīja tiesnesis",
         "verification_dismissed": "Noraidīja verifikācija",
         "human_dismissed": "Noraidīja administrators"
+      },
+      "reason": {
+        "label": "Iemesls",
+        "human_dismissed": "Administratora lēmums",
+        "absent_and_addressed": "Labots kopš pēdējā push",
+        "false_positive": "Kļūdains atradums",
+        "superseded": "Aizstāts ar izmaiņām"
       }
     },
     "findings": {
@@ -684,6 +700,49 @@
     "judge": {
       "skipped": "Tiesnesis izlaists",
       "skippedUnavailable": "Tiesnesis nav pieejams"
+    },
+    "glossary": {
+      "judge": "LLM, kas atkārtoti izvērtē atzīmētos atradumus gala lēmumam — var nebūt pieejams ierobežotos plānos."
+    },
+    "summary": {
+      "criticalCount": "{{count}} Kritisks",
+      "criticalCount_plural": "{{count}} Kritiski",
+      "errorCount": "{{count}} Kļūda",
+      "errorCount_plural": "{{count}} Kļūdas",
+      "warningCount": "{{count}} Brīdinājums",
+      "warningCount_plural": "{{count}} Brīdinājumi",
+      "infoCount": "{{count}} Info",
+      "infoCount_plural": "{{count}} Info",
+      "dismissedCount": "· {{count}} noraidīts",
+      "dismissedCount_plural": "· {{count}} noraidīti",
+      "noFindings": "Šim PR nav atradumu.",
+      "nextAction": {
+        "blocked": "Bloķēts — noraidiet vai atrisiniet {{blocking}} Kritisko/Kļūdu atradumus, lai atbloķētu",
+        "needsReview": "Nepieciešama pārskatīšana — {{blocking}} Brīdinājumu atradumi jāpārskata",
+        "infoOnly": "Gatavs sapludināšanai — ir Info atradumi, bet neviens nebloķē",
+        "ready": "Gatavs sapludināšanai — visi atradumi atrisināti"
+      }
+    },
+    "toolbar": {
+      "searchPlaceholder": "Meklēt atradumus…",
+      "resultCount": "{{count}} atradums",
+      "resultCount_plural": "{{count}} atradumi",
+      "severity": "Smagums",
+      "category": "Kategorija",
+      "state": "Stāvoklis",
+      "sort": "Kārtot",
+      "clearFilters": "Notīrīt filtrus",
+      "sort.severity": "Smagums",
+      "sort.file_path": "Fails",
+      "sort.updated_at": "Datums"
+    },
+    "detail": {
+      "file": "Fails",
+      "message": "Apraksts",
+      "suggestion": "Ieteikums",
+      "history": "Vēsture",
+      "firstSeen": "Pirmo reizi redzēts revīzijā {{revision}}",
+      "dismiss": "Noraidīt atradumu"
     },
     "widget": {
       "title": "Koda recenzija",

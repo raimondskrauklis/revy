@@ -1,5 +1,11 @@
 [
   {
+    "id": "console-ux-upgrade",
+    "date": "2026-09-21",
+    "title": "Console UX + mobile/layout upgrade",
+    "summary": "Three-state sidebar (expand/collapse/overlay), Settings flattened into main nav accordion, FindingsToolbar (search/filter/sort), FindingDetailSheet, merge verdict tiering, responsive tables on mobile, bottom nav bar, and empty state enrichment."
+  },
+  {
     "id": "resolution-honesty",
     "date": "2026-09-20",
     "title": "Honest resolved + this-push metrics",

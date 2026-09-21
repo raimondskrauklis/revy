@@ -47,7 +47,95 @@ export function MembersTable({
 
   return (
     <div className="space-y-3">
-      <div className="overflow-x-auto ring-1 ring-[color:var(--app-ring)] rounded-lg">
+      {/* Mobile cards */}
+      <div className="md:hidden flex flex-col gap-2">
+        {members.map((member) => {
+          const isBusy = busyUserId === member.user_id;
+          const isSelf = member.user_id === currentUserId;
+          return (
+            <div
+              key={member.user_id}
+              className="flex flex-col gap-2 rounded-[var(--app-radius-sm)] border border-[color:var(--app-ring)] bg-[color:var(--app-surface)] p-3"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-medium text-[color:var(--app-text-strong)]">
+                  {member.full_name ?? '—'}
+                </span>
+                {canManage ? (
+                  <QuietSelect
+                    value={member.role}
+                    onValueChange={(value) => void onRoleChange(member.user_id, value as AppRole)}
+                    disabled={isBusy}
+                  >
+                    <QuietSelectTrigger className="min-w-32">
+                      <QuietSelectValue />
+                    </QuietSelectTrigger>
+                    <QuietSelectContent>
+                      {ROLE_OPTIONS.map((role) => (
+                        <QuietSelectItem key={role} value={role}>
+                          {t(`settings.team.roles.${role}`)}
+                        </QuietSelectItem>
+                      ))}
+                    </QuietSelectContent>
+                  </QuietSelect>
+                ) : (
+                  <span className="text-xs text-[color:var(--app-text-muted)]">
+                    {t(`settings.team.roles.${member.role}`)}
+                  </span>
+                )}
+              </div>
+              <span className="text-xs text-[color:var(--app-text-muted)]">{member.email}</span>
+              {canManage && !isSelf && (
+                <div className="flex items-center gap-2">
+                  {confirmRemoveId === member.user_id ? (
+                    <>
+                      <span className="text-xs text-[color:var(--app-text-muted)]">
+                        {t('settings.team.members.removeConfirm')}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="min-h-11"
+                        disabled={isBusy}
+                        onClick={() => {
+                          void onRemove(member.user_id).finally(() => setConfirmRemoveId(null));
+                        }}
+                      >
+                        {t('common.confirm')}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="min-h-11"
+                        disabled={isBusy}
+                        onClick={() => setConfirmRemoveId(null)}
+                      >
+                        {t('common.cancel')}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="min-h-11"
+                      disabled={isBusy}
+                      onClick={() => setConfirmRemoveId(member.user_id)}
+                    >
+                      {t('settings.team.members.remove')}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden md:block overflow-x-auto ring-1 ring-[color:var(--app-ring)] rounded-lg">
         <table className="min-w-full text-sm">
           <thead className="bg-[color:var(--app-table-header)] text-[color:var(--app-text-muted)]">
             <tr>
@@ -64,7 +152,7 @@ export function MembersTable({
                 {t('settings.team.members.columns.joined')}
               </th>
               {canManage ? (
-                <th className="px-4 py-3 text-left font-medium">
+                <th className="sticky right-0 z-10 border-l border-[color:var(--app-ring)] bg-[color:var(--app-table-header)] px-4 py-3 text-left font-medium">
                   {t('settings.team.members.columns.actions')}
                 </th>
               ) : null}
@@ -115,7 +203,7 @@ export function MembersTable({
                     {formatDate(member.created_at)}
                   </td>
                   {canManage ? (
-                    <td className="px-4 py-3">
+                    <td className="sticky right-0 z-10 border-l border-[color:var(--app-ring)] px-4 py-3 bg-[color:var(--app-surface)]">
                       {confirmRemoveId === member.user_id ? (
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-sm text-[color:var(--app-text-muted)]">

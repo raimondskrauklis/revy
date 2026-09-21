@@ -1,12 +1,12 @@
 # Bugbot — review pipeline contract
 
-**Active program:** resolution-honesty — GitHub comment resolved / still open / this-push numbers match reality.
+**Active program:** console-ux-upgrade — rebuild reviewer page as operator console, responsive shell, mobile support.
 
-When reviewing **backend** (and later changelog) changes for this program, treat these as authoritative:
+When reviewing **frontend** changes for this program, treat these as authoritative:
 
-- [RESOLUTION_HONESTY_P5_EXECUTION.md](../docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_P5_EXECUTION.md) — P5 LOOP (dogfood gates, gap pass, doc-sync + changelog)
-- [RESOLUTION_HONESTY_FINDINGS.md](../docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_FINDINGS.md) — RH-Q1–Q12
-- [RESOLUTION_HONESTY_GENERAL_PLAN.md](../docs/review-pipeline/resolution-honesty/RESOLUTION_HONESTY_GENERAL_PLAN.md) — P0–P5 goals
+- [CONSOLE_UX_UPGRADE_P0_EXECUTION.md](../docs/visual-identity/console-ux-upgrade/CONSOLE_UX_UPGRADE_P0_EXECUTION.md) — P0 LOOP (shell, sidebar, responsive layout)
+- [UIUX_CONSOLE_FINDINGS.md](../docs/visual-identity/console-ux-upgrade/UIUX_CONSOLE_FINDINGS.md) — 12 findings (C1–m4)
+- [UIUX_CONSOLE_GENERAL_PLAN.md](../docs/visual-identity/console-ux-upgrade/UIUX_CONSOLE_GENERAL_PLAN.md) — P0–P3 goals
 
 **Agent workflow:**
 
