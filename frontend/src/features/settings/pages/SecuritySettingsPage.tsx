@@ -5,7 +5,7 @@ export function SecuritySettingsPage() {
   const { t } = useTranslation();
 
   return (
-    <div className="max-w-lg space-y-4">
+    <div className="space-y-4">
       <h1 className="text-xl font-semibold text-[color:var(--app-text-strong)]">
         {t('settings.nav.security')}
       </h1>

@@ -210,8 +210,12 @@ export function AppSidebar({ overlay = false }: { overlay?: boolean }) {
             <ChevronLeft className="h-4 w-4" />
           )}
         </button>
-        <WorkspaceSwitcher />
-        <UserMenu />
+        {!collapsed && (
+          <>
+            <WorkspaceSwitcher />
+            <UserMenu />
+          </>
+        )}
       </div>
     </aside>
   );
