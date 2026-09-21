@@ -203,7 +203,7 @@ export function MembersTable({
                     {formatDate(member.created_at)}
                   </td>
                   {canManage ? (
-                    <td className="sticky right-0 z-10 border-l border-[color:var(--app-ring)] px-4 py-3 bg-inherit">
+                    <td className="sticky right-0 z-10 border-l border-[color:var(--app-ring)] px-4 py-3 bg-[color:var(--app-surface)]">
                       {confirmRemoveId === member.user_id ? (
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-sm text-[color:var(--app-text-muted)]">
