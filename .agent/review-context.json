@@ -1,21 +1,21 @@
 {
-  "active_program": "free-plan-credits",
+  "active_program": "keycloak-theme",
   "programs": [
     {
-      "id": "free-plan-credits",
-      "scope": ["backend/**", "frontend/**"],
+      "id": "keycloak-theme",
+      "scope": ["infra/keycloak/**"],
       "paths": [
         {
-          "path": "docs/free-plan-credits/FREE_PLAN_CREDITS_P2_EXECUTION.md",
-          "description": "Free Plan Credits — P2 execution (me endpoint, counter display, trigger gate, i18n)"
+          "path": "docs/visual-identity/keycloak-theme/KEYCLOAK_THEME_P0_EXECUTION.md",
+          "description": "Keycloak login theme — P0 execution (inspector, read-only)"
         },
         {
-          "path": "docs/free-plan-credits/FREE_PLAN_CREDITS_FINDINGS.md",
-          "description": "Free Plan Credits — findings (DB snapshot, schema, edge cases, decisions registry)"
+          "path": "docs/visual-identity/keycloak-theme/KEYCLOAK_THEME_FINDINGS.md",
+          "description": "Keycloak login theme — findings (KC 26, keycloak.v2, dark tokens, decisions registry)"
         },
         {
-          "path": "docs/free-plan-credits/FREE_PLAN_CREDITS_GENERAL_PLAN.md",
-          "description": "Free Plan Credits — general plan (P0–P2 goals and deliverables)"
+          "path": "docs/visual-identity/keycloak-theme/KEYCLOAK_THEME_GENERAL_PLAN.md",
+          "description": "Keycloak login theme — general plan (P0–P3 goals and deliverables)"
         }
       ]
     }

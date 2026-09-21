@@ -1,12 +1,12 @@
 # Bugbot — review pipeline contract
 
-**Active program:** free-plan-credits — credit tracking on workspaces (completed_review_runs + review_run_limit columns), open GitHub installation gate, atomic credit increment, frontend counter display.
+**Active program:** keycloak-theme — Revy Keycloak login theme: dark phosphor-green child theme on `keycloak.v2`, directory theme (no JAR), `docker cp` apply, realm `loginTheme=revy`.
 
-When reviewing **backend** changes for this program, treat these as authoritative:
+When reviewing **infra** changes for this program, treat these as authoritative:
 
-- [FREE_PLAN_CREDITS_P0_EXECUTION.md](../docs/free-plan-credits/FREE_PLAN_CREDITS_P0_EXECUTION.md) — P0 LOOP (schema, migration, open install gate)
-- [FREE_PLAN_CREDITS_FINDINGS.md](../docs/free-plan-credits/FREE_PLAN_CREDITS_FINDINGS.md) — DB snapshot, schema design, edge cases, decisions registry
-- [FREE_PLAN_CREDITS_GENERAL_PLAN.md](../docs/free-plan-credits/FREE_PLAN_CREDITS_GENERAL_PLAN.md) — P0–P2 goals and deliverables
+- [KEYCLOAK_THEME_P0_EXECUTION.md](../docs/visual-identity/keycloak-theme/KEYCLOAK_THEME_P0_EXECUTION.md) — P0 inspector (read-only, review context)
+- [KEYCLOAK_THEME_FINDINGS.md](../docs/visual-identity/keycloak-theme/KEYCLOAK_THEME_FINDINGS.md) — KC 26, keycloak.v2, dark tokens, decisions Q1–Q14
+- [KEYCLOAK_THEME_GENERAL_PLAN.md](../docs/visual-identity/keycloak-theme/KEYCLOAK_THEME_GENERAL_PLAN.md) — P0–P3 goals and deliverables
 
 **Agent workflow:**
 

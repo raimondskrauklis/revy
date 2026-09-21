@@ -1,0 +1,21 @@
+# infra/keycloak/docker-compose.yml
+# Local Keycloak 26.0 for Revy theme development.
+# start-dev = H2 in-memory DB + theme caches off.
+# Run from infra/keycloak/: docker compose up -d
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: revy-kc-local
+    command:
+      - start-dev
+      - --spi-theme-static-max-age=-1
+      - --spi-theme-cache-themes=false
+      - --spi-theme-cache-templates=false
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    volumes:
+      - ./themes:/opt/keycloak/themes
+    ports:
+      - "8080:8080"
