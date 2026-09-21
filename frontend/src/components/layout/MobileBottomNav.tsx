@@ -30,9 +30,8 @@ export function MobileBottomNav() {
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive =
-            pathname === tab.href ||
-            (tab.href !== '/' && pathname.startsWith(tab.href) && tab.href !== '/dashboard')
-            || (tab.href === '/dashboard' && pathname === '/dashboard');
+            pathname === tab.href || 
+            (tab.href !== '/dashboard' && pathname.startsWith(tab.href));
 
           return (
             <li key={tab.href} className="flex-1">

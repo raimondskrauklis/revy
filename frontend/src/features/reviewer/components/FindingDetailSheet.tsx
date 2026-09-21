@@ -120,7 +120,7 @@ export function FindingDetailSheet({
           {/* Badges row */}
           <div className="flex flex-wrap gap-2">
             <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--app-chip)] px-2 py-0.5 text-xs font-medium text-[color:var(--app-text-muted)]">
-              {t(`reviewer.findings.${finding.severity}`)}
+              {t(`reviewer.severity.${finding.severity}`)}
             </span>
             <span className="rounded-full bg-[color:var(--app-chip)] px-2 py-0.5 text-xs text-[color:var(--app-text-muted)]">
               {finding.category}
