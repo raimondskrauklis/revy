@@ -6,8 +6,8 @@
       "scope": ["backend/**"],
       "paths": [
         {
-          "path": "docs/free-plan-credits/FREE_PLAN_CREDITS_P0_EXECUTION.md",
-          "description": "Free Plan Credits — P0 execution (schema, migration, open install gate)"
+          "path": "docs/free-plan-credits/FREE_PLAN_CREDITS_P1_EXECUTION.md",
+          "description": "Free Plan Credits — P1 execution (credit check, atomic increment, autostart, Stripe webhook)"
         },
         {
           "path": "docs/free-plan-credits/FREE_PLAN_CREDITS_FINDINGS.md",

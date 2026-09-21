@@ -287,6 +287,10 @@ async def apply_subscription_event(
             actor_user_id=actor_user_id,
             stripe_customer_id=customer_id if isinstance(customer_id, str) else None,
         )
+        # Upgrade to Pro → unlimited credits
+        if plan == "pro":
+            workspace.review_run_limit = None
+            await session.flush()
         return
 
     if event_type in {"customer.subscription.updated", "customer.subscription.deleted"}:
@@ -309,6 +313,12 @@ async def apply_subscription_event(
             data_object
         )
         await _update_workspace_plan(session, workspace=workspace, new_plan=new_plan)
+        # Set credit limit based on final plan
+        if new_plan == "free":
+            workspace.review_run_limit = 25
+        elif new_plan == "pro":
+            workspace.review_run_limit = None
+        await session.flush()
         return
 
     if event_type in {"invoice.paid", "invoice.payment_failed"}:

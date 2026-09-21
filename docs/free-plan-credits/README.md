@@ -7,7 +7,7 @@
 
 | Phase | File | Status |
 |:---|:---|:---|
-| P0 — Schema + open the gate | [FREE_PLAN_CREDITS_P0_EXECUTION.md](FREE_PLAN_CREDITS_P0_EXECUTION.md) | pending |
+| P0 — Schema + open the gate | [FREE_PLAN_CREDITS_P0_EXECUTION.md](FREE_PLAN_CREDITS_P0_EXECUTION.md) | Done (`45dcdc3`) |
 | P1 — Credit check + increment | [FREE_PLAN_CREDITS_P1_EXECUTION.md](FREE_PLAN_CREDITS_P1_EXECUTION.md) | pending |
 | P2 — Frontend counter + trigger gate | [FREE_PLAN_CREDITS_P2_EXECUTION.md](FREE_PLAN_CREDITS_P2_EXECUTION.md) | pending |
 
