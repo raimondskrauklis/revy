@@ -26,7 +26,7 @@ export function BillingSettingsPage() {
       {isLoading ? (
         <p className="text-sm text-[color:var(--app-text-muted)]">{t('common.loading')}</p>
       ) : (
-        <div className="max-w-lg space-y-4 rounded-lg bg-[color:var(--app-surface)] p-4 ring-1 ring-[color:var(--app-ring)]">
+        <div className="space-y-4 rounded-lg bg-[color:var(--app-surface)] p-4 ring-1 ring-[color:var(--app-ring)]">
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm text-[color:var(--app-text-muted)]">
               {t('settings.billing.currentPlan')}

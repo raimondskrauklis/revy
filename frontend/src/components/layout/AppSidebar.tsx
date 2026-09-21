@@ -118,7 +118,7 @@ export function AppSidebar({ overlay = false }: { overlay?: boolean }) {
           <li>
             <button
               type="button"
-              aria-expanded={settingsOpen}
+              aria-expanded={showSettings}
               onClick={() => {
                 if (collapsed) {
                   expand();

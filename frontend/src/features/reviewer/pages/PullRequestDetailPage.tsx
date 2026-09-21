@@ -167,7 +167,7 @@ export function PullRequestDetailPage() {
       </div>
 
       {/* Findings summary bar */}
-      {!loadingFindings && reconciledFindings.length > 0 && (
+      {!loadingFindings && (
         <FindingsSummaryBar findings={reconciledFindings} conclusion={mergeConclusion} />
       )}
 
