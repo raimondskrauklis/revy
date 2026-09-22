@@ -4,19 +4,23 @@ AI-assisted code review for GitHub.
 
 **Live demo:** https://revy.createit.digital/
 
-Revy connects to your GitHub repositories and reviews pull requests with an AI pipeline: ingest PRs, index code changes, run multi-stage LLM review, reconcile findings across revisions, and publish a `revy/review` check run back to GitHub. Findings are grouped, judged for quality, and tracked until they are resolved or dismissed.
+> *"Beware of bugs; a small defect can sink a great ship."*
+
+Revy is a code review platform that connects to GitHub repositories and reviews every pull request through an AI pipeline. It ingests PRs, indexes code changes, runs multi-stage LLM review, reconciles findings across revisions, and publishes a `revy/review` check run back to GitHub. Findings are grouped, judged for quality, and tracked until they are resolved or dismissed.
+
+**About the project:** Revy was built to automate the code review loop: catching regressions, flagging risky patterns, and surfacing evidence before merge, without replacing human judgment. It is a full-stack B2B SaaS application with a self-service GitHub App installation flow, workspace-based tenancy, and a dark phosphor-green operator console. The review pipeline is multi-stage (ingest → index → review → reconcile → judge → publish) and supports pluggable LLM backends and model profiles. Revy is MIT-licensed and open to contributors.
 
 > Try it: open https://revy.createit.digital/, sign in with your Keycloak account, install the GitHub App on a repository, and open a pull request.
 
 ## What it does
 
-- **GitHub App installation** — workspace-scoped; one workspace can manage multiple installations.
-- **PR ingestion** — listens to `pull_request` and `push` webhooks.
-- **Code indexing** — chunks changed files and computes embeddings for retrieval context.
-- **LLM review** — multi-stage reviewer (standard / deep / critical profiles) with a separate judge model for quality.
-- **Finding reconciliation** — groups findings across PR revisions, tracks resolution, and closes stale items.
-- **GitHub publish** — posts a `revy/review` check run with review comments.
-- **Team console** — React SPA with workspace settings, team management, billing, audit log, and reviewer UI.
+- **GitHub App installation** workspace-scoped; one workspace can manage multiple installations.
+- **PR ingestion** listens to `pull_request` and `push` webhooks.
+- **Code indexing** chunks changed files and computes embeddings for retrieval context.
+- **LLM review** multi-stage reviewer (standard / deep / critical profiles) with a separate judge model for quality.
+- **Finding reconciliation** groups findings across PR revisions, tracks resolution, and closes stale items.
+- **GitHub publish** posts a `revy/review` check run with review comments.
+- **Team console** React SPA with workspace settings, team management, billing, audit log, and reviewer UI.
 
 ## Stack
 
@@ -69,10 +73,10 @@ See `backend/.env.example` and `frontend/.env.example` for required variables.
 
 `deploy/` contains sanitized example configs:
 
-- `deploy/env-examples/` — backend and frontend env templates.
-- `deploy/keycloak/config/` — Keycloak 26 docker-compose and Dockerfile.
-- `deploy/nginx/` — example vhosts for `app.example.com` and `auth.example.com`.
-- `deploy/sql/postgres-extensions.sql` — required PostgreSQL extensions.
+- `deploy/env-examples/` backend and frontend env templates.
+- `deploy/keycloak/config/` Keycloak 26 docker-compose and Dockerfile.
+- `deploy/nginx/` example vhosts for `app.example.com` and `auth.example.com`.
+- `deploy/sql/postgres-extensions.sql` required PostgreSQL extensions.
 
 Replace `example.com` with your domain and fill in real credentials before deploying.
 
