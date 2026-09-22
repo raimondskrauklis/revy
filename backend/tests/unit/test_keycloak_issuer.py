@@ -27,22 +27,22 @@ def test_keycloak_token_issuer_uses_public_override():
         database_url="postgresql+asyncpg://localhost/revy",
         redis_url="redis://localhost:6379/0",
         secret_key="test",
-        allowed_origins="https://revy.createit.digital",
+        allowed_origins="https://app.example.com",
         keycloak_url="http://keycloak:8080",
         keycloak_realm="revy",
         keycloak_client_id="revy-api",
         keycloak_client_secret="secret",
-        keycloak_issuer="https://auth.revy.createit.digital/realms/revy",
+        keycloak_issuer="https://auth.example.com/realms/revy",
     )
 
-    assert settings.keycloak_token_issuer == "https://auth.revy.createit.digital/realms/revy"
+    assert settings.keycloak_token_issuer == "https://auth.example.com/realms/revy"
 
-
+    
 def test_jwks_client_issuer_reads_settings_token_issuer():
     from app.core.jwks import jwks_client
 
     class _SettingsStub:
-        keycloak_token_issuer = "https://auth.revy.createit.digital/realms/revy"
+        keycloak_token_issuer = "https://auth.example.com/realms/revy"
 
     with patch("app.core.jwks.settings", _SettingsStub()):
-        assert jwks_client.issuer == "https://auth.revy.createit.digital/realms/revy"
+        assert jwks_client.issuer == "https://auth.example.com/realms/revy"

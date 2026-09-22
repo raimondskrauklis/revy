@@ -1,7 +1,7 @@
 # deploy/keycloak
 
-**Droplet bundle:** copy `config/` to `/mnt/revy_volume/keycloak/config/` and run `docker compose` from there.
+**Server bundle:** copy `config/` to `/opt/revy/keycloak/config/` (or your volume) and run `docker compose` from there.
 
 See **`config/README.md`** for full steps.
 
-Local dev (Postgres sidecar): `internal-docs/starter-pack/deploy/keycloak/docker-compose.yml`
+Local dev: `infra/keycloak/docker-compose.yml` (H2 in-memory, theme caches off).
