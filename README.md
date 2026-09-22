@@ -19,7 +19,7 @@ Revy connects to GitHub repositories and reviews every pull request through a mu
 - **Finding lifecycle** tracked across pushes: addressed, dismissed, still open. Stale items are closed automatically.
 - **GitHub publish**: `revy/review` check run plus review comments on the PR.
 - **Free tier**: 25 completed review runs per workspace; failed runs do not count. Paid plan not available.
-- **Team console**: workspace settings, team management, billing, audit log, reviewer UI. English + Latvian.
+- **Team console**: workspace settings, team management, audit log, reviewer UI. English + Latvian.
 
 ## How Revy is built, and why it matters for review quality
 
