@@ -2,25 +2,46 @@
 
 AI-assisted code review for GitHub.
 
+**Status:** Active experimental service with a live demo. Single maintainer.
 **Live demo:** https://revy.createit.digital/
 
 > *"Beware of bugs; a small defect can sink a great ship."*
 
-Revy is a code review platform that connects to GitHub repositories and reviews every pull request through an AI pipeline. It ingests PRs, indexes code changes, runs multi-stage LLM review, reconciles findings across revisions, and publishes a `revy/review` check run back to GitHub. Findings are grouped, judged for quality, and tracked until they are resolved or dismissed.
+Revy connects to GitHub repositories and reviews every pull request through a multi-stage AI pipeline: ingest → index → review → reconcile → judge → publish. It ingests PRs, indexes changed code, runs LLM review, reconciles findings across revisions, judges them for quality, and publishes a `revy/review` check run back to GitHub. The goal is to catch regressions, flag risky patterns, and surface evidence before merge, without replacing human judgment.
 
-**About the project:** Revy was built to automate the code review loop: catching regressions, flagging risky patterns, and surfacing evidence before merge, without replacing human judgment. It is a full-stack B2B SaaS application with a self-service GitHub App installation flow, workspace-based tenancy, and a dark phosphor-green operator console. The review pipeline is multi-stage (ingest → index → review → reconcile → judge → publish) and supports pluggable LLM backends and model profiles. Revy is MIT-licensed and open to contributors.
+## What works today
 
-> Try it: open https://revy.createit.digital/, sign in with your Keycloak account, install the GitHub App on a repository, and open a pull request.
+- **Self-service GitHub App install** from inside the app. Workspace-scoped; one workspace can manage multiple installations.
+- **Automatic reviews** on PR open and every push. `@revy review` re-runs on demand. Per-workspace autostart toggle.
+- **Context beyond the diff.** Revy indexes the whole file each hunk lives in, not just the hunk, and retrieval pulls in related code from other files so cross-file impact can be checked.
+- **Engineering context.** A small manifest in the repo (`.revy/review-context.json`) points at the planning docs for the active work — findings, general plan, execution plan. Revy reads them at the PR's head commit and treats locked decisions as authoritative when reviewing and judging. This is the single biggest quality lever observed so far.
+- **Multi-stage LLM review** with standard / deep / critical profiles, a separate judge model, and configurable LLM providers.
+- **Finding lifecycle** tracked across pushes: addressed, dismissed, still open. Stale items are closed automatically.
+- **GitHub publish**: `revy/review` check run plus review comments on the PR.
+- **Free tier**: 25 completed review runs per workspace; failed runs do not count. Paid plan available.
+- **Team console**: workspace settings, team management, billing, audit log, reviewer UI. English + Latvian.
 
-## What it does
+## How Revy is built, and why it matters for review quality
 
-- **GitHub App installation** workspace-scoped; one workspace can manage multiple installations.
-- **PR ingestion** listens to `pull_request` and `push` webhooks.
-- **Code indexing** chunks changed files and computes embeddings for retrieval context.
-- **LLM review** multi-stage reviewer (standard / deep / critical profiles) with a separate judge model for quality.
-- **Finding reconciliation** groups findings across PR revisions, tracks resolution, and closes stale items.
-- **GitHub publish** posts a `revy/review` check run with review comments.
-- **Team console** React SPA with workspace settings, team management, billing, audit log, and reviewer UI.
+Revy reviews its own pull requests. Every feature ships the same way: a findings document (what exists, what is missing, decisions locked), a general plan (phases and goals), and per-phase execution plans; then code, one phase per commit, with the plans committed alongside it. Cursor agents run this loop; the skills that drive it live in [`.cursor/skills/`](.cursor/skills/) and the agent entry point is [`AGENTS.md`](AGENTS.md).
+
+The payoff is that the reviewer is never guessing at intent. The manifest points Revy at the plans, the plans state the decisions, and the review checks the diff against them rather than against generic advice. In daily use on this repository, that combination has made Revy a reviewer worth waiting for, not a bot to dismiss.
+
+## Not yet
+
+- No structural (LSP / call-graph) context; cross-file impact relies on retrieval, not a code graph.
+- No incremental re-index; every push re-indexes the changed files.
+- No email digests.
+
+## Try it
+
+Open https://revy.createit.digital/ and:
+
+1. Sign up / sign in.
+2. Create or join a workspace.
+3. Install the Revy GitHub App on a repository.
+4. Open a pull request in that repository.
+5. Wait for the `revy/review` check to appear and read the findings.
 
 ## Stack
 
@@ -67,29 +88,26 @@ deploy/         Example docker-compose, nginx, env templates, SQL snippets
    npm run dev
    ```
 
-See `backend/.env.example` and `frontend/.env.example` for required variables.
+See [backend/.env.example](backend/.env.example) and [frontend/.env.example](frontend/.env.example) for required variables.
 
 ## Self-hosting
 
 `deploy/` contains sanitized example configs:
 
-- `deploy/env-examples/` backend and frontend env templates.
-- `deploy/keycloak/config/` Keycloak 26 docker-compose and Dockerfile.
-- `deploy/nginx/` example vhosts for `app.example.com` and `auth.example.com`.
-- `deploy/sql/postgres-extensions.sql` required PostgreSQL extensions.
+- [deploy/env-examples/](deploy/env-examples/) backend and frontend env templates.
+- [deploy/keycloak/config/](deploy/keycloak/config/) Keycloak 26 docker-compose and Dockerfile.
+- [deploy/nginx/](deploy/nginx/) example vhosts for `app.example.com` and `auth.example.com`.
+- [deploy/sql/postgres-extensions.sql](deploy/sql/postgres-extensions.sql) required PostgreSQL extensions.
 
 Replace `example.com` with your domain and fill in real credentials before deploying.
 
-## Testing the live site
+## Contact
 
-Open https://revy.createit.digital/ and:
+- Open a GitHub issue.
+- Email: raimonds.krauklis [at] gmail.com
 
-1. Sign up / sign in.
-2. Create or join a workspace.
-3. Install the Revy GitHub App.
-4. Open any pull request in a connected repository.
-5. Wait for the `revy/review` check to appear and review the findings.
+Issues welcome.
 
 ## License
 
-MIT
+[MIT](LICENSE)
