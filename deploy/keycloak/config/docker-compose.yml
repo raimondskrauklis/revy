@@ -5,7 +5,7 @@
 #   docker compose up -d
 #   curl -sf http://127.0.0.1:9000/health/ready
 #
-# Droplet path: /mnt/revy_volume/keycloak/config/
+# Server path: /opt/revy/keycloak/config/ (change to match your volume layout)
 
 services:
   keycloak:
@@ -21,6 +21,9 @@ services:
     ports:
       - "127.0.0.1:8080:8080"
       - "127.0.0.1:9000:9000"
+    volumes:
+      # Revy custom theme. Mount your themes/ dir from the host volume.
+      - /opt/revy/keycloak-themes:/opt/keycloak/themes:ro
     mem_limit: 1g
     networks:
       revy-net:

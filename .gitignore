@@ -241,3 +241,7 @@ __marimo__/
 # P9 — community/GDS ops artifacts (local/staging only)
 artifacts/graph_community_first_run_metrics.json
 artifacts/graph_community_verification_gate.json
+
+# Public cleanup: docs/ and infra/ stay in git history but are not pushed to GitHub
+/docs/
+/infra/

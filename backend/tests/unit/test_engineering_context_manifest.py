@@ -20,7 +20,7 @@ def test_parse_committed_ssot_file():
     active = manifest.programs[0]
     assert active.id == manifest.active_program
     assert active.scope
-    assert set(active.scope) <= {"backend/**", "frontend/**"}
+    assert set(active.scope) <= {"backend/**", "frontend/**", "infra/keycloak/**"}
     assert len(active.paths) == 3
 
 
